@@ -1,0 +1,44 @@
+import pg from 'pg';
+import { afterAll } from 'vitest';
+import { migrar } from '../src/store/migrar.js';
+import { RepositorioPostgres } from '../src/store/postgres.js';
+import { RepositorioMemoria, type Repositorio } from '../src/store/repositorio.js';
+
+/**
+ * Os testes de orquestração rodam contra a memória sempre e contra um Postgres de verdade
+ * quando SINTONIA_TESTE_PG aponta para um banco de teste (ele é apagado a cada teste).
+ */
+export interface FabricaRepo {
+  nome: string;
+  criar(): Promise<Repositorio>;
+}
+
+const url = process.env.SINTONIA_TESTE_PG;
+let pool: pg.Pool | undefined;
+let migrado = false;
+
+export async function poolDeTeste(): Promise<pg.Pool> {
+  if (!url) throw new Error('SINTONIA_TESTE_PG não definido');
+  pool ??= new pg.Pool({ connectionString: url, max: 20 });
+  if (!migrado) {
+    await migrar(pool);
+    migrado = true;
+  }
+  await pool.query(
+    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas restart identity cascade',
+  );
+  return pool;
+}
+
+export const temPostgres = Boolean(url);
+
+export const fabricas: FabricaRepo[] = [
+  { nome: 'memória', criar: async () => new RepositorioMemoria() },
+  ...(url ? [{ nome: 'postgres', criar: async () => new RepositorioPostgres(await poolDeTeste()) }] : []),
+];
+
+afterAll(async () => {
+  await pool?.end();
+  pool = undefined;
+  migrado = false;
+});

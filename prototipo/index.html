@@ -1,0 +1,678 @@
+<title>Sintonia · Império</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@600;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: app de atendimento em 3 colunas (conversas | chat | ficha) com trilho de navegação; marca em azul, IA em menta */
+:root{
+  --bg:#F3F7FB; --surface:#FFFFFF; --sunk:#E9F0F7; --chat:#EDF3F9; --ink:#0F1E2E; --muted:#5B6B7C; --line:#DCE5EE;
+  --brand:#106EBE; --brand-soft:#E3EFFA; --ai:#08876A; --ai-soft:#E0FBF3; --ai-line:#A6EFD9;
+  --mint:#0FFCBE; --on-mint:#0B2A22;
+  --ok:#1C7F55; --ok-soft:#E2F3EA; --warn:#9A6514; --warn-soft:#FBF0DC; --bad:#B23A3A;
+  --out:#DCEBFA; --in:#FFFFFF; --av1:#D6E7F7; --av2:#CFF7EA; --av3:#E2E9F1; --av4:#D9EEF7;
+  --f-display:"Urbanist",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1622; --surface:#112131; --sunk:#172B3E; --chat:#0D1B29; --ink:#E8F1F8; --muted:#93A6B8; --line:#20374C;
+  --brand:#4FA3EC; --brand-soft:#15324D; --ai:#0FFCBE; --ai-soft:#0E3530; --ai-line:#1A5A4D;
+  --mint:#0FFCBE; --on-mint:#0B1E1A;
+  --ok:#5CCB98; --ok-soft:#173027; --warn:#E3B260; --warn-soft:#352914; --bad:#F08080;
+  --out:#163652; --in:#172B3E; --av1:#1B3C5C; --av2:#124238; --av3:#22374B; --av4:#18394A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1622; --surface:#112131; --sunk:#172B3E; --chat:#0D1B29; --ink:#E8F1F8; --muted:#93A6B8; --line:#20374C;
+  --brand:#4FA3EC; --brand-soft:#15324D; --ai:#0FFCBE; --ai-soft:#0E3530; --ai-line:#1A5A4D;
+  --mint:#0FFCBE; --on-mint:#0B1E1A;
+  --ok:#5CCB98; --ok-soft:#173027; --warn:#E3B260; --warn-soft:#352914; --bad:#F08080;
+  --out:#163652; --in:#172B3E; --av1:#1B3C5C; --av2:#124238; --av3:#22374B; --av4:#18394A; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+.app{height:100%;display:grid;grid-template-columns:68px 1fr;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+/* trilho */
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:14px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--brand);color:var(--mint);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:21px;margin-bottom:10px}
+.rail button{width:52px;border:0;background:none;border-radius:12px;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:600}
+.rail button svg{width:20px;height:20px}
+.rail button[aria-current="true"]{background:var(--brand-soft);color:var(--brand)}
+.rail .spacer{flex:1}
+main{min-width:0;min-height:0;display:flex;flex-direction:column}
+.view{flex:1;min-height:0}
+/* conversas */
+.inbox{display:grid;grid-template-columns:330px minmax(0,1fr) 300px;height:100%}
+.inbox.noprof{grid-template-columns:330px minmax(0,1fr)}
+.col{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+.list{border-right:1px solid var(--line)}
+.lhead{padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
+.brandline{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.brandline h1{font-family:var(--f-display);font-size:22px;margin:0;letter-spacing:-.01em}
+.brandline small{color:var(--muted);font-size:11.5px}
+.search{background:var(--sunk);border:0;border-radius:10px;padding:9px 12px;width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.items{overflow-y:auto;flex:1}
+.item{width:100%;border:0;background:none;text-align:left;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:center}
+.item:hover{background:var(--sunk)}
+.item[aria-current="true"]{background:var(--sunk)}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:var(--ink)}
+.av.sm{width:36px;height:36px;font-size:12.5px}
+.iname{font-weight:600;display:flex;gap:6px;align-items:center;min-width:0}
+.iname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ilast{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imeta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.unread{background:var(--ok);color:var(--surface);border-radius:999px;min-width:18px;height:18px;display:grid;place-items:center;font-size:10.5px;font-family:var(--f-body);font-weight:700;padding:0 5px}
+.mode{font-family:var(--f-body);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 6px;letter-spacing:.02em;white-space:nowrap}
+.m-ia{background:var(--ai-soft);color:var(--ai)}
+.m-humano{background:var(--brand-soft);color:var(--brand)}
+.m-copiloto{background:var(--ok-soft);color:var(--ok)}
+.unit{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;white-space:nowrap;font-weight:600}
+/* chat */
+.chat{background:var(--chat)}
+.chead{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chead .who{flex:1;min-width:140px}
+.chead .who b{display:block;font-size:15px}
+.chead .who small{color:var(--muted);font-size:12px}
+.back{display:none;border:0;background:none;padding:6px;margin-left:-6px}
+.seg{display:flex;background:var(--sunk);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 12px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--surface)}
+.btn.ai{background:var(--mint);border-color:var(--mint);color:var(--on-mint)}
+.btn.ghost{background:none}
+.btn.small{padding:5px 10px;font-size:12px}
+.profbtn{display:none}
+.banner{margin:10px 16px 0;background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:600}
+.banner .t{flex:1;min-width:180px}
+.banner .count{font-family:var(--f-mono)}
+.msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+.day{align-self:center;background:var(--surface);color:var(--muted);font-size:11px;border-radius:8px;padding:3px 10px;margin:4px 0;font-weight:600}
+.b{max-width:min(78%,520px);padding:7px 10px 5px;border-radius:12px;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;overflow-wrap:anywhere}
+.b.cli{align-self:flex-start;background:var(--in);border-top-left-radius:4px}
+.b.me,.b.ia{align-self:flex-end;background:var(--out);border-top-right-radius:4px}
+.b .by{font-size:11px;font-weight:700;margin-bottom:2px}
+.b.me .by{color:var(--brand)} .b.ia .by{color:var(--ai)}
+.b .tm{font-size:10.5px;color:var(--muted);text-align:right;font-family:var(--f-mono);margin-top:2px}
+.note{align-self:center;max-width:90%;background:var(--ai-soft);color:var(--ai);font-size:12px;font-weight:600;border-radius:999px;padding:4px 12px;text-align:center}
+.after{align-self:flex-end;max-width:min(78%,520px);font-size:12px;color:var(--ai);display:flex;gap:6px;align-items:flex-start;padding:0 4px}
+.after svg,.ihead svg{width:14px;height:14px;flex:none;margin-top:2px}
+.insight{align-self:flex-start;max-width:min(86%,560px);background:var(--surface);border:1px solid var(--ai-line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;margin:2px 0 6px}
+.ihead{display:flex;gap:6px;align-items:flex-start;color:var(--ai);font-size:12px;font-weight:700}
+.ihead span{font-weight:500;color:var(--muted)}
+.sug{background:var(--ai-soft);border-radius:10px;padding:8px 10px;font-size:13.5px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.typing{align-self:flex-start;background:var(--in);border-radius:12px;padding:8px 12px;color:var(--muted);font-size:12px}
+.live{margin:0 16px;background:var(--surface);border:1px solid var(--ai-line);border-bottom:0;border-radius:14px 14px 0 0;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.live .lt{color:var(--ai);font-weight:700;display:flex;gap:6px;align-items:center}
+.live .lt i{width:7px;height:7px;border-radius:50%;background:var(--ai);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.live .lt i{animation:none}}
+.li{display:flex;gap:8px;align-items:flex-start}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none}
+.k-ok{background:var(--ok)} .k-warn{background:var(--warn)} .k-tip{background:var(--ai)} .k-act{background:var(--brand)}
+.improved{background:var(--ai-soft);border-radius:8px;padding:6px 8px;color:var(--ink)}
+.composer{background:var(--surface);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:8px;align-items:flex-end;position:relative}
+.composer textarea{flex:1;resize:none;border:0;background:var(--sunk);border-radius:12px;padding:10px 12px;min-height:42px;max-height:120px}
+.iconbtn{width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--sunk);color:var(--muted);flex:none}
+.iconbtn svg{width:20px;height:20px}
+.send{background:var(--brand);color:var(--surface)}
+.qr{position:absolute;bottom:62px;left:16px;width:min(360px,calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.16);padding:6px;z-index:5}
+.qr button{width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:1px}
+.qr button:hover{background:var(--sunk)}
+.qr b{font-size:13px} .qr span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hint{font-size:11.5px;color:var(--muted);padding:0 16px 8px;background:var(--surface)}
+/* ficha */
+.prof{border-left:1px solid var(--line);overflow-y:auto;padding:18px 16px;gap:16px}
+.ptop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.ptop .av{width:64px;height:64px;font-size:20px}
+.ptop b{font-size:16px} .ptop small{color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stage{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--sunk);border-radius:10px;padding:8px 10px}
+.stage b{font-family:var(--f-display);font-size:16px}
+.stage small{color:var(--ai);font-size:11px;font-weight:600}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-weight:600}
+.summary{background:var(--ai-soft);border-radius:10px;padding:10px;font-size:13px}
+.auto{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.auto:last-child{border-bottom:0}
+.auto time{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-size:11.5px;border-radius:6px;padding:2px 7px;background:var(--sunk);font-weight:600}
+/* páginas */
+.page{height:100%;overflow-y:auto;padding-block:22px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.page-in{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.ph h2{font-family:var(--f-display);font-size:28px;margin:0;letter-spacing:-.015em;text-wrap:balance}
+.ph p{margin:4px 0 0;color:var(--muted);max-width:65ch}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:250px;gap:12px;overflow-x:auto;padding-bottom:8px}
+.colk{background:var(--sunk);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.colk h4{margin:0;display:flex;justify-content:space-between;font-size:13px;padding:2px 4px}
+.colk h4 span{font-family:var(--f-mono);color:var(--muted);font-size:12px}
+.card{background:var(--surface);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:5px;border:1px solid var(--line);text-align:left;width:100%}
+.card b{font-size:13.5px}
+.card .s{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .mv{font-size:11px;color:var(--ai);font-weight:600}
+.card.fresh{border-color:var(--ai)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h3{margin:0;font-size:15px}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile small{color:var(--muted);font-weight:600;font-size:12px}
+.tile b{font-family:var(--f-display);font-size:30px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{font-size:12px;color:var(--muted)}
+.tile span em{font-style:normal;color:var(--ok);font-weight:700}
+.bar{display:grid;grid-template-columns:150px minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:13px}
+.bar .tr{height:10px;background:var(--sunk);border-radius:6px;overflow:hidden}
+.bar .fl{height:100%;background:var(--brand);border-radius:6px}
+.bar .n{font-family:var(--f-mono);text-align:right;font-size:12px}
+.split{display:flex;height:14px;border-radius:7px;overflow:hidden}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.phone{background:var(--chat);border-radius:22px;border:8px solid var(--ink);padding:12px;display:flex;flex-direction:column;gap:8px;max-width:360px;width:100%;margin:0 auto}
+.phone .ptitle{font-size:12px;font-weight:700;text-align:center;color:var(--muted)}
+.phone .b{max-width:100%;font-size:13px;white-space:pre-line}
+.flows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.flow .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.flow b{font-size:14.5px}
+.flow p{margin:0;color:var(--muted);font-size:13px}
+.flow .st{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.flow .st strong{color:var(--ink);font-family:var(--f-mono)}
+.sw{position:relative;width:40px;height:23px;flex:none}
+.sw input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer}
+.sw span{position:absolute;inset:0;background:var(--line);border-radius:999px;pointer-events:none;transition:background .2s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:var(--surface);transition:transform .2s}
+.sw input:checked+span{background:var(--ok)}
+.sw input:checked+span::after{transform:translateX(17px)}
+.sw input:focus-visible+span{outline:2px solid var(--ai);outline-offset:2px}
+.badge{font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px;background:var(--warn-soft);color:var(--warn);align-self:flex-start}
+.example{font-size:11.5px;color:var(--muted);font-weight:600;background:var(--sunk);border-radius:6px;padding:3px 8px;align-self:flex-start}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(15,10,20,.45);display:grid;place-items:center;z-index:20;padding:16px}
+.modal{background:var(--surface);border-radius:18px;width:min(520px,100%);max-height:calc(100% - 32px);overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.modal h3{margin:0;font-family:var(--f-display);font-size:20px}
+.modal label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.modal select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 10px;font-weight:500;color:var(--ink);font-size:14px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.days,.slots{display:flex;gap:6px;flex-wrap:wrap}
+.days button,.slots button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 10px;font-size:13px;font-weight:600}
+.days button small{display:block;font-size:10.5px;color:var(--muted);font-weight:600}
+.slots button{font-family:var(--f-mono);font-size:12.5px}
+.days button[aria-pressed="true"],.slots button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--surface)}
+.days button[aria-pressed="true"] small{color:var(--surface)}
+.slots button:disabled{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+.mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);border-radius:12px;padding:10px 16px;font-weight:600;font-size:13px;z-index:30;max-width:calc(100% - 32px)}
+/* responsivo */
+@media (max-width:1180px){
+  .inbox,.inbox.noprof{grid-template-columns:300px minmax(0,1fr)}
+  .prof{position:fixed;right:0;top:0;bottom:0;width:min(320px,100%);z-index:15;box-shadow:-10px 0 30px rgba(0,0,0,.18);padding-top:calc(18px + env(safe-area-inset-top,0px))}
+  .profbtn{display:inline-flex}
+  .grid2{grid-template-columns:1fr}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+  .rail{order:2;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding-block:6px calc(6px + env(safe-area-inset-bottom,0px))}
+  .logo,.rail .spacer{display:none}
+  .inbox,.inbox.noprof{grid-template-columns:1fr}
+  .inbox.inchat .list{display:none}
+  .inbox:not(.inchat) .chat{display:none}
+  .back{display:block}
+  .flows{grid-template-columns:1fr}
+  .bar{grid-template-columns:110px minmax(0,1fr) 30px}
+  .chead .seg{order:5;width:100%}
+  .chead .seg button{flex:1}
+  .f2{grid-template-columns:1fr}
+}
+</style>
+
+<div class="app">
+  <nav class="rail" aria-label="Navegação">
+    <div class="logo" aria-hidden="true">S</div>
+    <button data-view="conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4z"/></svg>Conversas</button>
+    <button data-view="funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="11" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>Funil</button>
+    <button data-view="automacoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>Automações</button>
+    <button data-view="relatorio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg>Relatório</button>
+    <div class="spacer"></div>
+  </nav>
+  <main>
+    <section class="view" id="v-conversas"></section>
+    <section class="view" id="v-funil" hidden></section>
+    <section class="view" id="v-automacoes" hidden></section>
+    <section class="view" id="v-relatorio" hidden></section>
+  </main>
+</div>
+<div class="ov" id="ov" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const IC={
+  spark:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.3L20 10l-5.8 1.8L12 18l-2.2-6.2L4 10l5.8-1.7z"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  back:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg>'
+};
+const STAGES=['Novo lead','Em conversa','Interessada','Agendada','Compareceu','Manutenção','Perdida'];
+const MODE_LABEL={ia:'IA atendendo',humano:'Você',copiloto:'Copiloto'};
+const QUICK=[
+  {t:'Tabela de preços',m:'Nossa Progressiva Império varia pelo comprimento: curto R$ 220, médio R$ 270, longo R$ 320. Quer que eu veja um horário pra você?'},
+  {t:'Endereço Norte Shopping',m:'Estamos no Salvador Norte Shopping, piso L2, ao lado da praça de alimentação. Te espero aqui!'},
+  {t:'Endereço Sumaré',m:'Estamos no Shopping Sumaré, 1º piso. Tem estacionamento no próprio shopping.'},
+  {t:'Cuidados pós-progressiva',m:'Nas primeiras 72h: não prender o cabelo, não molhar e evitar suor intenso. Depois, use o kit de manutenção que indicamos.'},
+  {t:'Lista de espera Feira',m:'Nossa unidade de Feira de Santana está em obras! Posso colocar seu nome na lista VIP de inauguração, com condição especial?'}
+];
+const convs=[
+ {id:'c1',name:'Marina Souza',phone:'(71) 9 8812-4471',unit:'Norte',stage:'Interessada',mode:'copiloto',unread:1,att:'Carla',
+  msgs:[{d:'Hoje'},
+   {f:'cli',t:'Oi! Vi o vídeo da Tássia sobre a progressiva. Quanto fica pro meu cabelo? É bem volumoso e vai até o meio das costas',h:'14:20'},
+   {f:'note',t:'IA classificou: pediu preço · etapa movida para Interessada'},
+   {f:'me',by:'Carla',t:'Oi Marina, tudo bem? Pra cabelo longo e volumoso a Progressiva Império fica R$ 320 aqui na Norte Shopping',h:'14:22'},
+   {f:'cli',t:'Hmm, e dura quanto tempo? Tenho uma formatura dia 22',h:'14:31'}],
+  suggest:{intent:'Tem evento com data (22/11). Momento certo para propor horário.',
+   opts:['Dura em média de 3 a 4 meses! O ideal é fazer 5 a 7 dias antes do evento pra ficar com o caimento perfeito. Pra sua formatura, que tal dia 15 ou 16? Tenho 10h e 14h com a Jéssica. Quer que eu reserve?',
+         'Dura de 3 a 4 meses, então você chega na formatura e ainda passa o verão com ele lindo. Posso te encaixar no dia 15 às 14h?']},
+  script:[{t:'Dia 15 às 14h seria perfeito!',intent:'Aceitou data e horário. Pronto para agendar no Trinks.',opts:['Perfeito! Vou reservar sábado, 15/11 às 14h com a Jéssica aqui na Norte Shopping. Clique em Agendar para confirmar no Trinks.']}],
+  p:{last:'Primeira visita',cash:'—',visits:0,src:'Instagram · vídeo da Tássia',tags:['Formatura 22/11','Cabelo longo'],summary:'Lead novo do Instagram. Cabelo longo e volumoso, formatura em 22/11. Já sabe o preço (R$ 320). Sensível a prazo, não a preço.',autos:[['Follow-up se não responder','16:31']]}},
+ {id:'c2',name:'Fernanda Lima',phone:'(71) 9 9124-0083',unit:'Sumaré',stage:'Em conversa',mode:'humano',unread:1,att:'Bia',
+  msgs:[{d:'Hoje'},
+   {f:'cli',t:'Boa tarde! Consegue encaixe hoje no fim da tarde pra hidratação?',h:'13:40'},
+   {f:'me',by:'Bia',t:'Boa tarde, Fernanda! Vou verificar e já te falo',h:'13:42'},
+   {f:'cli',t:'Ok, fico no aguardo',h:'13:43'}],
+  takeover:{left:12,text:'Fernanda, consegui sim! Tenho encaixe hoje às 17h30 com a Bia aqui no Sumaré. Posso confirmar pra você?'},
+  suggest:{intent:'Pediu encaixe hoje. A atendente prometeu retorno e não voltou há 49 min.',opts:['Fernanda, consegui sim! Tenho encaixe hoje às 17h30 com a Bia aqui no Sumaré. Posso confirmar pra você?']},
+  script:[],
+  p:{last:'Progressiva · 02/08 · Bia',cash:'R$ 27,00',visits:4,src:'Cliente recorrente',tags:['Recorrente','Cashback ativo'],summary:'Cliente fiel (4 visitas). Quer hidratação hoje no fim da tarde. Tem R$ 27 de cashback para usar.',autos:[['IA assume se ninguém responder','em 12 s']]}},
+ {id:'c3',name:'Juliana Reis',phone:'(71) 9 8733-5120',unit:'Sumaré',stage:'Em conversa',mode:'ia',unread:0,
+  msgs:[{d:'Hoje'},
+   {f:'note',t:'Fora do horário · a IA atendeu sozinha'},
+   {f:'cli',t:'vcs abrem domingo?',h:'02:10'},
+   {f:'ia',t:'Oi Juliana! Abrimos sim, domingo das 13h às 19h no Shopping Sumaré. Quer que eu veja um horário pra você?',h:'02:10'},
+   {f:'cli',t:'quero sim, pra hidratação',h:'02:12'},
+   {f:'ia',t:'Tenho domingo às 14h ou 16h30. Qual fica melhor pra você?',h:'02:12'}],
+  script:[],
+  p:{last:'Hidratação · 20/09 · Lu',cash:'R$ 12,00',visits:2,src:'WhatsApp direto',tags:['Hidratação'],summary:'Perguntou de madrugada sobre domingo. IA ofereceu 14h ou 16h30. Aguardando escolha.',autos:[['Follow-up de horário','10:00']]}},
+ {id:'c4',name:'Patrícia Gomes',phone:'(71) 9 9301-7754',unit:'Norte',stage:'Agendada',mode:'ia',unread:0,
+  msgs:[{d:'Hoje'},
+   {f:'ia',t:'Oi Patrícia! Passando pra lembrar do seu horário amanhã, sexta, às 9h com a Jéssica na Norte Shopping. Confirma? Responda 1 para confirmar ou 2 para reagendar.',h:'09:00'},
+   {f:'cli',t:'1',h:'09:14'},
+   {f:'ia',t:'Confirmado! Até amanhã. Lembre de vir com o cabelo limpo e seco',h:'09:14'},
+   {f:'note',t:'Confirmação registrada no Trinks · lembrete de 2h programado'}],
+  script:[],
+  p:{last:'Progressiva · 11/06 · Jéssica',cash:'R$ 30,00',visits:5,src:'Indicação',tags:['Manutenção','VIP'],summary:'Manutenção da progressiva marcada pela IA após o lembrete de 90 dias. Confirmou presença.',autos:[['Lembrete 2h antes','amanhã 07:00'],['Pesquisa de satisfação','amanhã 13:00']]}},
+ {id:'c5',name:'Ana Clara Matos',phone:'(75) 9 9188-2290',unit:'Feira',stage:'Novo lead',mode:'ia',unread:0,
+  msgs:[{d:'Hoje'},
+   {f:'cli',t:'Oii, quando abre a unidade de Feira?',h:'11:05'},
+   {f:'ia',t:'Oi Ana Clara! A unidade de Feira de Santana está em obras e abre em breve. Posso colocar seu nome na lista VIP de inauguração, com condição especial?',h:'11:05'},
+   {f:'cli',t:'Pode sim!!',h:'11:07'},
+   {f:'note',t:'Adicionada à lista VIP Feira · etiqueta aplicada'}],
+  script:[],
+  p:{last:'—',cash:'—',visits:0,src:'Instagram Feira',tags:['Lista VIP Feira'],summary:'Lead de Feira de Santana. Entrou na lista VIP da inauguração.',autos:[['Aviso de inauguração','quando abrir']]}},
+ {id:'c6',name:'Roberta Santos',phone:'(71) 9 8640-3317',unit:'Norte',stage:'Manutenção',mode:'ia',unread:0,
+  msgs:[{d:'Ontem'},
+   {f:'ia',t:'Oi Roberta! Já fazem 3 meses da sua Progressiva Império. Esse é o momento ideal pra manutenção, antes da raiz pesar. Quer que eu veja um horário essa semana?',h:'10:00'},
+   {f:'note',t:'Sem resposta em 24h · follow-up programado'}],
+  script:[],
+  p:{last:'Progressiva · 04/08 · Jéssica',cash:'R$ 32,00',visits:3,src:'Cliente recorrente',tags:['Manutenção 90 dias'],summary:'Completou 90 dias da progressiva. Não respondeu o primeiro convite.',autos:[['Follow-up manutenção','hoje 16:00']]}},
+ {id:'c7',name:'Luana Freitas',phone:'(71) 9 9255-6041',unit:'Sumaré',stage:'Perdida',mode:'ia',unread:0,
+  msgs:[{d:'Segunda'},
+   {f:'cli',t:'Achei um pouco caro, vou pensar',h:'15:20'},
+   {f:'ia',t:'Entendo, Luana! Se ajudar, dá pra parcelar em até 3x e você ainda ganha 10% de cashback pra próxima visita. Qualquer coisa estou aqui',h:'15:21'},
+   {f:'note',t:'Motivo: preço · etapa Perdida · recuperação em 7 dias'}],
+  script:[],
+  p:{last:'—',cash:'—',visits:0,src:'Anúncio Meta',tags:['Objeção: preço'],summary:'Achou caro. IA ofereceu parcelamento e cashback. Recuperação automática programada.',autos:[['Recuperação com condição','seg 10:00']]}}
+];
+const extras=[
+ ['Novo lead','Camila Rocha','Norte','Quero saber da progressiva'],['Novo lead','Débora Alves','Sumaré','Quanto custa?'],['Novo lead','Isabela Nunes','Feira','Vai ter promoção na inauguração?'],
+ ['Em conversa','Tatiane Melo','Norte','Faz em cabelo com luzes?'],['Interessada','Priscila Dias','Sumaré','Vou ver com meu marido'],['Interessada','Renata Cruz','Norte','Tem horário sábado?'],
+ ['Agendada','Bianca Lopes','Sumaré','Sáb 10:00 · Lu'],['Agendada','Kelly Prado','Norte','Sex 15:30 · Jéssica'],['Agendada','Sabrina Costa','Norte','Sáb 09:00 · Carla'],
+ ['Compareceu','Vanessa Moura','Norte','Progressiva · conta fechada'],['Compareceu','Larissa Pinto','Sumaré','Hidratação · conta fechada'],
+ ['Manutenção','Gabriela Sá','Sumaré','91 dias da progressiva'],['Perdida','Michele Araújo','Norte','Sem resposta após 3 follow-ups']
+];
+const S={view:'conversas',active:'c1',filter:'todas',inchat:false,prof:window.innerWidth>1180,draft:'',qr:false,timer:null};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const conv=()=>convs.find(c=>c.id===S.active);
+const avc=n=>'var(--av'+(1+[...n].reduce((a,c)=>a+c.charCodeAt(0),0)%4)+')';
+const ini=n=>n.split(' ').map(w=>w[0]).slice(0,2).join('');
+const now=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3200)}
+function lastText(c){const m=[...c.msgs].reverse().find(m=>m.t&&m.f!=='note');return m?((m.f==='cli'?'':m.f==='ia'?'IA: ':'Você: ')+m.t):''}
+function lastTime(c){const m=[...c.msgs].reverse().find(m=>m.h);return m?m.h:''}
+
+/* ---------- navegação ---------- */
+function go(v){S.view=v;document.querySelectorAll('.rail button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===v));
+ document.querySelectorAll('.view').forEach(s=>s.hidden=s.id!=='v-'+v);
+ if(v==='funil')renderFunil();if(v==='automacoes')renderAuto();if(v==='relatorio')renderReport();if(v==='conversas')renderInbox()}
+document.querySelectorAll('.rail button').forEach(b=>b.onclick=()=>go(b.dataset.view));
+
+/* ---------- caixa de entrada ---------- */
+function renderInbox(){
+ const root=$('#v-conversas');
+ root.innerHTML=`<div class="inbox ${S.prof?'':'noprof'} ${S.inchat?'inchat':''}" id="inbox">
+  <div class="col list">
+   <div class="lhead">
+    <div class="brandline"><h1>Sintonia</h1><small>Império Progressivas · 3 números</small></div>
+    <input class="search" id="q" placeholder="Buscar cliente ou mensagem" aria-label="Buscar">
+    <div class="chips" id="chips"></div>
+   </div>
+   <div class="items" id="items"></div>
+  </div>
+  <div class="col chat" id="chat"></div>
+  <aside class="col prof" id="prof" ${S.prof?'':'hidden'}></aside>
+ </div>`;
+ renderChips();renderList();renderChat();renderProf();
+ $('#q').oninput=renderList;
+}
+function renderChips(){
+ const f=[['todas','Todas'],['ia','IA'],['humano','Equipe'],['espera','Sem resposta']];
+ $('#chips').innerHTML=f.map(([k,l])=>`<button class="chip" data-f="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join('');
+ $('#chips').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.filter=b.dataset.f;renderChips();renderList()});
+}
+function renderList(){
+ const q=($('#q')?.value||'').toLowerCase();
+ let l=convs.filter(c=>{const last=[...c.msgs].reverse().find(m=>m.f&&m.f!=='note');
+  if(S.filter==='ia'&&c.mode!=='ia')return false;
+  if(S.filter==='humano'&&c.mode==='ia')return false;
+  if(S.filter==='espera'&&!(last&&last.f==='cli'))return false;
+  return !q||(c.name+' '+lastText(c)).toLowerCase().includes(q)});
+ $('#items').innerHTML=l.map(c=>`<button class="item" data-id="${c.id}" aria-current="${c.id===S.active}">
+  <div class="av" style="background:${avc(c.name)}">${ini(c.name)}</div>
+  <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+   <div class="iname"><span>${esc(c.name)}</span><em class="unit">${c.unit}</em></div>
+   <div class="ilast">${esc(lastText(c))}</div>
+  </div>
+  <div class="imeta">${lastTime(c)}<span class="mode m-${c.mode}">${MODE_LABEL[c.mode]}</span>${c.unread?`<span class="unread">${c.unread}</span>`:''}</div>
+ </button>`).join('')||'<p style="padding:16px;color:var(--muted)">Nenhuma conversa neste filtro.</p>';
+ $('#items').querySelectorAll('.item').forEach(b=>b.onclick=()=>openConv(b.dataset.id));
+}
+function openConv(id){S.active=id;S.draft='';S.qr=false;S.inchat=true;const c=conv();c.unread=0;
+ clearInterval(S.timer);renderList();$('#inbox').classList.add('inchat');renderChat();renderProf()}
+
+/* ---------- chat ---------- */
+function renderChat(){
+ const c=conv();
+ $('#chat').innerHTML=`<div class="chead" id="chead"></div><div id="banner"></div><div class="msgs" id="msgs"></div>
+  <div id="live"></div>
+  <div class="composer">
+   <div id="qrbox"></div>
+   <button class="iconbtn" id="qrb" title="Mensagens rápidas" aria-label="Mensagens rápidas">${IC.bolt}</button>
+   <textarea id="draft" rows="1" placeholder="Mensagem  ·  digite / para mensagens rápidas" aria-label="Mensagem"></textarea>
+   <button class="iconbtn send" id="sendb" aria-label="Enviar">${IC.send}</button>
+  </div>
+  <div class="hint" id="hint"></div>`;
+ renderHead();renderMsgs();renderLive();renderBanner();
+ const ta=$('#draft');ta.value=S.draft;
+ ta.oninput=()=>{S.draft=ta.value;ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px';
+  if(ta.value.startsWith('/')){S.qr=true}else if(S.qr&&!ta.value.startsWith('/'))S.qr=false;
+  if(c.mode==='ia'&&ta.value.trim()){c.mode='copiloto';renderHead();renderList();pushNote(c,'Você começou a digitar · a IA pausou e virou copiloto',false)}
+  if(c.takeover&&ta.value.trim()){cancelTake(c,true)}
+  renderQR();renderLive()};
+ ta.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
+ $('#sendb').onclick=send;
+ $('#qrb').onclick=()=>{S.qr=!S.qr;renderQR()};
+}
+function renderHead(){
+ const c=conv();
+ $('#chead').innerHTML=`<button class="back" id="back" aria-label="Voltar">${IC.back}</button>
+  <div class="av sm" style="background:${avc(c.name)}">${ini(c.name)}</div>
+  <div class="who"><b>${esc(c.name)}</b><small>${c.phone} · ${unitName(c.unit)}${c.att?' · '+c.att:''}</small></div>
+  <div class="seg" role="group" aria-label="Quem atende">
+   ${['ia','copiloto','humano'].map(m=>`<button data-m="${m}" aria-pressed="${c.mode===m}">${m==='ia'?'IA atende':m==='copiloto'?'Copiloto':'Só eu'}</button>`).join('')}
+  </div>
+  <button class="btn primary" id="agb">${IC.cal}Agendar</button>
+  <button class="btn profbtn" id="pfb">${IC.user}Ficha</button>`;
+ $('#back').onclick=()=>{S.inchat=false;$('#inbox').classList.remove('inchat')};
+ $('#agb').onclick=()=>openAgenda();
+ $('#pfb').onclick=()=>{S.prof=!S.prof;$('#prof').hidden=!S.prof;$('#inbox').classList.toggle('noprof',!S.prof)};
+ $('#chead').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{c.mode=b.dataset.m;
+  pushNote(c,b.dataset.m==='ia'?'A IA assumiu a conversa':b.dataset.m==='copiloto'?'Modo copiloto: a IA sugere e você envia':'Só você: a IA apenas observa e organiza o funil',false);
+  if(c.takeover)cancelTake(c,false);renderHead();renderList();renderLive()});
+}
+function unitName(u){return u==='Norte'?'Salvador Norte Shopping':u==='Sumaré'?'Shopping Sumaré':'Feira de Santana (em obras)'}
+function renderMsgs(){
+ const c=conv();const box=$('#msgs');
+ const lastIdx=c.msgs.map(m=>m.f).lastIndexOf('cli');
+ const lastReal=[...c.msgs].reverse().find(m=>m.f&&m.f!=='note');
+ box.innerHTML=c.msgs.map((m,i)=>{
+  if(m.d)return `<div class="day">${m.d}</div>`;
+  if(m.f==='note')return `<div class="note">${esc(m.t)}</div>`;
+  if(m.f==='typing')return `<div class="typing">${esc(c.name.split(' ')[0])} está digitando…</div>`;
+  let h=`<div class="b ${m.f}">${m.f!=='cli'?`<div class="by">${m.f==='ia'?'IA Sintonia':esc(m.by||'Você')}</div>`:''}${esc(m.t)}<div class="tm">${m.h||''}</div></div>`;
+  if(m.review)h+=`<div class="after">${IC.spark}<span>${esc(m.review)}</span></div>`;
+  if(i===lastIdx&&lastReal===m&&c.suggest&&c.mode!=='humano'){
+   const o=c.suggest.opts[c.suggest.i||0];
+   h+=`<div class="insight"><div class="ihead">${IC.spark}<div>A IA leu esta mensagem <span>· ${esc(c.suggest.intent)}</span></div></div>
+    <div class="sug">${esc(o)}</div>
+    <div class="row"><button class="btn small ai" data-a="use">Usar sugestão</button><button class="btn small" data-a="send">Enviar agora</button>${c.suggest.opts.length>1?'<button class="btn small ghost" data-a="alt">Outra opção</button>':''}</div></div>`}
+  if(i===lastIdx&&lastReal===m&&c.suggest&&c.mode==='humano')h+=`<div class="after" style="align-self:flex-start">${IC.spark}<span>Sugestão pronta. Ative o Copiloto para ver.</span></div>`;
+  return h}).join('');
+ box.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const s=c.suggest;const o=s.opts[s.i||0];
+  if(b.dataset.a==='use'){S.draft=o;const ta=$('#draft');ta.value=o;ta.focus();ta.dispatchEvent(new Event('input'))}
+  if(b.dataset.a==='send'){S.draft=o;send()}
+  if(b.dataset.a==='alt'){s.i=((s.i||0)+1)%s.opts.length;renderMsgs()}});
+ box.scrollTop=box.scrollHeight;
+}
+function pushNote(c,t,render=true){c.msgs.push({f:'note',t});if(c.id===S.active)renderMsgs()}
+
+/* revisão ao vivo */
+function analyze(d,c){
+ d=d.trim();if(!d||d.startsWith('/'))return null;
+ const it=[];
+ const pm=d.match(/r\$\s?(\d+)/i);
+ if(pm&&+pm[1]!==320&&c.id==='c1')it.push(['warn','Valor diferente da tabela: Progressiva Império longa é R$ 320 na Norte Shopping.']);
+ if(/(amanh|hoje|s[áa]bado|domingo|dia \d|hor[áa]rio|\d{1,2}h)/i.test(d))it.push(['act','Você citou data ou horário. Confira a agenda do Trinks antes de confirmar.','agenda']);
+ if(/n[ãa]o sei/i.test(d))it.push(['warn','"Não sei" passa insegurança. A resposta certa está na base da Império: duração média de 3 a 4 meses.']);
+ if(d.length<14)it.push(['tip','Resposta curta. Aproveite para conduzir: proponha um horário.']);
+ else if(!d.includes('?'))it.push(['tip','Termine com uma pergunta para levar ao agendamento.']);
+ const ok=!it.length;
+ if(ok)it.push(['ok','Mensagem clara e no tom da Império. Pode enviar.']);
+ let imp=null;
+ if(!ok){imp=d.replace(/n[ãa]o sei[^.?!]*[.?!]?/i,'Dura em média de 3 a 4 meses.').replace(/[\s.!]+$/,'');
+  if(pm&&+pm[1]!==320&&c.id==='c1')imp=imp.replace(/r\$\s?\d+/i,'R$ 320');
+  if(!imp.includes('?'))imp+=(imp.length<14?'! ':'. ')+'Quer que eu já reserve um horário pra você essa semana?';}
+ return {it,imp}
+}
+function renderLive(){
+ const c=conv();const a=analyze(S.draft,c);const el=$('#live');
+ const hint=$('#hint');
+ hint.textContent=c.mode==='ia'?'A IA está conduzindo esta conversa. Se você digitar, ela pausa e vira copiloto.':c.mode==='humano'?'Só você: a IA não sugere, mas continua movendo o funil e registrando.':'Copiloto: a IA lê cada mensagem e revisa o que você escreve, mas nunca envia por você.';
+ if(!a||c.mode==='humano'){el.innerHTML='';return}
+ el.innerHTML=`<div class="live"><div class="lt"><i></i>IA revisando enquanto você digita</div>
+  ${a.it.map(([k,t,act])=>`<div class="li"><span class="dot k-${k}"></span><span style="flex:1">${esc(t)}</span>${act?'<button class="btn small" data-x="ag">Abrir agenda</button>':''}</div>`).join('')}
+  ${a.imp?`<div class="li"><span class="dot k-tip"></span><div style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="improved">${esc(a.imp)}</span><div class="row"><button class="btn small ai" data-x="imp">Usar esta versão</button></div></div></div>`:''}
+ </div>`;
+ el.querySelector('[data-x="ag"]')?.addEventListener('click',()=>openAgenda());
+ el.querySelector('[data-x="imp"]')?.addEventListener('click',()=>{S.draft=a.imp;const ta=$('#draft');ta.value=a.imp;ta.focus();renderLive()});
+}
+function renderQR(){
+ const box=$('#qrbox');if(!S.qr){box.innerHTML='';return}
+ const q=S.draft.startsWith('/')?S.draft.slice(1).toLowerCase():'';
+ const l=QUICK.filter(x=>x.t.toLowerCase().includes(q));
+ box.innerHTML=`<div class="qr" role="listbox">${l.map((x,i)=>`<button data-i="${QUICK.indexOf(x)}"><b>/${esc(x.t)}</b><span>${esc(x.m)}</span></button>`).join('')||'<p style="padding:8px;margin:0;color:var(--muted)">Nenhuma mensagem rápida.</p>'}</div>`;
+ box.querySelectorAll('button').forEach(b=>b.onclick=()=>{const m=QUICK[+b.dataset.i].m;S.draft=m;S.qr=false;const ta=$('#draft');ta.value=m;ta.focus();renderQR();renderLive()});
+}
+function reviewSent(d){
+ if(/\?/.test(d))return 'Boa condução: terminou com pergunta. Se ela não responder em 2h, eu faço o follow-up.';
+ return 'Enviado. Se ela não responder em 2h, eu mando um follow-up perguntando o melhor horário.';
+}
+function send(){
+ const c=conv();const d=S.draft.trim();if(!d||d.startsWith('/'))return;
+ const byIA=false;
+ c.msgs.push({f:'me',by:'Você',t:d,h:now(),review:c.mode!=='humano'?reviewSent(d):null});
+ c.suggest=null;S.draft='';S.qr=false;$('#draft').value='';$('#draft').style.height='auto';
+ if(c.stage==='Novo lead'){c.stage='Em conversa'}
+ renderMsgs();renderLive();renderQR();renderList();
+ const nx=c.script.shift();
+ if(nx){setTimeout(()=>{c.msgs.push({f:'typing'});if(c.id===S.active)renderMsgs();
+  setTimeout(()=>{c.msgs=c.msgs.filter(m=>m.f!=='typing');c.msgs.push({f:'cli',t:nx.t,h:now()});
+   c.suggest={intent:nx.intent,opts:nx.opts};
+   if(c.id!==S.active)c.unread++;renderList();if(c.id===S.active){renderMsgs();renderProf()}},1600)},900)}
+}
+/* IA assume quando a atendente some */
+function renderBanner(){
+ const c=conv();const el=$('#banner');clearInterval(S.timer);
+ if(!c.takeover){el.innerHTML='';return}
+ const draw=()=>{el.innerHTML=`<div class="banner"><span class="t">${esc(c.att)} disse que ia verificar há 49 min e não voltou. A IA assume em <span class="count">${c.takeover.left}s</span>.</span>
+  <button class="btn small ai" id="tk">Deixar a IA responder agora</button><button class="btn small" id="tc">Eu respondo</button></div>`;
+  $('#tk').onclick=()=>doTake(c);$('#tc').onclick=()=>{cancelTake(c,true);$('#draft').focus()}};
+ draw();
+ S.timer=setInterval(()=>{c.takeover.left--;if(c.takeover.left<=0){doTake(c)}else{const n=el.querySelector('.count');if(n)n.textContent=c.takeover.left+'s'}},1000);
+}
+function doTake(c){clearInterval(S.timer);const t=c.takeover.text;c.takeover=null;c.mode='ia';c.suggest=null;
+ c.msgs.push({f:'note',t:'IA assumiu: cliente sem resposta há 49 min em horário de atendimento'});
+ c.msgs.push({f:'ia',t,h:now()});c.p.autos=[['Follow-up se não responder','em 30 min']];
+ renderBanner();renderHead();renderMsgs();renderList();renderProf();renderLive();toast('A IA assumiu a conversa com Fernanda');
+ setTimeout(()=>{c.msgs.push({f:'cli',t:'Pode sim, obrigada!!',h:now()});c.msgs.push({f:'ia',t:'Prontinho, Fernanda! Hidratação hoje às 17h30 com a Bia no Sumaré. Te mando um lembrete 1h antes',h:now()});
+  c.msgs.push({f:'note',t:'Agendamento criado no Trinks pela IA · etapa movida para Agendada'});c.stage='Agendada';c.p.next='Hoje 17:30 · Hidratação · Bia';
+  c.p.autos=[['Lembrete 1h antes','16:30']];if(S.active===c.id){renderMsgs();renderProf()}renderList()},3500)}
+function cancelTake(c,human){clearInterval(S.timer);c.takeover=null;if(human){c.mode='humano'};$('#banner').innerHTML='';c.p.autos=c.p.autos.filter(a=>!a[0].startsWith('IA assume'));renderProf();renderHead()}
+
+/* ---------- ficha ---------- */
+function renderProf(){
+ const c=conv();const p=c.p;const el=$('#prof');if(!el)return;
+ el.innerHTML=`
+  <div class="row" style="justify-content:flex-end"><button class="btn small ghost profbtn" id="pfx">Fechar</button></div>
+  <div class="ptop"><div class="av" style="background:${avc(c.name)}">${ini(c.name)}</div><b>${esc(c.name)}</b><small>${c.phone}</small></div>
+  <div class="sec"><h3>Etapa no funil</h3>
+   <div class="stage"><b>${c.stage}</b><small>movida pela IA</small></div></div>
+  <div class="sec"><h3>Resumo da IA</h3><div class="summary">${esc(p.summary)}</div></div>
+  ${p.next?`<div class="sec"><h3>Próximo horário</h3><div class="stage"><b style="font-size:14px">${esc(p.next)}</b><small style="color:var(--ok)">no Trinks</small></div></div>`:''}
+  <div class="sec"><h3>Trinks</h3><dl class="kv">
+   <dt>Unidade</dt><dd>${c.unit}</dd><dt>Último serviço</dt><dd>${esc(p.last)}</dd><dt>Visitas</dt><dd>${p.visits}</dd><dt>Cashback</dt><dd>${p.cash}</dd><dt>Origem</dt><dd>${esc(p.src)}</dd></dl></div>
+  <div class="sec"><h3>Etiquetas</h3><div class="tags">${p.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>
+  <div class="sec"><h3>Automações programadas</h3><div>${p.autos.map(a=>`<div class="auto"><span class="dot k-tip" style="margin:0"></span>${esc(a[0])}<time>${a[1]}</time></div>`).join('')||'<span style="color:var(--muted);font-size:12.5px">Nenhuma</span>'}</div></div>
+  <p class="example">Dados de exemplo</p>`;
+ $('#pfx').onclick=()=>{S.prof=false;el.hidden=true;$('#inbox').classList.add('noprof')};
+}
+
+/* ---------- agendar ---------- */
+const SERV=[['Progressiva Império (longo)',320,'3h'],['Progressiva Império (médio)',270,'2h30'],['Hidratação profunda',90,'1h'],['Manutenção de raiz',180,'2h']];
+const PROF={Norte:['Jéssica','Carla','Rafa'],Sumaré:['Bia','Lu'],Feira:['Em breve']};
+const SLOTS=['09:00','10:00','11:30','13:00','14:00','15:30','17:00','18:30'];
+function openAgenda(){
+ const c=conv();const unit=c.unit==='Feira'?'Norte':c.unit;
+ const base=new Date();const days=[...Array(6)].map((_,i)=>{const d=new Date(base);d.setDate(d.getDate()+i+1);return d});
+ const A={unit,serv:c.id==='c2'?2:0,prof:PROF[unit][0],day:c.id==='c1'?days.findIndex(d=>d.getDate()===15):0,slot:null};
+ if(A.day<0)A.day=0;
+ const fmt=d=>d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','');
+ const draw=()=>{
+  const taken=SLOTS.map((s,i)=>((i*7+A.day*3+A.prof.length)%5)===0);
+  $('#ov').innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="agt">
+   <h3 id="agt">Agendar ${esc(c.name.split(' ')[0])}</h3>
+   <div class="f2">
+    <label for="au">Unidade<select id="au">${['Norte','Sumaré'].map(u=>`<option value="${u}" ${u===A.unit?'selected':''}>${unitName(u)}</option>`).join('')}</select></label>
+    <label for="ap">Profissional<select id="ap">${PROF[A.unit].map(p=>`<option ${p===A.prof?'selected':''}>${p}</option>`).join('')}</select></label>
+   </div>
+   <label for="as">Serviço<select id="as">${SERV.map((s,i)=>`<option value="${i}" ${i===A.serv?'selected':''}>${s[0]} · R$ ${s[1]} · ${s[2]}</option>`).join('')}</select></label>
+   <div style="display:flex;flex-direction:column;gap:6px"><label style="pointer-events:none">Dia</label><div class="days">${days.map((d,i)=>`<button data-d="${i}" aria-pressed="${i===A.day}"><small>${fmt(d)}</small>${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</button>`).join('')}</div></div>
+   <div style="display:flex;flex-direction:column;gap:6px"><label style="pointer-events:none">Horários livres no Trinks</label><div class="slots">${SLOTS.map((s,i)=>`<button data-s="${s}" ${taken[i]?'disabled':''} aria-pressed="${A.slot===s}">${s}</button>`).join('')}</div></div>
+   <div class="mfoot"><span>Ao confirmar: cria no Trinks, envia a confirmação e programa os lembretes.</span>
+    <div class="row"><button class="btn" id="acx">Cancelar</button><button class="btn primary" id="aok" ${A.slot?'':'disabled style="opacity:.5"'}>Confirmar agendamento</button></div></div>
+  </div>`;
+  $('#au').onchange=e=>{A.unit=e.target.value;A.prof=PROF[A.unit][0];A.slot=null;draw()};
+  $('#ap').onchange=e=>{A.prof=e.target.value;A.slot=null;draw()};
+  $('#as').onchange=e=>{A.serv=+e.target.value};
+  $('#ov').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{A.day=+b.dataset.d;A.slot=null;draw()});
+  $('#ov').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{A.slot=b.dataset.s;draw()});
+  $('#acx').onclick=closeOv;
+  $('#aok').onclick=()=>{if(!A.slot)return;const d=days[A.day];const ds=`${fmt(d)}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+   c.msgs.push({f:'me',by:'Você',t:`Prontinho, ${c.name.split(' ')[0]}! Seu horário está confirmado: ${SERV[A.serv][0]}, ${ds} às ${A.slot} com ${A.prof} no ${unitName(A.unit)}. Te mando um lembrete na véspera`,h:now()});
+   c.msgs.push({f:'note',t:'Criado no Trinks · etapa movida para Agendada · lembretes de 24h e 2h programados'});
+   c.stage='Agendada';c.suggest=null;c.p.next=`${ds} ${A.slot} · ${A.prof}`;c.p.autos=[['Lembrete 24h antes','véspera 09:00'],['Lembrete 2h antes','no dia'],['Pesquisa pós-atendimento','dia seguinte']];
+   closeOv();renderMsgs();renderProf();renderList();toast('Agendamento criado no Trinks')};
+ };
+ $('#ov').hidden=false;draw();
+}
+function closeOv(){$('#ov').hidden=true;$('#ov').innerHTML=''}
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeOv()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeOv()});
+
+/* ---------- funil ---------- */
+function renderFunil(){
+ const all=[...convs.map(c=>({stage:c.stage,name:c.name,unit:c.unit,s:lastText(c),id:c.id})),...extras.map(e=>({stage:e[0],name:e[1],unit:e[2],s:e[3]}))];
+ const why={'Novo lead':'chegou pelo WhatsApp','Em conversa':'respondeu à IA','Interessada':'pediu preço/horário','Agendada':'horário criado no Trinks','Compareceu':'conta fechada no Trinks','Manutenção':'completou 90 dias','Perdida':'objeção ou sem resposta'};
+ $('#v-funil').innerHTML=`<div class="page"><div class="page-in">
+  <div class="ph"><h2>Funil automático</h2><p>Ninguém arrasta card aqui. A IA move cada cliente pelo que acontece na conversa, e as etapas Agendada e Compareceu vêm direto do Trinks.</p></div>
+  <span class="example">Dados de exemplo</span>
+  <div class="board">${STAGES.map(st=>{const cs=all.filter(x=>x.stage===st);return `<div class="colk"><h4>${st}<span>${cs.length}</span></h4>
+   ${cs.map(x=>`<button class="card ${x.id?'fresh':''}" ${x.id?`data-id="${x.id}"`:''}><b>${esc(x.name)} <em class="unit">${x.unit}</em></b><span class="s">${esc(x.s)}</span><span class="mv">IA moveu · ${why[st]}</span></button>`).join('')}</div>`}).join('')}</div>
+ </div></div>`;
+ $('#v-funil').querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{S.active=b.dataset.id;S.inchat=true;go('conversas')});
+}
+
+/* ---------- automações ---------- */
+const FLOWS=[
+ ['Atendimento fora do horário','A IA responde na hora, tira dúvidas e agenda de madrugada, domingo e feriado.',true,[['Conversas hoje','21'],['Agendou','6']]],
+ ['IA assume quando a equipe some','Se a cliente ficar sem resposta por 15 min em horário de loja, a IA retoma a conversa.',true,[['Assumidas hoje','9'],['Viraram agendamento','4']]],
+ ['Lembrete 24h e 2h antes','Confirma presença com 1 ou 2 e já oferece reagendar sem precisar ligar.',true,[['Enviados hoje','18'],['Confirmaram','15']]],
+ ['Follow-up de quem não agendou','1h, 1 dia e 3 dias depois, sempre com uma pergunta de horário. Para ao primeiro sinal de desinteresse.',true,[['Na fila','42'],['Recuperadas na semana','11']]],
+ ['Recuperação de falta','Quem faltou recebe convite para remarcar no mesmo dia.',true,[['Faltas hoje','2'],['Remarcaram','1']]],
+ ['Manutenção de 90 dias','Chama a cliente para a manutenção da progressiva antes da raiz pesar.',true,[['Elegíveis este mês','64'],['Agendaram','19']]],
+ ['Cashback 30 e 60 dias','Avisa o saldo de cashback que está para vencer. Integra com o fluxo de cashback que já existe.',true,[['Avisos hoje','12'],['Usaram','3']]],
+ ['Campanhas e disparos','Envio em massa com modelos aprovados pela Meta, segmentado por unidade, serviço e etapa.',false,[['Status','aguardando API oficial']]]
+];
+function renderAuto(){
+ $('#v-automacoes').innerHTML=`<div class="page"><div class="page-in">
+  <div class="ph"><h2>Automações</h2><p>Fluxos prontos que rodam sozinhos. Cada mensagem sai no tom da Império e respeita o horário de cada unidade.</p></div>
+  <span class="example">Números de exemplo</span>
+  <div class="flows">${FLOWS.map((f,i)=>`<div class="flow"><div class="top"><b>${f[0]}</b><label class="sw"><input type="checkbox" id="fl${i}" ${f[2]?'checked':''} aria-label="Ativar ${f[0]}"><span></span></label></div>
+   <p>${f[1]}</p>${f[2]?'':'<span class="badge">Requer API oficial do WhatsApp</span>'}
+   <div class="st">${f[3].map(s=>`<span>${s[0]} <strong>${s[1]}</strong></span>`).join('')}</div></div>`).join('')}</div>
+ </div></div>`;
+ $('#v-automacoes').querySelectorAll('input').forEach((el,i)=>el.onchange=()=>toast(el.checked?`${FLOWS[i][0]}: ativado`:`${FLOWS[i][0]}: pausado`));
+}
+
+/* ---------- relatório ---------- */
+function renderReport(){
+ const motivos=[['Vai pensar / sumiu',14],['Preço',8],['Horário não serviu',5],['Mora longe',3],['Só pesquisando',1]];const mx=14;
+ $('#v-relatorio').innerHTML=`<div class="page"><div class="page-in">
+  <div class="ph"><h2>Relatório do dia</h2><p>Quinta, 6 de novembro · todas as unidades. Às 20h a IA envia este resumo no WhatsApp do Bruno, da Tássia e do Vinícius.</p></div>
+  <span class="example">Números de exemplo</span>
+  <div class="tiles">
+   <div class="tile"><small>Conversas</small><b>86</b><span><em>+12%</em> vs. quinta passada</span></div>
+   <div class="tile"><small>Agendamentos</small><b>23</b><span>14 pela IA · 9 pela equipe</span></div>
+   <div class="tile"><small>Não agendaram</small><b>31</b><span>todas no follow-up</span></div>
+   <div class="tile"><small>Recuperadas</small><b>6</b><span>de follow-up e faltas</span></div>
+  </div>
+  <div class="grid2">
+   <div class="panel"><h3>Quem agendou</h3>
+    <div class="split"><div style="width:61%;background:var(--ai)"></div><div style="width:39%;background:var(--brand)"></div></div>
+    <div class="legend"><span><i style="background:var(--ai)"></i>IA · 14</span><span><i style="background:var(--brand)"></i>Equipe · 9</span></div>
+    <h3 style="margin-top:6px">Por que não agendaram</h3>
+    ${motivos.map(m=>`<div class="bar"><span>${m[0]}</span><div class="tr"><div class="fl" style="width:${m[1]/mx*100}%"></div></div><span class="n">${m[1]}</span></div>`).join('')}
+    <h3 style="margin-top:6px">Por unidade</h3>
+    <dl class="kv"><dt>Salvador Norte Shopping</dt><dd>48 conversas · 14 agend.</dd><dt>Shopping Sumaré</dt><dd>31 conversas · 9 agend.</dd><dt>Feira de Santana</dt><dd>7 na lista VIP</dd></dl>
+   </div>
+   <div class="panel" style="background:none;border:0;padding:0">
+    <div class="phone"><div class="ptitle">Sintonia → Bruno · 20:00</div>
+     <div class="b ia"><div class="by">IA Sintonia</div>Boa noite, Bruno! Resumo de hoje:
+
+86 conversas (+12%)
+23 agendamentos: 14 pela IA, 9 pela equipe
+31 não agendaram, todas no follow-up
+6 clientes recuperadas
+2 faltas, 1 já remarcou
+
+Destaque: Norte Shopping com 14 agendamentos.
+Atenção: Sumaré teve 5 conversas sem resposta da equipe por mais de 15 min. A IA assumiu todas.
+
+Amanhã: 27 horários marcados, 15 já confirmados.<div class="tm">20:00</div></div>
+    </div>
+   </div>
+  </div>
+ </div></div>`;
+}
+
+go('conversas');
+window.addEventListener('resize',()=>{if(window.innerWidth>1180&&!S.prof){S.prof=true;if(S.view==='conversas')renderInbox()}});
+</script>

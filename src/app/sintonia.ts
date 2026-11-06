@@ -1,0 +1,410 @@
+import type { Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
+import type { CanalWhatsApp, MensagemRecebida } from '../channels/tipos.js';
+import type { Repositorio, Tarefa } from '../store/repositorio.js';
+import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
+import type { AcaoAgente } from '../ai/ferramentas.js';
+import { decidirQuemResponde, equipeAtuou, REGRAS_PADRAO, type RegrasAtendimento } from '../engine/atendimento.js';
+import { proximaEtapa, type EventoFunil } from '../engine/etapas.js';
+import { followupsSemAgendamento, lembretesDoAgendamento } from '../engine/followups.js';
+import { UNIDADES } from '../unidades.js';
+import { bahia, DIA, partesBahia } from '../util/tempo.js';
+import { resumir, textoRelatorio } from './relatorio.js';
+import { TravaMemoria, type Trava } from '../fila/trava.js';
+
+/** Número de WhatsApp conectado: por qual canal e de qual unidade. */
+export interface NumeroConectado {
+  canalId: string;
+  unidade: UnidadeId;
+  canal: CanalWhatsApp;
+}
+
+export interface DependenciasSintonia {
+  empresaId: string;
+  repo: Repositorio;
+  numeros: NumeroConectado[];
+  agente: { executar(p: PedidoAgente): Promise<RespostaAgente> };
+  agora?: () => Date;
+  regras?: RegrasAtendimento;
+  /** Trava por conversa. Com vários processos, use a do Postgres. */
+  trava?: Trava;
+  /** Avisa a equipe (ex.: WhatsApp da gerente) quando a IA passa uma conversa adiante. */
+  avisarEquipe?: (texto: string, conversa: Conversa) => Promise<void>;
+  log?: (msg: string, extra?: unknown) => void;
+}
+
+const FOLLOWUPS: Tarefa['tipo'][] = ['followup_1h', 'followup_1d', 'followup_3d'];
+
+/**
+ * Quando a Sintonia "viu" a mensagem da cliente: o mais tarde entre a hora do WhatsApp e agora.
+ * Se a cliente manda duas mensagens seguidas, a resposta à primeira pode sair depois da hora
+ * da segunda; contando pela hora em que a segunda foi vista, ela não fica sem resposta.
+ */
+const vistaEm = (enviadaEm: Date, agora: Date, c: Conversa) =>
+  // Uma mensagem nova é sempre posterior a tudo o que a loja já disse: a resposta anterior não a viu.
+  new Date(
+    Math.max(
+      enviadaEm.getTime(),
+      agora.getTime(),
+      (c.ultimaMensagemIa?.getTime() ?? 0) + 1,
+      (c.ultimaMensagemEquipe?.getTime() ?? 0) + 1,
+    ),
+  );
+
+/**
+ * Orquestra tudo: recebe mensagens, decide quem responde, chama a IA, envia,
+ * move o funil e programa lembretes e follow-ups.
+ */
+export class Sintonia {
+  private readonly trava: Trava;
+  /** Envios em andamento: a Evolution pode avisar do nosso próprio envio antes de ele retornar o id. */
+  private readonly enviando = new Map<string, number>();
+  private readonly agora: () => Date;
+  private readonly regras: RegrasAtendimento;
+  private readonly log: (msg: string, extra?: unknown) => void;
+
+  constructor(private readonly d: DependenciasSintonia) {
+    this.agora = d.agora ?? (() => new Date());
+    this.regras = d.regras ?? REGRAS_PADRAO;
+    this.log = d.log ?? (() => {});
+    this.trava = d.trava ?? new TravaMemoria();
+  }
+
+  // ---------- entrada pelo WhatsApp ----------
+
+  async receber(msg: MensagemRecebida): Promise<void> {
+    const numero = this.d.numeros.find((n) => n.canalId === msg.canalId);
+    if (!numero) {
+      this.log('Mensagem de número não cadastrado', msg.canalId);
+      return;
+    }
+    // A própria Sintonia enviou: a Evolution devolve como fromMe. Ignorar.
+    if (msg.deMim) {
+      if (await this.d.repo.foiEnviadoPorNos(msg.idExterno)) return;
+      const chave = this.chaveEnvio(msg.canalId, msg.telefone, msg.texto);
+      if (this.enviando.has(chave)) {
+        this.enviando.delete(chave);
+        return;
+      }
+    }
+
+    const criada = await this.d.repo.buscarOuCriarConversa({
+      empresaId: this.d.empresaId,
+      unidade: numero.unidade,
+      canalId: numero.canalId,
+      telefone: msg.telefone,
+      nome: msg.deMim ? undefined : msg.nome,
+      agora: this.agora(),
+    });
+
+    // Toda alteração na conversa acontece sob a trava dela, lendo a versão mais nova:
+    // dois processos nunca gravam um por cima do outro.
+    const pensar = await this.mutar(criada.conversa.id, async (conversa) => {
+      const agora = this.agora();
+      const gravou = await this.d.repo.adicionarMensagem({
+        conversaId: conversa.id,
+        autor: msg.deMim ? 'equipe' : 'cliente',
+        autorNome: msg.deMim ? 'celular da loja' : undefined,
+        texto: msg.texto,
+        em: msg.em,
+        idExterno: msg.idExterno,
+      });
+
+      if (msg.deMim) {
+        if (!gravou) return false;
+        // A atendente respondeu pelo celular: a IA sai da frente e os follow-ups recomeçam a contar.
+        Object.assign(conversa, equipeAtuou(conversa, agora, this.regras), { ultimaMensagemEquipe: msg.em, atualizadaEm: agora });
+        await this.d.repo.salvarConversa(conversa);
+        await this.d.repo.cancelarTarefas(conversa.id, ['reavaliar', ...FOLLOWUPS]);
+        await this.programarFollowups(conversa, agora);
+        await this.evento('equipe_respondeu', conversa);
+        return false;
+      }
+
+      if (!gravou) {
+        // Já estava gravada: webhook repetido, ou a mensagem foi retomada depois de uma queda
+        // no meio do processamento. Garante que a conversa a registra e confere se foi respondida.
+        if (!conversa.ultimaMensagemCliente || conversa.ultimaMensagemCliente.getTime() < msg.em.getTime()) {
+          conversa.ultimaMensagemCliente = vistaEm(msg.em, agora, conversa);
+          conversa.atualizadaEm = agora;
+          await this.d.repo.salvarConversa(conversa);
+        }
+        return true;
+      }
+
+      if (criada.nova) await this.evento('conversa_nova', conversa);
+      conversa.ultimaMensagemCliente = vistaEm(msg.em, agora, conversa);
+      conversa.atualizadaEm = agora;
+      await this.moverFunil(conversa, { tipo: 'mensagem_cliente' });
+      await this.d.repo.salvarConversa(conversa);
+      await this.d.repo.cancelarTarefas(conversa.id, FOLLOWUPS);
+      await this.evento('mensagem_cliente', conversa);
+      return true;
+    });
+    if (pensar) await this.processar(criada.conversa.id);
+  }
+
+  // ---------- ações vindas da tela do CRM ----------
+
+  /** Atendente começou a digitar ou abriu a conversa para responder. */
+  async equipeDigitando(conversaId: string): Promise<void> {
+    await this.mutar(conversaId, async (c) => {
+      Object.assign(c, equipeAtuou(c, this.agora(), this.regras));
+      await this.d.repo.salvarConversa(c);
+    });
+  }
+
+  /** Atendente enviou pelo CRM. */
+  async equipeEnviou(conversaId: string, texto: string, atendente: string): Promise<void> {
+    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente));
+    if (feito === undefined) throw new Error('Conversa não encontrada');
+  }
+
+  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string): Promise<true> {
+    const agora = this.agora();
+    const espera = this.tempoDeResposta(c, agora);
+    const id = await this.enviar(c, texto);
+    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
+    Object.assign(c, equipeAtuou(c, agora, this.regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
+    await this.d.repo.salvarConversa(c);
+    await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
+    await this.programarFollowups(c, agora);
+    await this.evento('equipe_respondeu', c, { atendente, tempoRespostaMs: espera });
+    return true;
+  }
+
+  async mudarModo(conversaId: string, modo: ModoAtendimento): Promise<void> {
+    const existe = await this.mutar(conversaId, async (c) => {
+      c.modo = modo;
+      c.pausaIaAte = undefined;
+      await this.d.repo.salvarConversa(c);
+      return true;
+    });
+    if (existe && modo !== 'humano') await this.processar(conversaId);
+  }
+
+  /** Agendamento feito pela atendente no botão "Agendar" do CRM (já gravado no Trinks). */
+  async equipeAgendou(conversaId: string, acao: Extract<AcaoAgente, { tipo: 'agendou' }>, atendente: string): Promise<void> {
+    await this.mutar(conversaId, async (c) => {
+      await this.aplicarAcoes(c, [acao], 'equipe', atendente);
+      await this.d.repo.salvarConversa(c);
+    });
+  }
+
+  // ---------- relógio: reavaliações, lembretes e follow-ups ----------
+
+  async tick(): Promise<void> {
+    const agora = this.agora();
+    for (const t of await this.d.repo.reivindicarTarefas(agora)) {
+      try {
+        if (t.tipo === 'reavaliar') await this.processar(t.conversaId);
+        else await this.mutar(t.conversaId, (c) => this.enviarAtivo(t, c));
+      } catch (e) {
+        this.log('Falha ao executar tarefa', { tarefa: t, erro: String(e) });
+        await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: t.conversaId, em: agora, dados: { tarefa: t.tipo, erro: String(e) } });
+      }
+    }
+  }
+
+  /** Números do dia (painel do gestor). */
+  async resumoDoDia(dia: Date) {
+    const p = partesBahia(dia);
+    const inicio = bahia(p.ano, p.mes, p.dia);
+    return resumir(await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)));
+  }
+
+  /** Texto do relatório do dia (o envio às 20h fica no index). */
+  async relatorioDoDia(dia: Date): Promise<string> {
+    const p = partesBahia(dia);
+    const inicio = bahia(p.ano, p.mes, p.dia);
+    const eventos = await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
+    const hoje = new Set(eventos.filter((e) => e.tipo === 'mensagem_cliente').map((e) => e.conversaId));
+    const conversas = await this.d.repo.listarConversas();
+    const semAgendar = conversas.filter((c) => hoje.has(c.id) && c.etapa !== 'agendada' && c.etapa !== 'compareceu').length;
+    return textoRelatorio(resumir(eventos), dia, semAgendar);
+  }
+
+  // ---------- núcleo ----------
+
+  /**
+   * Roda `fn` com a conversa mais nova, sob a trava dela. Retorna undefined se a conversa não existe.
+   * Nunca chamar `processar` de dentro (a trava não é reentrante).
+   */
+  private mutar<T>(conversaId: string, fn: (c: Conversa) => Promise<T>): Promise<T | undefined> {
+    return this.trava.comTrava(conversaId, async () => {
+      const c = await this.d.repo.buscarConversa(conversaId);
+      return c ? fn(c) : undefined;
+    });
+  }
+
+  /** Uma conversa por vez: mensagens em sequência não geram respostas cruzadas. */
+  private async processar(conversaId: string): Promise<void> {
+    try {
+      await this.trava.comTrava(conversaId, () => this.processarAgora(conversaId));
+    } catch (e) {
+      // A mensagem já está salva; a falha foi ao pensar ou enviar (IA fora, WhatsApp fora).
+      // Registra e tenta de novo daqui a 2 minutos, para a cliente não ficar sem resposta.
+      this.log('Falha ao processar', String(e));
+      await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: String(e) } });
+      await this.reavaliarEm(conversaId, new Date(this.agora().getTime() + 2 * 60_000));
+    }
+  }
+
+  private async processarAgora(conversaId: string): Promise<void> {
+    for (let rodada = 0; rodada < 3; rodada++) {
+      const c = await this.d.repo.buscarConversa(conversaId);
+      if (!c) return;
+      const agora = this.agora();
+      const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, this.regras);
+
+      if (decisao.acao === 'nada') return;
+      if (decisao.acao === 'aguardar') {
+        await this.reavaliarEm(c.id, decisao.reavaliarEm);
+        return;
+      }
+
+      const marco = c.ultimaMensagemCliente?.getTime();
+      const mensagens = await this.d.repo.mensagens(c.id);
+      const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
+      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo });
+
+      // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
+      const depois = await this.d.repo.buscarConversa(c.id);
+      if (!depois) return;
+      if (depois.ultimaMensagemCliente?.getTime() !== marco) continue;
+      // A equipe assumiu enquanto a IA pensava: não atropela.
+      if (modo === 'responder' && decidirQuemResponde(depois, UNIDADES[depois.unidade], this.agora(), this.regras).acao !== 'ia_responde') {
+        return;
+      }
+
+      if (decisao.acao === 'sugerir') {
+        await this.d.repo.guardarSugestao(depois.id, r.texto);
+        await this.aplicarAcoes(depois, r.acoes, 'ia');
+        await this.d.repo.salvarConversa(depois);
+        await this.evento('sugestao_gerada', depois);
+        await this.reavaliarEm(depois.id, decisao.reavaliarEm);
+        return;
+      }
+
+      const enviadoEm = this.agora();
+      const id = await this.enviar(depois, r.texto);
+      await this.d.repo.adicionarMensagem({ conversaId: depois.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
+      depois.ultimaMensagemIa = enviadoEm;
+      depois.atualizadaEm = enviadoEm;
+      if (decisao.assumiu) {
+        depois.modo = 'ia';
+        await this.evento('ia_assumiu', depois, { motivo: decisao.motivo });
+      }
+      await this.aplicarAcoes(depois, r.acoes, 'ia');
+      await this.d.repo.salvarConversa(depois);
+      await this.evento('ia_respondeu', depois);
+      await this.d.repo.cancelarTarefas(depois.id, ['reavaliar']);
+      await this.programarFollowups(depois, enviadoEm);
+      return;
+    }
+  }
+
+  private async enviarAtivo(t: Tarefa, c: Conversa): Promise<void> {
+    if (c.modo === 'humano' || t.tipo === 'reavaliar') return;
+    const numero = this.numeroDa(c);
+    // Na API oficial, mensagem ativa fora da janela de 24h exige modelo aprovado (Fase 3).
+    if (numero.canal.tipo === 'meta') {
+      const ult = c.ultimaMensagemCliente?.getTime() ?? 0;
+      if (this.agora().getTime() - ult > DIA) {
+        await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: c.id, em: this.agora(), dados: { tarefa: t.tipo, erro: 'requer modelo aprovado pela Meta' } });
+        return;
+      }
+    }
+    const mensagens = await this.d.repo.mensagens(c.id);
+    const r = await this.d.agente.executar({ conversa: c, mensagens, agora: this.agora(), modo: 'responder', tipoAtivo: t.tipo });
+    const enviadoEm = this.agora();
+    const id = await this.enviar(c, r.texto);
+    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
+    c.ultimaMensagemIa = enviadoEm;
+    await this.aplicarAcoes(c, r.acoes, 'ia');
+    if (t.tipo === 'followup_3d') await this.moverFunil(c, { tipo: 'followups_esgotados' });
+    await this.d.repo.salvarConversa(c);
+    await this.evento('envio_ativo', c, { tipo: t.tipo });
+  }
+
+  private async aplicarAcoes(c: Conversa, acoes: AcaoAgente[], autor: 'ia' | 'equipe', atendente?: string): Promise<void> {
+    for (const a of acoes) {
+      if (a.tipo === 'etapa') await this.moverFunil(c, { tipo: 'ia_classificou', etapa: a.etapa }, a.motivo);
+      if (a.tipo === 'agendou') {
+        c.trinksClienteId = a.clienteTrinksId;
+        await this.moverFunil(c, { tipo: 'agendamento_criado' });
+        await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
+        for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) {
+          await this.d.repo.programar({ conversaId: c.id, tipo: l.tipo, quando: l.quando });
+        }
+        await this.evento(autor === 'ia' ? 'agendamento_ia' : 'agendamento_equipe', c, {
+          trinksId: a.agendamento.trinksId,
+          atendente: autor === 'equipe' ? atendente : undefined,
+          servico: a.agendamento.servico,
+          inicio: a.agendamento.inicio.toISOString(),
+        });
+      }
+      if (a.tipo === 'passar_para_humano') {
+        c.modo = 'humano';
+        if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
+        await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
+        await this.evento('passou_para_humano', c, { motivo: a.motivo });
+        await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${UNIDADES[c.unidade].nome}) para a equipe. Motivo: ${a.motivo}`, c);
+      }
+    }
+  }
+
+  private async moverFunil(c: Conversa, ev: EventoFunil, motivo?: string): Promise<void> {
+    const nova = proximaEtapa(c.etapa, ev);
+    if (nova === c.etapa) return;
+    const de = c.etapa;
+    c.etapa = nova;
+    await this.evento('etapa_mudou', c, { de, para: nova, motivo: motivo ?? ev.tipo });
+  }
+
+  private async programarFollowups(c: Conversa, desde: Date): Promise<void> {
+    if (c.modo === 'humano' || c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida') return;
+    await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
+    for (const f of followupsSemAgendamento(desde)) await this.d.repo.programar({ conversaId: c.id, tipo: f.tipo, quando: f.quando });
+  }
+
+  private async reavaliarEm(conversaId: string, quando: Date): Promise<void> {
+    await this.d.repo.cancelarTarefas(conversaId, ['reavaliar']);
+    await this.d.repo.programar({ conversaId, tipo: 'reavaliar', quando });
+  }
+
+  /** Quanto a cliente esperou pela resposta da equipe (para o painel por atendente). */
+  private tempoDeResposta(c: Conversa, agora: Date): number | undefined {
+    const cli = c.ultimaMensagemCliente?.getTime();
+    const ultLoja = Math.max(c.ultimaMensagemIa?.getTime() ?? 0, c.ultimaMensagemEquipe?.getTime() ?? 0);
+    if (!cli || ultLoja > cli) return undefined;
+    return agora.getTime() - cli;
+  }
+
+  private numeroDa(c: Conversa): NumeroConectado {
+    const n = this.d.numeros.find((x) => x.canalId === c.canalId);
+    if (!n) throw new Error(`Número ${c.canalId} não está conectado`);
+    return n;
+  }
+
+  private async enviar(c: Conversa, texto: string): Promise<string> {
+    const n = this.numeroDa(c);
+    const chave = this.chaveEnvio(n.canalId, c.telefone, texto);
+    this.enviando.set(chave, Date.now());
+    try {
+      const r = await n.canal.enviarTexto(n.canalId, c.telefone, texto);
+      await this.d.repo.registrarEnviadoPorNos(r.idExterno);
+      return r.idExterno;
+    } finally {
+      // Dá um tempo para o eco do webhook chegar e depois esquece.
+      setTimeout(() => this.enviando.delete(chave), 60_000).unref?.();
+    }
+  }
+
+  private chaveEnvio(canalId: string, telefone: string, texto: string): string {
+    return `${canalId}|${telefone}|${texto.trim()}`;
+  }
+
+  private evento(tipo: Parameters<Repositorio['registrarEvento']>[0]['tipo'], c: Conversa, dados?: Record<string, unknown>) {
+    return this.d.repo.registrarEvento({ tipo, conversaId: c.id, unidade: c.unidade, em: this.agora(), dados });
+  }
+}

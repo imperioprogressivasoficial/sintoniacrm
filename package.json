@@ -1,0 +1,30 @@
+{
+  "name": "sintonia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sintonia — CRM automático com IA para WhatsApp (Império Progressivas)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:pg": "SINTONIA_TESTE_PG=${SINTONIA_TESTE_PG:-postgres://sintonia@127.0.0.1:5432/sintonia_teste} vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
