@@ -15,6 +15,8 @@ import { RepositorioMemoria, type Repositorio } from './store/repositorio.js';
 import { FilaMemoria, FilaPostgres, type FilaEntrada } from './fila/entrada.js';
 import { Trabalhador } from './fila/trabalhador.js';
 import { TravaMemoria, TravaPostgres, type Trava } from './fila/trava.js';
+import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
+import { gerarHash, senhaFraca } from './auth/senha.js';
 import { UNIDADES } from './unidades.js';
 import { dataISO, partesBahia } from './util/tempo.js';
 
@@ -32,6 +34,7 @@ const agente = new Agente(claude, trinks, base, { modelo: cfg.SINTONIA_MODELO, e
 let repo: Repositorio;
 let fila: FilaEntrada;
 let trava: Trava;
+let contas: Contas;
 let pool: pg.Pool | undefined;
 if (cfg.DATABASE_URL) {
   pool = new pg.Pool({ connectionString: cfg.DATABASE_URL, max: 20 });
@@ -40,11 +43,30 @@ if (cfg.DATABASE_URL) {
   repo = new RepositorioPostgres(pool);
   fila = new FilaPostgres(pool);
   trava = new TravaPostgres(pool);
+  contas = new ContasPostgres(pool);
 } else {
   log('Aviso: DATABASE_URL ausente; dados em memória (somem ao reiniciar). Use só para teste local.');
   repo = new RepositorioMemoria();
   fila = new FilaMemoria();
   trava = new TravaMemoria();
+  contas = new ContasMemoria();
+}
+
+// Primeiro administrador (só se ainda não existir).
+if (cfg.ADMIN_EMAIL && cfg.ADMIN_SENHA) {
+  const fraca = senhaFraca(cfg.ADMIN_SENHA);
+  if (fraca) log(`ADMIN_SENHA recusada: ${fraca}`);
+  else if (!(await contas.buscarPorEmail(cfg.ADMIN_EMAIL))) {
+    await contas.criarUsuario({
+      empresaId: cfg.SINTONIA_EMPRESA_ID,
+      nome: cfg.ADMIN_NOME ?? 'Administrador',
+      email: cfg.ADMIN_EMAIL,
+      papel: 'admin',
+      unidades: [],
+      senhaHash: await gerarHash(cfg.ADMIN_SENHA),
+    });
+    log(`Administrador ${cfg.ADMIN_EMAIL} criado.`);
+  }
 }
 
 const evolution =
@@ -81,6 +103,7 @@ const app = criarServidor({
   sintonia,
   repo,
   log,
+  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
   fila: { fila, avisar: () => trabalhador.avisar() },
   agenda: cfg.TRINKS_API_KEY ? trinks : undefined,
   evolution: evolution ? { canal: evolution, token: cfg.EVOLUTION_WEBHOOK_TOKEN } : undefined,

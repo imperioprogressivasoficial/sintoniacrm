@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sintonia CRM</title>
+<meta name="theme-color" content="#106EBE">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/marca.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body class="app-vazio">
+<header class="topo">
+  <div class="miolo">
+    <a class="logo" href="/app" aria-label="Sintonia CRM"><img src="/marca.svg" alt=""><span>sintonia<b>.</b></span></a>
+    <nav class="menu"><button class="botao botao-contorno" id="sair" type="button">Sair</button></nav>
+  </div>
+</header>
+<main class="miolo">
+  <div class="cartao">
+    <h2 id="ola" style="margin:0">Olá!</h2>
+    <p class="sub" id="perfil" style="margin:0;color:var(--cinza)"></p>
+    <p style="margin:0">A tela de atendimento, com conversas, sugestões da IA e o botão Agendar, chega na próxima etapa. Seu acesso já está pronto.</p>
+  </div>
+</main>
+<script>
+(async () => {
+  const papeis = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
+  const r = await fetch('/api/auth/eu');
+  if (r.status === 401) { location.href = '/entrar'; return; }
+  const eu = await r.json();
+  document.getElementById('ola').textContent = 'Olá, ' + eu.nome.split(' ')[0] + '!';
+  document.getElementById('perfil').textContent = (papeis[eu.papel] || eu.papel) + (eu.unidades.length ? ' · ' + eu.unidades.join(', ') : '');
+  document.getElementById('sair').addEventListener('click', async () => {
+    await fetch('/api/auth/sair', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    location.href = '/entrar';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entrar · Sintonia CRM</title>
+<meta name="theme-color" content="#106EBE">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/marca.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<div class="tela-login">
+  <section class="lado-azul">
+    <div class="arco" aria-hidden="true"></div>
+    <a class="logo" href="/" aria-label="Sintonia CRM, início"><img src="/marca.svg" alt=""><span>sintonia<b>.</b></span></a>
+    <div>
+      <h1>Bom te ver de novo. <em>Suas clientes estão esperando.</em></h1>
+      <p>Entre para ver suas conversas, as sugestões da IA e a agenda do dia.</p>
+    </div>
+    <span></span>
+  </section>
+
+  <section class="lado-form">
+    <form class="cartao" id="form-entrar" novalidate>
+      <div>
+        <h2>Entrar</h2>
+        <p class="sub">Use o e-mail cadastrado pela sua empresa.</p>
+      </div>
+      <div class="campo"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="username" required></div>
+      <div class="campo">
+        <label for="senha">Senha</label>
+        <div class="senha"><input id="senha" name="senha" type="password" autocomplete="current-password" required><button type="button" id="ver-senha" aria-controls="senha">Mostrar</button></div>
+      </div>
+      <div id="aviso-entrar" role="status" aria-live="polite"></div>
+      <button class="botao botao-azul" type="submit">Entrar</button>
+      <p class="miudo">Esqueceu a senha? Peça ao administrador da sua empresa para criar uma nova.</p>
+    </form>
+  </section>
+</div>
+
+<script>
+(() => {
+  const form = document.getElementById('form-entrar');
+  const aviso = document.getElementById('aviso-entrar');
+  const senha = document.getElementById('senha');
+  const ver = document.getElementById('ver-senha');
+  ver.addEventListener('click', () => {
+    const mostrando = senha.type === 'text';
+    senha.type = mostrando ? 'password' : 'text';
+    ver.textContent = mostrando ? 'Mostrar' : 'Esconder';
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dados = Object.fromEntries(new FormData(form));
+    if (!dados.email || !dados.senha) { aviso.className = 'aviso erro'; aviso.textContent = 'Preencha e-mail e senha.'; return; }
+    const botao = form.querySelector('button[type=submit]');
+    botao.disabled = true;
+    try {
+      const r = await fetch('/api/auth/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(dados) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) { location.href = '/app'; return; }
+      aviso.className = 'aviso erro';
+      aviso.textContent = j.erro || 'Não foi possível entrar agora.';
+    } catch { aviso.className = 'aviso erro'; aviso.textContent = 'Sem conexão. Tente de novo.'; }
+    finally { botao.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

@@ -8,6 +8,8 @@ import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida } from './channels/tipos.js';
+import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
+import { registrarPaginas } from './web/paginas.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
 export interface DependenciasServidor {
@@ -22,6 +24,8 @@ export interface DependenciasServidor {
   agenda?: Agenda;
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
+  /** Login. Sem ele, a API fica aberta (só para teste local). */
+  auth?: OpcoesAuth;
 }
 
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
@@ -37,6 +41,10 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       feito(e as Error, undefined);
     }
   });
+
+  // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
+  if (d.auth) registrarAuth(app, d.auth);
+  registrarPaginas(app, d.auth);
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).

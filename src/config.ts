@@ -21,6 +21,12 @@ const Env = z.object({
   /** Postgres da Sintonia. Sem ele, tudo fica em memória (só para teste local). */
   DATABASE_URL: z.string().optional(),
   /** Quantas clientes diferentes cada processo atende ao mesmo tempo. */
+  /** Cookie de login só por HTTPS. Desligue (0) apenas em teste local sem HTTPS. */
+  COOKIE_SEGURO: z.enum(['0', '1']).default('1'),
+  /** Primeiro administrador, criado ao subir se ainda não existir. */
+  ADMIN_NOME: z.string().optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_SENHA: z.string().optional(),
   SINTONIA_PARALELO: z.coerce.number().int().min(1).max(64).default(8),
 });
 
