@@ -30,7 +30,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-abas button { all: unset; cursor: pointer; text-align: center; padding: 10px 6px; border-radius: 999px; font-size: 14.5px; font-weight: 600; color: var(--sub); display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; transition: background .18s, color .18s; }
   .ld-abas button[aria-selected="true"] { background: var(--vidro-ativo); color: var(--texto); border-color: var(--vidro-borda); box-shadow: 0 2px 10px rgba(0, 0, 0, .08); font-weight: 700; }
   .ld-abas button:focus-visible, .ld-botao:focus-visible, .ld-link:focus-visible, .ld-arquivo:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-  .ld-abas .ld-qtd { font-size: 11.5px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--acento); color: #fff; display: inline-grid; place-items: center; padding: 0 5px; font-weight: 800; }
+  .ld-abas .ld-qtd { font-size: 11.5px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--acento); color: #071d33; display: inline-grid; place-items: center; padding: 0 5px; font-weight: 800; }
   .ld-bloco { border-radius: 24px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
   .ld-bloco h2 { margin: 0; font-size: 15px; font-weight: 700; }
   .ld-bloco h2 small { display: block; font-size: 12.5px; color: var(--sub); font-weight: 500; margin-top: 3px; line-height: 1.4; }
@@ -38,7 +38,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-campo { display: grid; gap: 5px; font-size: 12px; color: var(--sub); font-weight: 700; min-width: 0; }
   .ld-campo select, .ld-campo input:not([type=checkbox]), .ld-campo textarea { font: inherit; font-size: 15px; font-weight: 600; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 14px; padding: 11px 12px; min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; }
   .ld-campo textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 13px; font-weight: 500; }
-  .ld-campo select option { color: #002941; }
+  .ld-campo select option { color: #106ebe; }
   .ld-periodo { grid-column: 1 / -1; max-width: 560px; }
   .ld-periodo > div { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
   .ld-periodo > div span { color: var(--sub); font-weight: 500; }
@@ -48,7 +48,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-marcar input { width: 20px; height: 20px; accent-color: var(--acento); margin: 0; flex: none; }
   .ld-marcar small { display: block; color: var(--sub); font-size: 12.5px; }
   .ld-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .ld-botao { all: unset; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; box-sizing: border-box; background: var(--acento); color: #fff; font-weight: 800; font-size: 15px; padding: 0 22px; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca-menta) 35%, transparent), 0 6px 22px color-mix(in srgb, var(--marca-menta) 35%, transparent); text-align: center; transition: transform .18s; }
+  .ld-botao { all: unset; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; box-sizing: border-box; background: var(--acento); color: #071d33; font-weight: 800; font-size: 15px; padding: 0 22px; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca-menta) 35%, transparent), 0 6px 22px color-mix(in srgb, var(--marca-menta) 35%, transparent); text-align: center; transition: transform .18s; }
   .ld-botao:hover { transform: translateY(-1px); }
   .ld-botao svg { width: 18px; height: 18px; }
   .ld-botao.ld-leve { background: var(--vidro-item); color: var(--texto); box-shadow: none; border: 1px solid var(--vidro-borda); font-weight: 700; }
@@ -75,7 +75,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-col b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-col span { grid-column: 1; font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-col select { grid-column: 2; grid-row: 1 / span 2; font: inherit; font-size: 14px; font-weight: 600; color: var(--texto); background: var(--vidro-ativo); border: 1px solid var(--vidro-borda); border-radius: 12px; padding: 9px; min-width: 0; min-height: 40px; }
-  .ld-col select option { color: #002941; }
+  .ld-col select option { color: #106ebe; }
   .ld-col.ld-ignorada b { color: var(--sub); }
   @media (max-width: 480px) { .ld-col { grid-template-columns: minmax(0, 1fr); } .ld-col select { grid-column: 1; grid-row: auto; } }
   .ld-numeros-res { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -98,7 +98,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-pessoa input { width: 20px; height: 20px; accent-color: var(--acento); margin: 2px 0 0; grid-column: 1; grid-row: 1 / span 8; }
   .ld-pessoa > :not(input) { grid-column: 2; }
   .ld-pessoa b { font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .ld-pessoa b i { font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--acento); color: #fff; }
+  .ld-pessoa b i { font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--acento); color: #071d33; }
   .ld-pessoa span { font-size: 13px; color: var(--sub); line-height: 1.45; overflow-wrap: anywhere; }
   .ld-link { all: unset; cursor: pointer; color: var(--texto); font-weight: 700; text-decoration: underline; text-decoration-color: var(--acento); text-decoration-thickness: 2px; text-underline-offset: 3px; }
   .ld-vazio { border-radius: 24px; padding: 28px 20px; display: grid; gap: 8px; justify-items: center; text-align: center; color: var(--sub); font-size: 14.5px; line-height: 1.45; }

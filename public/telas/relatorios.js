@@ -14,9 +14,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   const CSS = `
   .rl-caixa.rl-caixa { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; padding: 14px 16px 0; gap: 0; }
-  html[data-tema="escuro"] .rl { --azul-serie: #b6dfed; }
-  @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .rl { --azul-serie: #b6dfed; } }
-  .rl { --azul-serie: var(--marca-azul); --acento: var(--marca-menta); --acento-suave: color-mix(in srgb, var(--marca-menta) 14%, transparent); --brilho: color-mix(in srgb, var(--marca-menta) 50%, transparent); --menta: var(--marca-menta); --noite: #fff;
+  html[data-tema="escuro"] .rl { --azul-serie: #7cc4ff; }
+  @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .rl { --azul-serie: #7cc4ff; } }
+  .rl { --azul-serie: var(--marca-azul); --acento: var(--marca-menta); --acento-suave: color-mix(in srgb, var(--marca-menta) 14%, transparent); --brilho: color-mix(in srgb, var(--marca-menta) 50%, transparent); --menta: var(--marca-menta); --noite: #071d33;
         display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; max-width: 1240px; width: 100%; margin: 0 auto; }
   @media (max-width: 760px) { .rl { padding-bottom: 110px; } }
   .rl-vidro { background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); }
@@ -42,7 +42,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .rl-campo { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 0 8px 0 14px; min-height: 44px; box-sizing: border-box; min-width: 0; }
   .rl-campo span { font-size: 12px; color: var(--sub); font-weight: 700; white-space: nowrap; }
   .rl-campo select, .rl-campo input { all: unset; font: inherit; font-size: 14px; font-weight: 600; color: var(--texto); padding: 8px 6px; cursor: pointer; min-width: 0; max-width: 170px; }
-  .rl-campo select option { color: #002941; }
+  .rl-campo select option { color: #106ebe; }
   html[data-tema="escuro"] .rl input, html[data-tema="escuro"] .rl select { color-scheme: dark; }
   @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .rl input, html:not([data-tema="claro"]) .rl select { color-scheme: dark; } }
   .rl-espaco { flex: 1; }
@@ -314,7 +314,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const et = r.conversao.etapas;
     const total = et[0]?.total || 0;
     if (!total) return painel(ui, 'conversao', 'Conversão do funil', 'de quem chegou no período', 'rl-g6', el('div', { class: 'rl-vazio', text: 'Sem leads novos no período para acompanhar a conversão.' }));
-    const cores = ['#b6dfed', 'var(--azul-serie)', '#19c3a6', 'var(--marca-menta)'];
+    const cores = ['#7cc4ff', 'var(--azul-serie)', '#19c3a6', 'var(--marca-menta)'];
     return painel(ui, 'conversao', 'Conversão do funil', `de quem chegou no período, até agora · ${fmtN(r.conversao.perdidas)} perdidas`, 'rl-g6',
       el('div', { class: 'rl-funil', role: 'list' }, ...et.map((e, i) => el('div', { class: 'rl-coluna', role: 'listitem', 'aria-label': `${e.nome}: ${e.total} (${fmtPct(e.pct)})` },
         el('b', {}, fmtN(e.total), el('small', { text: fmtPct(e.pct) })),

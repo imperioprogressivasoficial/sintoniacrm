@@ -13,7 +13,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CHAVE = 'sintonia.painel.periodo';
   const INTERVALO = 30000;
   /** Cores das etapas (acentos de apoio do guia: só para gráficos). */
-  const COR_ETAPA = { novo_lead: '#B6DFED', em_conversa: '#8CC7E0', interessada: '#5FA8CB', agendada: 'var(--marca-menta)', compareceu: '#FFB199', manutencao: '#F5B800', perdida: '#7D8C99' };
+  const COR_ETAPA = { novo_lead: '#7cc4ff', em_conversa: '#8CC7E0', interessada: '#5FA8CB', agendada: 'var(--marca-menta)', compareceu: '#FFB199', manutencao: '#F5B800', perdida: '#7D8C99' };
   const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
@@ -21,7 +21,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-caixa.pn-caixa { padding: 18px 16px 0; gap: 0; }
   @media (min-width: 761px) { .pn-caixa.pn-caixa { padding: 26px 28px 0; } }
   /* Acento = var(--marca-menta) (coral na paleta final), principal = var(--marca-azul) (Midnight Navy), apoio = Soft Blue. */
-  .pn { --pn-linha: var(--marca-menta); --pn-linha-2: var(--marca-azul); --pn-apoio: #B6DFED; --pn-forte: var(--marca-menta); --pn-coral: var(--marca-menta);
+  .pn { --pn-linha: var(--marca-menta); --pn-linha-2: var(--marca-azul); --pn-apoio: #7cc4ff; --pn-forte: var(--marca-menta); --pn-coral: var(--marca-menta);
         --pn-sobre: var(--marca-azul); --pn-bom-txt: var(--marca-azul); --pn-raio: 24px;
         display: grid; gap: 16px; padding-bottom: 32px; min-width: 0; max-width: 1480px; width: 100%; margin: 0 auto; }
   [data-tema="escuro"] .pn { --pn-linha-2: var(--pn-apoio); --pn-bom-txt: var(--pn-apoio); }

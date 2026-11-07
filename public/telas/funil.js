@@ -41,7 +41,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-num b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--texto); display: flex; align-items: center; gap: 7px; }
   .fn-num small { font-size: 12px; color: var(--sub); white-space: nowrap; }
   .fn-num .fn-selo { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 999px; letter-spacing: 0; }
-  .fn-selo.bom { color: #002941; background: color-mix(in srgb, var(--marca-menta) 28%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-menta) 55%, transparent); }
+  .fn-selo.bom { color: #106ebe; background: color-mix(in srgb, var(--marca-menta) 28%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-menta) 55%, transparent); }
   html[data-tema="escuro"] .fn-selo.bom { color: #fff; background: color-mix(in srgb, var(--marca-menta) 22%, transparent); }
   .fn-selo.ruim { color: #8a5a00; background: rgba(245,184,0,.18); box-shadow: inset 0 0 0 1px rgba(245,184,0,.5); }
   html[data-tema="escuro"] .fn-selo.ruim { color: #ffd34d; }
@@ -55,9 +55,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   #funil-abas .chip, .fn-trilho .fn-pilula { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 999px; white-space: nowrap;
     font-size: 14px; font-weight: 650; color: var(--sub); background: transparent; box-shadow: none; transition: background .18s ease, color .18s ease, box-shadow .18s ease; }
   #funil-abas .chip:hover, .fn-trilho .fn-pilula:hover { color: var(--texto); }
-  #funil-abas .chip[aria-pressed="true"], .fn-trilho .fn-pilula[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(0,41,65,.12); }
+  #funil-abas .chip[aria-pressed="true"], .fn-trilho .fn-pilula[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(16, 110, 190,.12); }
   html[data-tema="escuro"] #funil-abas .chip[aria-pressed="true"], html[data-tema="escuro"] .fn-trilho .fn-pilula[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 6px 18px rgba(0,0,0,.3); }
-  #funil-abas .chip .qtd { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-menta); color: #002941; }
+  #funil-abas .chip .qtd { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-menta); color: #071d33; }
   #funil-abas .chip .qtd:empty { display: none; }
 
   #funil.fn-caixa { display: flex; flex-direction: column; padding: 0; gap: 0; overflow: hidden; align-items: stretch; }
@@ -89,7 +89,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-pessoa:hover { color: var(--texto); }
   .fn-pessoa[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)); }
   html[data-tema="escuro"] .fn-pessoa[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.5); }
-  .fn-ini { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .02em; color: #002941; background: var(--ini, #e8eef5);
+  .fn-ini { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .02em; color: #106ebe; background: var(--ini, #e8eef5);
     box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.75), 0 2px 6px rgba(0,0,0,.18); }
   .fn-ini.fn-sem { background: transparent; color: inherit; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .7; }
   .fn-ini svg { width: 15px; height: 15px; }
@@ -130,18 +130,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .fn-carregar { color: var(--marca-menta); }
 
   /* ---------- cartão preenchido com a cor da etapa ---------- */
-  .fn-cartao, .fn-resumo { --fill: var(--f-cla, #e8eef5); --tx: #002941; --tx2: rgba(0,41,65,.74); --vd: rgba(255,255,255,.55); --vd-b: rgba(0,41,65,.12); }
+  .fn-cartao, .fn-resumo { --fill: var(--f-cla, #e8eef5); --tx: #106ebe; --tx2: rgba(16, 110, 190,.74); --vd: rgba(255,255,255,.55); --vd-b: rgba(16, 110, 190,.12); }
   html[data-tema="escuro"] .fn-cartao, html[data-tema="escuro"] .fn-resumo { --fill: var(--f-esc, #2a3a4c); --tx: #ffffff; --tx2: rgba(255,255,255,.80); --vd: rgba(255,255,255,.16); --vd-b: rgba(255,255,255,.22); }
   .fn-cartao { position: relative; display: grid; gap: 4px; padding: 12px 12px 12px 14px; border-radius: 18px; cursor: pointer; color: var(--tx);
     background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 55%), var(--fill);
-    box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.28), 0 6px 18px rgba(0,26,43,.16);
+    box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.28), 0 6px 18px rgba(7, 29, 51,.16);
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-x pan-y; transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease, filter .15s ease; flex: none; }
-  .fn-cartao:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 12px 26px rgba(0,26,43,.24); }
+  .fn-cartao:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 12px 26px rgba(7, 29, 51,.24); }
   .fn-cartao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .fn-cartao.fn-saindo { opacity: .3; transform: scale(.98); }
   .fn-cartao.fn-segurando { transform: scale(.97); }
   .fn-cartao.fn-novo-aqui { animation: fn-chegou .7s ease; }
-  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px color-mix(in srgb, var(--marca-menta) 35%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--vd-b), 0 6px 18px rgba(0,26,43,.16); } }
+  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px color-mix(in srgb, var(--marca-menta) 35%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--vd-b), 0 6px 18px rgba(7, 29, 51,.16); } }
   .fn-c0 { display: flex; align-items: center; gap: 6px; min-height: 24px; padding-right: 30px; }
   .fn-desde { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--tx2); white-space: nowrap; }
   .fn-desde svg { width: 12.5px; height: 12.5px; }
@@ -161,7 +161,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-mais:hover { background: rgba(255,255,255,.32); }
   .fn-mais svg { width: 15px; height: 15px; }
 
-  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4), 0 26px 54px rgba(0,26,43,.42) !important; opacity: .97; }
+  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4), 0 26px 54px rgba(7, 29, 51,.42) !important; opacity: .97; }
   .fn-arrastando, .fn-arrastando * { cursor: grabbing !important; }
   .fn-arrastando .fn-quadro { scroll-snap-type: none !important; }
 
@@ -190,7 +190,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); transition: transform .15s ease, filter .15s ease, background .15s ease; }
   .fn-bt:hover { transform: translateY(-1px); background: var(--vidro-ativo); }
   .fn-bt svg { width: 18px; height: 18px; flex: none; }
-  dialog .fn-bt.fn-menta, .fn-bt.fn-menta { background: var(--marca-menta); color: #002941; box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca-menta) 45%, transparent), 0 8px 26px color-mix(in srgb, var(--marca-menta) 38%, transparent); }
+  dialog .fn-bt.fn-menta, .fn-bt.fn-menta { background: var(--marca-menta); color: #071d33; box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca-menta) 45%, transparent), 0 8px 26px color-mix(in srgb, var(--marca-menta) 38%, transparent); }
   .fn-bt.fn-menta:hover { filter: brightness(1.05); background: var(--marca-menta); }
   .fn-bt.fn-perigo { color: #c4313b; box-shadow: inset 0 0 0 1.5px rgba(229,72,77,.6); background: transparent; }
   html[data-tema="escuro"] .fn-bt.fn-perigo { color: #ff8f94; }
@@ -205,10 +205,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-fi-topo span b { color: var(--texto); }
   .fn-fi-corpo { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 22px 6px; display: grid; gap: 16px; align-content: start; overscroll-behavior: contain; }
   .fn-fi-rodape { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 22px calc(18px + env(safe-area-inset-bottom)); flex: none; border-top: 1px solid var(--vidro-linha); }
-  html[data-tema="claro"] .fn-campo select, html[data-tema="claro"] .fn-campo textarea { border-color: rgba(0,41,65,.14); background: rgba(255,255,255,.75); }
-  html[data-tema="claro"] .fn-bt:not(.fn-menta):not(.fn-perigo) { box-shadow: inset 0 0 0 1px rgba(0,41,65,.14); }
+  html[data-tema="claro"] .fn-campo select, html[data-tema="claro"] .fn-campo textarea { border-color: rgba(16, 110, 190,.14); background: rgba(255,255,255,.75); }
+  html[data-tema="claro"] .fn-bt:not(.fn-menta):not(.fn-perigo) { box-shadow: inset 0 0 0 1px rgba(16, 110, 190,.14); }
   .fn-resumo { position: relative; display: grid; gap: 4px; padding: 18px 20px 18px; border-radius: 22px; color: var(--tx);
-    background: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,0) 50%), var(--fill); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 14px 34px rgba(0,26,43,.22); }
+    background: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,0) 50%), var(--fill); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 14px 34px rgba(7, 29, 51,.22); }
   .fn-resumo .fn-r0 { display: flex; align-items: center; gap: 8px; }
   .fn-resumo .fn-r0 .fn-desde { flex: 1; }
   .fn-etapa-selo { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 750; padding: 4px 11px 4px 9px; border-radius: 999px; background: var(--vd); box-shadow: inset 0 0 0 1px var(--vd-b); white-space: nowrap; }
@@ -228,9 +228,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-seta:hover { background: var(--vidro-ativo); color: var(--texto); }
   .fn-seta i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor); flex: none; }
   .fn-seta.fn-feita { color: var(--texto); background: color-mix(in srgb, var(--marca-menta) 14%, var(--vidro-item)); }
-  .fn-seta[aria-current="step"] { background: var(--marca-menta); color: #002941; font-weight: 800; cursor: default; }
+  .fn-seta[aria-current="step"] { background: var(--marca-menta); color: #071d33; font-weight: 800; cursor: default; }
   .fn-seta[aria-current="step"] i { background: currentColor; }
-  html[data-tema="claro"] .fn-seta { background: rgba(0,41,65,.06); }
+  html[data-tema="claro"] .fn-seta { background: rgba(16, 110, 190,.06); }
   html[data-tema="claro"] .fn-seta.fn-feita { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); }
   html[data-tema="claro"] .fn-seta[aria-current="step"] { background: var(--marca-menta); }
   .fn-campo { display: grid; gap: 7px; }
@@ -239,7 +239,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-campo textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
   .fn-campo select:focus, .fn-campo textarea:focus { outline: none; border-color: color-mix(in srgb, var(--marca-azul) 60%, var(--vidro-borda)); }
   html[data-tema="escuro"] .fn-campo select:focus, html[data-tema="escuro"] .fn-campo textarea:focus { border-color: color-mix(in srgb, var(--marca-menta) 55%, transparent); }
-  html[data-tema="escuro"] .fn-campo select option { background: #00324f; }
+  html[data-tema="escuro"] .fn-campo select option { background: #0d3050; }
   .fn-campo small { font-size: 12.5px; color: var(--sub); min-height: 1em; }
   .fn-dona-linha { display: flex; align-items: center; gap: 10px; }
   .fn-dona-linha select { flex: 1; }
@@ -341,7 +341,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     no.style.setProperty('--f-cla', t.cla);
   }
   // bolinhas das pessoas: tons claros de apoio com tinta azul-noite
-  const TONS_PESSOA = ['#B6DFED', '#C9D6FF', '#BFEFE3', '#FFE3A3', '#FFD0D0', '#E2D4FF', '#D6F0B8'];
+  const TONS_PESSOA = ['#7cc4ff', '#C9D6FF', '#BFEFE3', '#FFE3A3', '#FFD0D0', '#E2D4FF', '#D6F0B8'];
   const tomPessoa = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return TONS_PESSOA[h % TONS_PESSOA.length]; };
   const iniciais = (n) => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '?'; };
   function bolinha(dona, titulo) {
