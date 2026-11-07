@@ -36,6 +36,8 @@ try {
     { cwd: raiz, stdio: ['ignore', 'ignore', 'inherit'] },
   );
   for (const p of ['public', 'db', 'knowledge']) cpSync(path.join(raiz, p), path.join(pasta, p), { recursive: true });
+  // Fotos da demonstração: o código lê ./rostos e ./clientes ao lado do arquivo do servidor (dist/app).
+  for (const p of ['rostos', 'clientes']) cpSync(path.join(raiz, 'src/demo', p), path.join(pasta, 'dist/app', p), { recursive: true });
   const pkg = JSON.parse(readFileSync(path.join(raiz, 'package.json'), 'utf8'));
   const lock = JSON.parse(readFileSync(path.join(raiz, 'package-lock.json'), 'utf8'));
   const deps = Object.fromEntries(Object.keys(pkg.dependencies).map((n) => [n, lock.packages[`node_modules/${n}`].version]));
