@@ -71,6 +71,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
                 background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); transition: transform .15s ease, background .15s ease; }
   .pn-redondo:hover { background: var(--vidro-ativo); transform: translateY(-1px); }
   .pn-redondo svg { width: 18px; height: 18px; }
+  .pn-desemp { all: unset; box-sizing: border-box; cursor: pointer; flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: 13.5px; background: var(--marca-menta); color: #071d33; box-shadow: 0 6px 20px color-mix(in srgb, var(--marca-menta) 35%, transparent); }
+  .pn-desemp:focus-visible { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
   @media (min-width: 761px) { .pn-p-cab .pn-redondo { width: 38px; height: 38px; } }
   .pn-girando svg { animation: pn-gira .9s linear infinite; }
   @keyframes pn-gira { to { transform: rotate(360deg); } }
@@ -667,6 +669,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const cab = el('div', { class: 'pn-p-cab' }, el('h2', { id: 'pn-t-rank', text: pessoal ? 'Seu desempenho' : 'Ranking da equipe' }),
       el('span', { class: 'pn-dica', text: eq ? `${fmtN(eq.online)} de ${fmtN(eq.ativas)} online` : NO_PERIODO[d.periodo] }));
     if (!pessoal && ui.ehGestor?.(ui.estado.eu)) cab.append(botaoRedondo(ui, IC.abrir, 'Abrir a equipe', () => ui.mostrar('equipe')));
+    // Atalho para o Desempenho do atendimento (quem vê relatórios).
+    if (!pessoal && ui.estado.eu?.permissoes?.relatorios) cab.append(ui.el('button', { class: 'pn-desemp', type: 'button', id: 'pn-desempenho', title: 'Ver o desempenho de cada atendente', text: 'Desempenho', onclick: () => ui.mostrar('desempenho') }));
     const bloco = el('section', { class: 'pn-p pn-rank-p pn-g-rank', 'aria-labelledby': 'pn-t-rank' }, cab);
     if (eq) {
       const on = el('div', { class: 'pn-online', 'aria-label': 'Online agora' });
