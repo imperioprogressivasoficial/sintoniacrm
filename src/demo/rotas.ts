@@ -21,7 +21,8 @@ export function registrarDemo(app: FastifyInstance, demo: Demo): void {
   });
   app.post('/api/demo/popular', async (req) => {
     const u = exige(req);
-    return demo.popular(u);
+    const corpo = (req.body ?? {}) as { segmento?: unknown };
+    return demo.popular(u, corpo.segmento === 'estetica' ? 'estetica' : corpo.segmento === 'imperio' ? 'imperio' : undefined);
   });
   app.delete('/api/demo', async (req) => {
     exige(req);

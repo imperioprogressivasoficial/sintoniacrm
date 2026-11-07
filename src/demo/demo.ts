@@ -13,7 +13,7 @@ import { mesDe } from '../painel/painel.js';
 import { DIA, HORA, MIN } from '../util/tempo.js';
 import { UNIDADES } from '../unidades.js';
 import type { ArmazemDemo, Registros } from './armazem.js';
-import { ATENDENTES_DEMO, ehEmailDemo, POR_DEMO, RESPOSTAS_RAPIDAS_DEMO, SENHA_INUTILIZAVEL } from './dados.js';
+import { ATENDENTES_DEMO, ehEmailDemo, materialDo, POR_DEMO, SENHA_INUTILIZAVEL, type Segmento } from './dados.js';
 import { contarPlano, gerarPlano, ligacoesDeHoje, type CampoRef, type ContextoGerador } from './gerador.js';
 
 /**
@@ -38,18 +38,10 @@ export interface OpcoesDemo {
   log?: (msg: string, extra?: unknown) => void;
   /** Quantas conversas (padrão 140). */
   quantidade?: number;
+  /** Segmento padrão (DEMO_SEGMENTO). Sem nada: a Império (salão). */
+  segmento?: Segmento;
 }
 
-const TAGS_DEMO: Array<[string, string]> = [
-  ['Progressiva', '#3E63DD'],
-  ['Selagem', '#12A594'],
-  ['Botox capilar', '#8E4EC6'],
-  ['VIP', '#D4A017'],
-  ['Instagram', '#D6409F'],
-  ['Indicação', '#30A46C'],
-  ['Tráfego pago', '#F76B15'],
-  ['Gestante', '#E5484D'],
-];
 const CAMPOS_DEMO: Array<{ chave: 'tipoCabelo' | 'comoConheceu' | 'alergias'; nome: string; tipo: TipoCampo; opcoes: string[] }> = [
   { chave: 'tipoCabelo', nome: 'Tipo de cabelo', tipo: 'lista', opcoes: ['Liso', 'Ondulado', 'Cacheado', 'Crespo'] },
   { chave: 'comoConheceu', nome: 'Como conheceu', tipo: 'lista', opcoes: ['Instagram', 'Indicação', 'Google', 'Passou na loja', 'Tráfego pago'] },
@@ -84,10 +76,10 @@ export class Demo {
     return this.o.armazem.conversasDemo(this.o.empresaId);
   }
 
-  popular(quem: Pick<Usuario, 'id' | 'nome'>) {
+  popular(quem: Pick<Usuario, 'id' | 'nome'>, segmento?: Segmento) {
     return this.emFila(async () => {
       const antes = (await this.estado()).existe ? await this.apagarAgora() : null;
-      return { substituiu: Boolean(antes), ...(await this.popularAgora(quem)) };
+      return { substituiu: Boolean(antes), ...(await this.popularAgora(quem, segmento ?? this.o.segmento)) };
     });
   }
 
@@ -97,8 +89,10 @@ export class Demo {
 
   // ---------------------------------------------------------------- preencher
 
-  private async popularAgora(quem: Pick<Usuario, 'id' | 'nome'>) {
+  private async popularAgora(quem: Pick<Usuario, 'id' | 'nome'>, segmento?: Segmento) {
     const { o } = this;
+    const M = materialDo(segmento);
+    const TAGS_DEMO = M.tags;
     const E = o.empresaId;
     const agora = this.agora();
     const reg = (tipo: Parameters<ArmazemDemo['registrar']>[1], chaves: string[]) => o.armazem.registrar(E, tipo, chaves);
@@ -111,11 +105,11 @@ export class Demo {
     const atendentes: ContextoGerador['atendentes'] = [];
     for (const [i, a] of ATENDENTES_DEMO.entries()) {
       const ja = await o.contas.buscarPorEmail(a.email);
-      const u = ja && ehEmailDemo(ja.email) ? ja : await o.contas.criarUsuario({ empresaId: E, nome: a.nome, email: a.email, papel: 'atendente', unidades: [a.unidade], senhaHash: SENHA_INUTILIZAVEL });
+      const u = ja && ehEmailDemo(ja.email) ? ja : await o.contas.criarUsuario({ empresaId: E, nome: M.equipe[i]?.nome ?? a.nome, email: a.email, papel: 'atendente', unidades: [a.unidade], senhaHash: SENHA_INUTILIZAVEL });
       await reg('usuario', [u.id]);
       atendentes.push({ id: u.id, nome: u.nome, unidade: a.unidade, ritmo: a.ritmo });
       try {
-        const conteudo = await readFile(new URL(`./rostos/${ROSTOS[i % ROSTOS.length]}`, import.meta.url));
+        const conteudo = await readFile(new URL(`./rostos/${M.equipe[i]?.rosto ?? ROSTOS[i % ROSTOS.length]}`, import.meta.url));
         await o.contas.salvarFotoDe(u.id, { conteudo, tipo: 'image/jpeg' }, agora);
       } catch (e) {
         this.log('Demonstração: foto da atendente não carregou', String(e));
@@ -148,7 +142,8 @@ export class Demo {
     const campos: ContextoGerador['campos'] = {};
     let camposCriados = 0;
     const existentes = await o.contatos.campos(E);
-    for (const c of CAMPOS_DEMO) {
+    for (const c0 of CAMPOS_DEMO) {
+      const c = c0.chave === 'tipoCabelo' ? { ...c0, nome: M.campoTipo.nome, opcoes: M.campoTipo.opcoes.map(([x]) => x) } : c0;
       const ja = existentes.find((x) => x.nome.toLowerCase() === c.nome.toLowerCase());
       let ref: CampoRef;
       if (ja) ref = { id: ja.id, tipo: ja.tipo, opcoes: ja.opcoes };
@@ -171,15 +166,30 @@ export class Demo {
       tags,
       campos,
       quantidade: o.quantidade,
+      segmento,
     };
     const plano = gerarPlano(ctx);
     ligacoesDeHoje(plano, ctx);
     await o.armazem.gravar(E, plano);
 
+    // Foto de perfil de cada cliente, guardada como a foto do WhatsApp (a tela pede em /api/conversas/:id/foto).
+    const arquivos = new Map<string, Buffer>();
+    const fotos: Array<{ telefone: string; conteudo: Buffer; tipo: string }> = [];
+    for (const f of plano.fotos) {
+      try {
+        let conteudo = arquivos.get(f.arquivo);
+        if (!conteudo) arquivos.set(f.arquivo, (conteudo = await readFile(new URL(`./clientes/${f.arquivo}`, import.meta.url))));
+        fotos.push({ telefone: f.telefone, conteudo, tipo: 'image/jpeg' });
+      } catch (e) {
+        this.log('Demonstração: foto da cliente não carregou', String(e));
+      }
+    }
+    await o.armazem.gravarFotos(fotos, agora);
+
     // Respostas rápidas da empresa (atalho que já existe fica como está).
     const atalhos = new Set((await o.respostas.listar(E, null)).filter((r) => r.usuarioId === null).map((r) => r.atalho));
     let respostas = 0;
-    for (const r of RESPOSTAS_RAPIDAS_DEMO) {
+    for (const r of M.respostasRapidas) {
       if (atalhos.has(r.atalho)) continue;
       const nova = await o.respostas.criar(E, { atalho: r.atalho, texto: r.texto, usuarioId: null, criadaPor: POR_DEMO });
       await reg('resposta', [nova.id]);
@@ -222,16 +232,16 @@ export class Demo {
     const conv = (etapa: Etapa, i = 0) => plano.conversas.filter((c) => c.etapa === etapa)[i];
     const notas: Array<{ tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; ha: number; lida: boolean }> = [];
     const nova = [...plano.conversas].sort((a, b) => b.criadaEm.getTime() - a.criadaEm.getTime())[0];
-    if (nova) notas.push({ tipo: 'nova_cliente', titulo: `Nova cliente: ${nova.nome}`, texto: `${UNIDADES[nova.unidade].nome} · Quanto tá a progressiva?`, conversaId: nova.id, ha: 25 * MIN, lida: false });
+    if (nova) notas.push({ tipo: 'nova_cliente', titulo: `Nova cliente: ${nova.nome}`, texto: `${(M.unidades[nova.unidade as "norte" | "sumare"] ?? UNIDADES[nova.unidade].nome)} · Quanto fica a ${M.servicos.progressiva.nome.toLowerCase()}?`, conversaId: nova.id, ha: 25 * MIN, lida: false });
     const ag = conv('agendada');
-    if (ag) notas.push({ tipo: 'agendamento', titulo: 'A IA agendou Progressiva', texto: `${ag.nome} · ${UNIDADES[ag.unidade].nome}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
+    if (ag) notas.push({ tipo: 'agendamento', titulo: `A IA agendou ${M.servicos.progressiva.nome}`, texto: `${ag.nome} · ${(M.unidades[ag.unidade as "norte" | "sumare"] ?? UNIDADES[ag.unidade].nome)}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
     const gest = plano.eventos.find((e) => e.tipo === 'passou_para_humano');
     const cg = gest && plano.conversas.find((c) => c.id === gest.conversaId);
     if (cg) notas.push({ tipo: 'ia_equipe', titulo: `A IA passou ${cg.nome} para a equipe`, texto: 'Motivo: cliente gestante, precisa da orientação da equipe', conversaId: cg.id, ha: 5 * HORA, lida: false });
     const it = conv('interessada', 1);
     if (it) notas.push({ tipo: 'lembrete_ligacao', titulo: `Ligar para ${it.nome}`, texto: 'Interessada e ainda não agendou', conversaId: it.id, ha: 20 * HORA, lida: true });
     const ag2 = conv('agendada', 1);
-    if (ag2) notas.push({ tipo: 'agendamento', titulo: `${atendentes[0]?.nome.split(' ')[0] ?? 'A equipe'} agendou Selagem`, texto: `${ag2.nome} · ${UNIDADES[ag2.unidade].nome}`, conversaId: ag2.id, ha: DIA, lida: true });
+    if (ag2) notas.push({ tipo: 'agendamento', titulo: `${atendentes[0]?.nome.split(' ')[0] ?? 'A equipe'} agendou ${M.servicos.selagem.nome}`, texto: `${ag2.nome} · ${(M.unidades[ag2.unidade as "norte" | "sumare"] ?? UNIDADES[ag2.unidade].nome)}`, conversaId: ag2.id, ha: DIA, lida: true });
     const em = conv('em_conversa', 2);
     if (em) notas.push({ tipo: 'espera', titulo: `${em.nome} está esperando`, texto: 'Sem resposta há 12 minutos.', conversaId: em.id, ha: 1.5 * DIA, lida: true });
     notas.push({ tipo: 'teste', titulo: 'Dados de demonstração prontos', texto: 'Conversas, CRM, Dashboard, Relatórios e Agenda preenchidos. Apague em Mais › Dados de demonstração.', ha: MIN, lida: false });

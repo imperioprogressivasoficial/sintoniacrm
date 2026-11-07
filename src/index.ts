@@ -639,6 +639,7 @@ const demo = new Demo({
   automacoes,
   notificacoes: armazemNotificacoes,
   empresa,
+  segmento: process.env.DEMO_SEGMENTO === 'estetica' ? 'estetica' : undefined,
   log,
 });
 registrarDemo(app, demo);

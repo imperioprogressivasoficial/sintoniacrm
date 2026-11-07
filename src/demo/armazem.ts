@@ -32,6 +32,8 @@ export interface ArmazemDemo {
   esquecer(empresaId: string, tipo: TipoRegistro, chaves?: string[]): Promise<void>;
   /** Grava conversas, mensagens, eventos, etapas/tags e fichas (no Postgres, numa transação só) e registra conversas e fichas. */
   gravar(empresaId: string, plano: PlanoDemo): Promise<void>;
+  /** Grava a foto de perfil das clientes (a mesma tabela das fotos do WhatsApp); apagar as conversas apaga as fotos. */
+  gravarFotos(fotos: Array<{ telefone: string; conteudo: Buffer; tipo: string }>, em: Date): Promise<void>;
   /** Apaga as conversas (com mensagens, eventos, tarefas, marcações, notificações...) e as fichas dos telefones. */
   apagarConversas(empresaId: string, ids: string[], telefones: string[]): Promise<ApagadoConversas>;
   /** Tira a dona (atendente de demonstração) das conversas que sobraram e apaga as contas (e as fotos delas). */
@@ -95,6 +97,9 @@ export class ArmazemDemoMemoria implements ArmazemDemo {
     }
     await this.registrar(empresaId, 'conversa', p.conversas.map((c) => c.id));
     await this.registrar(empresaId, 'contato', p.contatos.map((c) => c.telefone));
+  }
+  async gravarFotos(fotos: Array<{ telefone: string; conteudo: Buffer; tipo: string }>, em: Date) {
+    for (const f of fotos) if (ehTelefoneDemo(f.telefone)) await this.m.repo.salvarFoto(f.telefone, { conteudo: f.conteudo, tipo: f.tipo }, em);
   }
   async apagarConversas(empresaId: string, ids: string[], telefones: string[]) {
     const { repo, tags, contatos } = this.m;
@@ -251,6 +256,19 @@ export class ArmazemDemoPostgres implements ArmazemDemo {
       throw e;
     } finally {
       c.release();
+    }
+  }
+
+  async gravarFotos(fotos: Array<{ telefone: string; conteudo: Buffer; tipo: string }>, em: Date) {
+    const ok = fotos.filter((f) => ehTelefoneDemo(f.telefone));
+    for (let i = 0; i < ok.length; i += 50) {
+      const lote = ok.slice(i, i + 50);
+      await this.pool.query(
+        `insert into sintonia.fotos (telefone, conteudo, tipo, atualizada_em)
+         select * from unnest($1::text[], $2::bytea[], $3::text[], $4::timestamptz[])
+         on conflict (telefone) do update set conteudo = excluded.conteudo, tipo = excluded.tipo, atualizada_em = excluded.atualizada_em`,
+        [lote.map((f) => f.telefone), lote.map((f) => f.conteudo), lote.map((f) => f.tipo), lote.map(() => em)],
+      );
     }
   }
 

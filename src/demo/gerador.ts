@@ -7,27 +7,18 @@ import { UNIDADES } from '../unidades.js';
 import { canalTesteDa } from '../channels/teste.js';
 import { bahia, DIA, HORA, MIN, nomeDiaSemana, partesBahia } from '../util/tempo.js';
 import {
-  ABERTURAS,
-  AGRADECE,
-  ALERGIAS,
-  ELOGIOS,
-  ESPERA_CLIENTE,
+  FOTOS_CLIENTES_F,
+  FOTOS_CLIENTES_M,
+  materialDo,
   NOMES_F,
   NOMES_M,
-  OBSERVACOES,
   ORIGENS,
-  PERDAS,
-  PERGUNTAS,
-  PRECO,
   PREFIXO_TELEFONE_DEMO,
-  PROFISSIONAIS,
-  RESPOSTA_ESPERA,
-  SERVICOS,
-  VALORES,
   SOBRENOMES,
   TAG_DA_ORIGEM,
-  TIPOS_CABELO,
+  type Material,
   type Origem,
+  type Segmento,
   type Servico,
 } from './dados.js';
 
@@ -68,6 +59,8 @@ export interface ContextoGerador {
   campos: { tipoCabelo?: CampoRef; comoConheceu?: CampoRef; alergias?: CampoRef };
   quantidade?: number;
   semente?: number;
+  /** Segmento da demonstração (padrão: a Império, salão). 'estetica' = clínica de estética, para os prints. */
+  segmento?: Segmento;
 }
 
 export type MensagemDemo = Omit<Mensagem, 'anexo' | 'entrega' | 'idExterno'> & { idExterno: string };
@@ -85,6 +78,8 @@ export interface PlanoDemo {
   eventos: Evento[];
   marcacoes: MarcacaoDemo[];
   contatos: ContatoDemo[];
+  /** Foto de perfil de cada cliente (arquivo em src/demo/clientes), gravada como a foto do WhatsApp. */
+  fotos: Array<{ telefone: string; arquivo: string }>;
 }
 
 // ---------------------------------------------------------------- sorte (determinística pela semente)
@@ -149,6 +144,8 @@ interface Pessoa {
   servico: Servico;
   origem: Origem;
   atendente: AtendenteDemo;
+  /** Homem? (a foto de perfil acompanha o gênero do nome) */
+  homem: boolean;
 }
 
 class Roteiro {
@@ -327,15 +324,15 @@ class Roteiro {
 
   /** Agendamento gravado como a Sintonia grava (agendamento_ia/equipe com inicio, profissional e duração). */
   agendar(inicio: Date, por: 'ia' | 'equipe', servico = this.p.servico) {
-    const prof = this.s.um(PROFISSIONAIS[this.p.unidade]);
+    const prof = this.s.um(this.g.m.profissionais[this.p.unidade]);
     const quem = this.dona ?? this.p.atendente;
     this.ev(por === 'ia' ? 'agendamento_ia' : 'agendamento_equipe', {
       ...(por === 'equipe' ? { atendente: quem.nome, atendenteId: quem.id } : {}),
-      servico: SERVICOS[servico].nome,
+      servico: this.g.m.servicos[servico].nome,
       inicio: inicio.toISOString(),
       profissional: prof,
-      duracaoMin: SERVICOS[servico].duracaoMin,
-      valor: this.s.um(VALORES[servico]),
+      duracaoMin: this.g.m.servicos[servico].duracaoMin,
+      valor: this.s.um(this.g.m.valores[servico]),
     });
     this.mudarEtapa('agendada', 'agendamento_criado');
     return { prof, inicio };
@@ -408,14 +405,17 @@ export class Gerador {
   readonly s: Sorte;
   private readonly nomesUsados = new Set<string>();
   private seq = 0;
+  readonly m: Material;
   constructor(readonly c: ContextoGerador) {
     this.s = new Sorte(mulberry32(c.semente ?? 20261107));
+    this.m = materialDo(c.segmento);
   }
 
   private pessoa(unidade?: Unidade): Pessoa {
     let nome = '';
+    let homem = false;
     for (let i = 0; i < 50 && (!nome || this.nomesUsados.has(nome)); i++) {
-      const homem = this.s.chance(0.07);
+      homem = this.s.chance(0.07);
       nome = `${this.s.um(homem ? NOMES_M : NOMES_F)} ${this.s.um(SOBRENOMES)}`;
     }
     this.nomesUsados.add(nome);
@@ -426,9 +426,10 @@ export class Gerador {
       nome,
       telefone: `${PREFIXO_TELEFONE_DEMO}${String(++this.seq).padStart(5, '0')}`,
       unidade: u,
-      servico: this.s.pesado([['progressiva', 55], ['selagem', 20], ['botox', 17], ['hidratacao', 8]] as const),
+      servico: this.s.pesado(this.m.pesoServico),
       origem: this.s.pesado(ORIGENS),
       atendente,
+      homem,
     };
   }
 
@@ -452,11 +453,11 @@ export class Gerador {
   // ---------- falas que se repetem ----------
 
   private abertura(r: Roteiro) {
-    const lista = this.s.chance(0.7) ? ABERTURAS[r.p.origem] : ABERTURAS.geral;
-    r.cliente(this.s.um(lista).replace('{servico}', SERVICOS[r.p.servico].nome.toLowerCase()));
+    const lista = this.s.chance(0.7) ? this.m.aberturas[r.p.origem] : this.m.aberturas.geral;
+    r.cliente(this.s.um(lista).replace('{servico}', this.m.servicos[r.p.servico].nome.toLowerCase()));
     const oi = this.s.um([`Oi, ${primeiro(r.p.nome)}! Tudo bem? 💛 `, `Olá, ${primeiro(r.p.nome)}! Que bom que chamou 😊 `, `Oii ${primeiro(r.p.nome)}! `]);
-    const quem = r.responder(oi + PRECO[r.p.servico]);
-    const tag = SERVICOS[r.p.servico].tag;
+    const quem = r.responder(oi + this.m.preco[r.p.servico]);
+    const tag = this.m.servicos[r.p.servico].tag;
     if (tag) r.marcarTag(tag, quem === 'ia' ? 'IA' : r.p.atendente.nome);
     const tagOrigem = TAG_DA_ORIGEM[r.p.origem];
     if (tagOrigem && this.s.chance(0.75)) r.marcarTag(tagOrigem, r.p.atendente.nome);
@@ -468,12 +469,12 @@ export class Gerador {
     for (let i = 0; i < n; i++) {
       let k = 0;
       for (let tent = 0; tent < 10; tent++) {
-        k = PERGUNTAS.indexOf(this.s.pesado(PERGUNTAS.map((q) => [q, q.peso] as const)));
+        k = this.m.perguntas.indexOf(this.s.pesado(this.m.perguntas.map((q) => [q, q.peso] as const)));
         if (!ja.has(k)) break;
       }
       if (ja.has(k)) continue;
       ja.add(k);
-      const q = PERGUNTAS[k]!;
+      const q = this.m.perguntas[k]!;
       r.cliente(q.cliente, this.s.entre(1, 35));
       if (q.especial === 'gestante') {
         r.marcarTag('Gestante', r.p.atendente.nome);
@@ -499,7 +500,7 @@ export class Gerador {
     const modo: ModoAtendimento = tipo === 'agora_ia' || this.s.chance(0.1) ? 'ia' : this.s.chance(0.06) ? 'humano' : 'copiloto';
     const r = new Roteiro(this, p, t0, modo);
     const nome = primeiro(p.nome);
-    const servico = SERVICOS[p.servico].nome;
+    const servico = this.m.servicos[p.servico].nome;
     const agora = this.c.agora.getTime();
 
     switch (tipo) {
@@ -508,28 +509,28 @@ export class Gerador {
         r.evs.push({ tipo: 'lead_importado', conversaId: r.id, unidade: p.unidade, em: new Date(r.t), dados: { por: 'Demonstração' } });
         r.modo = 'copiloto';
         r.avancarMin(this.s.entre(20, 300));
-        r.equipe(`Oi, ${nome}! Aqui é a ${p.atendente.nome.split(' ')[0]} da Império Progressivas 💛 Vi que você deixou seu contato com interesse em ${servico.toLowerCase()}. Quer que eu te passe os valores?`, 0);
+        r.equipe(`Oi, ${nome}! Aqui é a ${p.atendente.nome.split(' ')[0]} da ${this.m.empresa} 💛 Vi que você deixou seu contato com interesse em ${servico.toLowerCase()}. Quer que eu te passe os valores?`, 0);
         if (agora - r.t > 26 * HORA) {
           r.avancarDias(1, this.s.int(10, 17));
           r.ligacao(this.s.um(['nao_atendeu', 'caixa_postal'] as const), p.atendente);
           r.equipe(`${nome}, tentei te ligar agora há pouco 😊 Quando puder me chama aqui que te passo os horários livres!`, this.s.entre(2, 10));
         } else r.equipe('Temos horários essa semana nas duas unidades 😉', this.s.entre(1, 3));
-        if (SERVICOS[p.servico].tag) r.marcarTag(SERVICOS[p.servico].tag!, p.atendente.nome);
+        if (this.m.servicos[p.servico].tag) r.marcarTag(this.m.servicos[p.servico].tag!, p.atendente.nome);
         break;
       }
       case 'em_conversa': {
         this.abertura(r);
         this.perguntas(r, 1, 3);
         // Algumas ficam com a pergunta da cliente sem resposta (há mais de um dia): aparecem em "Não lidas".
-        if (this.s.chance(0.3) && agora - r.t > 2 * DIA) r.cliente(this.s.um(['E pra cabelo com química, pode?', 'Tem horário pra amanhã?', 'Vocês têm estacionamento?']), this.s.entre(5, 60));
+        if (this.s.chance(0.3) && agora - r.t > 2 * DIA) r.cliente(this.s.um(this.m.duvidaSolta), this.s.entre(5, 60));
         break;
       }
       case 'interessada': {
         this.abertura(r);
         this.perguntas(r, 1, 3);
-        r.cliente(this.s.um(ESPERA_CLIENTE), this.s.entre(2, 40));
+        r.cliente(this.s.um(this.m.esperaCliente), this.s.entre(2, 40));
         r.mudarEtapa('interessada', 'ia_classificou', 'IA');
-        r.responder(this.s.um(RESPOSTA_ESPERA));
+        r.responder(this.s.um(this.m.respostaEspera));
         if (this.s.chance(0.45) && agora - r.t > 1.3 * DIA) {
           r.avancarDias(1, this.s.int(10, 18));
           r.t = ajustarParaJanelaAtiva(new Date(r.t)).getTime();
@@ -544,7 +545,7 @@ export class Gerador {
       case 'perdida': {
         this.abertura(r);
         this.perguntas(r, 0, 2);
-        const perda = this.s.pesado(PERDAS.map((x) => [x, x.peso] as const));
+        const perda = this.s.pesado(this.m.perdas.map((x) => [x, x.peso] as const));
         if (perda.motivo === 'followups_esgotados') {
           r.avancarDias(1, this.s.int(10, 17));
           r.ativo('followup_1d', `Oi, ${nome}! Passando pra saber se ficou alguma dúvida sobre a ${servico.toLowerCase()} 😊`);
@@ -562,7 +563,7 @@ export class Gerador {
       case 'retorno':
       case 'agora_ia': {
         if (tipo === 'retorno') {
-          r.cliente(this.s.um(['Oi! Tá na hora da minha manutenção, tem horário essa semana?', 'Oii, quero retocar minha progressiva 💛 tem horário?']));
+          r.cliente(this.s.um(this.m.retorno));
           r.responder(`Oi, ${nome}! Que bom te ver de volta 😍 Tenho horários sim, qual dia fica melhor?`);
           r.marcarTag('VIP', p.atendente.nome);
         } else {
@@ -573,12 +574,12 @@ export class Gerador {
         if (tipo === 'agora_ia') dias = this.s.int(1, 4);
         const inicio = this.horarioDoSalao(agora, dias, p.unidade);
         r.cliente(this.s.um([`Quero marcar! Pode ser ${quandoHumano(inicio).split(' às ')[0]}?`, `Tem horário ${quandoHumano(inicio).split(',')[0]}?`, 'Bora marcar então! Qual o próximo horário?']), tipo === 'agora_ia' ? 3 : this.s.entre(2, 90));
-        const fala = `Prontinho, ${nome}! Agendei ${servico.toLowerCase()} para ${quandoHumano(inicio)}, unidade ${UNIDADES[p.unidade].nome}. Chegue uns 10 minutinhos antes 💛`;
+        const fala = `Prontinho, ${nome}! Agendei ${servico.toLowerCase()} para ${quandoHumano(inicio)}, unidade ${this.m.unidades[p.unidade]}. Chegue uns 10 minutinhos antes 💛`;
         const quem = r.responder(fala);
         const ag = r.agendar(inicio, quem);
         void ag;
         if (tipo === 'retorno' && this.c.posVenda) r.posVenda = { tagId: this.c.posVenda.manutencao, em: r.t };
-        r.cliente(this.s.um(AGRADECE), tipo === 'agora_ia' ? 2 : this.s.entre(1, 20));
+        r.cliente(this.s.um(this.m.agradece), tipo === 'agora_ia' ? 2 : this.s.entre(1, 20));
         if (this.s.chance(0.5)) r.responder(this.s.um(['😘', 'Até lá! 💛', 'Te esperamos ✨']));
         break;
       }
@@ -590,9 +591,9 @@ export class Gerador {
         const marcadoDaqui = this.s.int(1, tipo === 'manutencao' ? 7 : 5);
         const inicio = this.horarioDoSalao(r.t, marcadoDaqui, p.unidade);
         r.cliente(this.s.um([`Pode ser ${quandoHumano(inicio).split(' às ')[0]}?`, 'Quero marcar! Qual o horário mais cedo?', `Tem ${quandoHumano(inicio).split(',')[0]} à tarde?`]), this.s.entre(2, 60));
-        const quem = r.responder(`Agendado, ${nome}! ${servico} ${quandoHumano(inicio)}, unidade ${UNIDADES[p.unidade].nome} 💛`);
+        const quem = r.responder(`Agendado, ${nome}! ${servico} ${quandoHumano(inicio)}, unidade ${this.m.unidades[p.unidade]} 💛`);
         const ag = r.agendar(inicio, quem);
-        r.cliente(this.s.um(AGRADECE), this.s.entre(1, 15));
+        r.cliente(this.s.um(this.m.agradece), this.s.entre(1, 15));
         // Véspera às 10h: o lembrete que a Sintonia mandou na época.
         const pv = partesBahia(new Date(inicio.getTime() - DIA));
         const vespera = bahia(pv.ano, pv.mes, pv.dia, 10, 0).getTime();
@@ -602,7 +603,7 @@ export class Gerador {
           r.cliente(this.s.um(['Confirmado!', 'Confirmadíssimo 😍', 'Tô lá!']), this.s.entre(5, 180));
           r.responder(this.s.um(['Oba! Até amanhã 💛', 'Perfeito, te esperamos ✨']));
         }
-        const fim = inicio.getTime() + SERVICOS[p.servico].duracaoMin * MIN;
+        const fim = inicio.getTime() + this.m.servicos[p.servico].duracaoMin * MIN;
         if (tipo === 'faltou') {
           r.t = ajustarParaJanelaAtiva(new Date(inicio.getTime() + 3 * HORA)).getTime();
           r.ativo('recuperar_falta', `Oi, ${nome}, sentimos sua falta hoje! Aconteceu alguma coisa? Se quiser, remarco pra você 💛`);
@@ -617,10 +618,10 @@ export class Gerador {
         r.mudarEtapa('compareceu', 'manual', (r.dona ?? p.atendente).nome);
         const pd = partesBahia(new Date(fim + DIA));
         r.t = bahia(pd.ano, pd.mes, pd.dia, 11, 0).getTime();
-        r.ativo('pos_atendimento', `Oi, ${nome}! Como ficou o cabelo? Qualquer dúvida sobre os cuidados é só chamar 💛`);
+        r.ativo('pos_atendimento', this.m.posAtendimento(nome));
         if (this.s.chance(0.7)) {
-          r.cliente(this.s.um(ELOGIOS), this.s.entre(10, 300));
-          r.responder(this.s.um(['Que alegria! 😍 Te esperamos na manutenção daqui a uns 3 meses ✨', 'Ahh que bom! Obrigada pela confiança 💛']));
+          r.cliente(this.s.um(this.m.elogios), this.s.entre(10, 300));
+          r.responder(this.s.um(this.m.respostaElogio));
           if (this.s.chance(0.35)) r.marcarTag('VIP', p.atendente.nome);
         }
         if (this.c.posVenda && tipo === 'compareceu' && this.s.chance(0.55)) {
@@ -630,7 +631,7 @@ export class Gerador {
         if (tipo === 'manutencao') {
           const p90 = partesBahia(new Date(fim + 90 * DIA));
           r.t = Math.min(bahia(p90.ano, p90.mes, p90.dia, 10, 0).getTime(), agora - this.s.int(2, 20) * DIA);
-          r.ativo('manutencao_90d', `Oi, ${nome}! Já faz uns 3 meses da sua ${servico.toLowerCase()}, tá na hora da manutenção ✨ Quer que eu veja um horário pra você?`);
+          r.ativo('manutencao_90d', this.m.manutencao(nome, servico));
           r.mudarEtapa('manutencao', 'manutencao_vencida');
           if (this.c.posVenda && this.s.chance(0.5)) {
             r.marcarTag('VIP', p.atendente.nome);
@@ -682,10 +683,9 @@ export class Gerador {
       if (ref.tipo === 'lista') valores[ref.id] = ref.opcoes.includes(v) ? v : ref.opcoes.length ? ref.opcoes[Math.abs(v.length) % ref.opcoes.length]! : v;
       else if (ref.tipo === 'texto') valores[ref.id] = v;
     };
-    if (this.s.chance(0.7)) lista(campos.tipoCabelo, this.s.pesado([['Liso', 10], ['Ondulado', 30], ['Cacheado', 38], ['Crespo', 22]] as const));
+    if (this.s.chance(0.7)) lista(campos.tipoCabelo, this.s.pesado(this.m.campoTipo.opcoes));
     if (this.s.chance(0.88)) lista(campos.comoConheceu, r.p.origem);
-    if (this.s.chance(0.08)) lista(campos.alergias, this.s.um(ALERGIAS));
-    void TIPOS_CABELO;
+    if (this.s.chance(0.08)) lista(campos.alergias, this.s.um(this.m.alergias));
     const [pn, ...resto] = r.p.nome.split(' ');
     const ano = partesBahia(this.c.agora).ano - this.s.int(19, 54);
     return {
@@ -693,7 +693,7 @@ export class Gerador {
       nome: r.p.nome,
       email: this.s.chance(0.45) ? `${semAcento(pn!)}.${semAcento(resto.join(''))}${this.s.int(1, 99)}@exemplo.com` : null,
       nascimento: this.s.chance(0.35) ? `${ano}-${p2(this.s.int(1, 12))}-${p2(this.s.int(1, 28))}` : null,
-      observacoes: this.s.chance(0.22) ? this.s.um(OBSERVACOES) : null,
+      observacoes: this.s.chance(0.22) ? this.s.um(this.m.observacoes) : null,
       pessoa: 'fisica',
       empresa: {},
       campos: valores,
@@ -712,11 +712,13 @@ export class Gerador {
       for (let i = 0; i < k; i++) lista.push(tipo);
     }
     while (lista.length > total + 2 && lista.length > 0) lista.splice(lista.findIndex((x) => x === 'em_conversa'), 1);
-    const plano: PlanoDemo = { conversas: [], mensagens: [], eventos: [], marcacoes: [], contatos: [] };
+    const plano: PlanoDemo = { conversas: [], mensagens: [], eventos: [], marcacoes: [], contatos: [], fotos: [] };
+    const homens = new Map<string, boolean>();
     for (const tipo of this.s.embaralhar(lista)) {
       const r = this.montar(tipo);
       const c = r.conversa();
       plano.conversas.push(c);
+      homens.set(r.p.telefone, r.p.homem);
       plano.mensagens.push(...r.msgs);
       plano.eventos.push(...r.evs);
       plano.marcacoes.push(...r.marcas);
@@ -731,6 +733,12 @@ export class Gerador {
       if (ficha) plano.contatos.push(ficha);
     }
     plano.eventos.sort((a, b) => a.em.getTime() - b.em.getTime());
+    // Fotos em rodízio pela ordem da lista (mais recentes primeiro): no topo da tela nenhuma foto se repete.
+    let f = 0, m = 0;
+    for (const c of [...plano.conversas].sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())) {
+      const arquivo = homens.get(c.telefone) ? FOTOS_CLIENTES_M[m++ % FOTOS_CLIENTES_M.length]! : FOTOS_CLIENTES_F[f++ % FOTOS_CLIENTES_F.length]!;
+      plano.fotos.push({ telefone: c.telefone, arquivo });
+    }
     return plano;
   }
 }
