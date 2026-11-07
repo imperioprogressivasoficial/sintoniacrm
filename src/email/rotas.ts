@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ehGestor, veTudo } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import { MODELOS_PRONTOS } from './blocos.js';
 import { ErroEmail, PREDEFINICOES, type EmailMarketing, type Publico } from './email.js';
 
@@ -51,7 +52,7 @@ export function registrarEmail(app: FastifyInstance, o: OpcoesRotasEmail): void 
     return `${String(req.headers['x-forwarded-proto'] ?? (local ? 'http' : 'https')).split(',')[0]}://${host}`;
   };
   const gestao = (req: FastifyRequest) => {
-    if (req.usuario && !ehGestor(req.usuario)) throw proibido('Só a gerência, a direção e a administração mexem no e-mail marketing.');
+    if (!pode(req, 'email_marketing')) throw proibido('Só a gerência, a direção e a administração mexem no e-mail marketing.');
     em.verUrl(baseDe(req));
     return { nome: req.usuario?.nome ?? 'teste', email: req.usuario?.email };
   };

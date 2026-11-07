@@ -2,7 +2,9 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { PAPEIS, type Contas, type Usuario } from './contas.js';
 import { apareceNaEquipe, ehGestor, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, UNIDADES_EQUIPE, unidadesQuePodeDar } from './acesso.js';
+import { pode } from './permissoes.js';
 import { gerarHash, senhaFraca } from './senha.js';
+import { seriaUltimoAdmin } from './usuarios-rotas.js';
 
 /** Foto já reduzida pela tela (~256 px): bem abaixo disto. */
 export const LIMITE_FOTO = 300 * 1024;
@@ -45,7 +47,7 @@ const publico = (u: Usuario, g: Usuario) => ({
 export function registrarEquipe(app: FastifyInstance, contas: Contas): void {
   const gestor = (req: FastifyRequest): Usuario => {
     const u = req.usuario!;
-    if (!ehGestor(u)) throw erro(403, 'Só gerente, direção e administração cuidam da equipe.');
+    if (!pode(req, 'equipe')) throw erro(403, 'Só gerente, direção e administração cuidam da equipe.');
     return u;
   };
   /** Pessoa que este gestor pode gerenciar; quem ele não enxerga dá 404. */
@@ -101,6 +103,7 @@ export function registrarEquipe(app: FastifyInstance, contas: Contas): void {
     const unidades = b.data.unidades ?? alvo.unidades;
     const recusa = recusaAtribuicao(g, papel, unidades);
     if (recusa) return reply.code(403).send({ erro: recusa });
+    if (seriaUltimoAdmin(await contas.listarUsuarios(g.empresaId), alvo, { papel })) return reply.code(409).send({ erro: 'Esta é a última pessoa da Administração.' });
     const u = await contas.atualizarUsuario(alvo.id, { papel, unidades });
     return publico(u!, g);
   });
@@ -108,6 +111,7 @@ export function registrarEquipe(app: FastifyInstance, contas: Contas): void {
   const ativar = (ativo: boolean) => async (req: FastifyRequest) => {
     const g = gestor(req);
     const alvo = await alvoDe(req, g);
+    if (!ativo && seriaUltimoAdmin(await contas.listarUsuarios(g.empresaId), alvo, { ativo })) throw erro(409, 'Esta é a última pessoa da Administração.');
     const u = await contas.atualizarUsuario(alvo.id, { ativo });
     // Desativada: sai na hora de todos os aparelhos.
     if (!ativo) await contas.encerrarSessoesDe(alvo.id);

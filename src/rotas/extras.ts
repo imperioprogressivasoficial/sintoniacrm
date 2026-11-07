@@ -9,6 +9,7 @@ import { ArmazemLeadsMemoria, ArmazemLeadsPostgres, type ArmazemLeads } from '..
 import { Leads as LeadsClasse } from '../leads/leads.js';
 import { Relatorios as RelatoriosClasse } from '../relatorios/relatorios.js';
 import { ehGestor, escopoDe, podeVer, type EscopoVisao } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import type { Contas } from '../auth/contas.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
@@ -39,7 +40,7 @@ const Unidade = z.enum(UNIDADES_LEADS);
 export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
   const agora = o.agora ?? (() => new Date());
   const exigeGestao = (req: FastifyRequest, msg: string) => {
-    if (req.usuario && !ehGestor(req.usuario)) throw proibido(msg);
+    if (!pode(req, req.url.startsWith('/api/relatorios') ? 'relatorios' : 'importar_leads')) throw proibido(msg);
   };
   const escopo = (req: FastifyRequest): EscopoVisao => ({ empresaId: o.empresaId, ...escopoDe(req.usuario) });
   const quem = (req: FastifyRequest) => ({ nome: req.usuario?.nome ?? 'teste', id: req.usuario?.id });

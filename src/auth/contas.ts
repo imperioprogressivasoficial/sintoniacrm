@@ -12,6 +12,8 @@ export interface Usuario {
   papel: Papel;
   unidades: string[];
   ativo: boolean;
+  /** Até onde vê as conversas (vem das permissões; sem isso vale o padrão do papel). */
+  verConversas?: 'minhas' | 'unidade' | 'todas';
 }
 
 export interface UsuarioComSenha extends Usuario {
@@ -177,7 +179,7 @@ const paraUsuario = (l: LinhaUsuario): Usuario => ({
 });
 
 export class ContasPostgres implements Contas {
-  constructor(private readonly pool: pg.Pool) {}
+  constructor(readonly pool: pg.Pool) {}
 
   async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
     try {

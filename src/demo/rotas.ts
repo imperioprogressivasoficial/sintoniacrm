@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { veTudo } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import type { Demo } from './demo.js';
 
 /**
@@ -11,7 +12,7 @@ import type { Demo } from './demo.js';
 export function registrarDemo(app: FastifyInstance, demo: Demo): void {
   const exige = (req: FastifyRequest) => {
     const u = req.usuario;
-    if (!u || !veTudo(u)) throw Object.assign(new Error('Só a administração e a direção mexem nos dados de demonstração.'), { statusCode: 403 });
+    if (!u || !pode(req, 'demo')) throw Object.assign(new Error('Só a administração e a direção mexem nos dados de demonstração.'), { statusCode: 403 });
     return u;
   };
   app.get('/api/demo', async (req) => {

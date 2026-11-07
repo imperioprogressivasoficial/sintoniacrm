@@ -18,7 +18,11 @@ export const NOME_PAPEL: Record<Papel, string> = {
 };
 
 /** Quem a tela e o servidor tratam como "pessoa da equipe" numa ação (nome vem da sessão). */
-export type Quem = Pick<Usuario, 'id' | 'nome' | 'papel' | 'unidades'> & Partial<Pick<Usuario, 'empresaId'>>;
+export type Quem = Pick<Usuario, 'id' | 'nome' | 'papel' | 'unidades'> & Partial<Pick<Usuario, 'empresaId' | 'verConversas'>>;
+
+/** Até onde a pessoa vê as conversas: o que as permissões disseram, ou o padrão do papel. */
+export const nivelConversas = (u: Pick<Usuario, 'papel'> & Partial<Pick<Usuario, 'verConversas'>>) =>
+  u.verConversas ?? (veTudo(u) ? 'todas' : u.papel === 'gerente' ? 'unidade' : 'minhas');
 
 /** Admin e direção veem todas as conversas. */
 export const veTudo = (u: Pick<Usuario, 'papel'>) => u.papel === 'admin' || u.papel === 'direcao';
@@ -34,9 +38,10 @@ export const ehGestor = (u: Pick<Usuario, 'papel'>) => u.papel === 'gerente' || 
  */
 export function podeVer(u: Quem, c: Conversa): boolean {
   if (u.empresaId && u.empresaId !== c.empresaId) return false;
-  if (veTudo(u)) return true;
+  const nivel = nivelConversas(u);
+  if (nivel === 'todas') return true;
   if (!u.unidades.includes(c.unidade)) return false;
-  if (u.papel === 'gerente') return true;
+  if (nivel === 'unidade') return true;
   return !c.responsavelId || c.responsavelId === u.id;
 }
 
@@ -55,8 +60,9 @@ export interface EscopoVisao {
 export function escopoDe(u: Quem | undefined): EscopoVisao {
   if (!u) return {};
   const base: EscopoVisao = u.empresaId ? { empresaId: u.empresaId } : {};
-  if (veTudo(u)) return base;
-  if (u.papel === 'gerente') return { ...base, unidades: [...u.unidades] };
+  const nivel = nivelConversas(u);
+  if (nivel === 'todas') return base;
+  if (nivel === 'unidade') return { ...base, unidades: [...u.unidades] };
   return { ...base, unidades: [...u.unidades], donaOuSemDona: u.id };
 }
 
