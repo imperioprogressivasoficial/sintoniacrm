@@ -1,0 +1,13 @@
+{
+  "name": "Sintonia",
+  "short_name": "Sintonia",
+  "description": "CRM de WhatsApp com IA",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0e1824",
+  "theme_color": "#0e1824",
+  "icons": [
+    { "src": "/icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
