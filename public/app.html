@@ -8,29 +8,8 @@
 <meta name="theme-color" content="#111b21" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/marca.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/ds.css">
 <style>
-  /* Paleta no padrão do WhatsApp (claro e escuro, segue o aparelho). */
-  :root {
-    --fundo: #ffffff; --painel: #f0f2f5; --chat: #efeae2; --linha: #e9edef; --hover: #f5f6f6; --sel: #f0f2f5;
-    --texto: #111b21; --sub: #667781; --icone: #54656f;
-    --recebida: #ffffff; --enviada: #d9fdd3; --entrada: #ffffff;
-    --verde: #25d366; --verde-forte: #008069; --check: #53bdeb; --badge-txt: #ffffff;
-    --aviso: #ffeecd; --aviso-txt: #54656f; --data: #ffffff; --sombra: 0 1px .5px rgba(11,20,26,.13);
-    --ia: #008069; --citacao: #f0f2f5; --azul: #106ebe;
-    --textura: rgba(11,20,26,.035);
-    --boneco-fundo: #dfe5e7; --boneco: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --fundo: #111b21; --painel: #202c33; --chat: #0b141a; --linha: #222d34; --hover: #202c33; --sel: #2a3942;
-      --texto: #e9edef; --sub: #8696a0; --icone: #aebac1;
-      --recebida: #202c33; --enviada: #005c4b; --entrada: #2a3942;
-      --verde: #00a884; --verde-forte: #00a884; --check: #53bdeb; --badge-txt: #111b21;
-      --aviso: #182229; --aviso-txt: #ffd279; --data: #182229; --sombra: 0 1px .5px rgba(11,20,26,.4);
-      --ia: #06cf9c; --citacao: #1d282f; --textura: rgba(255,255,255,.025);
-      --boneco-fundo: #6a7175; --boneco: #cfd4d6;
-    }
-  }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { height: 100%; margin: 0; }
@@ -400,6 +379,113 @@
     .nav .rotulo { font-size: 11px; }
     .dono .dica { display: none; }
   }
+
+  /* ===================== Sintonia v2: estrutura do WhatsApp (iPhone) com a cara da Sintonia ===================== */
+  .titulo-grande { font-size: 34px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 6px; line-height: 1.1; }
+  .lista-topo .titulo { display: flex; align-items: center; gap: 10px; height: 48px; position: static; }
+  .lista-topo .titulo .espaco { flex: 1; }
+  .icone.redondo { width: 40px; height: 40px; background: var(--painel); color: var(--texto); }
+  .icone.redondo.branco { background: var(--texto); color: var(--fundo); }
+  .so-nunca { display: none !important; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .chip .qtd { color: var(--sub); font-weight: 600; }
+  .chip .qtd:empty { display: none; }
+  .chip[aria-pressed="true"] .qtd { color: inherit; }
+  .luz { width: 10px; height: 10px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px rgba(15, 252, 190, .8); display: inline-block; }
+  .badge, .contador { background: var(--badge) !important; color: var(--badge-txt) !important; box-shadow: 0 0 10px rgba(15, 252, 190, .5); }
+  .item .hora.nova { color: var(--verde); }
+
+  /* aba IA no meio, com brilho */
+  .nav-ia .ia-bola { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: 0 0 0 1px rgba(15,252,190,.35), 0 0 18px rgba(15, 252, 190, .55); }
+  .nav-ia .ia-bola svg { width: 20px; height: 20px; }
+  .nav-ia[aria-current="page"] .ia-bola { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 24px rgba(15, 252, 190, .8); }
+
+  /* topo da conversa */
+  .voltar { all: unset; cursor: pointer; display: none; align-items: center; gap: 2px; height: 40px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--painel); color: var(--texto); font-size: 16px; font-weight: 600; flex: none; }
+  .voltar svg { width: 22px; height: 22px; }
+  .voltar span:empty { display: none; }
+  .pilula-topo { display: flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: 999px; background: var(--painel); border: 1px solid var(--linha); flex: none; }
+  .pilula-topo .icone { width: 42px; height: 40px; color: var(--texto); }
+  .pilula-topo .icone svg { width: 23px; height: 23px; }
+
+  /* barra de digitar: campo grande em cima, modo e botões embaixo */
+  .compor { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: var(--fundo); border-top: 1px solid var(--linha); }
+  .compor .caixa { margin: 0; padding: 0 14px; border-radius: 22px; background: var(--painel); }
+  .compor textarea { padding: 12px 0; font-size: 16px; }
+  .linha-compor { display: flex; align-items: center; gap: 4px; }
+  .linha-compor .espaco { flex: 1; }
+  .linha-compor .icone { color: var(--texto); }
+  .linha-compor .modo { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha); font-size: 14px; font-weight: 600; color: var(--texto); }
+  .linha-compor .modo i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); }
+  .linha-compor .modo[data-m="ia"] i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(15, 252, 190, .9); }
+  .linha-compor .modo[data-m="copiloto"] i { background: #5ec4ff; }
+  .falar { background: var(--texto) !important; color: var(--fundo) !important; width: 46px !important; height: 46px !important; margin: 0 0 0 4px !important; }
+  #enviar:not(.mic-vazio) { background: var(--marca-gradiente) !important; color: #fff !important; box-shadow: var(--brilho-azul); }
+  .compor.gravando > .caixa, .compor.gravando > .linha-compor { display: none !important; }
+  .menu-mais { bottom: 104px; }
+
+  /* folha "Selecionar modo" (sobe de baixo, como no iPhone) */
+  dialog.folha { width: min(520px, 100vw); max-width: 100vw; margin: auto auto 0; border-radius: 22px 22px 0 0; padding: 10px 14px calc(18px + env(safe-area-inset-bottom)); background: var(--fundo); }
+  @media (min-width: 761px) { dialog.folha { margin: auto; border-radius: 22px; } }
+  .folha-topo { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; margin-bottom: 10px; }
+  .folha-topo h2 { text-align: center; font-size: 18px; font-weight: 700; margin: 0; }
+  .fechar-folha { background: var(--painel); color: var(--texto); }
+  .folha-lista { background: var(--painel); border-radius: 18px; overflow: hidden; }
+  .folha-lista button { all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--linha); }
+  .folha-lista button:last-child { border-bottom: 0; }
+  .folha-lista button > svg { width: 24px; height: 24px; flex: none; color: var(--texto); }
+  .folha-lista span { flex: 1; display: grid; gap: 2px; }
+  .folha-lista b { font-size: 17px; font-weight: 500; }
+  .folha-lista small { font-size: 14px; color: var(--sub); }
+  .folha-lista .marca-ok { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+  .folha-lista button[aria-pressed="true"] .marca-ok { background: var(--marca-gradiente); box-shadow: 0 0 10px rgba(15,252,190,.5); }
+  .folha-lista button[aria-pressed="true"] .marca-ok::after { content: "✓"; display: grid; place-items: center; height: 100%; color: #fff; font-size: 13px; font-weight: 800; }
+
+  /* vistas com cabeçalho grande (Funil) */
+  .coluna-vista { flex-direction: column; }
+  .cabeca-vista { padding: 10px 16px 4px; background: var(--fundo); }
+  .ligar { flex: 1; overflow-y: auto; padding: 4px 0 110px; background: var(--fundo); }
+  .item-ligar { cursor: default; }
+  .acoes-ligar { display: flex; gap: 6px; padding-right: 12px; }
+  .acoes-ligar .icone.redondo { color: var(--texto); }
+  .acoes-ligar svg { width: 20px; height: 20px; }
+  .tag.motivo-faltou { background: #3a1d24; color: #ff8fa3; }
+  .tag.motivo-interessada_sem_agendar { background: #0d3a40; color: var(--marca-menta); }
+  @media (prefers-color-scheme: light) { .tag.motivo-faltou { background: #ffe3e8; color: #b4233f; } .tag.motivo-interessada_sem_agendar { background: #d5f9ef; color: #0a6b5b; } }
+  .secao { margin: 18px 4px 6px; font-size: 13px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; }
+  .ligar .secao { margin-left: 16px; }
+  .linha-ligacao { padding: 8px 16px; font-size: 14px; border-bottom: 1px solid var(--linha); }
+  .linha-ligacao span { color: var(--sub); }
+  .escolha-ligacao { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .escolha-ligacao label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; color: var(--texto); font-size: 15px; cursor: pointer; }
+  .escolha-ligacao input { accent-color: var(--marca-azul); }
+
+  /* aba IA */
+  #ia { padding-bottom: 110px; }
+  .ia-destaque { border-radius: 20px; padding: 18px; display: grid; gap: 4px; color: #fff; background: radial-gradient(240px 140px at 90% 0%, rgba(15,252,190,.45), transparent), linear-gradient(135deg, #0d3a63, #106ebe); box-shadow: var(--brilho-azul); }
+  .ia-destaque span { font-size: 13px; opacity: .85; }
+  .ia-destaque b { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+  .ia-destaque small { font-size: 13.5px; opacity: .9; }
+  #ia .item, #ia .linha-ligacao { padding-left: 4px; }
+
+  @media (max-width: 760px) {
+    .lista-topo { padding-top: 6px; }
+    .lista-topo .titulo { height: 46px; }
+    .titulo-grande { font-size: 34px; }
+    .voltar { display: inline-flex; }
+    .chat-topo { gap: 10px; padding: 6px 10px; height: auto; min-height: 60px; background: var(--fundo); }
+    .chat-topo .quem span { font-size: 12.5px; }
+    .trilho { justify-content: space-between; }
+    .nav { min-width: 0; }
+    .nav-ia { margin-top: -8px; }
+    .nav-ia .ia-bola { width: 40px; height: 40px; }
+    .nav-ia .ia-bola svg { width: 22px; height: 22px; }
+    .menu-mais { bottom: 110px; }
+  }
+
+  /* títulos grandes do iPhone valem por cima das regras antigas */
+  .lista-topo h1.titulo-grande, .painel h1.titulo-grande, .gestao h1.titulo-grande, .cabeca-vista h1.titulo-grande { position: static; transform: none; font-size: 34px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 8px; }
+  @media (max-width: 760px) { .voltar { display: inline-flex !important; } }
 </style>
 </head>
 <body>
@@ -408,10 +494,11 @@
     <img class="marca" src="/marca.svg" alt="Sintonia">
     <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
     <button class="nav" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">Funil</span></button>
+    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg></span><span class="rotulo">IA</span></button>
     <button class="nav" data-vista="painel" title="Painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg><span class="rotulo">Painel</span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
-    <button class="nav" data-vista="configuracoes" id="nav-config" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span class="rotulo">Configurações</span></button>
+    <button class="nav" data-vista="configuracoes" id="nav-config" title="Conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span class="rotulo">Conta</span></button>
   </nav>
 
   <div class="area">
@@ -421,15 +508,17 @@
       <div class="lista">
         <div class="lista-topo">
           <div class="titulo">
-            <button class="icone redondo so-cel" id="mais-lista" title="Mais opções"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
-            <h1>Conversas</h1>
-            <button class="icone redondo verde so-cel" id="nova-teste-cel" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-            <button class="icone so-pc" id="nova-teste" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
+            <button class="icone redondo" id="mais-lista" title="Mais opções"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+            <span class="espaco"></span>
+            <button class="icone redondo branco" id="nova-teste-cel" title="Nova conversa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button class="icone so-nunca" id="nova-teste" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
           </div>
+          <h1 class="titulo-grande">Conversas</h1>
           <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Pesquisar" aria-label="Pesquisar"></label>
           <div class="filtros" id="filtros">
-            <button class="chip" data-f="todas" aria-pressed="true">Tudo</button>
-            <button class="chip" data-f="esperando" aria-pressed="false">Não respondidas</button>
+            <button class="chip" data-f="todas" aria-pressed="true">Todas</button>
+            <button class="chip" data-f="esperando" aria-pressed="false">Não lidas <span class="qtd" id="qtd-nao-lidas"></span></button>
+            <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA respondendo</button>
             <button class="chip" data-f="minhas" aria-pressed="false">Minhas</button>
             <button class="chip" data-f="norte" aria-pressed="false">Norte</button>
             <button class="chip" data-f="sumare" aria-pressed="false">Sumaré</button>
@@ -446,23 +535,31 @@
         </div></div>
         <div id="chat-aberto" style="display:none">
           <header class="chat-topo">
-            <button class="icone voltar" id="voltar" aria-label="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>
+            <button class="voltar" id="voltar" aria-label="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg><span id="voltar-qtd"></span></button>
             <span class="avatar p" id="c-avatar"></span>
             <div class="quem" id="abrir-ficha" role="button" tabindex="0"><b id="c-nome"></b><span id="c-sub"></span></div>
-            <button class="modo" id="modo" title="Quem responde esta conversa"><i></i><span id="modo-txt"></span></button>
-            <button class="icone" id="topo-agendar" title="Agendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></button>
+            <div class="pilula-topo">
+              <button class="icone" id="topo-ficha" title="Dados da cliente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="14" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0M7 3.5h10"/></svg></button>
+              <button class="icone" id="topo-agendar" title="Agendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></button>
+              <a class="icone" id="topo-ligar" title="Ligar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg></a>
+            </div>
           </header>
           <div class="dono" id="dono" hidden><span id="dono-txt"></span><button id="dono-assumir" hidden>Assumir</button><span class="digitando" id="dono-dig" hidden></span></div>
           <div class="msgs" id="msgs"></div>
           <div class="sugestao" id="sugestao" hidden><div class="citacao"><div class="t"><b>Sugestão da IA</b><span id="sugestao-txt"></span></div><button id="usar-sugestao">Usar</button></div></div>
           <div class="revisao" id="revisao" hidden><div class="citacao"><div class="t"><b id="revisao-tit"></b><span id="revisao-txt"></span></div><button id="revisao-usar" hidden>Usar</button></div></div>
           <div class="compor">
-            <button class="icone" id="mais" title="Mais" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
             <div class="caixa">
               <textarea id="texto" rows="1" placeholder="Mensagem"></textarea>
-              <button class="icone" id="camera" title="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
             </div>
-            <button class="icone falar" id="enviar" title="Gravar áudio"><svg id="ic-mic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg><svg id="ic-enviar" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
+            <div class="linha-compor">
+              <button class="modo" id="modo" title="Selecionar modo"><i></i><span id="modo-txt"></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+              <span class="espaco"></span>
+              <button class="icone" id="mais" title="Mais" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+              <button class="icone" id="figurinha" title="Figurinhas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 12.5V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5.5L20 12.5Z"/><path d="M12.5 20v-4.5a3 3 0 0 1 3-3H20"/></svg></button>
+              <button class="icone" id="camera" title="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
+              <button class="icone falar" id="enviar" title="Gravar áudio"><svg id="ic-mic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg><svg id="ic-enviar" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
+            </div>
             <div class="gravando" id="gravando" hidden>
               <button class="icone" id="grav-cancelar" title="Cancelar gravação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg></button>
               <span class="ponto"></span><span class="relogio" id="grav-tempo">0:00</span><span class="dica">Gravando…</span>
@@ -506,21 +603,41 @@
       </aside>
     </section>
 
-    <section class="vista" id="v-funil"><div class="funil" id="funil"></div></section>
+    <section class="vista coluna-vista" id="v-funil">
+      <div class="cabeca-vista"><h1 class="titulo-grande">Funil</h1>
+        <div class="filtros" id="funil-abas"><button class="chip" data-a="quadro" aria-pressed="true">Quadro</button><button class="chip" data-a="ligar" aria-pressed="false">📞 Ligar hoje <span class="qtd" id="qtd-ligar"></span></button></div></div>
+      <div class="funil" id="funil"></div>
+      <div class="ligar" id="ligar" hidden></div>
+    </section>
+    <section class="vista" id="v-ia"><div class="painel" id="ia"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
     <section class="vista" id="v-configuracoes"><div class="painel"><div class="gestao" id="configuracoes" style="display:grid;gap:14px"></div></div></section>
   </div>
 </div>
 
-<dialog id="d-modo">
-  <form method="dialog" id="f-modo">
-    <h2>Quem responde esta conversa?</h2>
-    <label class="opcao"><input type="radio" name="modo" value="ia"><span><b style="font-weight:500">IA</b><br><span class="info">A IA responde sozinha, 24 horas.</span></span></label>
-    <label class="opcao"><input type="radio" name="modo" value="copiloto"><span><b style="font-weight:500">Copiloto</b><br><span class="info">A IA sugere, você envia. Se ninguém responder no prazo, ela assume.</span></span></label>
-    <label class="opcao"><input type="radio" name="modo" value="humano"><span><b style="font-weight:500">Só eu</b><br><span class="info">A IA não responde nem sugere; só organiza o funil.</span></span></label>
-    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Salvar</button></div>
+<dialog id="d-ligacao">
+  <form method="dialog" id="f-ligacao">
+    <h2>Como foi a ligação?</h2>
+    <p class="info" id="lg-quem" style="margin:0"></p>
+    <div class="escolha-ligacao">
+      <label><input type="radio" name="resultado" value="atendeu" checked><span>Atendeu</span></label>
+      <label><input type="radio" name="resultado" value="agendou"><span>Agendou</span></label>
+      <label><input type="radio" name="resultado" value="nao_atendeu"><span>Não atendeu</span></label>
+      <label><input type="radio" name="resultado" value="caixa_postal"><span>Caixa postal</span></label>
+    </div>
+    <label>Nota (opcional) <input name="nota" maxlength="500" placeholder="ex.: pediu para ligar à noite" autocomplete="off"></label>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Depois</button><button class="botao" value="ok">Registrar</button></div>
   </form>
+</dialog>
+
+<dialog id="d-modo" class="folha">
+  <div class="folha-topo"><span></span><h2>Selecionar modo</h2><button class="icone fechar-folha" id="modo-fechar" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="folha-lista">
+    <button data-modo="humano"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></svg><span><b>Minha resposta</b><small>Sem assistência da IA</small></span><i class="marca-ok"></i></button>
+    <button data-modo="copiloto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 9-9a2.1 2.1 0 0 0-3-3l-9 9-1 4Z"/><path d="M18 14l.7 1.8 1.8.7-1.8.7L18 19l-.7-1.8-1.8-.7 1.8-.7L18 14Z" fill="currentColor"/></svg><span><b>Sugestões</b><small>A IA sugere, você envia</small></span><i class="marca-ok"></i></button>
+    <button data-modo="ia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6L10 3Z"/><path d="M17.5 13.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z"/></svg><span><b>Agente de IA</b><small>A IA escreve e envia mensagens para você</small></span><i class="marca-ok"></i></button>
+  </div>
 </dialog>
 
 <dialog id="d-teste">
@@ -626,7 +743,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const ETAPAS = [['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
   const NOME_ETAPA = Object.fromEntries(ETAPAS);
   const UNIDADE = { norte: 'Salvador Norte', sumare: 'Sumaré', feira: 'Feira de Santana' };
-  const MODO = { ia: 'IA', copiloto: 'Copiloto', humano: 'Só eu' };
+  const MODO = { ia: 'Agente de IA', copiloto: 'Sugestões', humano: 'Minha resposta' };
   const CORES = ['#00a884', '#027eb5', '#7f66ff', '#e26b2c', '#c4407b', '#1f8a70', '#a0522d', '#5b6ee1'];
   const CHECK = '<svg viewBox="0 0 16 11" fill="currentColor"><path d="M11.07.65 4.98 8.15 2.7 5.92a.5.5 0 0 0-.7.71l2.67 2.6a.5.5 0 0 0 .73-.04L11.84 1.3a.5.5 0 0 0-.77-.64Zm3.79 0-6.08 7.5-.9-.88-.7.71 1.29 1.25a.5.5 0 0 0 .73-.04L15.63 1.3a.5.5 0 0 0-.77-.64Z"/></svg>';
   const estado = { eu: null, situacao: {}, conversas: [], aberta: null, detalhe: null, filtro: 'todas', busca: '', vista: 'conversas', horario: null, assinatura: '' };
@@ -674,7 +791,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.vista = v;
     document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
-    if (v === 'funil') desenharFunil();
+    if (v === 'funil') { desenharFunil(); carregarLigacoes(); }
+    if (v === 'ia') carregarIA();
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
@@ -685,6 +803,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !esperando(c)) return false;
+    if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
     if (estado.filtro === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
@@ -742,7 +861,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
     $('c-avatar').replaceWith(Object.assign(avatar(c, 'p'), { id: 'c-avatar' }));
     $('c-nome').textContent = nomeDe(c);
-    $('c-sub').textContent = `${UNIDADE[c.unidade] || c.unidade} · ${NOME_ETAPA[c.etapa]}`;
+    $('c-sub').textContent = `${UNIDADE[c.unidade] || c.unidade} · toque para ver os dados da cliente`;
+    $('topo-ligar').href = 'tel:+' + c.telefone;
     $('modo').dataset.m = c.modo; $('modo-txt').textContent = MODO[c.modo];
     const caixa = $('msgs'); const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
     caixa.replaceChildren();
@@ -781,20 +901,30 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('f-etiquetas-bloco').hidden = !(c.etiquetas || []).length; $('f-etiquetas').replaceChildren(...(c.etiquetas || []).map((t) => el('span', { class: 'tag', text: t })));
   }
   const abrirFicha = () => { $('ficha').hidden = false; $('menu-mais').hidden = true; };
+  $('topo-ficha').addEventListener('click', abrirFicha);
+  $('figurinha').addEventListener('click', () => toast('Figurinhas chegam numa próxima versão.'));
+  // Ligar: abre a ligação no celular e, na volta, pede o resultado (aba Ligações do Funil).
+  $('topo-ligar').addEventListener('click', () => { const c = estado.detalhe?.conversa; if (c) setTimeout(() => abrirRegistroLigacao(c.id, nomeDe(c)), 600); });
   $('abrir-ficha').addEventListener('click', abrirFicha);
   $('abrir-ficha').addEventListener('keydown', (e) => { if (e.key === 'Enter') abrirFicha(); });
   $('m-ficha').addEventListener('click', abrirFicha);
   $('fechar-ficha').addEventListener('click', () => { $('ficha').hidden = true; });
 
   // quem responde
-  $('modo').addEventListener('click', () => { $('f-modo').modo.value = estado.detalhe.conversa.modo; $('d-modo').showModal(); });
-  $('f-modo').addEventListener('submit', async (e) => {
-    if (e.submitter?.value !== 'ok') return;
-    const modo = e.target.modo.value;
+  $('modo').addEventListener('click', () => {
+    const atual = estado.detalhe?.conversa.modo;
+    document.querySelectorAll('#d-modo [data-modo]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modo === atual)));
+    $('d-modo').showModal();
+  });
+  $('modo-fechar').addEventListener('click', () => $('d-modo').close());
+  $('d-modo').addEventListener('click', (e) => { if (e.target === $('d-modo')) $('d-modo').close(); });
+  document.querySelectorAll('#d-modo [data-modo]').forEach((b) => b.addEventListener('click', async () => {
+    const modo = b.dataset.modo;
+    $('d-modo').close();
     if (modo !== 'humano' && !estado.situacao.iaLigada) toast('A IA ainda não foi ligada: ela começa a responder quando a chave for configurada.');
     await post(`/api/conversas/${estado.aberta}/modo`, { modo }).catch((x) => toast(x.message));
     await atualizar();
-  });
+  }));
 
   // escrever e enviar: o microfone vira o botão de enviar quando há texto, como no WhatsApp
   const texto = $('texto');
@@ -1179,6 +1309,72 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
   }
 
+  // funil: Quadro | Ligar hoje
+  estado.abaFunil = 'quadro';
+  $('funil-abas').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    estado.abaFunil = b.dataset.a;
+    document.querySelectorAll('#funil-abas .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+    $('funil').hidden = estado.abaFunil !== 'quadro'; $('ligar').hidden = estado.abaFunil !== 'ligar';
+    if (estado.abaFunil === 'ligar') carregarLigacoes();
+  });
+  const MOTIVO = { faltou: 'Faltou', interessada_sem_agendar: 'Interessada', nao_responde: 'Sumiu' };
+  const RESULTADO = { atendeu: 'atendeu', agendou: 'agendou', nao_atendeu: 'não atendeu', caixa_postal: 'caixa postal' };
+  async function carregarLigacoes() {
+    let r; try { r = await api('/api/ligacoes'); } catch { return; }
+    $('qtd-ligar').textContent = r.sugestoes.length ? String(r.sugestoes.length) : '';
+    if (estado.abaFunil !== 'ligar') return;
+    const caixa = $('ligar'); caixa.replaceChildren();
+    if (!r.sugestoes.length) caixa.append(el('div', { class: 'vazio' }, el('b', { text: 'Ninguém para ligar agora.', style: 'color:var(--texto);font-weight:600' }), el('span', { text: 'Aqui aparecem quem faltou, quem se interessou e não agendou e quem parou de responder.' })));
+    for (const s of r.sugestoes) {
+      const c = estado.conversas.find((x) => x.id === s.conversaId) || { id: s.conversaId, nome: s.cliente, telefone: s.telefone };
+      caixa.append(el('div', { class: 'item item-ligar' }, avatar(c),
+        el('div', { class: 'corpo' },
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: s.cliente || formatarTel(s.telefone) }), el('span', { class: 'tag motivo-' + s.motivo, text: MOTIVO[s.motivo] })),
+          el('div', { class: 'l2' }, el('span', { class: 'previa', text: s.texto }))),
+        el('div', { class: 'acoes-ligar' },
+          el('a', { class: 'icone redondo', href: 'tel:+' + s.telefone, title: 'Ligar', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>', onclick: () => setTimeout(() => abrirRegistroLigacao(s.conversaId, s.cliente || formatarTel(s.telefone)), 600) }),
+          el('button', { class: 'icone redondo', title: 'Abrir conversa', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg>', onclick: () => { mostrar('conversas'); abrir(s.conversaId); } }))));
+    }
+    if (r.hoje.length) {
+      caixa.append(el('h3', { class: 'secao', text: 'Ligações de hoje' }));
+      for (const l of r.hoje) caixa.append(el('div', { class: 'linha-ligacao' }, el('b', { text: l.cliente || 'Cliente' }), el('span', { text: ` · ${RESULTADO[l.resultado] || l.resultado} · ${l.atendente} · ${hm(l.em)}${l.nota ? ' · ' + l.nota : ''}` })));
+    }
+  }
+  function abrirRegistroLigacao(conversaId, nome) {
+    estado.ligacaoDe = conversaId;
+    $('f-ligacao').reset(); $('lg-quem').textContent = nome || '';
+    $('d-ligacao').showModal();
+  }
+  $('f-ligacao').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok' || !estado.ligacaoDe) return;
+    const f = Object.fromEntries(new FormData(e.target));
+    try { await post(`/api/conversas/${estado.ligacaoDe}/ligacao`, { resultado: f.resultado, nota: f.nota || undefined }); toast('Ligação registrada ✓'); carregarLigacoes(); atualizar(); }
+    catch (x) { toast(x.message); }
+  });
+
+  // aba IA: o que a IA fez hoje e quem ela está conduzindo
+  async function carregarIA() {
+    const caixa = $('ia');
+    const [r, at] = await Promise.all([api('/api/painel').catch(() => null), api('/api/atualizacoes').catch(() => [])]);
+    const conduzindo = estado.conversas.filter((c) => c.modo === 'ia');
+    const num = (v, t) => el('div', { class: 'num' }, el('b', { text: String(v) }), el('span', { text: t }));
+    const deIA = at.filter((a) => a.tipo === 'agendamento' && /^A IA/.test(a.titulo) || a.tipo === 'ia_assumiu' || a.tipo === 'pediu_ajuda');
+    caixa.replaceChildren(
+      el('h1', { class: 'titulo-grande', text: 'Inteligência' }),
+      el('div', { class: 'ia-destaque' },
+        el('span', { text: estado.situacao.iaLigada ? 'Hoje a IA' : 'IA desligada' }),
+        el('b', { text: estado.situacao.iaLigada ? `${r ? r.agendamentosIa : 0} agendamentos` : 'Falta a chave da IA' }),
+        el('small', { text: estado.situacao.iaLigada ? `assumiu ${r ? r.iaAssumiu : 0} conversas · pediu ajuda ${r ? r.passouParaHumano : 0} vezes · ${r ? r.enviosAtivos : 0} lembretes e follow-ups` : 'A administração liga em Conta › Conexões e integrações.' })),
+      el('div', { class: 'numeros' }, num(conduzindo.length, 'conversas com o Agente de IA'), num(estado.conversas.filter((c) => c.modo === 'copiloto').length, 'em Sugestões'), num(estado.conversas.filter((c) => c.modo === 'humano').length, 'em Minha resposta')),
+      el('h3', { class: 'secao', text: 'Conduzindo agora' }),
+      ...(conduzindo.length ? conduzindo.slice(0, 30).map((c) => el('button', { class: 'item', onclick: () => { mostrar('conversas'); abrir(c.id); } }, avatarDaLista(c), el('div', { class: 'corpo' }, el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), el('span', { class: 'hora', text: horaLista(c.ultima ? c.ultima.em : c.atualizadaEm) })), el('div', { class: 'l2' }, el('span', { class: 'previa', text: c.ultima ? c.ultima.texto : '' }))))) : [el('p', { class: 'info', style: 'padding:0 4px', text: 'Nenhuma conversa com o Agente de IA agora. Escolha "Agente de IA" no modo da conversa para a IA conduzir.' })]),
+      el('h3', { class: 'secao', text: 'O que ela fez hoje' }),
+      ...(deIA.length ? deIA.slice(0, 30).map((a) => el('div', { class: 'linha-ligacao' }, el('b', { text: a.titulo }), el('span', { text: ` · ${a.cliente || ''} · ${hm(a.em)}${a.detalhe ? ' · ' + a.detalhe : ''}` }))) : [el('p', { class: 'info', style: 'padding:0 4px', text: 'Ainda nada hoje.' })]),
+      ...(ehGestor(estado.eu) ? [el('h3', { class: 'secao', text: 'Treinamento' }), el('p', { class: 'info', style: 'padding:0 4px', text: 'Em breve aqui: o que a IA sabe da Império (serviços, regras, jeito de falar) para você editar e testar.' })] : []),
+    );
+  }
+
   // painel
   async function carregarPainel() {
     const caixa = $('painel');
@@ -1204,6 +1400,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     try { estado.conversas = await api('/api/conversas'); } catch { return; }
     const n = estado.conversas.filter(esperando).length;
     $('contador').hidden = !n; $('contador').textContent = String(n);
+    $('qtd-nao-lidas').textContent = n ? String(n) : '';
+    $('voltar-qtd').textContent = n ? String(n) : '';
     desenharLista();
     if (estado.aberta) await carregarConversa();
     if (estado.vista === 'funil') desenharFunil();
@@ -1359,14 +1557,23 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const ICONE_CHAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg>';
     const ICONE_SAIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>';
     const linha = (a, b) => el('div', { class: 'linha' }, el('span', { text: a }), el('span', { text: b }));
+    const ICONE_EQUIPE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg>';
+    const ICONE_IA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/></svg>';
+    const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+    const ICONE_RELATORIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg>';
     const botao = (icone, texto, acao, classe = '') => { const b = el('button', { class: classe, onclick: acao }); b.insertAdjacentHTML('beforeend', icone); b.append(texto); return b; };
     $('configuracoes').replaceChildren(
-      el('div', { class: 'cab' }, el('h1', { text: 'Configurações' })),
+      el('div', { class: 'cab' }, el('h1', { class: 'titulo-grande', text: 'Conta' })),
       el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, ''), el('b', { text: eu.nome }), el('span', { text: eu.email })),
       el('div', { class: 'opcoes-conta' },
         linha('Papel', PAPEL[eu.papel] || eu.papel),
         linha('Unidades', nomesUnidades(eu.unidades) || (['admin', 'direcao'].includes(eu.papel) ? 'Todas' : 'Nenhuma ainda')),
         el('div', { class: 'linha' }, el('span', { class: 'info', style: 'color:var(--sub)', text: SOBRE_PAPEL[eu.papel] || '' }))),
+      el('div', { class: 'opcoes-conta' },
+        ...(ehGestor(eu) ? [botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
+        botao(ICONE_IA, 'Inteligência artificial', () => mostrar('ia')),
+        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões e integrações', () => { location.href = '/conexoes'; })] : []),
+        botao(ICONE_RELATORIO, 'Relatórios e painel', () => mostrar('painel'))),
       el('div', { class: 'opcoes-conta' },
         botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
         botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
@@ -1386,14 +1593,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
-    $('nav-config').title = `Configurações · ${estado.eu.nome}`;
-    $('nav-equipe').hidden = !ehGestor(estado.eu);
+    $('nav-config').title = `Conta · ${estado.eu.nome}`;
+    $('nav-equipe').hidden = true;
     estado.situacao = await api('/api/situacao').catch(() => ({}));
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
     if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
-    if (avisos.length) { $('aviso').hidden = false; $('aviso').replaceChildren(...avisos.map((a) => el('span', { text: a }))); }
+    estado.avisos = avisos;
     $('nova-teste').hidden = !estado.situacao.simulador; $('nova-teste-cel').hidden = !estado.situacao.simulador;
     await atualizar();
     setInterval(atualizar, 4000);
