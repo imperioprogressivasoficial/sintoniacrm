@@ -694,7 +694,7 @@ html { overflow-x: clip; }
 .v-plano-conta div { display: grid; gap: 4px; padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.18); color: #fff; }
 .v-plano-conta b { font-family: var(--fonte-titulo); font-size: 22px; color: var(--menta); }
 .v-plano-conta span { font-size: 13.5px; color: rgba(255,255,255,.72); }
-@media (max-width: 900px) { .v-planos, .v-plano-conta { grid-template-columns: 1fr; } .v-plano.destaque { order: -1; } }
+@media (max-width: 900px) { .v-planos, .v-plano-conta { grid-template-columns: 1fr; } }
 .v-planos.dois { grid-template-columns: repeat(2, 1fr); max-width: 860px; }
 .v-creditos { max-width: 860px; margin: 18px auto 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; border-radius: 22px; background: rgba(255,255,255,.04); border: 1px dashed rgba(15,252,190,.4); color: #fff; }
 .v-creditos-txt p:last-child { margin: 6px 0 0; font-size: 14.5px; color: rgba(255,255,255,.78); }
