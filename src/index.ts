@@ -44,6 +44,10 @@ import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
 import { Notificador, observarEventos } from './notificacoes/notificador.js';
 import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
+import { EmailMarketing } from './email/email.js';
+import { registrarEmail } from './email/rotas.js';
+import { transporteArquivo, transporteReal } from './email/transporte.js';
+import { calendarioPostgres } from './automacoes/calendario.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -184,7 +188,12 @@ const funis = new Funis({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   log,
 });
+// E-mail marketing (só com banco). EMAIL_TRANSPORTE=arquivo:/pasta grava os e-mails em arquivos em vez de enviar (desenvolvimento).
+const transporteEmail = process.env.EMAIL_TRANSPORTE?.startsWith('arquivo:') ? transporteArquivo(process.env.EMAIL_TRANSPORTE.slice('arquivo:'.length)) : transporteReal;
+const email = pool ? new EmailMarketing({ pool, cofre, empresaId: cfg.SINTONIA_EMPRESA_ID, transporte: transporteEmail, urlPublica: process.env.SINTONIA_URL_PUBLICA, log }) : undefined;
 const automacoes = new Automacoes({
+  email,
+  calendario: pool ? calendarioPostgres(pool, cfg.SINTONIA_EMPRESA_ID) : undefined,
   armazem: pool ? new ArmazemAutomacoesPostgres(pool) : new ArmazemAutomacoesMemoria(armazemTags),
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -318,6 +327,16 @@ const extras = montarExtras({
 });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
 
+// E-mail marketing: gestão (/api/email) e rastreio público (/e/...). A fila anda a cada 10 s; o IMAP é lido a cada 2 min.
+let emailTick: ReturnType<typeof setInterval> | undefined;
+let emailImap: ReturnType<typeof setInterval> | undefined;
+if (email) {
+  const andar = () => void email.tick().catch((e) => log('Falha na fila de e-mails', String(e)));
+  registrarEmail(app, { email, avisar: andar });
+  emailTick = setInterval(andar, 10_000);
+  emailImap = setInterval(() => void email.lerCaixas().catch((e) => log('Falha ao ler as caixas de e-mail', String(e))), 120_000);
+}
+
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
 registrarConversa(app, {
   repo,
@@ -367,6 +386,8 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(sinal, async () => {
     log(`Recebido ${sinal}: encerrando`);
     clearInterval(relogio);
+    if (emailTick) clearInterval(emailTick);
+    if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
     await trabalhador.parar();
     await notificador.ocioso().catch(() => {});

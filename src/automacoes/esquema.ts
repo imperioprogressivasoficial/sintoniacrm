@@ -25,6 +25,10 @@ export const Gatilho = z.discriminatedUnion('tipo', [
   }),
   /** Uma tag foi marcada na conversa (solta ou etapa). */
   z.object({ tipo: z.literal('tag_marcada'), tagId: id }),
+  /** Dia do aniversário da cliente (data de nascimento da ficha). Uma vez por ano. */
+  z.object({ tipo: z.literal('aniversario') }),
+  /** `dias` depois de a conversa entrar na etapa "Compareceu" (uma vez por comparecimento). */
+  z.object({ tipo: z.literal('dias_apos_compareceu'), dias: z.number().int().min(0).max(365) }),
 ]);
 export type Gatilho = z.infer<typeof Gatilho>;
 
@@ -43,6 +47,7 @@ export type Passo =
   | { tipo: 'desmarcar_tag'; tagId: string }
   | { tipo: 'atribuir'; usuarioId: string | null; unidade?: (typeof UNIDADES_AUTOMACAO)[number] }
   | { tipo: 'lembrete_ligacao'; em_minutos: number; texto?: string }
+  | { tipo: 'enviar_email'; modeloId: string }
   | {
       tipo: 'condicao';
       se: 'cliente_respondeu' | 'tem_tag' | 'modo' | 'horario_loja';
@@ -66,6 +71,8 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('atribuir'), usuarioId: id.nullable(), unidade: z.enum(UNIDADES_AUTOMACAO).optional() }),
     /** Aparece em "Ligar hoje" a partir do dia em que vence (até 6 dias à frente). */
     z.object({ tipo: z.literal('lembrete_ligacao'), em_minutos: z.number().int().min(0).max(6 * 24 * 60), texto: z.string().trim().min(1).max(200).optional() }),
+    /** E-mail marketing: manda o modelo salvo para o e-mail da ficha (entra na fila, com ritmo e descadastro). */
+    z.object({ tipo: z.literal('enviar_email'), modeloId: id }),
     z.object({
       tipo: z.literal('condicao'),
       se: z.enum(['cliente_respondeu', 'tem_tag', 'modo', 'horario_loja']),
