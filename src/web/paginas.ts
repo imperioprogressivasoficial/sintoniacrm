@@ -10,6 +10,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/': { arquivo: 'index.html', tipo: 'text/html; charset=utf-8' },
   '/entrar': { arquivo: 'entrar.html', tipo: 'text/html; charset=utf-8' },
   '/app': { arquivo: 'app.html', tipo: 'text/html; charset=utf-8' },
+  '/conexoes': { arquivo: 'conexoes.html', tipo: 'text/html; charset=utf-8' },
   '/estilo.css': { arquivo: 'estilo.css', tipo: 'text/css; charset=utf-8' },
   '/marca.svg': { arquivo: 'marca.svg', tipo: 'image/svg+xml' },
 };
@@ -27,9 +28,10 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
 
   for (const [rota, { arquivo, tipo }] of Object.entries(ARQUIVOS)) {
     app.get(rota, async (req, reply) => {
-      if (auth && (rota === '/app' || rota === '/entrar')) {
+      if (auth && (rota === '/app' || rota === '/conexoes' || rota === '/entrar')) {
         const u = await usuarioDaRequisicao(req, auth);
-        if (rota === '/app' && !u) return reply.redirect('/entrar');
+        if ((rota === '/app' || rota === '/conexoes') && !u) return reply.redirect('/entrar');
+        if (rota === '/conexoes' && u && u.papel !== 'admin' && u.papel !== 'direcao') return reply.redirect('/app');
         if (rota === '/entrar' && u) return reply.redirect('/app');
       }
       reply

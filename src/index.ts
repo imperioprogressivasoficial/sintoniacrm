@@ -4,6 +4,8 @@ import { ClienteTrinks } from './agenda/trinks.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
+import { ArmazemMemoria, ArmazemPostgres, Conexoes } from './conexoes/conexoes.js';
+import { Cofre } from './conexoes/cofre.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
@@ -26,10 +28,9 @@ import { dataISO, partesBahia } from './util/tempo.js';
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
 
-if (!cfg.ANTHROPIC_API_KEY) log('Aviso: ANTHROPIC_API_KEY ausente; a IA não vai responder.');
-if (!cfg.TRINKS_API_KEY) log('Aviso: TRINKS_API_KEY ausente; agenda indisponível.');
-
-const claude = new Anthropic();
+// A chave da IA pode chegar depois (tela de Conexões): o agente usa sempre o cliente em vigor.
+let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
+const claude = new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) });
 const trinks = new ClienteTrinks({ apiKey: cfg.TRINKS_API_KEY ?? '', intervaloMs: cfg.TRINKS_INTERVALO_MS });
 const base = carregarBase();
 const agente = new Agente(claude, trinks, base, { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
@@ -72,23 +73,53 @@ if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
   }
 }
 
-const evolution =
-  cfg.EVOLUTION_URL && cfg.EVOLUTION_API_KEY ? new CanalEvolution(cfg.EVOLUTION_URL, cfg.EVOLUTION_API_KEY) : undefined;
+// Conexões: o que for salvo na tela vale por cima do ambiente, e é aplicado na hora.
+const conexoes = new Conexoes(
+  pool ? new ArmazemPostgres(pool) : new ArmazemMemoria(),
+  new Cofre(process.env.SINTONIA_SEGREDO || cfg.DATABASE_URL || 'sintonia-local'),
+  {
+    anthropicApiKey: cfg.ANTHROPIC_API_KEY,
+    trinksApiKey: cfg.TRINKS_API_KEY,
+    evolutionUrl: cfg.EVOLUTION_URL,
+    evolutionApiKey: cfg.EVOLUTION_API_KEY,
+    webhookToken: cfg.EVOLUTION_WEBHOOK_TOKEN,
+    relatorioDestinos: cfg.RELATORIO_DESTINOS,
+  },
+  log,
+);
+
+// A lista de números é a mesma usada pela Sintonia: é refeita no lugar quando as conexões mudam.
+let evolution = new CanalEvolution(cfg.EVOLUTION_URL ?? '', cfg.EVOLUTION_API_KEY ?? '');
 const meta = cfg.META_TOKEN ? new CanalMeta(cfg.META_TOKEN) : undefined;
-
-const numeros: NumeroConectado[] = cfg.numeros.flatMap((n) => {
-  const canal = n.canal === 'evolution' ? evolution : meta;
-  if (!canal) {
-    log(`Número ${n.canalId} ignorado: canal ${n.canal} sem credenciais`);
-    return [];
-  }
-  return [{ canalId: n.canalId, unidade: n.unidade, canal }];
-});
-
-// WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
 const canalTeste = new CanalTeste();
-for (const unidade of ['norte', 'sumare'] as const) numeros.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
-const iaLigada = Boolean(process.env.ANTHROPIC_API_KEY);
+const numeros: NumeroConectado[] = [];
+const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId);
+let iaLigada = false;
+let agendaLigada = false;
+
+function aplicarConexoes() {
+  const chaveIA = conexoes.get('anthropicApiKey');
+  claudeAtual = new Anthropic({ apiKey: chaveIA || 'sem-chave' });
+  iaLigada = Boolean(chaveIA);
+  trinks.definirChave(conexoes.get('trinksApiKey') ?? '');
+  agendaLigada = Boolean(conexoes.get('trinksApiKey'));
+  evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
+  const temEvolution = Boolean(conexoes.get('evolutionUrl') && conexoes.get('evolutionApiKey'));
+  const lista: NumeroConectado[] = [];
+  for (const n of cfg.numeros) {
+    const canal = n.canal === 'evolution' ? (temEvolution ? evolution : undefined) : meta;
+    if (canal) lista.push({ canalId: n.canalId, unidade: n.unidade, canal });
+    else log(`Número ${n.canalId} ignorado: canal ${n.canal} sem credenciais`);
+  }
+  if (temEvolution) for (const n of conexoes.numeros()) if (!lista.some((x) => x.canalId === n.canalId)) lista.push({ ...n, canal: evolution });
+  // WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
+  for (const unidade of ['norte', 'sumare'] as const) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
+  numeros.splice(0, numeros.length, ...lista);
+  log(`Conexões aplicadas: IA ${iaLigada ? 'ligada' : 'desligada'}, agenda ${agendaLigada ? 'ligada' : 'desligada'}, ${lista.filter(ehReal).length} número(s) de WhatsApp.`);
+}
+conexoes.aoMudar(aplicarConexoes);
+await conexoes.carregar();
+const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.destinosRelatorio() : cfg.destinosRelatorio);
 
 const sintonia = new Sintonia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -98,10 +129,10 @@ const sintonia = new Sintonia({
   log,
   trava,
   avisarEquipe: async (texto) => {
-    // Aviso vai para os mesmos números do relatório, pelo primeiro número conectado.
-    const n = numeros[0];
+    // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
+    const n = numeros.find(ehReal);
     if (!n) return;
-    for (const destino of cfg.destinosRelatorio) await n.canal.enviarTexto(n.canalId, destino, texto);
+    for (const destino of destinosRelatorio()) await n.canal.enviarTexto(n.canalId, destino, texto);
   },
 });
 
@@ -113,11 +144,26 @@ const app = criarServidor({
   log,
   auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
   fila: { fila, avisar: () => trabalhador.avisar() },
-  agenda: cfg.TRINKS_API_KEY ? trinks : undefined,
-  evolution: evolution ? { canal: evolution, token: cfg.EVOLUTION_WEBHOOK_TOKEN } : undefined,
+  get agenda() {
+    return agendaLigada ? trinks : undefined;
+  },
+  get evolution() {
+    return { canal: evolution, token: conexoes.get('webhookToken') };
+  },
+  conexoes: {
+    conexoes,
+    testarIA: async (chave) => {
+      await new Anthropic({ apiKey: chave }).models.list({ limit: 1 });
+    },
+    testarTrinks: async (chave) => {
+      const t = new ClienteTrinks({ apiKey: chave });
+      const lista = await t.listarProfissionais(UNIDADES.norte.trinksEstabelecimentoId ?? '');
+      return { profissionais: lista.length };
+    },
+  },
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
-  situacao: () => ({ iaLigada, agendaLigada: Boolean(cfg.TRINKS_API_KEY), numerosReais: numeros.filter((n) => !ehCanalTeste(n.canalId)).length }),
+  situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
   clienteTeste: async ({ unidade, nome, telefone, texto }) => {
     const canalId = canalTesteDa(unidade);
     const agora = new Date();
@@ -145,11 +191,12 @@ const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
   const agora = new Date();
   const p = partesBahia(agora);
-  if (p.hora === 20 && relatorioEnviadoEm !== dataISO(agora) && numeros[0]) {
+  const real = numeros.find(ehReal);
+  if (p.hora === 20 && relatorioEnviadoEm !== dataISO(agora) && real) {
     relatorioEnviadoEm = dataISO(agora);
     const texto = await sintonia.relatorioDoDia(agora);
-    for (const destino of cfg.destinosRelatorio) {
-      await numeros[0].canal.enviarTexto(numeros[0].canalId, destino, texto).catch((e) => log('Falha no relatório', String(e)));
+    for (const destino of destinosRelatorio()) {
+      await real.canal.enviarTexto(real.canalId, destino, texto).catch((e) => log('Falha no relatório', String(e)));
     }
   }
 }, 30_000);

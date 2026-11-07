@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conexões · Sintonia</title>
+<meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111b21" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/marca.svg" type="image/svg+xml">
+<style>
+  :root { --fundo: #ffffff; --painel: #f0f2f5; --linha: #e9edef; --texto: #111b21; --sub: #667781; --verde: #008069; --verde-claro: #d9fdd3; --entrada: #ffffff; --erro: #ea0038; --aviso: #fff3c4; --aviso-txt: #5e4b00; }
+  @media (prefers-color-scheme: dark) { :root { --fundo: #111b21; --painel: #0b141a; --linha: #222d34; --texto: #e9edef; --sub: #8696a0; --verde: #00a884; --verde-claro: #0a332c; --entrada: #2a3942; --erro: #f15c6d; --aviso: #3a2f05; --aviso-txt: #ffd279; } }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--painel); color: var(--texto); -webkit-font-smoothing: antialiased; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--fundo); border-bottom: 1px solid var(--linha); height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+  header a { color: var(--texto); text-decoration: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+  header a:hover { background: var(--painel); }
+  header h1 { font-size: 19px; font-weight: 500; margin: 0; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px 12px 60px; display: grid; gap: 14px; }
+  section { background: var(--fundo); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; }
+  h2 { margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  h2 .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+  h2 .ic svg { width: 18px; height: 18px; }
+  p { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.45; }
+  label { display: grid; gap: 5px; font-size: 13.5px; color: var(--sub); }
+  input { background: var(--entrada); border: 1px solid var(--linha); border-radius: 8px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; }
+  .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .botao { all: unset; cursor: pointer; background: var(--verde); color: #fff; border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 500; }
+  @media (prefers-color-scheme: dark) { .botao { color: #111b21; } }
+  .botao.leve { background: var(--painel); color: var(--texto); }
+  .botao.perigo { background: transparent; color: var(--erro); border: 1px solid var(--linha); }
+  .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
+  .estado { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--painel); color: var(--sub); white-space: nowrap; }
+  .estado.ok { background: var(--verde-claro); color: var(--verde); }
+  .res { font-size: 13.5px; }
+  .res.ok { color: var(--verde); }
+  .res.erro { color: var(--erro); }
+  .loja { border: 1px solid var(--linha); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+  .loja .topo { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .loja b { font-weight: 500; }
+  .aviso { background: var(--aviso); color: var(--aviso-txt); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; }
+  dialog { border: 0; border-radius: 14px; padding: 22px; width: min(380px, calc(100vw - 24px)); background: var(--fundo); color: var(--texto); text-align: center; }
+  dialog::backdrop { background: rgba(11,20,26,.6); }
+  dialog img { width: 264px; height: 264px; background: #fff; border-radius: 8px; padding: 8px; }
+  dialog ol { text-align: left; font-size: 14px; color: var(--sub); padding-left: 20px; margin: 12px 0; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/app" aria-label="Voltar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></a>
+  <h1>Conexões</h1>
+</header>
+<main>
+  <section>
+    <h2><span class="ic" style="background:#25d366"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span>WhatsApp das lojas</h2>
+    <p>Cada loja conecta o seu número lendo um QR Code, igual ao WhatsApp Web. As mensagens passam a chegar na Sintonia.</p>
+    <div class="aviso">Atenção: se o número já está ligado na Assia (n8n), as duas vão receber as mesmas mensagens e podem responder em dobro. Antes de conectar aqui, decida qual das duas atende esse número.</div>
+    <p id="wa-sem-evolution">Preencha a Evolution logo abaixo para conectar os números.</p>
+    <div id="lojas" style="display:grid;gap:10px"></div>
+  </section>
+
+  <section>
+    <h2><span class="ic" style="background:#7f66ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span>Inteligência artificial</h2>
+    <p>Chave da API da Anthropic (Claude). Com ela, a IA responde, sugere e revisa mensagens.</p>
+    <label>Chave da IA <input id="anthropicApiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
+    <div class="linha"><button class="botao" data-salvar="anthropicApiKey">Salvar</button><button class="botao leve" data-testar="ia">Testar</button><span class="res" id="res-ia"></span></div>
+  </section>
+
+  <section>
+    <h2><span class="ic" style="background:#ff2e74"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>Agenda (Trinks)</h2>
+    <p>Chave da API da Trinks. Com ela, o botão Agendar e a IA marcam horário sem abrir o Trinks.</p>
+    <label>Chave da Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
+    <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks"></span></div>
+  </section>
+
+  <section>
+    <h2><span class="ic" style="background:#007bfc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Evolution API</h2>
+    <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
+    <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com"></label>
+    <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
+    <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution"></span></div>
+  </section>
+
+  <section>
+    <h2><span class="ic" style="background:#02a698"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span>Relatório do dia</h2>
+    <p>Telefones que recebem, às 20h, o resumo do dia pelo WhatsApp da loja. Separe por vírgula, com DDD.</p>
+    <label>Telefones <input id="relatorioDestinos" type="text" inputmode="tel" placeholder="71 99999-9999, 71 98888-8888"></label>
+    <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio"></span></div>
+  </section>
+</main>
+
+<dialog id="d-qr">
+  <h2 style="justify-content:center">Conectar <span id="qr-loja"></span></h2>
+  <div id="qr-area" style="margin-top:14px"></div>
+  <ol>
+    <li>Abra o WhatsApp no celular da loja</li>
+    <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
+    <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
+  </ol>
+  <p id="qr-estado">Aguardando a leitura…</p>
+  <div class="linha" style="justify-content:center;margin-top:12px"><button class="botao leve" id="qr-fechar">Fechar</button></div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const NOMES = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré' };
+  const api = async (url, opcoes = {}) => {
+    const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
+    if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    if (r.status === 403) { location.href = '/app'; throw new Error('sem permissão'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || 'Algo deu errado');
+    return j;
+  };
+  const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
+  let resumo = null;
+
+  function preencher() {
+    for (const [campo, info] of Object.entries(resumo.campos)) {
+      const input = $(campo); if (!input) continue;
+      if (input.type === 'password') { input.value = ''; input.placeholder = info.definido ? `Salva (termina em ${info.final}). Cole outra para trocar.` : (input.dataset.ph || input.placeholder); }
+      else input.value = info.valor ?? '';
+    }
+    $('relatorioDestinos').value = resumo.destinosRelatorio.map(formatarTel).join(', ');
+  }
+
+  document.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
+    const corpo = {};
+    for (const campo of b.dataset.salvar.split(',')) {
+      const v = $(campo).value.trim();
+      if ($(campo).type === 'password' && !v) continue; // vazio = manter a chave salva
+      corpo[campo] = v;
+    }
+    const res = b.parentElement.querySelector('.res');
+    if (!Object.keys(corpo).length) { res.className = 'res erro'; res.textContent = 'Cole a chave antes de salvar.'; return; }
+    b.setAttribute('aria-busy', 'true');
+    try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify(corpo) }); preencher(); res.className = 'res ok'; res.textContent = 'Salvo ✓'; carregarLojas(); }
+    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
+    finally { b.removeAttribute('aria-busy'); }
+  }));
+
+  document.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
+    const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+    try { const r = await api('/api/conexoes/testar', { method: 'POST', body: JSON.stringify({ alvo: b.dataset.testar }) }); res.className = 'res ' + (r.ok ? 'ok' : 'erro'); res.textContent = r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro; }
+    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
+    finally { b.removeAttribute('aria-busy'); }
+  }));
+
+  // ---------- WhatsApp das lojas ----------
+  async function carregarLojas() {
+    const caixa = $('lojas');
+    let r; try { r = await api('/api/conexoes/whatsapp'); } catch (x) { caixa.textContent = x.message; return; }
+    $('wa-sem-evolution').hidden = r.configurada;
+    caixa.replaceChildren(...r.unidades.map((u) => {
+      const ok = u.estado === 'conectada';
+      const div = document.createElement('div'); div.className = 'loja';
+      const topo = document.createElement('div'); topo.className = 'topo';
+      const nome = document.createElement('b'); nome.textContent = NOMES[u.unidade] || u.unidade;
+      const est = document.createElement('span'); est.className = 'estado' + (ok ? ' ok' : '');
+      est.textContent = ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando QR Code' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado';
+      topo.append(nome, est); div.append(topo);
+      if (ok && u.numero) { const p = document.createElement('p'); p.textContent = `${formatarTel(u.numero)}${u.perfil ? ' · ' + u.perfil : ''}`; div.append(p); }
+      if (u.erro) { const p = document.createElement('p'); p.className = 'res erro'; p.textContent = u.erro; div.append(p); }
+      const acoes = document.createElement('div'); acoes.className = 'linha';
+      const b = document.createElement('button'); b.className = ok ? 'botao perigo' : 'botao';
+      b.textContent = ok ? 'Desconectar' : 'Conectar WhatsApp';
+      b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade, b)));
+      acoes.append(b); div.append(acoes);
+      return div;
+    }));
+  }
+
+  let espera = null;
+  async function conectar(unidade, botao) {
+    botao.setAttribute('aria-busy', 'true');
+    try {
+      const r = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' });
+      if (r.estado === 'conectada') { await carregarLojas(); return; }
+      $('qr-loja').textContent = NOMES[unidade]; mostrarQr(r.qr); $('qr-estado').textContent = 'Aguardando a leitura…';
+      $('d-qr').showModal();
+      let voltas = 0;
+      clearInterval(espera);
+      espera = setInterval(async () => {
+        voltas++;
+        const lista = await api('/api/conexoes/whatsapp').catch(() => null);
+        const u = lista?.unidades.find((x) => x.unidade === unidade);
+        if (u?.estado === 'conectada') { clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓'; setTimeout(() => $('d-qr').close(), 1200); carregarLojas(); return; }
+        if (voltas % 8 === 0) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
+      }, 3000);
+    } catch (x) { alert(x.message); }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
+  function mostrarQr(qr) {
+    const area = $('qr-area'); area.replaceChildren();
+    if (!qr) { area.textContent = 'A Evolution não devolveu o QR Code. Tente de novo.'; return; }
+    const img = document.createElement('img'); img.alt = 'QR Code para conectar'; img.src = qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr; area.append(img);
+  }
+  $('qr-fechar').addEventListener('click', () => { clearInterval(espera); $('d-qr').close(); carregarLojas(); });
+  async function desconectar(unidade, botao) {
+    if (!confirm(`Desconectar o WhatsApp de ${NOMES[unidade]}? As mensagens deixam de chegar na Sintonia.`)) return;
+    botao.setAttribute('aria-busy', 'true');
+    try { await api(`/api/conexoes/whatsapp/${unidade}/desconectar`, { method: 'POST', body: '{}' }); await carregarLojas(); }
+    catch (x) { alert(x.message); }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
+
+  (async () => {
+    document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
+    resumo = await api('/api/conexoes'); preencher(); carregarLojas();
+  })();
+})();
+</script>
+</body>
+</html>

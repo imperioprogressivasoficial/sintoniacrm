@@ -25,7 +25,7 @@ export async function poolDeTeste(): Promise<pg.Pool> {
     migrado = true;
   }
   await pool.query(
-    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados restart identity cascade',
+    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados, sintonia.fotos, sintonia.conexoes restart identity cascade',
   );
   return pool;
 }

@@ -10,6 +10,7 @@ import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { registrarPaginas } from './web/paginas.js';
+import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
 export interface DependenciasServidor {
@@ -26,6 +27,8 @@ export interface DependenciasServidor {
   log?: (msg: string, extra?: unknown) => void;
   /** Login. Sem ele, a API fica aberta (só para teste local). */
   auth?: OpcoesAuth;
+  /** Tela de Conexões (chaves da IA, Trinks, Evolution e QR Code do WhatsApp). */
+  conexoes?: Omit<OpcoesConexoes, 'auth'>;
   /** Fotos de perfil das clientes. */
   fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
@@ -51,6 +54,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
   if (d.auth) registrarAuth(app, d.auth);
   registrarPaginas(app, d.auth);
+  if (d.conexoes) registrarConexoes(app, { ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).

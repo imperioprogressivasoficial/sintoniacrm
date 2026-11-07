@@ -95,6 +95,13 @@ export class ClienteTrinks {
     this.dormir = opcoes.dormir ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   }
 
+  /** Troca a chave sem reiniciar (tela de Conexões). Limpa o cache, que pode ser de outra conta. */
+  definirChave(apiKey: string): void {
+    if (this.opcoes.apiKey === apiKey) return;
+    this.opcoes.apiKey = apiKey;
+    this.cache.clear();
+  }
+
   // ---------- leitura (com cache) ----------
 
   async listarServicos(estabelecimentoId: string): Promise<TrinksServico[]> {
