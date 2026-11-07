@@ -5,10 +5,10 @@ import type { Repositorio } from '../store/repositorio.js';
 import type { Contas } from '../auth/contas.js';
 import { ehGestor, escopoDe, veTudo } from '../auth/acesso.js';
 import { PALETA_TAGS, type Tags } from '../tags/tags.js';
-import { AlteracaoConfigIA, type Empresa } from '../empresa/empresa.js';
+import { AlteracaoConfigIA, AlteracaoMeta, type Empresa } from '../empresa/empresa.js';
 import type { BaseConhecimento } from '../ai/base.js';
 import type { PedidoSimulacao, RespostaSimulacao } from '../ai/simulacao.js';
-import { montarPainel, PERIODOS, type FontePainel } from '../painel/painel.js';
+import { mesDe, montarPainel, PERIODOS, type FontePainel } from '../painel/painel.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 
 /**
@@ -201,6 +201,37 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
     const u = req.usuario;
     const equipe = u && o.contas ? await o.contas.listarUsuarios(u.empresaId) : undefined;
     return montarPainel(o.painel, { periodo, agora: o.agora(), escopo: escopoDe(u), usuario: u, equipe });
+  });
+
+  // ---- meta do mês (agendamentos): todos veem o progresso do seu alcance; só a gestão muda o número
+  const progressoMeta = async (req: FastifyRequest) => {
+    const meta = await exige(o.empresa, 'A empresa').meta();
+    const agora = o.agora();
+    const m = mesDe(agora);
+    const d = await o.painel.periodo(m.inicio, agora, escopoDe(req.usuario), agora);
+    const feitos = d.agendamentos.ia + d.agendamentos.equipe;
+    const alvo = meta.agendamentosMes;
+    return {
+      mes: m.mes,
+      meta: alvo,
+      agendamentos: feitos,
+      ia: d.agendamentos.ia,
+      equipe: d.agendamentos.equipe,
+      leads: d.leads,
+      progressoPct: alvo ? Math.round((feitos / alvo) * 1000) / 10 : null,
+      faltam: alvo ? Math.max(0, alvo - feitos) : null,
+      diasNoMes: m.diasNoMes,
+      diasRestantes: m.diasRestantes,
+      atualizadaEm: meta.atualizadaEm,
+      atualizadaPor: meta.atualizadaPor,
+      podeEditar: !req.usuario || ehGestor(req.usuario),
+    };
+  };
+  app.get('/api/painel/meta', async (req) => progressoMeta(req));
+  app.put('/api/painel/meta', async (req) => {
+    exigeGestao(req, 'Só a gerência, a direção e a administração mudam a meta do mês.');
+    await exige(o.empresa, 'A empresa').alterarMeta(AlteracaoMeta.parse(req.body), quem(req));
+    return progressoMeta(req);
   });
 
   // ------------------------------------------------------------ empresa
