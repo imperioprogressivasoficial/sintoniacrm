@@ -18,104 +18,161 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     esquerda: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
     direita: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>',
     lixo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    caixa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13h4l1.5 2.5h5L16 13h4"/><path d="M5.5 5h13L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5Z"/></svg>',
+    calendario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4M9.5 15l2 2 3.5-3.5"/></svg>',
+    tendencia: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16 5-5 4 4 7-7"/><path d="M15 8h5v5"/></svg>',
+    alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2.5h6"/></svg>',
+    pessoa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19.5a6.5 6.5 0 0 1 13 0"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
     sair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M15 16l4-4-4-4M19 12H9"/></svg>',
   };
 
   const CSS = `
+  /* ---------- cabeçalho da vista (título, números, Quadro | Ligar hoje) ---------- */
+  #v-funil .cabeca-vista.fn-cabeca { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; padding: 16px 20px 6px; background: transparent; border-bottom: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #v-funil .fn-cabeca h1.titulo-grande { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1; flex: none; }
+  .fn-numeros { display: flex; align-items: center; gap: 22px; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
+  .fn-numeros::-webkit-scrollbar { display: none; }
+  .fn-numeros:empty { display: none; }
+  .fn-num { display: flex; align-items: center; gap: 10px; flex: none; }
+  .fn-num-ic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda), inset 0 1px 0 rgba(255,255,255,.12); }
+  .fn-num-ic svg { width: 19px; height: 19px; }
+  .fn-num div { display: grid; line-height: 1.15; }
+  .fn-num b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--texto); display: flex; align-items: center; gap: 7px; }
+  .fn-num small { font-size: 12px; color: var(--sub); white-space: nowrap; }
+  .fn-num .fn-selo { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 999px; letter-spacing: 0; }
+  .fn-selo.bom { color: #002941; background: color-mix(in srgb, var(--marca-menta) 28%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-menta) 55%, transparent); }
+  html[data-tema="escuro"] .fn-selo.bom { color: #fff; background: color-mix(in srgb, var(--marca-menta) 22%, transparent); }
+  .fn-selo.ruim { color: #8a5a00; background: rgba(245,184,0,.18); box-shadow: inset 0 0 0 1px rgba(245,184,0,.5); }
+  html[data-tema="escuro"] .fn-selo.ruim { color: #ffd34d; }
+  .fn-num.alerta .fn-num-ic { color: #c98f00; box-shadow: inset 0 0 0 1px rgba(245,184,0,.5), 0 0 14px rgba(245,184,0,.25); }
+  html[data-tema="escuro"] .fn-num.alerta .fn-num-ic { color: #ffd34d; }
+  /* trilho Quadro | Ligar hoje (o mesmo desenho do seletor de funil) */
+  #funil-abas, .fn-trilho { display: inline-flex; align-items: center; gap: 2px; padding: 4px; margin: 0; border-radius: 999px; overflow-x: auto; scrollbar-width: none; flex: none; max-width: 100%;
+    background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+  #funil-abas::-webkit-scrollbar, .fn-trilho::-webkit-scrollbar { display: none; }
+  #funil-abas { margin-left: auto; }
+  #funil-abas .chip, .fn-trilho .fn-pilula { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 999px; white-space: nowrap;
+    font-size: 14px; font-weight: 650; color: var(--sub); background: transparent; box-shadow: none; transition: background .18s ease, color .18s ease, box-shadow .18s ease; }
+  #funil-abas .chip:hover, .fn-trilho .fn-pilula:hover { color: var(--texto); }
+  #funil-abas .chip[aria-pressed="true"], .fn-trilho .fn-pilula[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(0,41,65,.12); }
+  html[data-tema="escuro"] #funil-abas .chip[aria-pressed="true"], html[data-tema="escuro"] .fn-trilho .fn-pilula[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 6px 18px rgba(0,0,0,.3); }
+  #funil-abas .chip .qtd { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-menta); color: #002941; }
+  #funil-abas .chip .qtd:empty { display: none; }
+
   #funil.fn-caixa { display: flex; flex-direction: column; padding: 0; gap: 0; overflow: hidden; align-items: stretch; }
-  .fn-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px 10px; flex: none; }
+  .fn-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 8px 20px 12px; flex: none; }
   .fn-linha { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .fn-linha.fn-l1 { flex: 1 1 360px; }
-  .fn-linha.fn-l2 { flex: 0 1 auto; }
-  .fn-funis { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; padding: 2px; }
-  .fn-funis::-webkit-scrollbar { display: none; }
-  .fn-pilula { all: unset; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14.5px; font-weight: 650; color: var(--sub);
-    background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); white-space: nowrap; }
-  .fn-pilula:hover { color: var(--texto); }
-  .fn-pilula[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(16,110,190,.18); }
-  html[data-tema="escuro"] .fn-pilula[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 22px rgba(0,0,0,.35); }
-  .fn-pilula .fn-qtd { font-size: 12px; font-weight: 700; color: var(--sub); }
-  .fn-pilula.fn-novo { color: var(--marca-azul); background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 40%, transparent); }
-  html[data-tema="escuro"] .fn-pilula.fn-novo { color: var(--marca-menta); box-shadow: inset 0 0 0 1px rgba(15,252,190,.35); }
+  .fn-linha.fn-l1 { flex: 1 1 420px; }
+  .fn-linha.fn-l2 { flex: 0 1 auto; margin-left: auto; }
+  .fn-funis { flex: 0 1 auto; min-width: 0; }
+  .fn-pilula .fn-qtd { font-size: 12px; font-weight: 700; color: var(--sub); opacity: .85; }
+  .fn-pilula.fn-novo { color: var(--marca-azul); }
+  html[data-tema="escuro"] .fn-pilula.fn-novo { color: var(--marca-menta); }
   .fn-pilula svg { width: 16px; height: 16px; }
-  .fn-redondo { all: unset; cursor: pointer; flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
-  .fn-redondo svg { width: 20px; height: 20px; }
-  .fn-redondo:hover { background: var(--vidro-ativo); }
-  .fn-busca { flex: 1 1 240px; min-width: 0; width: 280px; display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); max-width: 360px; }
+  .fn-redondo { all: unset; box-sizing: border-box; cursor: pointer; flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); transition: background .15s ease, transform .15s ease; }
+  .fn-redondo svg { width: 19px; height: 19px; }
+  .fn-redondo:hover { background: var(--vidro-ativo); transform: translateY(-1px); }
+  .fn-busca { flex: 0 1 280px; min-width: 160px; display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 16px; border-radius: 999px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); color: var(--sub);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+  .fn-busca:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 60%, var(--vidro-borda)), var(--vidro-brilho); }
+  html[data-tema="escuro"] .fn-busca:focus-within { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-menta) 50%, transparent), var(--vidro-brilho); }
   .fn-busca svg { width: 17px; height: 17px; flex: none; }
   .fn-busca input { all: unset; flex: 1; min-width: 0; font-size: 15px; color: var(--texto); }
   .fn-busca input::placeholder { color: var(--sub); }
-  .fn-unidades { display: flex; gap: 6px; flex: none; }
-  .fn-unidades .fn-pilula { height: 34px; padding: 0 12px; font-size: 13.5px; }
-  .fn-espaco { flex: 1; }
-  .fn-unidade-sel { display: none; flex: none; height: 38px; border-radius: 14px; padding: 0 10px; font: inherit; font-size: 14.5px; font-weight: 650; color: var(--texto);
+  .fn-pessoas { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; min-width: 0; flex: 1 1 auto; padding: 2px; }
+  .fn-pessoas::-webkit-scrollbar { display: none; }
+  .fn-pessoas:empty { display: none; }
+  .fn-pessoa { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 13px 0 5px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--sub);
+    background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); white-space: nowrap; transition: background .15s ease, color .15s ease; }
+  .fn-pessoa.fn-todas { padding: 0 14px; }
+  .fn-pessoa:hover { color: var(--texto); }
+  .fn-pessoa[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)); }
+  html[data-tema="escuro"] .fn-pessoa[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.5); }
+  .fn-ini { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .02em; color: #002941; background: var(--ini, #e8eef5);
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.75), 0 2px 6px rgba(0,0,0,.18); }
+  .fn-ini.fn-sem { background: transparent; color: inherit; box-shadow: inset 0 0 0 1.5px currentColor; opacity: .7; }
+  .fn-ini svg { width: 15px; height: 15px; }
+  .fn-unidade-sel { display: none; flex: none; height: 42px; border-radius: 999px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 650; color: var(--texto);
     background: var(--vidro-item); border: 0; box-shadow: inset 0 0 0 1px var(--vidro-borda); max-width: 46%; }
 
-  .fn-quadro { flex: 1; min-height: 0; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 4px 16px 16px; align-items: stretch; overscroll-behavior-x: contain; }
-  .fn-col { width: 296px; flex: none; display: flex; flex-direction: column; min-height: 0; max-height: 100%; border-radius: 22px; background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho);
+  /* ---------- quadro ---------- */
+  .fn-quadro { flex: 1; min-height: 0; display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 4px 20px 18px; align-items: stretch; overscroll-behavior-x: contain; }
+  .fn-col { width: 300px; flex: none; display: flex; flex-direction: column; min-height: 0; max-height: 100%; border-radius: 24px; background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho);
     -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); transition: box-shadow .15s ease, transform .15s ease; position: relative; }
-  .fn-col::before { content: ""; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 4px 4px; background: var(--cor); opacity: .9; box-shadow: 0 0 12px color-mix(in srgb, var(--cor) 60%, transparent); }
-  .fn-col.fn-alvo { box-shadow: inset 0 0 0 2px var(--cor), 0 0 0 4px color-mix(in srgb, var(--cor) 18%, transparent), var(--vidro-brilho); }
-  .fn-cab { display: flex; align-items: center; gap: 8px; padding: 14px 10px 8px 16px; flex: none; }
-  .fn-cab .fn-ponto { width: 10px; height: 10px; border-radius: 4px; background: var(--cor); flex: none; box-shadow: 0 0 8px color-mix(in srgb, var(--cor) 55%, transparent); }
-  .fn-cab h2 { margin: 0; font-size: 15.5px; font-weight: 750; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto); }
-  .fn-cab .fn-total { font-size: 13px; font-weight: 700; color: var(--sub); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); border-radius: 999px; padding: 2px 9px; }
-  .fn-cab .fn-redondo { width: 32px; height: 32px; background: transparent; box-shadow: none; color: var(--sub); }
-  .fn-cab .fn-redondo:hover { background: var(--vidro-item); color: var(--texto); }
-  .fn-cab .fn-redondo svg { width: 18px; height: 18px; }
+  .fn-col.fn-alvo { box-shadow: inset 0 0 0 2px var(--cor), 0 0 0 4px color-mix(in srgb, var(--cor) 22%, transparent), var(--vidro-brilho); }
+  .fn-cab { display: flex; align-items: center; gap: 6px; padding: 14px 10px 10px 16px; flex: none; }
+  .fn-cab .fn-ponto { width: 12px; height: 12px; border-radius: 50%; background: var(--cor); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor) 25%, transparent), 0 0 10px color-mix(in srgb, var(--cor) 60%, transparent); margin-right: 3px; }
+  .fn-cab-txt { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
+  .fn-cab-l1 { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .fn-cab h2 { margin: 0; font-size: 15.5px; font-weight: 750; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto); }
+  .fn-cab .fn-total { flex: none; min-width: 22px; height: 20px; box-sizing: border-box; display: inline-grid; place-items: center; font-size: 11.5px; font-weight: 800; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); border-radius: 999px; padding: 0 7px; }
+  .fn-cab-sub { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-cab-sub:empty { display: none; }
+  .fn-cab-sub.fn-alerta { color: #8a5a00; font-weight: 650; }
+  html[data-tema="escuro"] .fn-cab-sub.fn-alerta { color: #ffd34d; }
+  .fn-cab .fn-redondo { width: 32px; height: 32px; color: var(--sub); }
+  .fn-cab .fn-redondo:hover { color: var(--texto); }
+  .fn-cab .fn-redondo svg { width: 16px; height: 16px; }
+  .fn-cab .fn-redondo.fn-menu { background: transparent; box-shadow: none; }
   .fn-raio { all: unset; cursor: pointer; flex: none; height: 30px; min-width: 30px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
-    color: #f5b301; font-size: 12.5px; font-weight: 800; }
-  .fn-raio svg { width: 18px; height: 18px; filter: drop-shadow(0 0 5px rgba(255,190,0,.65)); }
-  .fn-raio:hover { background: rgba(255,190,0,.14); }
-  .fn-raio.fn-tem { background: rgba(255,190,0,.16); box-shadow: inset 0 0 0 1px rgba(255,190,0,.45), 0 0 12px rgba(255,190,0,.25); color: #b37f00; }
+    color: #f5b800; font-size: 12.5px; font-weight: 800; }
+  .fn-raio svg { width: 18px; height: 18px; filter: drop-shadow(0 0 5px rgba(245,184,0,.65)); }
+  .fn-raio:hover { background: rgba(245,184,0,.14); }
+  .fn-raio.fn-tem { background: rgba(245,184,0,.16); box-shadow: inset 0 0 0 1px rgba(245,184,0,.45), 0 0 12px rgba(245,184,0,.25); color: #a87400; }
   html[data-tema="escuro"] .fn-raio.fn-tem { color: #ffd34d; }
   .fn-raio:not(.fn-tem) { opacity: .8; }
   .fn-raio:not(.fn-tem) b { display: none; }
-  .fn-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 6px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
-  .fn-vazio { margin: 6px 4px 10px; padding: 18px 10px; border-radius: 16px; border: 1.5px dashed var(--vidro-linha); color: var(--sub); font-size: 13.5px; text-align: center; }
+  .fn-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 8px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
+  .fn-vazio { margin: 4px 2px 10px; padding: 22px 12px; border-radius: 18px; border: 1.5px dashed var(--vidro-borda); color: var(--sub); font-size: 13.5px; text-align: center; line-height: 1.4; }
   .fn-col.fn-alvo .fn-vazio { border-color: var(--cor); color: var(--texto); }
-  .fn-carregar { all: unset; cursor: pointer; margin: 0 10px 12px; padding: 10px; border-radius: 14px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--marca-azul); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .fn-carregar { all: unset; cursor: pointer; margin: 0 10px 12px; padding: 11px; border-radius: 999px; text-align: center; font-size: 13.5px; font-weight: 750; color: var(--marca-azul); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   html[data-tema="escuro"] .fn-carregar { color: var(--marca-menta); }
 
-  .fn-cartao { position: relative; display: grid; gap: 6px; padding: 11px 10px 10px 12px; border-radius: 16px; cursor: pointer; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(8,36,63,.06);
-    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-x pan-y; transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease; flex: none; }
-  .fn-cartao:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, var(--vidro-borda)), 0 6px 16px rgba(16,110,190,.12); }
-  .fn-cartao:focus-visible { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
+  /* ---------- cartão preenchido com a cor da etapa ---------- */
+  .fn-cartao, .fn-resumo { --fill: var(--f-cla, #e8eef5); --tx: #002941; --tx2: rgba(0,41,65,.74); --vd: rgba(255,255,255,.55); --vd-b: rgba(0,41,65,.12); }
+  html[data-tema="escuro"] .fn-cartao, html[data-tema="escuro"] .fn-resumo { --fill: var(--f-esc, #2a3a4c); --tx: #ffffff; --tx2: rgba(255,255,255,.80); --vd: rgba(255,255,255,.16); --vd-b: rgba(255,255,255,.22); }
+  .fn-cartao { position: relative; display: grid; gap: 4px; padding: 12px 12px 12px 14px; border-radius: 18px; cursor: pointer; color: var(--tx);
+    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 55%), var(--fill);
+    box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.28), 0 6px 18px rgba(0,26,43,.16);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-x pan-y; transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease, filter .15s ease; flex: none; }
+  .fn-cartao:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 12px 26px rgba(0,26,43,.24); }
+  .fn-cartao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .fn-cartao.fn-saindo { opacity: .3; transform: scale(.98); }
   .fn-cartao.fn-segurando { transform: scale(.97); }
-  .fn-cartao.fn-novo-aqui { animation: fn-chegou .6s ease; }
-  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px rgba(15,252,190,.25); } 100% { box-shadow: inset 0 0 0 1px var(--vidro-borda); } }
-  .fn-c1 { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .fn-c1 .avatar { width: 38px; height: 38px; font-size: 14px; }
-  .fn-quem { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
-  .fn-quem .fn-n { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-  .fn-quem b { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto); }
-  .fn-quem span { font-size: 12.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fn-mais { all: unset; cursor: pointer; width: 34px; height: 34px; margin: -4px -4px -4px 0; border-radius: 50%; display: grid; place-items: center; color: var(--sub); flex: none; }
-  .fn-mais:hover { background: var(--vidro-item); color: var(--texto); }
-  .fn-mais svg { width: 18px; height: 18px; }
-  .fn-previa { font-size: 13.5px; color: var(--sub); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
-  .fn-previa i { font-style: normal; font-weight: 650; color: var(--texto); opacity: .8; }
-  .fn-c3 { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
-  .fn-tag { font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 2px 6px; background: color-mix(in srgb, var(--cor) 18%, transparent); color: color-mix(in srgb, var(--cor) 72%, var(--texto)); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-  .fn-desde { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sub); white-space: nowrap; }
-  .fn-desde svg { width: 13px; height: 13px; }
-  .fn-desde.fn-velho { color: #d9480f; font-weight: 700; }
-  html[data-tema="escuro"] .fn-desde.fn-velho { color: #ffa94d; }
+  .fn-cartao.fn-novo-aqui { animation: fn-chegou .7s ease; }
+  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px color-mix(in srgb, var(--marca-menta) 35%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--vd-b), 0 6px 18px rgba(0,26,43,.16); } }
+  .fn-c0 { display: flex; align-items: center; gap: 6px; min-height: 24px; padding-right: 30px; }
+  .fn-desde { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--tx2); white-space: nowrap; }
+  .fn-desde svg { width: 12.5px; height: 12.5px; }
+  .fn-desde.fn-velho { color: #2b1d00; background: #f5b800; padding: 2px 8px 2px 6px; border-radius: 999px; font-weight: 800; box-shadow: 0 0 10px rgba(245,184,0,.4); }
+  .fn-cartao .fn-nome { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-linha2 { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; font-size: 12.5px; color: var(--tx2); line-height: 1.3; }
+  .fn-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 750; border-radius: 999px; padding: 1px 7px 1px 5px; background: var(--vd); color: var(--tx); box-shadow: inset 0 0 0 1px var(--vd-b); white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .fn-tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor); flex: none; box-shadow: 0 0 0 1.5px rgba(255,255,255,.7); }
+  .fn-pe { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; min-width: 0; }
+  .fn-previa { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--tx); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  .fn-previa i { font-style: normal; font-weight: 800; opacity: .78; }
+  .fn-previa.fn-nada { font-weight: 500; color: var(--tx2); font-style: italic; }
+  .fn-cartao .fn-ini { width: 30px; height: 30px; }
+  .fn-cartao .fn-ini.fn-sem { color: var(--tx2); }
+  .fn-mais { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 9px; right: 9px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--tx);
+    background: var(--vd); box-shadow: inset 0 0 0 1px var(--vd-b); transition: background .15s ease; }
+  .fn-mais:hover { background: rgba(255,255,255,.32); }
+  .fn-mais svg { width: 15px; height: 15px; }
 
-  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 24px 50px rgba(8,36,63,.3) !important;
-    background: var(--vidro-forte); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); opacity: .96; }
+  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4), 0 26px 54px rgba(0,26,43,.42) !important; opacity: .97; }
   .fn-arrastando, .fn-arrastando * { cursor: grabbing !important; }
   .fn-arrastando .fn-quadro { scroll-snap-type: none !important; }
 
-  .fn-nova-etapa { all: unset; cursor: pointer; width: 220px; flex: none; align-self: flex-start; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; height: 54px; border-radius: 18px;
-    border: 1.5px dashed color-mix(in srgb, var(--marca-azul) 40%, var(--vidro-borda)); color: var(--marca-azul); font-weight: 700; font-size: 14.5px; }
-  html[data-tema="escuro"] .fn-nova-etapa { color: var(--marca-menta); border-color: rgba(15,252,190,.3); }
+  .fn-nova-etapa { all: unset; cursor: pointer; width: 220px; flex: none; align-self: flex-start; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; height: 56px; border-radius: 22px;
+    border: 1.5px dashed color-mix(in srgb, var(--marca-azul) 40%, var(--vidro-borda)); color: var(--marca-azul); font-weight: 700; font-size: 14.5px; background: var(--vidro-item); }
+  html[data-tema="escuro"] .fn-nova-etapa { color: var(--marca-menta); border-color: color-mix(in srgb, var(--marca-menta) 30%, transparent); }
   .fn-nova-etapa svg { width: 18px; height: 18px; }
   .fn-erro { margin: 30px auto; color: var(--sub); text-align: center; display: grid; gap: 10px; justify-items: center; }
 
-  /* folhas e diálogos desta tela */
-  dialog.fn-folha .folha-lista .fn-ponto-g { width: 14px; height: 14px; border-radius: 5px; background: var(--cor); flex: none; box-shadow: 0 0 8px color-mix(in srgb, var(--cor) 55%, transparent); }
+  /* ---------- folhas e diálogos desta tela ---------- */
+  dialog.fn-folha .folha-lista .fn-ponto-g { width: 14px; height: 14px; border-radius: 50%; background: var(--cor); flex: none; box-shadow: 0 0 8px color-mix(in srgb, var(--cor) 55%, transparent); }
   dialog.fn-folha .folha-lista button > svg { width: 22px; height: 22px; color: var(--sub); }
   dialog.fn-folha .folha-lista button.fn-perigo, dialog.fn-folha .folha-lista button.fn-perigo b, dialog.fn-folha .folha-lista button.fn-perigo svg { color: #e5484d; }
   dialog.fn-folha .folha-lista button[aria-disabled="true"] { opacity: .45; cursor: default; }
@@ -125,27 +182,119 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   dialog.fn-dlg .cores .cor { width: 32px; height: 32px; }
   dialog.fn-dlg .fn-aviso { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.45; }
   dialog.fn-dlg .botao.fn-perigo { background: #e5484d !important; color: #fff !important; }
+  dialog.fn-folha .fn-add-busca { margin: 0 2px 12px; width: auto; flex: none; max-width: none; }
+  dialog.fn-folha .fn-add-lista { max-height: min(52dvh, 420px); overflow-y: auto; }
+
+  /* ---------- botões de vidro e menta ---------- */
+  .fn-bt { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px; font-size: 14.5px; font-weight: 750; white-space: nowrap;
+    color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); transition: transform .15s ease, filter .15s ease, background .15s ease; }
+  .fn-bt:hover { transform: translateY(-1px); background: var(--vidro-ativo); }
+  .fn-bt svg { width: 18px; height: 18px; flex: none; }
+  dialog .fn-bt.fn-menta, .fn-bt.fn-menta { background: var(--marca-menta); color: #002941; box-shadow: 0 0 0 1px color-mix(in srgb, var(--marca-menta) 45%, transparent), 0 8px 26px color-mix(in srgb, var(--marca-menta) 38%, transparent); }
+  .fn-bt.fn-menta:hover { filter: brightness(1.05); background: var(--marca-menta); }
+  .fn-bt.fn-perigo { color: #c4313b; box-shadow: inset 0 0 0 1.5px rgba(229,72,77,.6); background: transparent; }
+  html[data-tema="escuro"] .fn-bt.fn-perigo { color: #ff8f94; }
+  .fn-bt[aria-disabled="true"] { opacity: .5; cursor: default; transform: none; }
+  .fn-bt:focus-visible, .fn-seta:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+
+  /* ---------- ficha do cartão em janela de vidro ---------- */
+  dialog.fn-ficha { width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; border-radius: 28px; overflow: hidden; }
+  dialog.fn-ficha[open] { display: flex; flex-direction: column; }
+  .fn-fi-topo { display: flex; align-items: center; gap: 10px; padding: 16px 16px 6px 22px; flex: none; }
+  .fn-fi-topo span { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-fi-topo span b { color: var(--texto); }
+  .fn-fi-corpo { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 22px 6px; display: grid; gap: 16px; align-content: start; overscroll-behavior: contain; }
+  .fn-fi-rodape { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 22px calc(18px + env(safe-area-inset-bottom)); flex: none; border-top: 1px solid var(--vidro-linha); }
+  html[data-tema="claro"] .fn-campo select, html[data-tema="claro"] .fn-campo textarea { border-color: rgba(0,41,65,.14); background: rgba(255,255,255,.75); }
+  html[data-tema="claro"] .fn-bt:not(.fn-menta):not(.fn-perigo) { box-shadow: inset 0 0 0 1px rgba(0,41,65,.14); }
+  .fn-resumo { position: relative; display: grid; gap: 4px; padding: 18px 20px 18px; border-radius: 22px; color: var(--tx);
+    background: linear-gradient(160deg, rgba(255,255,255,.2), rgba(255,255,255,0) 50%), var(--fill); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 14px 34px rgba(0,26,43,.22); }
+  .fn-resumo .fn-r0 { display: flex; align-items: center; gap: 8px; }
+  .fn-resumo .fn-r0 .fn-desde { flex: 1; }
+  .fn-etapa-selo { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 750; padding: 4px 11px 4px 9px; border-radius: 999px; background: var(--vd); box-shadow: inset 0 0 0 1px var(--vd-b); white-space: nowrap; }
+  .fn-etapa-selo i { width: 8px; height: 8px; border-radius: 50%; background: var(--tx); }
+  .fn-resumo h3 { margin: 4px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; overflow-wrap: anywhere; }
+  .fn-resumo .fn-r2 { font-size: 14px; color: var(--tx2); }
+  .fn-resumo .fn-r3 { display: flex; align-items: flex-end; gap: 12px; margin-top: 10px; }
+  .fn-resumo .fn-r3 .fn-previa { font-size: 14.5px; -webkit-line-clamp: 3; }
+  .fn-resumo .fn-ini { width: 38px; height: 38px; font-size: 12.5px; }
+  .fn-resumo .fn-ini.fn-sem { color: var(--tx2); }
+  .fn-trilha { display: flex; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+  .fn-trilha::-webkit-scrollbar { display: none; }
+  .fn-seta { all: unset; box-sizing: border-box; cursor: pointer; flex: 1 0 auto; min-width: 96px; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px 0 24px; margin-left: -7px;
+    font-size: 13px; font-weight: 700; color: var(--sub); white-space: nowrap; background: var(--vidro-item);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%); transition: background .15s ease, color .15s ease; }
+  .fn-seta:first-child { margin-left: 0; padding-left: 16px; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); border-radius: 999px 0 0 999px; }
+  .fn-seta:hover { background: var(--vidro-ativo); color: var(--texto); }
+  .fn-seta i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor); flex: none; }
+  .fn-seta.fn-feita { color: var(--texto); background: color-mix(in srgb, var(--marca-menta) 14%, var(--vidro-item)); }
+  .fn-seta[aria-current="step"] { background: var(--marca-menta); color: #002941; font-weight: 800; cursor: default; }
+  .fn-seta[aria-current="step"] i { background: currentColor; }
+  html[data-tema="claro"] .fn-seta { background: rgba(0,41,65,.06); }
+  html[data-tema="claro"] .fn-seta.fn-feita { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); }
+  html[data-tema="claro"] .fn-seta[aria-current="step"] { background: var(--marca-menta); }
+  .fn-campo { display: grid; gap: 7px; }
+  .fn-campo > span, .fn-campo > label > span { font-size: 13px; font-weight: 700; color: var(--sub); }
+  .fn-campo select, .fn-campo textarea { box-sizing: border-box; width: 100%; font: inherit; font-size: 15px; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 16px; padding: 12px 14px; min-height: 46px; }
+  .fn-campo textarea { resize: vertical; min-height: 92px; line-height: 1.45; }
+  .fn-campo select:focus, .fn-campo textarea:focus { outline: none; border-color: color-mix(in srgb, var(--marca-azul) 60%, var(--vidro-borda)); }
+  html[data-tema="escuro"] .fn-campo select:focus, html[data-tema="escuro"] .fn-campo textarea:focus { border-color: color-mix(in srgb, var(--marca-menta) 55%, transparent); }
+  html[data-tema="escuro"] .fn-campo select option { background: #00324f; }
+  .fn-campo small { font-size: 12.5px; color: var(--sub); min-height: 1em; }
+  .fn-dona-linha { display: flex; align-items: center; gap: 10px; }
+  .fn-dona-linha select { flex: 1; }
+  .fn-dona-linha .fn-ini { width: 40px; height: 40px; font-size: 13px; }
+  .fn-dona-txt { flex: 1; font-size: 15px; font-weight: 650; }
+  .fn-tags-fi { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fn-tags-fi .fn-tag { font-size: 12.5px; padding: 5px 11px 5px 8px; max-width: none; background: var(--vidro-item); color: var(--texto); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .fn-tags-fi .fn-tag i { width: 9px; height: 9px; }
+  .fn-tags-fi em { font-style: normal; font-size: 13.5px; color: var(--sub); }
 
   @media (max-width: 760px) {
-    .fn-barra { padding: 6px 14px 6px; }
-    .fn-busca { max-width: none; width: auto; }
-    .fn-linha.fn-l1, .fn-linha.fn-l2 { flex: 1 1 100%; }
+    #v-funil .cabeca-vista.fn-cabeca { padding: 10px 14px 2px; gap: 8px 10px; }
+    #v-funil .fn-cabeca h1.titulo-grande { font-size: 32px; }
+    #funil-abas .chip { height: 40px; padding: 0 13px; }
+    .fn-numeros { order: 3; flex: 1 1 100%; gap: 8px; margin: 2px -14px 0; padding: 2px 14px 4px; scroll-snap-type: x proximity; }
+    .fn-num { padding: 7px 14px 7px 7px; border-radius: 999px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda); scroll-snap-align: start; }
+    .fn-num-ic { width: 34px; height: 34px; }
+    .fn-num-ic svg { width: 16px; height: 16px; }
+    .fn-num b { font-size: 18px; }
+    .fn-num small { font-size: 11.5px; }
+    .fn-barra { padding: 4px 14px 8px; gap: 8px; }
+    .fn-linha.fn-l1, .fn-linha.fn-l2 { display: contents; }
+    .fn-busca { order: 1; flex: 1 1 50%; min-width: 0; height: 44px; }
+    .fn-unidade-sel { order: 2; }
+    .fn-funis { order: 3; flex: 1 1 calc(100% - 60px); min-width: 0; }
+    .fn-barra > .fn-linha > .fn-redondo { order: 4; }
+    .fn-pessoas { order: 5; flex: 1 1 100%; }
+    .fn-trilho .fn-pilula { height: 38px; padding: 0 13px; }
     .fn-unidades { display: none; }
-    .fn-unidade-sel:not([hidden]) { display: block; }
+    .fn-unidade-sel:not([hidden]) { display: block; height: 44px; flex: 0 1 auto; max-width: 44%; }
+    .fn-redondo { width: 44px; height: 44px; }
+    .fn-pessoa { height: 40px; }
     .fn-quadro { scroll-snap-type: x mandatory; padding: 4px 14px calc(100px + env(safe-area-inset-bottom)); gap: 10px; scroll-padding: 0 14px; }
     .fn-col { width: calc(100vw - 46px); scroll-snap-align: center; scroll-snap-stop: always; }
     .fn-nova-etapa { width: calc(100vw - 46px); scroll-snap-align: center; }
-    .fn-cartao { padding: 12px 10px 12px 12px; }
-    .fn-mais { width: 40px; height: 40px; }
-    .fn-cab .fn-redondo { width: 38px; height: 38px; }
-    .fn-raio { height: 36px; min-width: 36px; }
+    .fn-mais { width: 36px; height: 36px; top: 6px; right: 6px; }
+    .fn-c0 { padding-right: 38px; min-height: 28px; }
+    .fn-cab .fn-redondo { width: 40px; height: 40px; }
+    .fn-raio { height: 40px; min-width: 40px; }
+    dialog.fn-ficha { width: 100vw; max-width: 100vw; max-height: 94dvh; margin: auto auto 0; border-radius: 28px 28px 0 0; border-bottom: 0; }
+    .fn-fi-corpo { padding: 6px 16px 6px; }
+    .fn-fi-topo { padding: 14px 12px 4px 18px; }
+    .fn-fi-rodape { padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); }
+    .fn-fi-rodape .fn-bt { flex: 1 1 calc(50% - 5px); padding: 0 10px; font-size: 14px; }
+    .fn-fi-rodape .fn-bt.fn-menta { flex-basis: 100%; order: -1; }
+    .fn-resumo h3 { font-size: 23px; }
+    .fn-seta { min-width: 104px; height: 46px; }
   }
   @media (hover: hover) and (min-width: 761px) {
-    .fn-cartao .fn-mais { opacity: 0; }
+    .fn-cartao .fn-mais { opacity: .55; }
     .fn-cartao:hover .fn-mais, .fn-cartao:focus-within .fn-mais { opacity: 1; }
   }
-  @media (prefers-reduced-motion: reduce) { .fn-cartao, .fn-col { transition: none; } .fn-cartao.fn-novo-aqui { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .fn-cartao, .fn-col, .fn-bt, .fn-redondo, .fn-seta { transition: none; } .fn-cartao:hover, .fn-bt:hover { transform: none; } .fn-cartao.fn-novo-aqui { animation: none; } }
   `;
+
 
   // ---------- estado (sobrevive entre aberturas da aba) ----------
   const lerLocal = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -155,9 +304,61 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     funis: [], funisEm: 0, funilId: lerLocal('sintonia.crm.funil'), unidade: lerLocal('sintonia.crm.unidade') || '', busca: '',
     q: null, carregados: {}, geracao: 0, buscando: false, erro: null,
     colEls: new Map(), cartaoEls: new Map(), autos: [], autosEm: 0, cores: [],
-    arrasto: null, aperto: null, abertos: 0, assinaturaFunis: '',
+    arrasto: null, aperto: null, abertos: 0, assinaturaFunis: '', dona: lerLocal('sintonia.crm.dona') || '', assinaturaPessoas: '',
   };
   const PAGINA = 50;
+  const DIA = 86400000;
+
+  // ---------- cores: cartão preenchido com a cor da etapa (fosco no escuro, pastel no claro), com contraste garantido ----------
+  const hexRgb = (h) => {
+    h = String(h || '').replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16);
+    return Number.isNaN(n) || h.length !== 6 ? [139, 141, 152] : [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const misturar = (a, b, t) => a.map((v, i) => Math.round(v * t + b[i] * (1 - t)));
+  const luz = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const contraste = (a, b) => { const x = luz(a), y = luz(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const NOITE = [0, 26, 43], BRANCO = [255, 255, 255], TINTA = [0, 41, 65];
+  const cacheTons = new Map();
+  function tons(hex) {
+    if (cacheTons.has(hex)) return cacheTons.get(hex);
+    const c0 = hexRgb(hex);
+    const media = Math.round((c0[0] + c0[1] + c0[2]) / 3);
+    const c = misturar(c0, [media, media, media], 0.7); // um pouco menos saturada: tom fosco
+    let t = 0.66, esc = misturar(c, NOITE, t);
+    while (contraste(esc, BRANCO) < 5 && t > 0.2) { t -= 0.04; esc = misturar(c, NOITE, t); }
+    let t2 = 0.36, cla = misturar(c, BRANCO, t2);
+    while (contraste(cla, TINTA) < 7.5 && t2 > 0.1) { t2 -= 0.04; cla = misturar(c, BRANCO, t2); }
+    const r = { esc: `rgb(${esc.join(',')})`, cla: `rgb(${cla.join(',')})` };
+    cacheTons.set(hex, r);
+    return r;
+  }
+  function pintar(no, hex) {
+    const t = tons(hex || '#8B8D98');
+    no.style.setProperty('--cor', hex || '#8B8D98');
+    no.style.setProperty('--f-esc', t.esc);
+    no.style.setProperty('--f-cla', t.cla);
+  }
+  // bolinhas das pessoas: tons claros de apoio com tinta azul-noite
+  const TONS_PESSOA = ['#B6DFED', '#C9D6FF', '#BFEFE3', '#FFE3A3', '#FFD0D0', '#E2D4FF', '#D6F0B8'];
+  const tomPessoa = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return TONS_PESSOA[h % TONS_PESSOA.length]; };
+  const iniciais = (n) => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '?'; };
+  function bolinha(dona, titulo) {
+    const { el } = s.ui;
+    if (!dona) return el('span', { class: 'fn-ini fn-sem', title: titulo || 'Sem dona', 'aria-label': titulo || 'Sem dona', html: SVG.pessoa });
+    return el('span', { class: 'fn-ini', style: `--ini:${tomPessoa(dona.id)}`, title: titulo || dona.nome, 'aria-label': titulo || dona.nome, text: iniciais(dona.nome) });
+  }
+  const haTexto = (d) => {
+    if (!d) return '';
+    const min = Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 60000));
+    if (min < 1) return 'agora';
+    if (min < 60) return `há ${min} min`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `há ${h} h`;
+    const dias = Math.round(h / 24);
+    return dias === 1 ? 'há 1 dia' : dias < 60 ? `há ${dias} dias` : `há ${Math.round(dias / 30)} meses`;
+  };
 
   function estilo() {
     if (document.getElementById('estilo-funil')) return;
@@ -170,16 +371,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ehGestao = () => s.ui && s.ui.ehGestor(s.ui.estado.eu);
   const funil = () => s.funis.find((f) => f.id === s.funilId) || s.funis[0];
   const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
-  const ha = (d) => {
-    if (!d) return '';
-    const min = Math.max(0, Math.round((Date.now() - new Date(d).getTime()) / 60000));
-    if (min < 1) return 'agora';
-    if (min < 60) return `${min} min`;
-    const h = Math.round(min / 60);
-    if (h < 24) return `${h} h`;
-    const dias = Math.round(h / 24);
-    return dias < 60 ? `${dias} d` : `${Math.round(dias / 30)} m`;
-  };
 
   // ---------- dados ----------
   async function carregarFunis(forcar) {
@@ -245,22 +436,27 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function montar() {
     const { el } = s.ui;
     s.caixa.classList.add('fn-caixa');
-    s.barraFunis = el('div', { class: 'fn-funis', role: 'tablist', 'aria-label': 'Funis' });
+    s.barraFunis = el('div', { class: 'fn-funis fn-trilho', role: 'tablist', 'aria-label': 'Funis' });
     s.botaoFunil = el('button', { class: 'fn-redondo', type: 'button', title: 'Opções do funil', 'aria-label': 'Opções do funil', html: SVG.pontos, onclick: menuFunil });
-    const busca = el('input', { type: 'search', placeholder: 'Buscar nome ou telefone', 'aria-label': 'Buscar no quadro', value: s.busca });
+    const busca = el('input', { type: 'search', placeholder: 'Buscar cliente', 'aria-label': 'Buscar no quadro por nome ou telefone', value: s.busca });
     let t = null;
     busca.addEventListener('input', () => { s.busca = busca.value; clearTimeout(t); t = setTimeout(() => { s.carregados = {}; carregarQuadro(); }, 300); });
-    s.unidades = el('div', { class: 'fn-unidades', role: 'group', 'aria-label': 'Unidade' });
+    s.unidades = el('div', { class: 'fn-unidades fn-trilho', role: 'group', 'aria-label': 'Unidade' });
+    s.pessoas = el('div', { class: 'fn-pessoas', role: 'group', 'aria-label': 'Filtrar por dona da conversa' });
+    s.assinaturaPessoas = '';
     s.unidadeSel = el('select', { class: 'fn-unidade-sel', 'aria-label': 'Unidade' });
     s.unidadeSel.addEventListener('change', () => escolherUnidade(s.unidadeSel.value));
     s.quadro = el('div', { class: 'fn-quadro' });
     s.caixa.replaceChildren(
       el('div', { class: 'fn-barra' },
-        el('div', { class: 'fn-linha fn-l1' }, s.barraFunis, s.botaoFunil),
-        el('div', { class: 'fn-linha fn-l2' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.unidades, s.unidadeSel)),
+        el('div', { class: 'fn-linha fn-l1' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.pessoas),
+        el('div', { class: 'fn-linha fn-l2' }, s.barraFunis, s.botaoFunil, s.unidades, s.unidadeSel)),
       s.quadro,
     );
     s.colEls.clear(); s.cartaoEls.clear();
+    // cabeçalho da vista (em app.html): números ao lado do título
+    s.numeros = document.getElementById('funil-numeros');
+    s.numeros?.closest('.cabeca-vista')?.classList.add('fn-cabeca');
     s.montado = true;
   }
 
@@ -281,10 +477,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (s.unidade && !unidades.includes(s.unidade)) s.unidade = '';
     s.unidades.hidden = unidades.length < 2;
     s.unidadeSel.hidden = unidades.length < 2;
-    const ops = [['', 'Todas as unidades'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
+    const ops = [['', 'Todas'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
     s.unidades.replaceChildren(...ops.map(([v, n]) => el('button', {
       class: 'fn-pilula', type: 'button', 'aria-pressed': String(s.unidade === v), onclick: () => escolherUnidade(v),
-    }, el('span', { text: v ? n : 'Todas' }))));
+    }, el('span', { text: n }))));
     s.unidadeSel.replaceChildren(...ops.map(([v, n]) => el('option', { value: v, text: n })));
     s.unidadeSel.value = s.unidade;
   }
@@ -300,6 +496,56 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     carregarQuadro();
   }
 
+  // ---------- números do topo e filtro de pessoas ----------
+  const FECHADAS = new Set(['agendada', 'compareceu', 'manutencao', 'perdida']);
+  const parada = (c) => c.desde && Date.now() - new Date(c.desde).getTime() > 3 * DIA;
+  const passaDona = (c) => !s.dona || (s.dona === 'sem' ? !c.dona : !!c.dona && c.dona.id === s.dona);
+  function colunasAbertas() {
+    const cols = s.q?.colunas || [];
+    if (funil()?.sistema) return cols.filter((c) => !FECHADAS.has(c.etapa.chaveSistema));
+    return cols.length > 1 ? cols.slice(0, -1) : cols;
+  }
+  function desenharNumeros() {
+    if (!s.numeros) return;
+    const { el } = s.ui;
+    if (!s.q) { s.numeros.replaceChildren(); return; }
+    const cols = s.q.colunas;
+    const soma = (l) => l.reduce((n, c) => n + c.total, 0);
+    const todas = soma(cols);
+    const abertas = colunasAbertas();
+    const sistema = funil()?.sistema;
+    const chave = (k) => cols.find((c) => c.etapa.chaveSistema === k);
+    const ultima = cols[cols.length - 1];
+    const ganhas = sistema ? ['agendada', 'compareceu', 'manutencao'].reduce((n, k) => n + (chave(k)?.total || 0), 0) : (cols.length > 1 ? ultima.total : 0);
+    const conv = todas ? Math.round((ganhas / todas) * 100) : 0;
+    const paradas = abertas.reduce((n, c) => n + c.cartoes.filter(parada).length, 0);
+    const maisParadas = abertas.some((c) => c.mais);
+    const num = (icone, valor, rotulo, extra = {}) => el('div', { class: 'fn-num' + (extra.alerta ? ' alerta' : ''), title: extra.dica || rotulo },
+      el('span', { class: 'fn-num-ic', html: icone }),
+      el('div', {}, el('b', {}, el('span', { text: valor }), extra.selo || null), el('small', { text: rotulo })));
+    const itens = [num(SVG.caixa, String(soma(abertas)), 'Em aberto', { dica: 'Clientes nas etapas em andamento' })];
+    if (sistema) itens.push(num(SVG.calendario, String(chave('agendada')?.total || 0), 'Agendadas', { dica: 'Clientes na etapa Agendada agora' }));
+    else if (ultima && cols.length > 1) itens.push(num(SVG.calendario, String(ultima.total), `Em ${ultima.etapa.nome}`));
+    itens.push(num(SVG.tendencia, `${conv}%`, 'Conversão', { dica: sistema ? 'Agendadas, compareceram ou em manutenção, sobre todas do funil' : `Na última etapa (${ultima?.etapa.nome || ''}) sobre todas do funil` }));
+    itens.push(num(SVG.alerta, `${paradas}${maisParadas && paradas ? '+' : ''}`, 'Paradas há +3 dias', { alerta: paradas > 0, dica: 'Clientes que não saem da etapa há mais de 3 dias' }));
+    s.numeros.replaceChildren(...itens);
+  }
+  function desenharPessoas() {
+    const { el } = s.ui;
+    const donas = new Map();
+    let semDona = 0;
+    for (const col of s.q?.colunas || []) for (const c of col.cartoes) { if (c.dona) donas.set(c.dona.id, c.dona); else semDona++; }
+    if (s.dona && s.dona !== 'sem' && !donas.has(s.dona)) s.dona = '';
+    const lista = [...donas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const assinatura = JSON.stringify([s.dona, lista.map((d) => [d.id, d.nome]), semDona > 0]);
+    if (assinatura === s.assinaturaPessoas) return;
+    s.assinaturaPessoas = assinatura;
+    if (!lista.length) { s.pessoas.replaceChildren(); return; }
+    const pilula = (v, rotulo, ini) => el('button', { class: 'fn-pessoa' + (ini ? '' : ' fn-todas'), type: 'button', 'aria-pressed': String(s.dona === v), title: v ? `Só as conversas de ${rotulo}` : 'Todas as donas',
+      onclick: () => { s.dona = s.dona === v ? '' : v; gravarLocal('sintonia.crm.dona', s.dona); desenharQuadro(); } }, ini || null, el('span', { text: rotulo }));
+    s.pessoas.replaceChildren(pilula('', 'Todas'), ...lista.map((d) => pilula(d.id, primeiroNome(d.nome), bolinha(d))), ...(semDona ? [pilula('sem', 'Sem dona', bolinha(null))] : []));
+  }
+
   // ---------- quadro ----------
   function desenharQuadro() {
     const { el } = s.ui;
@@ -307,9 +553,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       s.quadro.replaceChildren(el('div', { class: 'fn-erro' }, el('span', { text: s.erro ? `Não deu para carregar o quadro: ${s.erro}` : 'Carregando…' }),
         s.erro ? el('button', { class: 'botao leve', type: 'button', text: 'Tentar de novo', onclick: () => carregarQuadro() }) : null));
       s.colEls.clear();
+      desenharNumeros();
       return;
     }
     const gestao = ehGestao();
+    // a dona escolhida pode ter sumido do quadro (outro funil, outra busca)
+    if (s.dona && s.dona !== 'sem' && !s.q.colunas.some((col) => col.cartoes.some((c) => c.dona && c.dona.id === s.dona))) { s.dona = ''; s.assinaturaPessoas = ''; }
     const ordem = [];
     const vistas = new Set();
     for (const col of s.q.colunas) {
@@ -318,10 +567,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       let c = s.colEls.get(id);
       if (!c) { c = criarColuna(id); s.colEls.set(id, c); }
       c.col = col;
-      c.raiz.style.setProperty('--cor', col.etapa.cor || '#8B8D98');
+      pintar(c.raiz, col.etapa.cor || '#8B8D98');
       c.nome.textContent = col.etapa.nome;
-      c.total.textContent = String(col.total);
-      c.total.title = `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
+      const vis = s.dona ? col.cartoes.filter(passaDona) : col.cartoes;
+      c.total.textContent = String(s.dona ? vis.length : col.total);
+      c.total.title = s.dona ? `${vis.length} desta dona entre as carregadas` : `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
+      const paradasCol = vis.filter(parada).length;
+      const aberta = colunasAbertas().includes(col);
+      c.sub.textContent = aberta && paradasCol ? `${paradasCol}${col.mais ? '+' : ''} parada${paradasCol === 1 ? '' : 's'} há +3 dias` : '';
+      c.sub.classList.toggle('fn-alerta', !!c.sub.textContent);
+      c.mais.hidden = !gestao;
       const autos = autosDaEtapa(id);
       c.raio.hidden = !gestao;
       c.raio.classList.toggle('fn-tem', autos.length > 0);
@@ -331,9 +586,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       c.raio.setAttribute('aria-label', c.raio.title);
       c.menu.hidden = !gestao;
       // cartões: reaproveita os elementos que não mudaram (não pisca nem recarrega a foto)
-      const nos = col.cartoes.map((cartao) => cartaoEl(cartao, id));
+      const nos = vis.map((cartao) => cartaoEl(cartao, id));
       const topo = c.lista.scrollTop;
-      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: s.busca.trim() ? 'Ninguém com essa busca aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
+      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: s.dona && col.cartoes.length ? 'Ninguém desta dona aqui.' : s.busca.trim() ? 'Ninguém com essa busca aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
       const atuais = [...c.lista.children];
       if (atuais.length !== nos.length || atuais.some((n, i) => n !== nos[i])) { c.lista.replaceChildren(...nos); c.lista.scrollTop = topo; }
       const faltam = col.total - col.cartoes.length;
@@ -355,6 +610,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     // limpa elementos de cartões que saíram do quadro
     const ids = new Set(s.q.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId)));
     for (const k of s.cartaoEls.keys()) if (!ids.has(k)) s.cartaoEls.delete(k);
+    desenharPessoas();
+    desenharNumeros();
+    if (s.ficha) s.ficha.atualizar();
   }
 
   function criarColuna(id) {
@@ -362,42 +620,55 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const c = {};
     c.nome = el('h2');
     c.total = el('span', { class: 'fn-total' });
+    c.sub = el('span', { class: 'fn-cab-sub' });
+    c.mais = el('button', { class: 'fn-redondo', type: 'button', title: 'Pôr uma cliente nesta etapa', 'aria-label': 'Pôr uma cliente nesta etapa', html: SVG.mais, onclick: (e) => { e.stopPropagation(); adicionarCliente(c.col); } });
     c.raioQtd = el('b');
     c.raio = el('button', { class: 'fn-raio', type: 'button', onclick: (e) => { e.stopPropagation(); abrirRaio(c.col); } }, el('span', { html: SVG.raio, style: 'display:grid' }), c.raioQtd);
-    c.menu = el('button', { class: 'fn-redondo', type: 'button', title: 'Opções da etapa', 'aria-label': 'Opções da etapa', html: SVG.pontos, onclick: () => menuEtapa(c.col) });
+    c.menu = el('button', { class: 'fn-redondo fn-menu', type: 'button', title: 'Opções da etapa', 'aria-label': 'Opções da etapa', html: SVG.pontos, onclick: () => menuEtapa(c.col) });
     c.lista = el('div', { class: 'fn-lista' });
     c.carregar = el('button', { class: 'fn-carregar', type: 'button', hidden: '', onclick: () => carregarMais(c.col) });
     c.raiz = el('section', { class: 'fn-col', 'data-etapa': id, 'aria-label': 'Etapa' },
-      el('div', { class: 'fn-cab' }, el('span', { class: 'fn-ponto' }), c.nome, c.total, c.raio, c.menu), c.lista, c.carregar);
+      el('div', { class: 'fn-cab' }, el('span', { class: 'fn-ponto' }),
+        el('div', { class: 'fn-cab-txt' }, el('div', { class: 'fn-cab-l1' }, c.nome, c.total), c.sub), c.raio, c.mais, c.menu), c.lista, c.carregar);
     return c;
   }
 
-  function cartaoEl(cartao, etapaId) {
-    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000)]);
-    const cache = s.cartaoEls.get(cartao.conversaId);
-    if (cache && cache.assinatura === assinatura) return cache.no;
-    const { el, UNIDADE, avatar, nomeDe } = s.ui;
-    const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
-    const u = cartao.ultima;
+  function previaEl(u) {
+    const { el } = s.ui;
     const previa = el('div', { class: 'fn-previa' });
     if (u) {
       const quem = u.autor === 'cliente' ? '' : u.autor === 'ia' ? (u.autorNome && /^Automação/.test(u.autorNome) ? '⚡ ' : 'IA: ') : `${primeiroNome(u.autorNome) || 'Equipe'}: `;
       if (quem) previa.append(el('i', { text: quem }));
       previa.append(document.createTextNode(u.texto || '(mídia)'));
-    } else previa.textContent = 'Sem mensagens ainda';
-    const linha2 = [UNIDADE[cartao.unidade] || cartao.unidade, cartao.dona ? primeiroNome(cartao.dona.nome) : 'sem dona'].filter(Boolean).join(' · ');
-    const desdeMin = cartao.desde ? (Date.now() - new Date(cartao.desde).getTime()) / 60000 : 0;
-    const desde = cartao.desde ? el('span', { class: 'fn-desde' + (desdeMin > 3 * 1440 ? ' fn-velho' : ''), title: `Nesta etapa desde ${s.ui.quando(cartao.desde)}` }, el('span', { html: SVG.relogio, style: 'display:grid' }), el('span', { text: ha(cartao.desde) })) : null;
+    } else { previa.textContent = 'Sem mensagens ainda'; previa.classList.add('fn-nada'); }
+    return previa;
+  }
+  function desdeEl(cartao) {
+    const { el } = s.ui;
+    if (!cartao.desde) return el('span', { class: 'fn-desde' });
+    return el('span', { class: 'fn-desde' + (parada(cartao) ? ' fn-velho' : ''), title: `Nesta etapa desde ${s.ui.quando(cartao.desde)}` },
+      el('span', { html: SVG.relogio, style: 'display:grid' }), el('span', { text: haTexto(cartao.desde) }));
+  }
+  const tagEl = (t) => s.ui.el('span', { class: 'fn-tag', style: `--cor:${t.cor}`, title: t.nome }, s.ui.el('i'), s.ui.el('span', { text: t.nome }));
+
+  function cartaoEl(cartao, etapaId) {
+    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000)]);
+    const cache = s.cartaoEls.get(cartao.conversaId);
+    if (cache && cache.assinatura === assinatura) return cache.no;
+    const { el, UNIDADE, nomeDe } = s.ui;
+    const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
+    const unidade = UNIDADE[cartao.unidade] || cartao.unidade;
     const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mover para…', 'aria-label': `Mover ${nome} para…`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
-    const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir conversa` },
-      el('div', { class: 'fn-c1' }, avatar({ id: cartao.conversaId }, 'p'), el('div', { class: 'fn-quem' }, el('div', { class: 'fn-n' }, el('b', { text: nome }), desde), el('span', { text: linha2 })), mais),
-      previa,
-      cartao.tags && cartao.tags.length ? el('div', { class: 'fn-c3' }, ...cartao.tags.slice(0, 4).map((t) => el('span', { class: 'fn-tag', style: `--cor:${t.cor}`, text: t.nome }))) : null);
-    // a foto é a mesma: reaproveita a do cartão anterior para não recarregar
-    if (cache) { const velho = cache.no.querySelector('.avatar'); const novo = no.querySelector('.avatar'); if (velho && novo) novo.replaceWith(velho); }
-    no.addEventListener('click', () => { if (s.semClique) return; s.ui.abrir(cartao.conversaId); });
+    const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir ficha` },
+      el('div', { class: 'fn-c0' }, desdeEl(cartao)),
+      mais,
+      el('div', { class: 'fn-nome', text: nome }),
+      el('div', { class: 'fn-linha2' }, unidade ? el('span', { text: unidade }) : null, ...(cartao.tags || []).slice(0, 3).map(tagEl)),
+      el('div', { class: 'fn-pe' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')));
+    no.addEventListener('click', () => { if (s.semClique) return; abrirFicha(cartao.conversaId); });
     no.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.ui.abrir(cartao.conversaId); }
+      if (e.target !== no) return;
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirFicha(cartao.conversaId); }
       if (e.key === 'm' || e.key === 'M' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); menuCartao(cartao.conversaId); }
     });
     no.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!s.arrasto && !s.aperto) menuCartao(cartao.conversaId); });
@@ -458,7 +729,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     fantasma.removeAttribute('tabindex');
     fantasma.style.width = r.width + 'px';
     const col = a.no.closest('.fn-col');
-    if (col) fantasma.style.setProperty('--cor', getComputedStyle(col).getPropertyValue('--cor'));
+    if (col) for (const v of ['--cor', '--f-esc', '--f-cla']) fantasma.style.setProperty(v, col.style.getPropertyValue(v));
     document.body.append(fantasma);
     a.no.classList.add('fn-saindo');
     s.arrasto = { ...a, de: achado.col.etapa.id, fantasma, dx: a.x0 - r.left, dy: a.y0 - r.top, alvo: null, moveu: false, raf: 0 };
@@ -653,7 +924,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       nome: c.etapa.nome, cor: c.etapa.cor, atual: c.etapa.id === col.etapa.id, info: c.etapa.id === col.etapa.id ? 'Está aqui agora' : `${c.total} cliente${c.total === 1 ? '' : 's'}`,
       acao: () => { if (c.etapa.id !== col.etapa.id) mover(conversaId, c.etapa.id); },
     }));
-    const outros = [{ nome: 'Abrir conversa', icone: SVG.conversa, acao: () => s.ui.abrir(conversaId) }];
+    const outros = [{ nome: 'Abrir ficha', icone: SVG.lapis, acao: () => abrirFicha(conversaId) }, { nome: 'Abrir conversa', icone: SVG.conversa, acao: () => s.ui.abrir(conversaId) }];
     if (f && !f.sistema) outros.push({ nome: `Tirar do funil ${f.nome}`, info: 'A cliente continua nas Conversas', icone: SVG.sair, perigo: true, acao: () => mover(conversaId, null) });
     folha('Mover para…', cartao.nome || s.ui.formatarTel(cartao.telefone), [etapas, outros]);
   }
@@ -692,6 +963,168 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const autos = autosDaEtapa(col.etapa.id);
     if (!autos.length) A.abrirEditor({ funilId: f && !f.sistema ? f.id : null, gatilho: { tipo: 'entrou_na_etapa', etapaId: col.etapa.id }, nome: `Ao entrar em ${col.etapa.nome}`, aoSalvar: aoMudar });
     else A.abrirDaEtapa({ funilId: f && !f.sistema ? f.id : null, etapaId: col.etapa.id, etapaNome: col.etapa.nome, aoMudar });
+  }
+
+  // ---------- ficha do cartão (janela de vidro; folha que sobe no celular) ----------
+  function abrirFicha(conversaId) {
+    if (!acharCartao(conversaId)) { s.ui.abrir(conversaId); return; }
+    if (s.ficha) s.ficha.d.close();
+    const { el, UNIDADE, nomeDe, formatarTel } = s.ui;
+    const d = el('dialog', { class: 'folha fn-ficha', 'aria-label': 'Ficha da cliente' });
+    const fechar = () => d.close();
+    const rotuloTopo = el('span');
+    const resumo = el('div', { class: 'fn-resumo' });
+    const trilha = el('div', { class: 'fn-trilha', role: 'group', 'aria-label': 'Etapa do funil' });
+    const donaCaixa = el('div', { class: 'fn-dona-linha' }, el('span', { class: 'fn-dona-txt', text: 'Carregando…' }));
+    const obs = el('textarea', { rows: '3', maxlength: '4000', placeholder: 'Preferências, histórico, cuidados…', 'aria-label': 'Observações', disabled: '' });
+    const obsInfo = el('small');
+    const tags = el('div', { class: 'fn-tags-fi' });
+    const rodape = el('div', { class: 'fn-fi-rodape' });
+    d.append(
+      el('div', { class: 'fn-fi-topo' }, rotuloTopo, el('button', { class: 'fn-redondo', type: 'button', 'aria-label': 'Fechar', title: 'Fechar', html: SVG.fechar, onclick: fechar })),
+      el('div', { class: 'fn-fi-corpo' }, resumo, trilha,
+        el('div', { class: 'fn-campo' }, el('span', { text: 'Responsável' }), donaCaixa),
+        el('label', { class: 'fn-campo' }, el('span', { text: 'Observações da ficha' }), obs, obsInfo),
+        el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags)),
+      rodape);
+    let ultimoObs = '';
+    const salvarObs = async () => {
+      if (obs.disabled || obs.value === ultimoObs) return;
+      const valor = obs.value;
+      obsInfo.textContent = 'Salvando…';
+      try { await s.ui.api(`/api/conversas/${conversaId}/contato`, { method: 'PUT', body: JSON.stringify({ observacoes: valor }) }); ultimoObs = valor; obsInfo.textContent = 'Salvo ✓'; }
+      catch (x) { obsInfo.textContent = `Não deu para salvar: ${x.message}`; }
+    };
+    obs.addEventListener('blur', salvarObs);
+    obs.addEventListener('input', () => { obsInfo.textContent = 'Salva quando você sair do campo.'; });
+
+    const sistemaF = () => s.funis.find((f) => f.sistema);
+    async function marcarSistema(chave) {
+      const f = funil();
+      if (f?.sistema) { const col = s.q.colunas.find((c) => c.etapa.chaveSistema === chave); if (col) await mover(conversaId, col.etapa.id); return; }
+      const fs = sistemaF(); const et = fs?.etapas?.find((e) => e.chaveSistema === chave);
+      if (!fs || !et) return;
+      try { await s.ui.post(`/api/conversas/${conversaId}/funis/${fs.id}`, { etapaId: et.id }); s.ui.toast(`Marcada como ${et.nome.toLowerCase()} ✓`); s.funisEm = 0; }
+      catch (x) { s.ui.toast(x.message); }
+    }
+
+    function atualizar() {
+      const achado = acharCartao(conversaId);
+      if (!achado) return;
+      const { col, cartao } = achado;
+      const f = funil();
+      const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
+      rotuloTopo.replaceChildren('Cliente · ', el('b', { text: f ? f.nome : '' }));
+      pintar(resumo, col.etapa.cor);
+      resumo.replaceChildren(
+        el('div', { class: 'fn-r0' }, desdeEl(cartao), el('span', { class: 'fn-etapa-selo' }, el('i'), el('span', { text: col.etapa.nome }))),
+        el('h3', { text: nome }),
+        el('div', { class: 'fn-r2', text: [UNIDADE[cartao.unidade] || cartao.unidade, cartao.telefone ? formatarTel(cartao.telefone) : '', cartao.desde ? `desde ${s.ui.quando(cartao.desde)}` : ''].filter(Boolean).join(' · ') }),
+        el('div', { class: 'fn-r3' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')));
+      const i = s.q.colunas.indexOf(col);
+      trilha.replaceChildren(...s.q.colunas.map((c, j) => {
+        const atual = c === col;
+        const b = el('button', { class: 'fn-seta' + (j < i ? ' fn-feita' : ''), type: 'button', style: `--cor:${c.etapa.cor}`, title: atual ? `Está em ${c.etapa.nome}` : `Mover para ${c.etapa.nome}`,
+          'aria-current': atual ? 'step' : null, onclick: () => { if (!atual) mover(conversaId, c.etapa.id); } }, el('i'), el('span', { text: c.etapa.nome }));
+        return b;
+      }));
+      requestAnimationFrame(() => { const atual = trilha.querySelector('[aria-current]'); if (atual) trilha.scrollLeft = Math.max(0, atual.offsetLeft - trilha.clientWidth / 2 + atual.offsetWidth / 2); });
+      const ts = cartao.tags || [];
+      tags.replaceChildren(...(ts.length ? ts.map(tagEl) : [el('em', { text: 'Sem tags. Marque pela conversa.' })]));
+      const fs = sistemaF();
+      const chaveAtual = f?.sistema ? col.etapa.chaveSistema : null;
+      const bt = (classe, icone, texto, acao, desligado) => el('button', { class: 'fn-bt ' + classe, type: 'button', 'aria-disabled': desligado ? 'true' : null, onclick: () => { if (!desligado) acao(); } },
+        icone ? el('span', { html: icone, style: 'display:grid' }) : null, el('span', { text: texto }));
+      rodape.replaceChildren(
+        bt('fn-menta', SVG.conversa, 'Abrir conversa', () => { fechar(); s.ui.abrir(conversaId); }),
+        ...(fs ? [
+          bt('', SVG.check, chaveAtual === 'agendada' ? 'Agendada' : 'Marcar agendada', () => marcarSistema('agendada'), chaveAtual === 'agendada'),
+          bt('fn-perigo', SVG.fechar, chaveAtual === 'perdida' ? 'Perdida' : 'Marcar perdida', () => marcarSistema('perdida'), chaveAtual === 'perdida'),
+        ] : []));
+    }
+
+    async function carregarDona() {
+      const cartao = acharCartao(conversaId)?.cartao; if (!cartao) return;
+      const atual = cartao.dona;
+      let pessoas = null;
+      try { pessoas = await s.ui.api(`/api/conversas/${conversaId}/transferir`); } catch { pessoas = null; }
+      if (!d.open) return;
+      if (pessoas) {
+        const sel = el('select', { 'aria-label': 'Responsável pela conversa' });
+        const opcoes = pessoas.map((p) => [p.id, p.eu ? `${p.nome} (você)` : p.nome]);
+        if (atual && !opcoes.some(([id]) => id === atual.id)) opcoes.unshift([atual.id, atual.nome]);
+        opcoes.push(['', 'Sem dona']);
+        sel.replaceChildren(...opcoes.map(([v, n]) => el('option', { value: v, text: n })));
+        sel.value = atual ? atual.id : '';
+        sel.addEventListener('change', async () => {
+          const usuarioId = sel.value || null;
+          try {
+            const r = await s.ui.post(`/api/conversas/${conversaId}/transferir`, { usuarioId });
+            const c = acharCartao(conversaId)?.cartao;
+            if (c) c.dona = r.responsavelId ? { id: r.responsavelId, nome: r.responsavelNome } : null;
+            s.ui.toast(r.responsavelNome ? `Agora com ${r.responsavelNome} ✓` : 'A conversa ficou sem dona.');
+            donaCaixa.firstChild.replaceWith(bolinha(c?.dona || null));
+            desenharQuadro(); carregarQuadro();
+          } catch (x) { s.ui.toast(x.message); sel.value = atual ? atual.id : ''; }
+        });
+        donaCaixa.replaceChildren(bolinha(atual), sel);
+      } else {
+        const eu = s.ui.estado.eu || {};
+        const kids = [bolinha(atual), el('span', { class: 'fn-dona-txt', text: atual ? (atual.id === eu.id ? 'Você' : atual.nome) : 'Sem dona' })];
+        if (!atual) kids.push(el('button', { class: 'fn-bt', type: 'button', text: 'Assumir', onclick: async () => {
+          try { await s.ui.post(`/api/conversas/${conversaId}/assumir`); s.ui.toast('A conversa agora é sua.'); carregarQuadro(); fechar(); } catch (x) { s.ui.toast(x.message); }
+        } }));
+        donaCaixa.replaceChildren(...kids);
+      }
+    }
+    async function carregarObs() {
+      try {
+        const r = await s.ui.api(`/api/conversas/${conversaId}/contato`);
+        if (!d.open) return;
+        ultimoObs = r.contato?.observacoes || '';
+        obs.value = ultimoObs; obs.disabled = false;
+      } catch (x) { obsInfo.textContent = x.message; }
+    }
+
+    s.ficha = { d, atualizar, id: conversaId };
+    d.addEventListener('close', () => { salvarObs(); d.remove(); s.abertos--; if (s.ficha && s.ficha.d === d) s.ficha = null; });
+    d.addEventListener('click', (e) => { if (e.target === d) fechar(); });
+    document.body.append(d);
+    s.abertos++;
+    atualizar();
+    d.showModal();
+    carregarDona(); carregarObs();
+  }
+
+  // ---------- "+" da coluna: pôr uma cliente das Conversas nesta etapa ----------
+  function adicionarCliente(col) {
+    if (!col) return;
+    const { el, nomeDe, formatarTel, UNIDADE } = s.ui;
+    const d = el('dialog', { class: 'folha fn-folha' });
+    const fechar = () => d.close();
+    const ja = new Set(s.q.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId)));
+    const input = el('input', { type: 'search', placeholder: 'Buscar nome ou telefone', 'aria-label': 'Buscar cliente' });
+    const lista = el('div', { class: 'folha-lista fn-add-lista' });
+    const desenhar = () => {
+      const t = input.value.trim().toLowerCase();
+      const dig = t.replace(/\D/g, '');
+      const todas = (s.ui.estado.conversas || []).filter((c) => !ja.has(c.id) && (!t || nomeDe(c).toLowerCase().includes(t) || (dig.length >= 3 && String(c.telefone || '').includes(dig)))).slice(0, 40);
+      lista.replaceChildren(...(todas.length ? todas.map((c) => el('button', { type: 'button', onclick: async () => {
+        fechar();
+        try { await s.ui.post(`/api/conversas/${c.id}/funis/${s.funilId}`, { etapaId: col.etapa.id }); s.ui.toast(`${nomeDe(c)} entrou em “${col.etapa.nome}” ✓`); recarregarTudo(); }
+        catch (x) { s.ui.toast(x.message); }
+      } }, el('span', {}, el('b', { text: nomeDe(c) }), el('small', { text: [UNIDADE[c.unidade] || c.unidade, formatarTel(c.telefone)].filter(Boolean).join(' · ') })))) : [el('p', { class: 'fn-sub', style: 'margin:14px', text: 'Ninguém encontrado fora deste quadro.' })]));
+    };
+    input.addEventListener('input', desenhar);
+    d.append(el('div', { class: 'folha-topo' }, el('span'), el('h2', { text: `Pôr em ${col.etapa.nome}` }),
+      el('button', { class: 'icone fechar-folha', type: 'button', 'aria-label': 'Fechar', html: SVG.fechar, onclick: fechar })),
+    el('label', { class: 'fn-busca fn-add-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), input), lista);
+    desenhar();
+    d.addEventListener('close', () => { d.remove(); s.abertos--; });
+    d.addEventListener('click', (e) => { if (e.target === d) fechar(); });
+    document.body.append(d);
+    s.abertos++;
+    d.showModal();
   }
 
   // ---------- gestão de funis e etapas ----------
