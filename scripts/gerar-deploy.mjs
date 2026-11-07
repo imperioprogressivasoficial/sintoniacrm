@@ -4,7 +4,7 @@
  *
  *   SENHA_BANCO=<hex> node scripts/gerar-deploy.mjs > sintonia-compose.yaml
  *
- * O código vai dentro da própria receita (variável PACOTE do serviço), com a soma SHA-256
+ * O código vai dentro da própria receita (variáveis PACOTE_1..N do serviço), com a soma SHA-256
  * conferida antes de montar: o servidor monta a imagem sem acesso ao GitHub e, se o pacote chegar
  * diferente, a montagem para (nada é instalado). Senhas e chaves NÃO entram aqui: vão nas variáveis
  * do projeto (POSTGRES_SENHA, ADMIN_*, ANTHROPIC_API_KEY...).
@@ -44,6 +44,8 @@ try {
   const tar = execFileSync('tar', ['--sort=name', '--mtime=2026-01-01', '--owner=0', '--group=0', '-czf', '-', '.'], { cwd: pasta, maxBuffer: 64 << 20 });
   const soma = createHash('sha256').update(tar).digest('hex');
   const b64 = tar.toString('base64');
+  // Cada variável de ambiente tem limite (128 KB no Linux): o pacote vai em pedaços de 60 KB.
+  const pedacos = b64.match(/.{1,60000}/g);
 
   // Sem "build": o gerenciador de Docker da Hostinger só sobe imagens prontas. O pacote vai numa
   // variável do próprio serviço; ao iniciar, o container confere a soma, extrai e instala.
@@ -55,7 +57,7 @@ try {
   const marca = `app/.versao-${soma}`;
   const instalar = [
     'rm -rf app', 'mkdir app', 'cd app',
-    'printenv PACOTE | base64 -d > /tmp/pacote.tgz',
+    `{ ${pedacos.map((_, i) => `printenv PACOTE_${i + 1};`).join(' ')} } | tr -d '\\n' | base64 -d > /tmp/pacote.tgz`,
     `echo '${soma}  /tmp/pacote.tgz' | sha256sum -c -`,
     'tar -xzf /tmp/pacote.tgz', 'rm /tmp/pacote.tgz',
     'npm install --omit=dev --no-audit --no-fund',
@@ -81,7 +83,7 @@ services:
       COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
-${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}      PACOTE: ${b64}
+${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node
     networks:
