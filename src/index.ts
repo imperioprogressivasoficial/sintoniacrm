@@ -46,7 +46,9 @@ if (cfg.DATABASE_URL) {
   if (aplicadas.length) log('Migrações aplicadas', aplicadas);
   repo = new RepositorioPostgres(pool);
   fila = new FilaPostgres(pool);
-  trava = new TravaPostgres(pool);
+  // Pool só das travas: cada conversa em atendimento segura uma conexão aqui, e o trabalho usa o pool principal.
+  // Tamanho: conversas simultâneas da fila + tarefas do relógio + folga.
+  trava = new TravaPostgres(new pg.Pool({ connectionString: cfg.DATABASE_URL, max: cfg.SINTONIA_PARALELO + 8 }));
   contas = new ContasPostgres(pool);
 } else {
   log('Aviso: DATABASE_URL ausente; dados em memória (somem ao reiniciar). Use só para teste local.');

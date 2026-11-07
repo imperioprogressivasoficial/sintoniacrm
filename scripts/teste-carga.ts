@@ -66,7 +66,7 @@ async function trabalhador() {
     empresaId: 'carga',
     repo,
     numeros: [{ canalId: CANAL_ID, unidade: 'norte', canal }],
-    trava: new TravaPostgres(pool),
+    trava: new TravaPostgres(new pg.Pool({ connectionString: url, max: Number(process.env.CARGA_PARALELO ?? 8) + 8 })),
     agora: () => new Date(Date.now() + MADRUGADA_OFFSET),
     agente: {
       executar: async (p) => {
