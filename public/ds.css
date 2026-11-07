@@ -54,6 +54,17 @@
   --boneco: #ffffff;
   --vidro: rgba(255, 255, 255, .82);
   --botao-txt: #ffffff;
+  /* vidro (glassmorphism) */
+  --vidro-fundo: rgba(255, 255, 255, .62);
+  --vidro-forte: rgba(255, 255, 255, .78);
+  --vidro-borda: rgba(255, 255, 255, .85);
+  --vidro-linha: rgba(8, 36, 63, .08);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 30px rgba(16, 110, 190, .10);
+  --vidro-item: rgba(255, 255, 255, .7);
+  --vidro-ativo: rgba(255, 255, 255, .92);
+  --aurora: radial-gradient(900px 600px at 0% 0%, rgba(16, 110, 190, .20), transparent 60%),
+            radial-gradient(700px 520px at 100% 100%, rgba(15, 252, 190, .22), transparent 60%),
+            radial-gradient(600px 500px at 70% 10%, rgba(26, 139, 224, .12), transparent 60%), #eef4fb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -92,6 +103,16 @@
     --boneco-fundo: #1b4a74;
     --boneco: #a9c8e6;
     --vidro: rgba(7, 29, 51, .82);
+    --vidro-fundo: rgba(11, 42, 71, .42);
+    --vidro-forte: rgba(11, 42, 71, .62);
+    --vidro-borda: rgba(255, 255, 255, .14);
+    --vidro-linha: rgba(255, 255, 255, .07);
+    --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .10), 0 16px 40px rgba(0, 0, 0, .35);
+    --vidro-item: rgba(255, 255, 255, .07);
+    --vidro-ativo: rgba(255, 255, 255, .13);
+    --aurora: radial-gradient(900px 640px at 0% 0%, rgba(16, 110, 190, .55), transparent 60%),
+              radial-gradient(760px 560px at 100% 100%, rgba(15, 252, 190, .16), transparent 60%),
+              radial-gradient(700px 520px at 75% 15%, rgba(10, 76, 134, .55), transparent 60%), #04121f;
   }
 }
 

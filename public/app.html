@@ -532,11 +532,130 @@
   .lista-topo h1.titulo-grande, .painel h1.titulo-grande, .gestao h1.titulo-grande, .cabeca-vista h1.titulo-grande { color: var(--texto); }
   .sugestao .citacao b, .citacao b { color: var(--ia); }
   .citacao { background: var(--ia-fundo); }
+
+  /* ===================== vidro (glassmorphism) com as cores da página de vendas ===================== */
+  body { background: var(--aurora); background-attachment: fixed; }
+  .vidro, .lateral, .lista, .chat-topo, .compor, .ficha, dialog, .menu-mais, .trilho, .cabeca-vista, .coluna, .num, .opcoes-conta, .perfil-conta, .tabela {
+    -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  }
+  .lista { background: var(--vidro-fundo); border-right: 1px solid var(--vidro-borda); }
+  .lista .item:hover { background: var(--vidro-item); }
+  .lista .item[aria-current="true"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .item .corpo { border-bottom-color: var(--vidro-linha); }
+  .busca { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .chip { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .chip[aria-pressed="true"] { box-shadow: 0 4px 14px rgba(16,110,190,.28); }
+  .chat { background: transparent; }
+  .chat::before { background-color: color-mix(in srgb, var(--chat) 55%, transparent); }
+  .chat-topo { background: var(--vidro-forte); border-bottom: 1px solid var(--vidro-borda); border-left: 0; }
+  .compor { background: var(--vidro-forte); border-top: 1px solid var(--vidro-borda); }
+  .compor .caixa { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .pilula-topo, .voltar, .linha-compor .modo, .icone.redondo:not(.branco) { background: var(--vidro-item); border-color: var(--vidro-borda); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .ficha { background: var(--vidro-forte); border-left: 1px solid var(--vidro-borda); }
+  .ficha .bloco, .ficha .topo { background: transparent; }
+  .sem-conversa { background: transparent; border-bottom: 0; }
+  dialog { background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 30px 80px rgba(0,0,0,.35); }
+  dialog::backdrop { background: rgba(4, 18, 31, .35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .folha-lista { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .menu-mais { background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
+  .funil, .painel, .ligar { background: transparent; }
+  .cabeca-vista { background: var(--vidro-fundo); border-bottom: 1px solid var(--vidro-borda); }
+  .coluna, .num, .opcoes-conta, .perfil-conta, .tabela { background: var(--vidro-fundo) !important; border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
+  .cartao:hover { background: var(--vidro-item); }
+
+  /* barra lateral de vidro (computador) */
+  .lateral { display: none; }
+  @media (min-width: 761px) {
+    .casca { grid-template-columns: 268px minmax(0, 1fr); transition: grid-template-columns .25s ease; }
+    .casca.recolhida { grid-template-columns: 84px minmax(0, 1fr); }
+    .trilho { display: none !important; }
+    .lateral { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 12px 12px; padding: 14px 12px; border-radius: 26px; min-height: 0; overflow-y: auto; overflow-x: hidden;
+      background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); scrollbar-width: none; }
+    .lt-topo { display: flex; align-items: center; gap: 10px; padding: 2px 4px 10px; position: relative; }
+    .lt-marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(16,110,190,.35)); }
+    .lt-nome { display: grid; min-width: 0; line-height: 1.2; }
+    .lt-nome b { font-size: 16px; font-weight: 800; }
+    .lt-nome span { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lt-recolher { all: unset; cursor: pointer; position: absolute; right: -2px; top: 6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+      background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 12px rgba(0,0,0,.12); color: var(--texto); transition: transform .25s ease; }
+    .lt-recolher svg { width: 16px; height: 16px; }
+    .lt-busca { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; padding: 0 10px; height: 40px; border-radius: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); }
+    .lt-busca svg { width: 17px; height: 17px; flex: none; }
+    .lt-busca input { all: unset; flex: 1; min-width: 0; font-size: 14px; color: var(--texto); }
+    .lt-busca input::placeholder { color: var(--sub); }
+    .lt-busca kbd { font: 600 11px var(--fonte); padding: 2px 6px; border-radius: 6px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); }
+    .lt-secao { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); padding: 12px 10px 4px; }
+    .lt-item, .nav.lt-item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: var(--texto);
+      font-size: 15px; font-weight: 600; position: relative; transition: background .15s ease, box-shadow .15s ease; width: auto; }
+    .lt-item svg { width: 21px; height: 21px; flex: none; color: var(--icone); }
+    .lt-item .lt-rot { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lt-item:hover { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+    .lt-item[aria-current="page"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 20px rgba(16,110,190,.18); }
+    .lt-item[aria-current="page"] svg { color: var(--marca-azul); }
+    [data-tema="escuro"] .lt-item[aria-current="page"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 24px rgba(0,0,0,.35); }
+    [data-tema="escuro"] .lt-item[aria-current="page"] svg { color: var(--marca-menta); }
+    .lt-qtd { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 12px rgba(15,252,190,.55); }
+    .lt-luz { width: 8px; height: 8px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 10px rgba(15,252,190,.9); }
+    .lt-ia svg { color: var(--marca-menta) !important; filter: drop-shadow(0 0 6px rgba(15,252,190,.6)); }
+    [data-tema="claro"] .lt-ia svg { color: #0a8f7a !important; }
+    .lt-espaco { flex: 1; min-height: 12px; }
+    .lt-noite input { position: absolute; opacity: 0; pointer-events: none; }
+    .lt-chave { width: 40px; height: 24px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; flex: none; transition: background .2s ease; }
+    .lt-chave::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s ease; }
+    .lt-noite input:checked + .lt-chave { background: var(--marca-azul); }
+    .lt-noite input:checked + .lt-chave::after { transform: translateX(16px); }
+    .lt-noite input:focus-visible + .lt-chave { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+    .lt-eu { all: unset; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px; border-radius: 16px; border-top: 1px solid var(--vidro-linha); }
+    .lt-eu:hover { background: var(--vidro-item); }
+    .lt-eu .avatar.eu { width: 38px; height: 38px; font-size: 13px; background: var(--marca-gradiente); box-shadow: 0 0 0 2px var(--vidro-borda); }
+    .lt-eu .lt-rot { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+    .lt-eu b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lt-eu small { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lt-eu > svg { width: 16px; height: 16px; color: var(--sub); flex: none; }
+    .area { padding: 12px 12px 12px 12px; }
+    .area > .vista { border-radius: 26px; overflow: hidden; border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
+    /* recolhida: só ícones */
+    .recolhida .lateral { padding: 14px 10px; align-items: center; }
+    .recolhida .lt-nome, .recolhida .lt-busca, .recolhida .lt-secao, .recolhida .lt-rot, .recolhida .lt-chave, .recolhida .lt-eu > svg, .recolhida .lt-luz { display: none; }
+    .recolhida .lt-topo { flex-direction: column; padding-bottom: 14px; }
+    .recolhida .lt-recolher { position: static; transform: rotate(180deg); }
+    .recolhida .lt-item { width: 48px; justify-content: center; padding: 0; }
+    .recolhida .lt-qtd { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; font-size: 10px; padding: 0 5px; }
+    .recolhida .lt-eu { padding: 6px; }
+  }
+  /* celular: barra de abas de vidro */
+  @media (max-width: 760px) {
+    .trilho { background: var(--vidro-forte) !important; border: 1px solid var(--vidro-borda) !important; box-shadow: var(--vidro-brilho) !important; }
+    .lista { border-right: 0; }
+  }
 </style>
 </head>
 <body>
 <div class="casca" id="casca">
-  <nav class="trilho" aria-label="Menu">
+  <aside class="lateral" id="lateral" aria-label="Menu">
+    <div class="lt-topo">
+      <picture class="lt-marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="" width="40" height="40"></picture>
+      <div class="lt-nome"><b>Sintonia</b><span id="lt-empresa">Império Progressivas</span></div>
+      <button class="lt-recolher" id="lt-recolher" title="Recolher menu" aria-label="Recolher menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>
+    </div>
+    <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
+    <div class="lt-secao">Principal</div>
+    <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
+    <button class="nav lt-item" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">Funil</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
+    <button class="nav lt-item lt-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg><span class="lt-rot">Inteligência</span><span class="lt-luz"></span></button>
+    <button class="nav lt-item" data-vista="painel" title="Painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg><span class="lt-rot">Painel</span></button>
+    <div class="lt-gestao" id="lt-gestao" hidden>
+      <div class="lt-secao">Gestão</div>
+      <button class="lt-item" id="lt-equipe" title="Atendentes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Atendentes</span></button>
+      <button class="lt-item" id="lt-tags" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
+      <button class="lt-item" id="lt-campos" title="Campos da ficha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="lt-rot">Campos da ficha</span></button>
+      <a class="lt-item" id="lt-conexoes" href="/conexoes" title="Conexões" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="lt-rot">Conexões</span></a>
+    </div>
+    <span class="lt-espaco"></span>
+    <label class="lt-item lt-noite" title="Modo noturno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg><span class="lt-rot">Modo noturno</span><input type="checkbox" id="lt-noite" role="switch"><i class="lt-chave"></i></label>
+    <button class="lt-eu" data-vista="configuracoes" id="lt-eu" title="Conta"><span class="avatar eu" id="lt-avatar">··</span><span class="lt-rot"><b id="lt-eu-nome"></b><small id="lt-eu-email"></small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/></svg></button>
+  </aside>
+  <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
     <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
     <button class="nav" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">Funil</span></button>
@@ -845,6 +964,45 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+/* Tema: "auto" segue o aparelho; "claro"/"escuro" vira as regras de cor da página inteira (inclusive as que as telas injetam depois). */
+(() => {
+  const CHAVE = 'sintonia.tema';
+  let tema = 'auto';
+  try { tema = localStorage.getItem(CHAVE) || 'auto'; } catch {}
+  const escuroDoAparelho = matchMedia('(prefers-color-scheme: dark)');
+  const original = new WeakMap();
+  function aplicarEm(regras) {
+    for (const r of regras) {
+      if (r instanceof CSSMediaRule) {
+        if (!original.has(r)) original.set(r, r.media.mediaText);
+        const m = original.get(r);
+        if (/prefers-color-scheme:\s*dark/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'escuro' ? m.replace(/\(prefers-color-scheme:\s*dark\)/, 'all') : 'not all';
+        else if (/prefers-color-scheme:\s*light/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'claro' ? m.replace(/\(prefers-color-scheme:\s*light\)/, 'all') : 'not all';
+        aplicarEm(r.cssRules);
+      }
+    }
+  }
+  function aplicar() {
+    for (const f of document.styleSheets) { try { aplicarEm(f.cssRules); } catch {} }
+    const escuro = tema === 'escuro' || (tema === 'auto' && escuroDoAparelho.matches);
+    document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+    document.querySelectorAll('picture source[data-tema], picture source[media*="prefers-color-scheme"]').forEach((src) => {
+      src.dataset.tema = '1';
+      src.media = tema === 'auto' ? '(prefers-color-scheme: dark)' : tema === 'escuro' ? 'all' : 'not all';
+    });
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m, i) => { m.media = tema === 'auto' ? (i ? '(prefers-color-scheme: dark)' : '(prefers-color-scheme: light)') : (i ? (tema === 'escuro' ? 'all' : 'not all') : (tema === 'claro' ? 'all' : 'not all')); });
+    window.dispatchEvent(new Event('tema'));
+  }
+  new MutationObserver(aplicar).observe(document.head, { childList: true });
+  escuroDoAparelho.addEventListener('change', aplicar);
+  window.SintoniaTema = {
+    get: () => tema,
+    escuro: () => document.documentElement.dataset.tema === 'escuro',
+    definir: (t) => { tema = t; try { localStorage.setItem(CHAVE, t); } catch {} aplicar(); },
+  };
+  aplicar();
+  addEventListener('DOMContentLoaded', aplicar);
+})();
 addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1656,6 +1814,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     try { estado.conversas = await api('/api/conversas'); } catch { return; }
     const n = estado.conversas.filter(esperando).length;
     $('contador').hidden = !n; $('contador').textContent = String(n);
+    $('lt-qtd').hidden = !n; $('lt-qtd').textContent = String(n);
     $('qtd-nao-lidas').textContent = n ? String(n) : '';
     $('voltar-qtd').textContent = n ? String(n) : '';
     desenharLista();
@@ -1850,12 +2009,39 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // Para a navegação de fora (ex.: botão flutuante de acesso rápido) abrir as telas pelo nome.
   window.Sintonia = { mostrar, abrirEquipe: () => mostrar('equipe'), abrirConfiguracoes: () => mostrar('configuracoes') };
+  // ---------- barra lateral de vidro (computador) ----------
+  try { if (localStorage.getItem('sintonia.lateral') === 'recolhida') $('casca').classList.add('recolhida'); } catch {}
+  $('lt-recolher').addEventListener('click', () => {
+    const r = $('casca').classList.toggle('recolhida');
+    try { localStorage.setItem('sintonia.lateral', r ? 'recolhida' : 'aberta'); } catch {}
+  });
+  $('lt-eu').addEventListener('click', () => mostrar('configuracoes'));
+  $('lt-equipe').addEventListener('click', () => mostrar('equipe'));
+  $('lt-tags').addEventListener('click', () => abrirTags());
+  $('lt-campos').addEventListener('click', () => abrirCampos());
+  $('lt-busca').addEventListener('input', (e) => {
+    if (estado.vista !== 'conversas') mostrar('conversas');
+    $('busca').value = e.target.value; estado.busca = e.target.value.toLowerCase(); desenharLista();
+  });
+  $('busca').addEventListener('input', (e) => { $('lt-busca').value = e.target.value; });
+  addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); ($('lateral').offsetParent ? $('lt-busca') : $('busca')).focus(); } });
+  const sincronizarNoite = () => { $('lt-noite').checked = window.SintoniaTema.escuro(); };
+  $('lt-noite').addEventListener('change', (e) => window.SintoniaTema.definir(e.target.checked ? 'escuro' : 'claro'));
+  addEventListener('tema', sincronizarNoite); sincronizarNoite();
+  function preencherLateral() {
+    const eu = estado.eu; if (!eu) return;
+    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
+    $('lt-gestao').hidden = !ehGestor(eu); $('lt-conexoes').hidden = !['admin', 'direcao'].includes(eu.papel);
+    api('/api/empresa').then((emp) => { if (emp?.nome) $('lt-empresa').textContent = emp.nome; }).catch(() => {});
+  }
+
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
   window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
     $('nav-config').title = `Conta · ${estado.eu.nome}`;
+    preencherLateral();
     $('nav-equipe').hidden = true;
     estado.situacao = await api('/api/situacao').catch(() => ({}));
     const avisos = [];
