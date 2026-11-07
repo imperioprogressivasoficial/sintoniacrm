@@ -200,7 +200,11 @@ const app = criarServidor({
     const agora = new Date();
     // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
     const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
-    if (nova) await sintonia.mudarModo(conversa.id, iaLigada ? (await empresa.configIa()).modoPadrao : 'humano');
+    if (nova) {
+      // A conversa foi criada aqui (para nascer no modo certo): registra a chegada da cliente como num número real.
+      await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora });
+      await sintonia.mudarModo(conversa.id, iaLigada ? (await empresa.configIa()).modoPadrao : 'humano');
+    }
     // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
     const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;
     const anexo = midia && tipo
