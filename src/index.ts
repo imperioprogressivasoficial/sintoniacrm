@@ -37,6 +37,8 @@ import { simularResposta } from './ai/simulacao.js';
 import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis } from './funis/funis.js';
 import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, ligarFunis } from './automacoes/automacoes.js';
 import { registrarFunis } from './rotas/funis.js';
+import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
+import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './conversa/transcricao.js';
@@ -184,8 +186,9 @@ const funis = new Funis({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   log,
 });
+const armazemAutomacoes = pool ? new ArmazemAutomacoesPostgres(pool) : new ArmazemAutomacoesMemoria(armazemTags);
 const automacoes = new Automacoes({
-  armazem: pool ? new ArmazemAutomacoesPostgres(pool) : new ArmazemAutomacoesMemoria(armazemTags),
+  armazem: armazemAutomacoes,
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   sintonia: () => sintonia,
@@ -194,7 +197,21 @@ const automacoes = new Automacoes({
   contas,
   log,
 });
-const ganchos = ligarFunis({ tags, funis, automacoes });
+// Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
+const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
+const bots = new Bots({
+  armazem: pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria(),
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  sintonia: () => sintonia,
+  funis,
+  tags,
+  contas,
+  contatos: armazemContatos,
+  envios: armazemAutomacoes,
+  log,
+});
+const ganchos = ligarBots(ligarFunis({ tags, funis, automacoes }), { bots, funis, tags });
 // Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
 await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
 
@@ -217,7 +234,6 @@ const sintonia = new Sintonia({
   },
 });
 
-const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
 
 const trabalhador = new Trabalhador({ fila, processar: (m) => sintonia.receber(m), paralelo: cfg.SINTONIA_PARALELO, log });
 
@@ -303,6 +319,7 @@ const app = criarServidor({
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes });
+registrarBots(app, { repo, bots });
 // Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
 const extras = montarExtras({
   repo,
@@ -344,6 +361,7 @@ let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
+  await bots.tick().catch((e) => log('Falha no relógio dos bots', String(e))); // esperas, tempo limite das respostas, agente de IA
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram
   const agora = new Date();
