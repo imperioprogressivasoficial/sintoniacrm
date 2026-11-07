@@ -810,6 +810,7 @@
       <div class="funil" id="funil"></div>
       <div class="ligar" id="ligar" hidden></div>
     </section>
+    <section class="vista" id="v-automacoes"><div class="painel" id="automacoes"></div></section>
     <section class="vista" id="v-ia"><div class="painel" id="ia"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
@@ -1074,6 +1075,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
     if (v === 'funil') { desenharFunil(); carregarLigacoes(); }
+    if (v === 'automacoes' && window.SintoniaTelas?.automacoes) window.SintoniaTelas.automacoes.desenhar($('automacoes'), window.Sintonia.ui);
     if (v === 'ia') carregarIA();
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
@@ -1773,6 +1775,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // funil
   function desenharFunil() {
+    if (window.SintoniaTelas?.funil) return window.SintoniaTelas.funil.desenhar($('funil'), window.Sintonia.ui);
     const caixa = $('funil'); caixa.replaceChildren();
     for (const [id, nome] of ETAPAS) {
       const cs = estado.conversas.filter((c) => c.etapa === id);
@@ -1790,7 +1793,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.abaFunil = b.dataset.a;
     document.querySelectorAll('#funil-abas .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
     $('funil').hidden = estado.abaFunil !== 'quadro'; $('ligar').hidden = estado.abaFunil !== 'ligar';
-    if (estado.abaFunil === 'ligar') carregarLigacoes();
+    if (estado.abaFunil === 'ligar') carregarLigacoes(); else desenharFunil();
   });
   const MOTIVO = { faltou: 'Faltou', interessada_sem_agendar: 'Interessada', nao_responde: 'Sumiu' };
   const RESULTADO = { atendeu: 'atendeu', agendou: 'agendou', nao_atendeu: 'não atendeu', caixa_postal: 'caixa postal' };
@@ -2124,5 +2127,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>
 <script src="/telas/conversa-extras.js" defer></script>
+<script src="/telas/funil.js" defer></script>
+<script src="/telas/automacoes.js" defer></script>
 </body>
 </html>
