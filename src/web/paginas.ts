@@ -21,6 +21,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/icone-32.png': { arquivo: 'icone-32.png', tipo: 'image/png' },
   '/logo.png': { arquivo: 'logo.png', tipo: 'image/png' },
   '/logo-escuro.png': { arquivo: 'logo-escuro.png', tipo: 'image/png' },
+  '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
   '/ds.css': { arquivo: 'ds.css', tipo: 'text/css; charset=utf-8' },
   '/acesso-rapido.js': { arquivo: 'acesso-rapido.js', tipo: 'text/javascript; charset=utf-8' },

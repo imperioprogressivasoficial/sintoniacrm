@@ -1361,6 +1361,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // aba IA: o que a IA fez hoje e quem ela está conduzindo
   async function carregarIA() {
+    if (window.SintoniaTelas?.ia) return window.SintoniaTelas.ia.desenhar($('ia'), window.Sintonia.ui);
     const caixa = $('ia');
     const [r, at] = await Promise.all([api('/api/painel').catch(() => null), api('/api/atualizacoes').catch(() => [])]);
     const conduzindo = estado.conversas.filter((c) => c.modo === 'ia');
@@ -1383,6 +1384,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // painel
   async function carregarPainel() {
+    if (window.SintoniaTelas?.painel) return window.SintoniaTelas.painel.desenhar($('painel'), window.Sintonia.ui);
     const caixa = $('painel');
     let r; try { r = await api('/api/painel'); } catch (x) { caixa.replaceChildren(el('p', { class: 'erro-txt', text: x.message })); return; }
     const num = (v, t) => el('div', { class: 'num' }, el('b', { text: String(v) }), el('span', { text: t }));
@@ -1596,6 +1598,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // Para a navegação de fora (ex.: botão flutuante de acesso rápido) abrir as telas pelo nome.
   window.Sintonia = { mostrar, abrirEquipe: () => mostrar('equipe'), abrirConfiguracoes: () => mostrar('configuracoes') };
+  // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
+  window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -1613,5 +1617,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   })();
 })();
 </script>
+<script src="/telas/painel.js" defer></script>
+<script src="/telas/ia.js" defer></script>
 </body>
 </html>
