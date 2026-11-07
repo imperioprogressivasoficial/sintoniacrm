@@ -46,6 +46,11 @@ try {
   const b64 = tar.toString('base64');
   // Cada variável de ambiente tem limite (128 KB no Linux): o pacote vai em pedaços de 60 KB.
   const pedacos = b64.match(/.{1,60000}/g);
+  // Pacote grande demais para variáveis de ambiente (limite do Linux ~2 MB no total): com PACOTE_URL o container
+  // baixa o pacote (base64) desse endereço na primeira subida; a soma SHA-256 continua sendo conferida.
+  const PACOTE_URL = process.env.PACOTE_URL;
+  if (PACOTE_URL && !/^https:\/\/[\w.\/-]+$/.test(PACOTE_URL)) throw new Error('PACOTE_URL inválida');
+  if (process.env.PACOTE_ARQUIVO) writeFileSync(process.env.PACOTE_ARQUIVO, b64);
 
   // Sem "build": o gerenciador de Docker da Hostinger só sobe imagens prontas. O pacote vai numa
   // variável do próprio serviço; ao iniciar, o container confere a soma, extrai e instala.
@@ -57,7 +62,9 @@ try {
   const marca = `app/.versao-${soma}`;
   const instalar = [
     'rm -rf app', 'mkdir app', 'cd app',
-    `{ ${pedacos.map((_, i) => `printenv PACOTE_${i + 1};`).join(' ')} } | tr -d '\\n' | base64 -d > /tmp/pacote.tgz`,
+    PACOTE_URL
+      ? `wget -qO- '${PACOTE_URL}' | tr -d '\\n' | base64 -d > /tmp/pacote.tgz`
+      : `{ ${pedacos.map((_, i) => `printenv PACOTE_${i + 1};`).join(' ')} } | tr -d '\\n' | base64 -d > /tmp/pacote.tgz`,
     `echo '${soma}  /tmp/pacote.tgz' | sha256sum -c -`,
     'tar -xzf /tmp/pacote.tgz', 'rm /tmp/pacote.tgz',
     'npm install --omit=dev --no-audit --no-fund',
@@ -83,7 +90,7 @@ services:
       COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
-${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
+${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node
     networks:
