@@ -21,7 +21,8 @@ import type { ArmazemContatos } from './contatos/contatos.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { registrarWebhooksSociais, type OpcoesWebhooksSociais } from './conexoes/sociais.js';
 import { registrarRotasMidia } from './web/midias.js';
-import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
+import { agendar, agendaDaUnidade, ErroAgendamento, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
+import { ErroIntegracaoPendente } from './agenda/sistema.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
 import { cabecalhoNotificacoes, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
@@ -37,7 +38,7 @@ export interface DependenciasServidor {
   revisar?: (conversaId: string, rascunho: string) => Promise<Revisao>;
   /** Fila persistente: o webhook só grava e responde; os trabalhadores processam. */
   fila?: { fila: FilaEntrada; avisar?: () => void };
-  /** Trinks: habilita o botão "Agendar" dentro do CRM. */
+  /** Agenda do salão (Trinks, Avec ou AppBarber, por unidade): habilita o botão "Agendar" dentro do CRM. */
   agenda?: Agenda;
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
@@ -50,7 +51,7 @@ export interface DependenciasServidor {
   /** Fotos de perfil das clientes. */
   fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
-  situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean }> } };
+  situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean; sistema?: string; sistemaNome?: string | null; falta?: string[]; pronta?: boolean }> } };
   /** Simulador: uma "cliente" escreve pelo WhatsApp de teste (texto e, se quiser, uma mídia de teste). */
   clienteTeste?: (p: {
     unidade: 'norte' | 'sumare';
@@ -471,13 +472,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const UnidadeQ = z.enum(['norte', 'sumare']);
 
   function exigeAgenda(): Agenda {
-    if (!d.agenda) throw Object.assign(new Error('Agenda (Trinks) não configurada'), { statusCode: 501 });
+    if (!d.agenda) throw Object.assign(new Error('Agenda do salão não configurada (Conexões › Agenda)'), { statusCode: 501 });
     return d.agenda;
   }
 
   app.get('/api/agenda/servicos', async (req) => {
     const { unidade } = z.object({ unidade: UnidadeQ }).parse(req.query);
-    const servicos = await exigeAgenda().listarServicos(estabelecimentoDa(unidade));
+    const { sistema, local } = agendaDaUnidade(exigeAgenda(), unidade);
+    const servicos = await sistema.listarServicos(local);
     return servicos
       .filter((s) => s.visivelParaCliente !== false)
       .map((s) => ({ id: s.id, nome: s.nome, categoria: s.categoria ?? null, duracaoMin: s.duracaoEmMinutos, preco: s.preco, precoHoje: s.valorPromocional ?? s.preco }));
@@ -485,7 +487,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   app.get('/api/agenda/profissionais', async (req) => {
     const { unidade } = z.object({ unidade: UnidadeQ }).parse(req.query);
-    const lista = await exigeAgenda().listarProfissionais(estabelecimentoDa(unidade));
+    const { sistema, local } = agendaDaUnidade(exigeAgenda(), unidade);
+    const lista = await sistema.listarProfissionais(local);
     return lista.filter((p) => p.possuiAgenda !== false).map((p) => ({ id: p.id, nome: p.apelido || p.nome }));
   });
 
@@ -521,7 +524,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     // Anti-duplicidade antes de gravar no Trinks: se outra pessoa já está respondendo, nada é marcado.
     if (req.usuario) await d.sintonia.conferirVez(conversa.id, req.usuario);
     try {
-      const r = await agendarNoTrinks(
+      const r = await agendar(
         exigeAgenda(),
         conversa,
         { ...b, origem: `${atendente} pelo CRM` },
@@ -544,6 +547,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.setErrorHandler((erro, _req, reply) => {
     if (erro instanceof z.ZodError) return reply.code(400).send({ erro: 'Dados inválidos', detalhes: erro.issues });
     if (erro instanceof ErroAgendamento) return reply.code(400).send({ erro: erro.message, codigo: erro.codigo });
+    if (erro instanceof ErroIntegracaoPendente) return reply.code(501).send({ erro: erro.message, codigo: 'integracao_pendente', sistema: erro.tipo });
     // Recusa da Graph API (API oficial): a mensagem explicada chega à tela. Fora da janela de 24 h = 422.
     if (erro instanceof ErroMeta) {
       return erro.codigo === 131047
