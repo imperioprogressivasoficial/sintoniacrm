@@ -127,7 +127,7 @@ async function montar() {
       conexoes,
       fetchFn: evo.f,
       testarIA: async (k) => { testes.push('ia:' + k); if (k === 'ruim') throw new Error('chave inválida'); },
-      testarTrinks: async () => ({ profissionais: 7 }),
+      testarTrinks: async () => ({ resumo: '7 profissionais' }),
     },
   });
   const entrar = async (email: string) => {

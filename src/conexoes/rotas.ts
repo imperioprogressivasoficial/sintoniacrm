@@ -11,7 +11,7 @@ export interface OpcoesConexoes {
   /** Confere uma chave da IA (chamada barata). */
   testarIA: (chave: string) => Promise<void>;
   /** Confere a chave da Trinks lendo os profissionais de uma unidade. */
-  testarTrinks: (chave: string) => Promise<{ profissionais: number }>;
+  testarTrinks: (chave: string) => Promise<{ resumo: string }>;
   /** Confere a chave da OpenAI (transcrição de áudio). Ausente = não testa. */
   testarOpenAI?: (chave: string) => Promise<void>;
   fetchFn?: typeof fetch;
@@ -30,6 +30,8 @@ const Canal = z.enum(['evolution', 'meta']).optional();
 const Salvar = z.object({
   anthropicApiKey: z.string().max(400).optional(),
   trinksApiKey: z.string().max(400).optional(),
+  trinksEstabelecimentoNorte: z.string().trim().regex(/^\d*$/, 'Use só os números do ID do estabelecimento').max(20).optional(),
+  trinksEstabelecimentoSumare: z.string().trim().regex(/^\d*$/, 'Use só os números do ID do estabelecimento').max(20).optional(),
   openaiApiKey: z.string().max(400).optional(),
   evolutionUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
   evolutionApiKey: z.string().max(400).optional(),
@@ -191,7 +193,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
         const k = c.get('trinksApiKey');
         if (!k) return reply.code(400).send({ ok: false, erro: 'Chave da Trinks não preenchida' });
         const r = await o.testarTrinks(k);
-        return { ok: true, mensagem: `Trinks respondendo (${r.profissionais} profissionais no Norte)` };
+        return { ok: true, mensagem: `Trinks respondendo: ${r.resumo}` };
       }
       const r = await evolution().testar();
       return { ok: true, mensagem: `Evolution respondendo (${r.instancias} instâncias)` };

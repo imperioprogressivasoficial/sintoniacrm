@@ -362,7 +362,7 @@ describe('Tela de Conexões: API oficial', () => {
     const g = graphFalsa();
     const repo = new RepositorioMemoria();
     const sintonia = new Sintonia({ empresaId: 'imperio', repo, numeros: [], agente: { executar: async () => ({ texto: '', acoes: [], recusou: false }) } });
-    const app = criarServidor({ sintonia, repo, auth: { contas }, conexoes: { conexoes, fetchFn: g.f, testarIA: async () => {}, testarTrinks: async () => ({ profissionais: 0 }) } });
+    const app = criarServidor({ sintonia, repo, auth: { contas }, conexoes: { conexoes, fetchFn: g.f, testarIA: async () => {}, testarTrinks: async () => ({ resumo: 'ok' }) } });
     const r = await app.inject({ method: 'POST', url: '/api/auth/entrar', payload: { email: 'bruno@imperio.com', senha: 'Imperio2026xyz' } });
     const cookie = String(r.headers['set-cookie']).split(';')[0]!;
     return { app, conexoes, cookie, g };

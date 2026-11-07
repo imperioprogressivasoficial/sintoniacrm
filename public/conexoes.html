@@ -221,9 +221,11 @@
 
   <section id="agenda" aria-labelledby="t-agenda">
     <h2 id="t-agenda"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span><span>Agenda<small>Trinks</small></span></h2>
-    <p>Chave da API da Trinks. Com ela, o botão Agendar e a IA marcam horário sem abrir o Trinks.</p>
-    <label>Chave da Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
-    <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks" role="status"></span></div>
+    <p>Preencha a chave da API e o ID do estabelecimento de cada unidade. Com isso, o botão Agendar e a IA marcam horário sem abrir o Trinks. A chave e o ID ficam no Trinks, em Configurações › Integrações (API).</p>
+    <label>Chave da API do Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
+    <label>ID do estabelecimento · Salvador Norte Shopping <input id="trinksEstabelecimentoNorte" inputmode="numeric" autocomplete="off" placeholder="Em uso: 240643 (confira no Trinks)"></label>
+    <label>ID do estabelecimento · Shopping Sumaré <input id="trinksEstabelecimentoSumare" inputmode="numeric" autocomplete="off" placeholder="Em uso: 222074 (confira no Trinks)"></label>
+    <div class="linha"><button class="botao" data-salvar="trinksApiKey,trinksEstabelecimentoNorte,trinksEstabelecimentoSumare">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks" role="status"></span></div>
   </section>
 
   <section id="transcricao" aria-labelledby="t-transcricao">

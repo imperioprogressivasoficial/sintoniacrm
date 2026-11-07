@@ -154,13 +154,18 @@ const numeros: NumeroConectado[] = [];
 const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId);
 let iaLigada = false;
 let agendaLigada = false;
+const ESTABELECIMENTO_PADRAO = { norte: UNIDADES.norte.trinksEstabelecimentoId, sumare: UNIDADES.sumare.trinksEstabelecimentoId };
 
 function aplicarConexoes() {
   const chaveIA = conexoes.get('anthropicApiKey');
   claudeAtual = new Anthropic({ apiKey: chaveIA || 'sem-chave' });
   iaLigada = Boolean(chaveIA);
   trinks.definirChave(conexoes.get('trinksApiKey') ?? '');
-  agendaLigada = Boolean(conexoes.get('trinksApiKey'));
+  // ID do estabelecimento de cada unidade: o da tela de Conexões vale por cima do padrão.
+  for (const [u, campo] of [['norte', 'trinksEstabelecimentoNorte'], ['sumare', 'trinksEstabelecimentoSumare']] as const) {
+    UNIDADES[u].trinksEstabelecimentoId = conexoes.get(campo) || ESTABELECIMENTO_PADRAO[u];
+  }
+  agendaLigada = Boolean(conexoes.get('trinksApiKey')) && (['norte', 'sumare'] as const).some((u) => UNIDADES[u].trinksEstabelecimentoId);
   evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
   const temEvolution = Boolean(conexoes.get('evolutionUrl') && conexoes.get('evolutionApiKey'));
   // Cada unidade usa a API escolhida na tela: oficial (Meta) ou não oficial (Evolution, QR Code).
@@ -385,8 +390,16 @@ const app = criarServidor({
     },
     testarTrinks: async (chave) => {
       const t = new ClienteTrinks({ apiKey: chave });
-      const lista = await t.listarProfissionais(UNIDADES.norte.trinksEstabelecimentoId ?? '');
-      return { profissionais: lista.length };
+      const partes: string[] = [];
+      let falhas = 0;
+      for (const u of ['norte', 'sumare'] as const) {
+        const est = UNIDADES[u].trinksEstabelecimentoId;
+        if (!est) { partes.push(`${UNIDADES[u].nome}: sem ID do estabelecimento`); continue; }
+        try { partes.push(`${UNIDADES[u].nome}: ${(await t.listarProfissionais(est)).length} profissionais`); }
+        catch (e) { falhas++; partes.push(`${UNIDADES[u].nome}: ${String((e as Error).message).slice(0, 80)}`); }
+      }
+      if (falhas && falhas === partes.length) throw new Error(partes.join(' · '));
+      return { resumo: partes.join(' · ') };
     },
   },
   get meta() {
@@ -403,7 +416,15 @@ const app = criarServidor({
   },
   origens: (ids) => rastreio.selos(ids),
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
-  situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
+  situacao: () => ({
+    iaLigada,
+    agendaLigada,
+    numerosReais: numeros.filter(ehReal).length,
+    agenda: {
+      chave: Boolean(conexoes.get('trinksApiKey')),
+      unidades: (['norte', 'sumare'] as const).map((u) => ({ id: u, nome: UNIDADES[u].nome, estabelecimento: Boolean(UNIDADES[u].trinksEstabelecimentoId) })),
+    },
+  }),
   midias,
   notificacoes: { notificador, armazem: armazemNotificacoes, chaves: chavesPush },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),

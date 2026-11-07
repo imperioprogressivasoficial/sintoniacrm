@@ -8,6 +8,9 @@ import { Cofre } from './cofre.js';
 export const CAMPOS = {
   anthropicApiKey: { segredo: true },
   trinksApiKey: { segredo: true },
+  /** ID do estabelecimento no Trinks (header estabelecimentoId), por unidade. Vazio = o padrão de src/unidades.ts. */
+  trinksEstabelecimentoNorte: { segredo: false },
+  trinksEstabelecimentoSumare: { segredo: false },
   /** OpenAI (Whisper): transcrição dos áudios na conversa. */
   openaiApiKey: { segredo: true },
   evolutionUrl: { segredo: false },

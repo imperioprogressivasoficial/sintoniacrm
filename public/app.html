@@ -289,6 +289,12 @@
   .horarios button[aria-pressed="true"] { background: var(--verde-forte); border-color: var(--verde-forte); color: #fff; }
   .info { font-size: 13.5px; color: var(--sub); }
   .erro-txt { color: #ea0038; font-size: 13.5px; }
+  .ag-pendente { display: grid; gap: 8px; margin: 4px 0 14px; padding: 14px 16px; border-radius: 16px; background: color-mix(in srgb, var(--marca-azul, #106ebe) 10%, transparent); border: 1px solid color-mix(in srgb, var(--marca-azul, #106ebe) 28%, transparent); font-size: 14px; line-height: 1.45; }
+  .ag-pendente[hidden] { display: none; }
+  .ag-pendente ul { margin: 0; padding-left: 18px; }
+  .ag-pendente p { margin: 0; opacity: .8; }
+  .ag-pendente .botao { justify-self: start; text-decoration: none; }
+  #ag-corpo :disabled { opacity: .55; }
   .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #3b4a54; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100vw - 32px); text-align: center; }
   .toast.ver { opacity: 1; }
 
@@ -984,6 +990,7 @@
 <dialog id="d-agendar">
   <form method="dialog" id="f-agendar">
     <h2>Agendar</h2>
+    <div id="ag-pendente" class="ag-pendente" hidden></div>
     <div id="ag-corpo" style="display:grid;gap:12px">
       <label>Unidade <select id="ag-unidade"><option value="norte">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
       <label>Serviço <select id="ag-servico"></select></label>
@@ -1955,8 +1962,34 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('ag-unidade').value = c.unidade === 'sumare' ? 'sumare' : 'norte';
     $('ag-nome').value = c.nome || ''; $('ag-data').value = hojeISO(); $('ag-data').min = hojeISO();
     $('d-agendar').showModal();
-    if (!estado.situacao.agendaLigada) { $('ag-corpo').hidden = true; $('ag-ok').hidden = true; $('ag-erro').textContent = 'A agenda ainda não está conectada ao Trinks. Quando a chave do Trinks for configurada, você agenda por aqui sem abrir o Trinks.'; return; }
-    $('ag-corpo').hidden = false; $('ag-ok').hidden = false;
+    await prepararAgenda();
+  }
+  // Agenda pronta: se faltar a chave da API ou o ID do estabelecimento da unidade, mostra só o que falta.
+  function pendenciasAgenda() {
+    const ag = estado.situacao.agenda || { chave: estado.situacao.agendaLigada, unidades: [] };
+    const u = (ag.unidades || []).find((x) => x.id === $('ag-unidade').value);
+    const falta = [];
+    if (!ag.chave) falta.push('Chave da API do Trinks');
+    if (u && !u.estabelecimento) falta.push(`ID do estabelecimento (${u.nome})`);
+    return falta;
+  }
+  async function prepararAgenda() {
+    const falta = pendenciasAgenda(); const caixa = $('ag-pendente');
+    const pronto = !falta.length;
+    $('ag-ok').hidden = !pronto; caixa.hidden = pronto;
+    ['ag-servico', 'ag-prof', 'ag-data', 'ag-nome', 'ag-confirmar'].forEach((id) => { $(id).disabled = !pronto; });
+    if (!pronto) {
+      const gestor = estado.eu && (estado.eu.papel === 'admin' || estado.eu.papel === 'direcao');
+      caixa.replaceChildren(
+        el('b', { text: 'Agenda pronta — falta só conectar' }),
+        el('ul', {}, ...falta.map((f) => el('li', { text: f }))),
+        el('p', { text: gestor ? 'Preencha em Conexões › Agenda. Assim que salvar, o Agendar e a IA já marcam horário direto no Trinks.' : 'Peça para a administração preencher em Conexões › Agenda.' }),
+        gestor ? el('a', { class: 'botao', href: '/conexoes#agenda', text: 'Abrir Conexões' }) : null);
+      $('ag-servico').replaceChildren(el('option', { value: '', text: 'Serviços do Trinks aparecem aqui' }));
+      $('ag-prof').replaceChildren(el('option', { value: '', text: 'Qualquer uma' }));
+      $('ag-horarios').replaceChildren(el('span', { class: 'info', text: 'Os horários livres aparecem aqui depois de conectar.' }));
+      return;
+    }
     await carregarCatalogo();
   }
   $('topo-agendar').addEventListener('click', abrirAgendar);
@@ -1981,7 +2014,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       caixa.replaceChildren(...(botoes.length ? botoes : [el('span', { class: 'info', text: 'Sem horário livre nesse dia.' })]));
     } catch (x) { caixa.replaceChildren(el('span', { class: 'erro-txt', text: x.message })); }
   }
-  $('ag-unidade').addEventListener('change', carregarCatalogo);
+  $('ag-unidade').addEventListener('change', prepararAgenda);
   ['ag-servico', 'ag-prof', 'ag-data'].forEach((id) => $(id).addEventListener('change', carregarHorarios));
   $('f-agendar').addEventListener('submit', async (e) => {
     if (e.submitter?.value !== 'ok') return;
