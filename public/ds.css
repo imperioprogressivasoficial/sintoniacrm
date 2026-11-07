@@ -1,56 +1,56 @@
 /*
  * Design system da Sintonia.
  * Estrutura e medidas do WhatsApp (as atendentes já sabem usar), com a identidade da Sintonia:
- * azul #0593C6 e menta #D83995 no lugar do verde, e brilho nos pontos de ação.
+ * azul #002941 e menta #FD6E6E no lugar do verde, e brilho nos pontos de ação.
  * Claro e escuro seguem o aparelho.
  */
 :root {
   /* marca (iguais à página de vendas) */
-  --marca-azul: #0593C6;
-  --marca-azul-escuro: #04709A;
-  --marca-menta: #D83995;
-  --marca-menta-suave: #F7C6E0;
-  --marca-tinta: #08243f;
-  --marca-gradiente: linear-gradient(135deg, #23ABDD 0%, #0593C6 50%, #04709A 100%);
-  --brilho-menta: 0 0 0 1px rgba(216, 57, 149, .3), 0 6px 22px rgba(216, 57, 149, .35);
-  --brilho-azul: 0 8px 24px rgba(5, 147, 198, .32);
+  --marca-azul: #002941;
+  --marca-azul-escuro: #001A2B;
+  --marca-menta: #FD6E6E;
+  --marca-menta-suave: #FFD6D6;
+  --marca-tinta: #002941;
+  --marca-gradiente: linear-gradient(135deg, #0A4A6E 0%, #002941 50%, #001A2B 100%);
+  --brilho-menta: 0 0 0 1px rgba(253, 110, 110, .3), 0 6px 22px rgba(253, 110, 110, .35);
+  --brilho-azul: 0 8px 24px rgba(0, 41, 65, .32);
   --fonte: "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* superfícies: branco e "papel" azulado da página de vendas */
-  --fundo: #FCFFFF;
-  --painel: #f4f8fc;
-  --chat: #eef3f8;
-  --linha: #dbe6f1;
-  --hover: #edf4fb;
-  --sel: #e3effa;
-  --texto: #08243f;
-  --sub: #5a6b7d;
-  --icone: #04709A;
+  --fundo: #FBFDFE;
+  --painel: #F2F9FC;
+  --chat: #EAF4F8;
+  --linha: #D3E6EE;
+  --hover: #E8F4F9;
+  --sel: #D9EEF6;
+  --texto: #002941;
+  --sub: #4F6B7D;
+  --icone: #002941;
   --entrada: #ffffff;
 
   /* conversa (como o celular de exemplo da página) */
   --recebida: #ffffff;
-  --enviada: #d9ecfb;
-  --check: #0593C6;
+  --enviada: #D3EBF4;
+  --check: #FD6E6E;
   --data: #ffffff;
-  --sombra: 0 1px 1px rgba(8, 36, 63, .08);
-  --textura: rgba(5, 147, 198, .05);
+  --sombra: 0 1px 1px rgba(0, 41, 65, .08);
+  --textura: rgba(0, 41, 65, .05);
   --aviso: #fff6db;
   --aviso-txt: #5e4b00;
 
   /* acentos: azul para ação, menta para IA e novidades */
-  --verde: #0593C6;
-  --verde-forte: #0593C6;
-  --badge: #D83995;
+  --verde: #002941;
+  --verde-forte: #002941;
+  --badge: #FD6E6E;
   --badge-txt: #ffffff;
-  --chip-ativo: #0593C6;
+  --chip-ativo: #002941;
   --chip-ativo-txt: #ffffff;
-  --ia: #B02A78;
-  --ia-fundo: #FDEEF6;
-  --citacao: #FDEEF6;
-  --azul: #0593C6;
-  --equipe: #04709A;
-  --boneco-fundo: #cfe2f6;
+  --ia: #C94545;
+  --ia-fundo: #FFEDED;
+  --citacao: #FFEDED;
+  --azul: #002941;
+  --equipe: #001A2B;
+  --boneco-fundo: #B6DFED;
   --boneco: #ffffff;
   --vidro: rgba(255, 255, 255, .82);
   --botao-txt: #ffffff;
@@ -58,61 +58,66 @@
   --vidro-fundo: rgba(255, 255, 255, .62);
   --vidro-forte: rgba(255, 255, 255, .78);
   --vidro-borda: rgba(255, 255, 255, .85);
-  --vidro-linha: rgba(8, 36, 63, .08);
-  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 30px rgba(5, 147, 198, .10);
+  --vidro-linha: rgba(0, 41, 65, .08);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .9), 0 10px 30px rgba(0, 41, 65, .10);
   --vidro-item: rgba(255, 255, 255, .7);
   --vidro-ativo: rgba(255, 255, 255, .92);
-  --aurora: radial-gradient(900px 600px at 0% 0%, rgba(5, 147, 198, .20), transparent 60%),
-            radial-gradient(700px 520px at 100% 100%, rgba(216, 57, 149, .22), transparent 60%),
-            radial-gradient(600px 500px at 70% 10%, rgba(35, 171, 221, .12), transparent 60%), #eef4fb;
+  --aurora: radial-gradient(900px 600px at 0% 0%, rgba(182, 223, 237, .75), transparent 60%),
+            radial-gradient(700px 520px at 100% 100%, rgba(253, 110, 110, .20), transparent 60%),
+            radial-gradient(600px 500px at 70% 10%, rgba(182, 223, 237, .45), transparent 60%), #F3F9FC;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* no escuro, o azul de ação fica mais claro para aparecer sobre o Midnight Navy */
+    --marca-azul: #3D8DB3;
+    --marca-azul-escuro: #B6DFED;
+    --azul: #3D8DB3;
+    --chip-ativo: #FD6E6E;
     /* escuro nos azuis da marca (rodapé e faixa escura da página de vendas) */
-    --fundo: #071d33;
-    --painel: #0b2a47;
-    --chat: #05172a;
-    --linha: #143a5e;
-    --hover: #0d3050;
-    --sel: #0f3a63;
-    --texto: #eaf3fc;
-    --sub: #8fb1d1;
-    --icone: #b9d4ee;
-    --entrada: #0d3050;
+    --fundo: #001A2B;
+    --painel: #00253B;
+    --chat: #00121F;
+    --linha: #0A3D5C;
+    --hover: #00324F;
+    --sel: #0A3D5C;
+    --texto: #EAF6FB;
+    --sub: #8FB7CC;
+    --icone: #B6DFED;
+    --entrada: #00324F;
 
-    --recebida: #0f3150;
-    --enviada: #0593C6;
-    --check: #D83995;
-    --data: #0b2a47;
+    --recebida: #00324F;
+    --enviada: #0A4A6E;
+    --check: #FD6E6E;
+    --data: #00253B;
     --sombra: 0 1px 1px rgba(0, 0, 0, .35);
-    --textura: rgba(216, 57, 149, .035);
+    --textura: rgba(182, 223, 237, .035);
     --aviso: #2a2410;
     --aviso-txt: #ffd47a;
 
-    --verde: #D83995;
-    --verde-forte: #23ABDD;
-    --badge: #D83995;
+    --verde: #FD6E6E;
+    --verde-forte: #0A4A6E;
+    --badge: #FD6E6E;
     --badge-txt: #ffffff;
-    --chip-ativo: #D83995;
+    --chip-ativo: #FD6E6E;
     --chip-ativo-txt: #ffffff;
-    --ia: #D83995;
-    --ia-fundo: #3A1430;
-    --citacao: #0b2a47;
-    --equipe: #8fd0ff;
-    --boneco-fundo: #1b4a74;
-    --boneco: #a9c8e6;
-    --vidro: rgba(7, 29, 51, .82);
-    --vidro-fundo: rgba(11, 42, 71, .42);
-    --vidro-forte: rgba(11, 42, 71, .62);
+    --ia: #FD6E6E;
+    --ia-fundo: #3A1F2A;
+    --citacao: #00253B;
+    --equipe: #B6DFED;
+    --boneco-fundo: #0A4A6E;
+    --boneco: #B6DFED;
+    --vidro: rgba(0, 26, 43, .82);
+    --vidro-fundo: rgba(0, 50, 79, .40);
+    --vidro-forte: rgba(0, 41, 65, .62);
     --vidro-borda: rgba(255, 255, 255, .14);
     --vidro-linha: rgba(255, 255, 255, .07);
     --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .10), 0 16px 40px rgba(0, 0, 0, .35);
     --vidro-item: rgba(255, 255, 255, .07);
     --vidro-ativo: rgba(255, 255, 255, .13);
-    --aurora: radial-gradient(900px 640px at 0% 0%, rgba(5, 147, 198, .55), transparent 60%),
-              radial-gradient(760px 560px at 100% 100%, rgba(216, 57, 149, .16), transparent 60%),
-              radial-gradient(700px 520px at 75% 15%, rgba(4, 112, 154, .55), transparent 60%), #04121f;
+    --aurora: radial-gradient(900px 640px at 0% 0%, rgba(10, 74, 110, .75), transparent 60%),
+              radial-gradient(760px 560px at 100% 100%, rgba(253, 110, 110, .16), transparent 60%),
+              radial-gradient(700px 520px at 75% 15%, rgba(182, 223, 237, .12), transparent 60%), #00121F;
   }
 }
 
@@ -130,11 +135,11 @@
 .ds-badge {
   background: var(--badge) !important;
   color: var(--badge-txt) !important;
-  box-shadow: 0 0 10px rgba(216, 57, 149, .55);
+  box-shadow: 0 0 10px rgba(253, 110, 110, .55);
 }
 
 /* ícone da marca com halo */
-.ds-marca { filter: drop-shadow(0 4px 14px rgba(5, 147, 198, .45)); }
+.ds-marca { filter: drop-shadow(0 4px 14px rgba(0, 41, 65, .45)); }
 
 /* ---------- bolinha de acesso rápido (estilo AssistiveTouch) ---------- */
 .ar {
@@ -168,7 +173,7 @@
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 2px solid rgba(216, 57, 149, .45);
+  border: 2px solid rgba(253, 110, 110, .45);
   animation: ar-pulso 2.8s ease-out infinite;
   pointer-events: none;
 }

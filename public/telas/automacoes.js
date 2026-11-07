@@ -55,7 +55,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .au-filtros { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
   .au-pilula { all: unset; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border-radius: 999px; font-size: 14px; font-weight: 650; color: var(--sub);
     background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); white-space: nowrap; }
-  .au-pilula[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(5, 147, 198,.16); }
+  .au-pilula[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(0, 41, 65,.16); }
   html[data-tema="escuro"] .au-pilula[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 22px rgba(0,0,0,.35); }
   .au-botao { all: unset; cursor: pointer; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 42px; padding: 0 18px; border-radius: 999px; font-weight: 750; font-size: 14.5px;
     background: var(--marca-gradiente); color: #fff; box-shadow: var(--brilho-azul); white-space: nowrap; }
@@ -74,7 +74,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .au-card .au-passos-txt { font-size: 13.5px; color: var(--sub); line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .au-card .au-l3 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--sub); }
   .au-selo { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); }
-  .au-selo.ligada { color: #0a6b5b; background: rgba(216, 57, 149,.18); box-shadow: inset 0 0 0 1px rgba(216, 57, 149,.45); }
+  .au-selo.ligada { color: #0a6b5b; background: rgba(253, 110, 110,.18); box-shadow: inset 0 0 0 1px rgba(253, 110, 110,.45); }
   html[data-tema="escuro"] .au-selo.ligada { color: var(--marca-menta); }
   .au-selo.erro { color: #c4313b; background: rgba(229,72,77,.12); box-shadow: inset 0 0 0 1px rgba(229,72,77,.35); }
   html[data-tema="escuro"] .au-selo.erro { color: #ff8f94; }
@@ -90,8 +90,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /* interruptor */
   .au-chave { appearance: none; -webkit-appearance: none; margin: 0; flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; cursor: pointer; transition: background .2s ease; }
   .au-chave::after { content: ""; position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s ease; }
-  .au-chave:checked { background: var(--marca-azul); box-shadow: 0 0 12px rgba(5, 147, 198,.35); }
-  html[data-tema="escuro"] .au-chave:checked { background: #0fb98d; box-shadow: 0 0 12px rgba(216, 57, 149,.35); }
+  .au-chave:checked { background: var(--marca-azul); box-shadow: 0 0 12px rgba(0, 41, 65,.35); }
+  html[data-tema="escuro"] .au-chave:checked { background: #0fb98d; box-shadow: 0 0 12px rgba(253, 110, 110,.35); }
   .au-chave:checked::after { transform: translateX(18px); }
   .au-chave:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
 
@@ -104,7 +104,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .au-ed-rodape { display: flex; align-items: center; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--vidro-linha); flex: none; }
   .au-ed-rodape .au-espaco { flex: 1; }
   .au-frase { padding: 14px 16px; border-radius: 18px; font-size: 15px; line-height: 1.55; color: var(--texto);
-    background: linear-gradient(135deg, rgba(255,190,0,.12), rgba(5, 147, 198,.08)); box-shadow: inset 0 0 0 1px rgba(255,190,0,.35); }
+    background: linear-gradient(135deg, rgba(255,190,0,.12), rgba(0, 41, 65,.08)); box-shadow: inset 0 0 0 1px rgba(255,190,0,.35); }
   .au-frase .au-raio { vertical-align: -2px; margin-right: 4px; }
   .au-frase i { font-style: normal; color: var(--sub); margin: 0 4px; }
   .au-secao { display: grid; gap: 12px; }
@@ -118,7 +118,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .au-op { all: unset; cursor: pointer; box-sizing: border-box; display: grid; gap: 2px; padding: 11px 13px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .au-op b { font-size: 14.5px; font-weight: 750; color: var(--texto); }
   .au-op small { font-size: 12.5px; color: var(--sub); line-height: 1.3; }
-  .au-op[aria-pressed="true"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 2px var(--marca-azul), 0 6px 18px rgba(5, 147, 198,.16); }
+  .au-op[aria-pressed="true"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 2px var(--marca-azul), 0 6px 18px rgba(0, 41, 65,.16); }
   html[data-tema="escuro"] .au-op[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 8px 22px rgba(0,0,0,.35); }
   .au-duracao { display: grid; grid-template-columns: minmax(70px, 110px) minmax(100px, 1fr); gap: 8px; }
   .au-linha-chave, dialog.au-editor label.au-linha-chave { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); font-size: 15px; cursor: pointer; }
@@ -129,7 +129,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .au-vars button { color: var(--marca-menta); }
 
   .au-passos { display: grid; gap: 0; }
-  .au-passo { display: grid; gap: 10px; padding: 12px 12px 14px 14px; border-radius: 18px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(8,36,63,.05); }
+  .au-passo { display: grid; gap: 10px; padding: 12px 12px 14px 14px; border-radius: 18px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(0, 41, 65,.05); }
   .au-passo-topo { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .au-num.nao { background: #8b8d98; }
   .au-num { width: 28px; height: 28px; border-radius: 10px; flex: none; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: var(--marca-gradiente); }
@@ -145,7 +145,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .au-ramo > b { font-size: 13px; font-weight: 800; color: var(--sub); }
   .au-add { all: unset; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 14px; border-radius: 16px; font-weight: 750; font-size: 14.5px;
     color: var(--marca-azul); border: 1.5px dashed color-mix(in srgb, var(--marca-azul) 40%, var(--vidro-borda)); }
-  html[data-tema="escuro"] .au-add { color: var(--marca-menta); border-color: rgba(216, 57, 149,.3); }
+  html[data-tema="escuro"] .au-add { color: var(--marca-menta); border-color: rgba(253, 110, 110,.3); }
   .au-add svg { width: 18px; height: 18px; }
   .au-catalogo { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); padding: 10px; border-radius: 18px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .au-catalogo button { all: unset; cursor: pointer; box-sizing: border-box; display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; }

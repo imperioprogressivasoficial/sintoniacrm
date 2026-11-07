@@ -27,7 +27,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-periodos { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
   .pn-periodos::-webkit-scrollbar { display: none; }
   .pn-periodos .chip { background: var(--fundo); padding: 8px 15px; font-size: 14.5px; font-weight: 500; }
-  .pn-periodos .chip[aria-pressed="true"] { background: var(--chip-ativo); color: var(--chip-ativo-txt); font-weight: 700; box-shadow: 0 0 0 1px rgba(216, 57, 149, .35); }
+  .pn-periodos .chip[aria-pressed="true"] { background: var(--chip-ativo); color: var(--chip-ativo-txt); font-weight: 700; box-shadow: 0 0 0 1px rgba(253, 110, 110, .35); }
 
   .pn-aviso { display: flex; gap: 12px; align-items: flex-start; background: var(--fundo); border-radius: 18px; padding: 14px 16px; font-size: 14.5px; line-height: 1.4; color: var(--sub); border: 1px dashed var(--linha); }
   .pn-aviso b { color: var(--texto); display: block; font-size: 15.5px; margin-bottom: 2px; }
@@ -38,7 +38,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-cartoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   @media (min-width: 1000px) { .pn-cartoes { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; } }
   .pn-cartao { background: var(--fundo); border-radius: 18px; padding: 14px 14px 13px; display: flex; flex-direction: column; gap: 6px; min-width: 0; position: relative; }
-  .pn-cartao.pn-forte { box-shadow: 0 0 0 1px rgba(216, 57, 149, .28), 0 8px 26px rgba(5, 147, 198, .16); }
+  .pn-cartao.pn-forte { box-shadow: 0 0 0 1px rgba(253, 110, 110, .28), 0 8px 26px rgba(0, 41, 65, .16); }
   .pn-rotulo { font-size: 13px; color: var(--sub); font-weight: 600; display: flex; align-items: center; gap: 6px; }
   .pn-valor { font-size: 32px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pn-valor small { font-size: .5em; font-weight: 700; letter-spacing: 0; color: var(--sub); margin: 0 4px 0 2px; }
@@ -54,7 +54,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-dupla div { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--sub); }
   .pn-dupla b { color: var(--texto); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pn-bolinha { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: 1px; }
-  .pn-b-ia { background: var(--marca-menta); box-shadow: 0 0 6px rgba(216, 57, 149, .8); }
+  .pn-b-ia { background: var(--marca-menta); box-shadow: 0 0 6px rgba(253, 110, 110, .8); }
   .pn-b-eq { background: var(--marca-azul); }
   .pn-divisao { display: flex; height: 7px; border-radius: 999px; overflow: hidden; background: var(--painel); margin-top: 3px; }
   .pn-divisao i { display: block; height: 100%; }
@@ -75,11 +75,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-barras { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; align-items: end; height: 150px; padding-top: 20px; border-bottom: 1px solid var(--linha); }
   .pn-barras.pn-barras-vazias { height: 56px !important; }
   .pn-col { position: relative; height: 100%; display: flex; align-items: flex-end; }
-  .pn-barra { width: 100%; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #23ABDD 0%, #0593C6 55%, #0bc7a8 100%); opacity: .9; transition: height .35s ease; }
+  .pn-barra { width: 100%; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #0A4A6E 0%, #002941 55%, #0bc7a8 100%); opacity: .9; transition: height .35s ease; }
   .pn-col.pn-zero .pn-barra { background: var(--linha); opacity: 1; }
   .pn-col.pn-futuro .pn-barra { background: transparent; border: 1px dashed var(--linha); border-bottom: 0; min-height: 6px; }
-  .pn-col.pn-agora .pn-barra { background: linear-gradient(180deg, #D83995 0%, #0bc7a8 60%, #0593C6 100%); opacity: 1; box-shadow: var(--brilho-menta); }
-  .pn-col.pn-agora.pn-zero .pn-barra { box-shadow: 0 0 8px rgba(216, 57, 149, .8); background: var(--marca-menta); }
+  .pn-col.pn-agora .pn-barra { background: linear-gradient(180deg, #FD6E6E 0%, #0bc7a8 60%, #002941 100%); opacity: 1; box-shadow: var(--brilho-menta); }
+  .pn-col.pn-agora.pn-zero .pn-barra { box-shadow: 0 0 8px rgba(253, 110, 110, .8); background: var(--marca-menta); }
   .pn-col em { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--h) + 3px); font-style: normal; font-size: 11px; font-weight: 700; color: var(--texto); white-space: nowrap; }
   .pn-eixo { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; font-size: 11px; color: var(--sub); font-variant-numeric: tabular-nums; }
   .pn-eixo span { text-align: center; white-space: nowrap; overflow: visible; }
@@ -102,7 +102,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-equipe { container-type: inline-size; }
   .pn-online { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13.5px; color: var(--sub); }
   .pn-online .pn-pilula { display: inline-flex; align-items: center; gap: 6px; background: var(--painel); border-radius: 999px; padding: 4px 10px; color: var(--texto); font-weight: 500; }
-  .pn-luz { width: 9px; height: 9px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px rgba(216, 57, 149, .85); display: inline-block; flex: none; }
+  .pn-luz { width: 9px; height: 9px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px rgba(253, 110, 110, .85); display: inline-block; flex: none; }
   .pn-luz.pn-off { background: var(--linha); box-shadow: none; }
   .pn-tabela { display: grid; }
   .pn-pessoa, .pn-cabeca { display: grid; grid-template-columns: 22px minmax(170px, 2.6fr) repeat(5, minmax(54px, 1fr)); align-items: center; gap: 8px; padding: 9px 4px; border-bottom: 1px solid var(--linha); }
@@ -117,9 +117,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-av { position: relative; flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13.5px; font-weight: 700; background: var(--sel); color: var(--texto); }
   .pn-av .pn-luz { position: absolute; right: -1px; bottom: -1px; border: 2px solid var(--fundo); width: 11px; height: 11px; }
   .pn-av.pn-ouro { background: var(--marca-gradiente); color: #fff; box-shadow: var(--brilho-azul); }
-  .pn-av.pn-robo { background: var(--marca-gradiente); color: #fff; box-shadow: 0 0 12px rgba(216, 57, 149, .5); }
+  .pn-av.pn-robo { background: var(--marca-gradiente); color: #fff; box-shadow: 0 0 12px rgba(253, 110, 110, .5); }
   .pn-av.pn-robo svg { width: 18px; height: 18px; }
-  .pn-medalha { width: 24px; height: 24px; flex: none; filter: drop-shadow(0 0 6px rgba(216, 57, 149, .6)); }
+  .pn-medalha { width: 24px; height: 24px; flex: none; filter: drop-shadow(0 0 6px rgba(253, 110, 110, .6)); }
   .pn-n { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .pn-n.pn-zero { color: var(--sub); font-weight: 500; }
   .pn-n small { display: none; }
@@ -130,7 +130,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     .pn-tabela { gap: 8px; }
     .pn-pessoa { grid-template-columns: 1.15fr 1fr 1.6fr 1.25fr 1.1fr; gap: 10px 6px; padding: 12px; border: 0; border-radius: 14px; background: var(--painel); }
     .pn-pessoa:last-child { border-bottom: 0; }
-    .pn-pessoa.pn-eu { background: var(--sel); box-shadow: inset 0 0 0 1px rgba(216, 57, 149, .35); }
+    .pn-pessoa.pn-eu { background: var(--sel); box-shadow: inset 0 0 0 1px rgba(253, 110, 110, .35); }
     .pn-pessoa.pn-ia-linha { border-top: 0; }
     .pn-pos { display: none; }
     .pn-quem { grid-column: 1 / -1; }
@@ -183,7 +183,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     falha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>',
     telefone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16.5v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 1.1 3.7 2 2 0 0 1 3.1 1.5h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L7.1 9.4a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>',
     grafico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg>',
-    medalha: '<svg class="pn-medalha" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h4l2 6H9z" fill="#0593C6"/><path d="M17 2h-4l-2 6h4z" fill="#04709A"/><circle cx="12" cy="15" r="7" fill="#D83995"/><circle cx="12" cy="15" r="5.2" fill="none" stroke="#063a4d" stroke-opacity=".35"/><text x="12" y="18.4" text-anchor="middle" font-size="9" font-weight="800" fill="#063a4d" font-family="system-ui, sans-serif">1</text></svg>',
+    medalha: '<svg class="pn-medalha" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h4l2 6H9z" fill="#002941"/><path d="M17 2h-4l-2 6h4z" fill="#001A2B"/><circle cx="12" cy="15" r="7" fill="#FD6E6E"/><circle cx="12" cy="15" r="5.2" fill="none" stroke="#063a4d" stroke-opacity=".35"/><text x="12" y="18.4" text-anchor="middle" font-size="9" font-weight="800" fill="#063a4d" font-family="system-ui, sans-serif">1</text></svg>',
   };
   IC.ia_assumiu = IC.brilho;
 

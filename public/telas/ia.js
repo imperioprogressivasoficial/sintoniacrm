@@ -32,7 +32,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-estado { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--sub); background: var(--fundo); border: 1px solid var(--linha); border-radius: 999px; padding: 6px 12px; }
   .iax-estado i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); }
   .iax-estado.ligada { color: var(--texto); }
-  .iax-estado.ligada i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(216, 57, 149, .9); }
+  .iax-estado.ligada i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(253, 110, 110, .9); }
   .iax-colunas { display: grid; gap: 22px; }
   .iax-coluna { display: contents; }
   .iax-bloco { display: grid; gap: 10px; min-width: 0; align-content: start; }
@@ -55,7 +55,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /* destaque "Hoje a IA" (usa .ia-destaque do app) */
   .iax-hoje { position: relative; overflow: hidden; }
-  .iax-hoje .iax-icone-hoje { position: absolute; right: 16px; top: 16px; width: 30px; height: 30px; color: var(--marca-menta); filter: drop-shadow(0 0 10px rgba(216, 57, 149,.8)); }
+  .iax-hoje .iax-icone-hoje { position: absolute; right: 16px; top: 16px; width: 30px; height: 30px; color: var(--marca-menta); filter: drop-shadow(0 0 10px rgba(253, 110, 110,.8)); }
   .iax-hoje .iax-icone-hoje svg { width: 100%; height: 100%; }
   .iax-hoje b { font-size: 30px; line-height: 1.12; }
   .iax-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -64,7 +64,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-num b { font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; white-space: nowrap; }
   .iax-num span { font-size: 13px; color: var(--sub); line-height: 1.3; }
   .iax-num.alerta b { color: var(--marca-azul); }
-  @media (prefers-color-scheme: dark) { .iax-num.alerta b { color: var(--marca-menta); text-shadow: 0 0 14px rgba(216, 57, 149,.45); } }
+  @media (prefers-color-scheme: dark) { .iax-num.alerta b { color: var(--marca-menta); text-shadow: 0 0 14px rgba(253, 110, 110,.45); } }
 
   /* linhas simples tocáveis (agendamentos, pedidos de ajuda, seções, perguntas) */
   .iax-linha { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-bottom: 1px solid var(--linha); min-height: 56px; }
@@ -85,9 +85,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-cartao + .iax-cartao { margin-top: 0; }
 
   /* contador de pendências [PREENCHER] */
-  .iax-pend { flex: none; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 9px; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 10px rgba(216, 57, 149, .5); white-space: nowrap; }
+  .iax-pend { flex: none; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 9px; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 10px rgba(253, 110, 110, .5); white-space: nowrap; }
   .iax-ok { flex: none; font-size: 12px; font-weight: 600; color: var(--sub); white-space: nowrap; }
-  .iax-faixa { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--chip-ativo); color: var(--chip-ativo-txt); font-size: 14px; line-height: 1.4; border: 1px solid rgba(216, 57, 149, .35); }
+  .iax-faixa { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--chip-ativo); color: var(--chip-ativo-txt); font-size: 14px; line-height: 1.4; border: 1px solid rgba(253, 110, 110, .35); }
   .iax-faixa b { font-weight: 750; }
   .iax-faixa .iax-pend { font-size: 13px; }
 
@@ -108,11 +108,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-modo .iax-txt { flex: 1; min-width: 0; display: grid; gap: 2px; }
   .iax-modo b { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .iax-modo b i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); flex: none; }
-  .iax-modo[data-m="ia"] b i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(216, 57, 149, .9); }
+  .iax-modo[data-m="ia"] b i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(253, 110, 110, .9); }
   .iax-modo[data-m="copiloto"] b i { background: #5ec4ff; }
   .iax-modo .iax-txt > span { font-size: 13.5px; color: var(--sub); line-height: 1.35; }
   .iax-marca { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 2px solid var(--linha); box-sizing: border-box; }
-  .iax-modo[aria-checked="true"] .iax-marca { border: 0; background: var(--marca-gradiente); box-shadow: 0 0 10px rgba(216, 57, 149,.5); display: grid; place-items: center; }
+  .iax-modo[aria-checked="true"] .iax-marca { border: 0; background: var(--marca-gradiente); box-shadow: 0 0 10px rgba(253, 110, 110,.5); display: grid; place-items: center; }
   .iax-modo[aria-checked="true"] .iax-marca::after { content: "✓"; color: #fff; font-size: 13px; font-weight: 800; }
   .iax-opcao { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--linha); }
   .iax-opcao .iax-txt { flex: 1; min-width: 0; display: grid; gap: 3px; }
@@ -123,7 +123,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-minutos select:disabled { opacity: .7; }
   .iax-int { all: unset; cursor: pointer; flex: none; width: 51px; height: 31px; border-radius: 999px; background: var(--linha); position: relative; transition: background .2s, box-shadow .2s; }
   .iax-int::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.25); transition: transform .2s; }
-  .iax-int[aria-checked="true"] { background: var(--marca-gradiente); box-shadow: 0 0 12px rgba(216, 57, 149, .45); }
+  .iax-int[aria-checked="true"] { background: var(--marca-gradiente); box-shadow: 0 0 12px rgba(253, 110, 110, .45); }
   .iax-int[aria-checked="true"]::after { transform: translateX(20px); }
   .iax-int[aria-disabled="true"] { cursor: default; opacity: .65; }
   .iax-int:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
@@ -168,7 +168,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-chat-vazio .iax-ic svg { width: 22px; height: 22px; }
   .iax-sugestoes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px; }
   .iax-acoes-ia { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 5px 0 6px; max-width: 86%; }
-  .iax-acoes-ia span { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.35; padding: 5px 10px; border-radius: 12px; background: var(--fundo); color: var(--texto); border: 1px solid rgba(216, 57, 149, .45); box-shadow: 0 0 10px rgba(216, 57, 149, .18); }
+  .iax-acoes-ia span { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.35; padding: 5px 10px; border-radius: 12px; background: var(--fundo); color: var(--texto); border: 1px solid rgba(253, 110, 110, .45); box-shadow: 0 0 10px rgba(253, 110, 110, .18); }
   .iax-acoes-ia span::before { content: "✦"; color: var(--ia); }
   .iax-aviso-chat { align-self: center; background: var(--aviso); color: var(--aviso-txt); font-size: 13px; line-height: 1.4; padding: 7px 12px; border-radius: 10px; box-shadow: var(--sombra); margin: 8px 0; text-align: center; max-width: 92%; }
   .iax-digitando { align-self: flex-end; display: inline-flex; gap: 4px; padding: 11px 13px; border-radius: 12px; background: var(--enviada); box-shadow: var(--sombra); margin-top: 8px; }
@@ -214,7 +214,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-ed-corpo .iax-titulo-campo { font-size: 20px; font-weight: 700; }
   .iax-ed-meta { font-size: 12.5px; color: var(--sub); padding: 0 2px; }
   .iax-ed-corpo textarea.iax-conteudo { flex: 1; min-height: 320px; resize: none; font-size: 15px; line-height: 1.55; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .iax-pendlista { border-radius: 14px; background: var(--chip-ativo); color: var(--chip-ativo-txt); padding: 10px 12px; display: grid; gap: 6px; font-size: 13.5px; border: 1px solid rgba(216, 57, 149, .35); }
+  .iax-pendlista { border-radius: 14px; background: var(--chip-ativo); color: var(--chip-ativo-txt); padding: 10px 12px; display: grid; gap: 6px; font-size: 13.5px; border: 1px solid rgba(253, 110, 110, .35); }
   .iax-pendlista b { font-weight: 750; }
   .iax-pendlista button { all: unset; cursor: pointer; display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
   .iax-pendlista button small { flex: none; font-weight: 700; opacity: .8; }
@@ -228,7 +228,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-versao-cab .iax-txt > span { font-size: 12.5px; color: var(--sub); }
   .iax-versao pre { margin: 0; padding: 10px 12px; max-height: 180px; overflow: auto; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .iax-leitura { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--texto); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .iax-leitura mark { background: var(--badge); color: var(--badge-txt); border-radius: 4px; padding: 0 3px; box-shadow: 0 0 8px rgba(216, 57, 149,.45); }
+  .iax-leitura mark { background: var(--badge); color: var(--badge-txt); border-radius: 4px; padding: 0 3px; box-shadow: 0 0 8px rgba(253, 110, 110,.45); }
   .iax-leitura .iax-h { font-weight: 800; color: var(--marca-azul); }
   @media (prefers-color-scheme: dark) { .iax-leitura .iax-h { color: var(--marca-menta); } }
 

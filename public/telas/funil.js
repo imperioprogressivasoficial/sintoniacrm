@@ -32,11 +32,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-pilula { all: unset; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px; font-size: 14.5px; font-weight: 650; color: var(--sub);
     background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); white-space: nowrap; }
   .fn-pilula:hover { color: var(--texto); }
-  .fn-pilula[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(5, 147, 198,.18); }
+  .fn-pilula[aria-pressed="true"] { color: var(--texto); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(0, 41, 65,.18); }
   html[data-tema="escuro"] .fn-pilula[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 22px rgba(0,0,0,.35); }
   .fn-pilula .fn-qtd { font-size: 12px; font-weight: 700; color: var(--sub); }
   .fn-pilula.fn-novo { color: var(--marca-azul); background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 40%, transparent); }
-  html[data-tema="escuro"] .fn-pilula.fn-novo { color: var(--marca-menta); box-shadow: inset 0 0 0 1px rgba(216, 57, 149,.35); }
+  html[data-tema="escuro"] .fn-pilula.fn-novo { color: var(--marca-menta); box-shadow: inset 0 0 0 1px rgba(253, 110, 110,.35); }
   .fn-pilula svg { width: 16px; height: 16px; }
   .fn-redondo { all: unset; cursor: pointer; flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .fn-redondo svg { width: 20px; height: 20px; }
@@ -77,14 +77,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-carregar { all: unset; cursor: pointer; margin: 0 10px 12px; padding: 10px; border-radius: 14px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--marca-azul); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   html[data-tema="escuro"] .fn-carregar { color: var(--marca-menta); }
 
-  .fn-cartao { position: relative; display: grid; gap: 6px; padding: 11px 10px 10px 12px; border-radius: 16px; cursor: pointer; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(8,36,63,.06);
+  .fn-cartao { position: relative; display: grid; gap: 6px; padding: 11px 10px 10px 12px; border-radius: 16px; cursor: pointer; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(0, 41, 65,.06);
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-x pan-y; transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease; flex: none; }
-  .fn-cartao:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, var(--vidro-borda)), 0 6px 16px rgba(5, 147, 198,.12); }
+  .fn-cartao:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, var(--vidro-borda)), 0 6px 16px rgba(0, 41, 65,.12); }
   .fn-cartao:focus-visible { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
   .fn-cartao.fn-saindo { opacity: .3; transform: scale(.98); }
   .fn-cartao.fn-segurando { transform: scale(.97); }
   .fn-cartao.fn-novo-aqui { animation: fn-chegou .6s ease; }
-  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px rgba(216, 57, 149,.25); } 100% { box-shadow: inset 0 0 0 1px var(--vidro-borda); } }
+  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px rgba(253, 110, 110,.25); } 100% { box-shadow: inset 0 0 0 1px var(--vidro-borda); } }
   .fn-c1 { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .fn-c1 .avatar { width: 38px; height: 38px; font-size: 14px; }
   .fn-quem { flex: 1; min-width: 0; display: grid; line-height: 1.2; }
@@ -103,14 +103,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-desde.fn-velho { color: #d9480f; font-weight: 700; }
   html[data-tema="escuro"] .fn-desde.fn-velho { color: #ffa94d; }
 
-  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 24px 50px rgba(8,36,63,.3) !important;
+  .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 24px 50px rgba(0, 41, 65,.3) !important;
     background: var(--vidro-forte); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); opacity: .96; }
   .fn-arrastando, .fn-arrastando * { cursor: grabbing !important; }
   .fn-arrastando .fn-quadro { scroll-snap-type: none !important; }
 
   .fn-nova-etapa { all: unset; cursor: pointer; width: 220px; flex: none; align-self: flex-start; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 8px; height: 54px; border-radius: 18px;
     border: 1.5px dashed color-mix(in srgb, var(--marca-azul) 40%, var(--vidro-borda)); color: var(--marca-azul); font-weight: 700; font-size: 14.5px; }
-  html[data-tema="escuro"] .fn-nova-etapa { color: var(--marca-menta); border-color: rgba(216, 57, 149,.3); }
+  html[data-tema="escuro"] .fn-nova-etapa { color: var(--marca-menta); border-color: rgba(253, 110, 110,.3); }
   .fn-nova-etapa svg { width: 18px; height: 18px; }
   .fn-erro { margin: 30px auto; color: var(--sub); text-align: center; display: grid; gap: 10px; justify-items: center; }
 
