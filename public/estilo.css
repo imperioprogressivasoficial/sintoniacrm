@@ -564,3 +564,21 @@ html { overflow-x: clip; }
 }
 @media (max-width: 760px) { .v-recursos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .v-recurso { padding: 18px 16px; } .v-recurso.grande { grid-column: span 2; } .v-recurso h3 { font-size: 16.5px; } .v-recurso p { font-size: 13.5px; } }
 @media (max-width: 360px) { .v-recursos { grid-template-columns: 1fr; } .v-recurso.grande { grid-column: auto; } }
+
+/* plataforma: novidades (agentes, bot, transmissões, e-mail, rastreamento) */
+.v-plataforma { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.v-pf { padding: 26px; border-radius: 26px; background: rgba(255,255,255,.72); border: 1px solid #fff; box-shadow: inset 0 1px 0 #fff, 0 14px 40px rgba(16,110,190,.09); display: flex; flex-direction: column; gap: 10px; }
+.v-pf.destaque, .v-pf.destaque2 { grid-column: span 2; color: #fff; border-color: rgba(255,255,255,.2); }
+.v-pf.destaque { background: radial-gradient(500px 300px at 100% 0%, rgba(15,252,190,.25), transparent 60%), linear-gradient(145deg, #0a4c86, #071d33); box-shadow: 0 24px 60px rgba(7,29,51,.35); }
+.v-pf.destaque2 { grid-column: span 3; background: radial-gradient(600px 300px at 0% 100%, rgba(15,252,190,.22), transparent 60%), linear-gradient(145deg, #1a8be0, #0a4c86); box-shadow: 0 24px 60px rgba(16,110,190,.3); }
+.v-pf .v-ic { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; background: linear-gradient(145deg, #1a8be0, #0a4c86); color: var(--menta); box-shadow: 0 8px 20px rgba(16,110,190,.3); }
+.v-pf.destaque .v-ic, .v-pf.destaque2 .v-ic { background: var(--menta); color: #04121f; }
+.v-pf .v-ic svg { width: 24px; height: 24px; }
+.v-pf h3 { margin: 6px 0 0; font-size: 21px; }
+.v-pf p { margin: 0; color: #4b5d70; font-size: 15px; line-height: 1.6; }
+.v-pf.destaque p, .v-pf.destaque2 p { color: rgba(255,255,255,.88); max-width: 70ch; }
+.v-tags-pf { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.v-tags-pf li { font-size: 13px; font-weight: 500; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); }
+@media (max-width: 1000px) { .v-plataforma { grid-template-columns: repeat(2, minmax(0, 1fr)); } .v-pf.destaque2 { grid-column: span 2; } }
+@media (max-width: 640px) { .v-plataforma { grid-template-columns: 1fr; } .v-pf.destaque, .v-pf.destaque2 { grid-column: auto; } .v-pf { padding: 22px 20px; } }
+.vendas section[id] { scroll-margin-top: 84px; }
