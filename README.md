@@ -46,6 +46,14 @@ DATABASE_URL=... npx tsx scripts/criar-usuario.ts --nome "Carla Lima" --email ca
 
 Na Evolution, aponte o webhook da instância para `https://SEU_DOMINIO/webhooks/evolution`, com o evento `MESSAGES_UPSERT` e o cabeçalho `x-sintonia-token` igual a `EVOLUTION_WEBHOOK_TOKEN`.
 
+## Publicar no VPS (Hostinger, Docker + Traefik)
+
+```bash
+node scripts/gerar-deploy.mjs > sintonia-compose.yaml
+```
+
+O arquivo leva o código compactado dentro (o servidor monta a imagem sozinho, sem acesso ao GitHub) e cria o projeto `sintonia`: app + Postgres próprio, rede interna própria, nenhuma porta aberta no servidor. O Traefik publica em `https://sintonia.n8nimperio.tech` com HTTPS automático. Variáveis do projeto: `POSTGRES_SENHA` (obrigatória), `ADMIN_NOME`, `ADMIN_EMAIL`, `ADMIN_SENHA`, `ANTHROPIC_API_KEY`, `TRINKS_API_KEY` e as da Evolution.
+
 ## Decisões importantes
 
 - **A IA nunca inventa preço ou horário.** Preço, duração e horários livres vêm do Trinks na hora.
