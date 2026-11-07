@@ -20,6 +20,12 @@ export interface CargaPush {
   etiqueta: string;
   /** Atualização silenciosa de uma notificação que já está no aparelho (rajada de mensagens). */
   silenciosa?: boolean;
+  /** Tipo da notificação (o app escolhe o som). */
+  tipo?: string;
+  /** Vibrar o celular (preferência da pessoa). */
+  vibrar?: boolean;
+  /** Fica na tela até a pessoa tocar (cliente esperando). */
+  insistente?: boolean;
 }
 
 /** Quem manda o push de verdade. Nos testes, um falso (nunca chama a rede). */

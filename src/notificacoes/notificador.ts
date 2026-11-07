@@ -8,7 +8,9 @@ import { UNIDADES } from '../unidades.js';
 import { DIA, MIN } from '../util/tempo.js';
 import type { ArmazemNotificacoes, Cursor } from './armazem.js';
 import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
-import { completarPreferencias, emNaoPerturbe, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
+import { avaliarEspera, EsquemaRegraEspera, regraDa, type RegraEspera, type RegrasEspera } from './espera.js';
+import { completarPreferencias, emNaoPerturbe, esperaSilenciada, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
+import type { UnidadeId } from '../domain.js';
 
 /**
  * Transforma o que acontece (eventos do motor, das automações e da equipe) em notificações para
@@ -23,8 +25,22 @@ export interface OpcoesNotificador {
   push?: { chaves: ChavesPush; enviador: EnviadorPush; assunto: string };
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
-  /** Depois de quantos minutos sem resposta a cliente conta como "esperando" (padrão 10). */
+  /** Padrão do aviso de "cliente esperando" quando a gestão não configurou (minutos; padrão 5). */
   esperaMin?: number;
+  /** A conversa está com bot ou follow-up conduzindo? (aí não há alerta de espera). */
+  automacaoAtiva?: (conversaId: string) => Promise<boolean>;
+}
+
+/** Item da faixa "clientes esperando" do app. */
+export interface EsperaParaTela {
+  conversaId: string;
+  nome: string;
+  unidade: UnidadeId;
+  nivel: 1 | 2;
+  desde: Date;
+  minutos: number;
+  dona: string | null;
+  repetirSeg: number;
 }
 
 /** Falhas que valem notificação (só para a administração e a direção, no máximo uma por hora de cada). */
@@ -60,6 +76,9 @@ export class Notificador {
   private ultimaEspera = 0;
   /** Conversas que acabaram de nascer: a primeira mensagem já está na notificação de "nova cliente". */
   private readonly recemNovas = new Set<string>();
+  /** Mensagens que já tocaram no aparelho de cada pessoa ("<usuario>:<mensagem>"): nunca repete. */
+  private readonly avisadas = new Set<string>();
+  private regrasCache?: { em: number; regras: Promise<RegrasEspera> };
   private readonly agora: () => Date;
   private readonly log: (msg: string, extra?: unknown) => void;
   /** Ouvintes de notificação nova (para avisar o app sem esperar o ciclo). */
@@ -133,8 +152,16 @@ export class Notificador {
         return;
       }
       case 'mensagem_cliente': {
-        const previa = (await this.previa(c)) || 'Nova mensagem';
+        const ultima = await this.ultimaDaCliente(c);
+        const previa = ultima ? curto(ultima.texto.replace(/\s+/g, ' ').trim()) || 'Nova mensagem' : 'Nova mensagem';
+        const porMensagem = { titulo: nome, texto: curto(previa, 110), msgId: ultima?.id ?? `${c.id}:${String(c.ultimaMensagemCliente?.getTime() ?? '')}` };
         const primeira = this.recemNovas.delete(c.id);
+        // A mesma mensagem avisada duas vezes (evento repetido): ignora.
+        if (ultima) {
+          const ev = `msg:${ultima.id}`;
+          if (this.avisadas.has(ev)) return;
+          this.lembrar(ev);
+        }
         const dona = this.dona(us, c);
         // Com dona, só ela. Sem dona, a unidade, quando a IA não responde sozinha (copiloto ou "Só eu").
         const alvos = dona.length ? dona : c.modo === 'ia' ? [] : this.linhaDeFrente(us, c);
@@ -147,8 +174,12 @@ export class Notificador {
         }
         for (const u of alvos) {
           const g = await this.o.armazem.grupoAberto(u.id, c.id, AGRUPA);
-          if (g) await this.somar(u, g, g.tipo === 'nova_cliente' ? `${unidade} · ${previa}` : previa);
-          else if (!primeira) await this.criar(u, { tipo: 'mensagem', titulo: nome, texto: previa, conversaId: c.id });
+          // A primeira mensagem já tocou com o aviso de "nova cliente".
+          if (g) await this.somar(u, g, g.tipo === 'nova_cliente' ? `${unidade} · ${previa}` : previa, primeira ? undefined : porMensagem);
+          else if (!primeira) {
+            const n = await this.criar(u, { tipo: 'mensagem', titulo: nome, texto: previa, conversaId: c.id });
+            if (n) this.avisadas.add(`${u.id}:${porMensagem.msgId}`);
+          }
         }
         return;
       }
@@ -230,9 +261,12 @@ export class Notificador {
 
   /** Texto da última mensagem da cliente (prévia). */
   private async previa(c: Conversa): Promise<string> {
-    const ms = await this.o.repo.mensagens(c.id, 6);
-    const m = [...ms].reverse().find((x) => x.autor === 'cliente');
+    const m = await this.ultimaDaCliente(c);
     return m ? curto(m.texto.replace(/\s+/g, ' ').trim()) : '';
+  }
+  private async ultimaDaCliente(c: Conversa) {
+    const ms = await this.o.repo.mensagens(c.id, 6);
+    return [...ms].reverse().find((x) => x.autor === 'cliente');
   }
 
   // ---------------------------------------------------------------- relógio
@@ -250,25 +284,91 @@ export class Notificador {
     }
   }
 
-  /** Cliente sem resposta há X minutos (IA desligada para ela, ou IA fora do ar): avisa a dona ou a unidade, uma vez por mensagem. */
+  // ---------------------------------------------------------------- cliente esperando
+
+  /** Regras de espera por unidade (guardadas pela gestão; cache curto). */
+  regrasEspera(): Promise<RegrasEspera> {
+    const t = Date.now();
+    if (!this.regrasCache || t - this.regrasCache.em > 10_000) {
+      this.regrasCache = {
+        em: t,
+        regras: this.o.armazem.config('espera-regras').then((v) => (v ? (JSON.parse(v) as RegrasEspera) : {})).catch(() => ({})),
+      };
+    }
+    return this.regrasCache.regras;
+  }
+  regraDaUnidade(regras: RegrasEspera, unidade: UnidadeId): RegraEspera {
+    const r = regraDa(regras, unidade);
+    if (!regras[unidade] && this.o.esperaMin) return { ...r, avisoMin: this.o.esperaMin, forteMin: Math.max(r.forteMin, this.o.esperaMin + 1) };
+    return r;
+  }
+  async salvarRegrasEspera(unidade: UnidadeId, bruto: unknown): Promise<RegraEspera> {
+    const atual = await this.regrasEspera();
+    const regra = EsquemaRegraEspera.parse({ ...this.regraDaUnidade(atual, unidade), ...(bruto as object) });
+    const novas = { ...atual, [unidade]: regra };
+    await this.o.armazem.gravarConfig('espera-regras', JSON.stringify(novas));
+    this.regrasCache = { em: Date.now(), regras: Promise.resolve(novas) };
+    return regra;
+  }
+
+  /** Conversas esperando além do limite (com o nível de cada uma). */
+  private async esperas(agora: Date): Promise<Array<{ c: Conversa; nivel: 1 | 2; desde: Date; minutos: number; regra: RegraEspera }>> {
+    const regras = await this.regrasEspera();
+    const saida = [];
+    for (const c of await this.o.repo.listarConversas()) {
+      if (c.empresaId !== this.o.empresaId) continue;
+      const regra = this.regraDaUnidade(regras, c.unidade);
+      const s = avaliarEspera(c, regra, agora);
+      if (!s.nivel || !s.desde) continue;
+      // Bot ou follow-up conduzindo a conversa: ninguém precisa correr.
+      if (this.o.automacaoAtiva && (await this.o.automacaoAtiva(c.id).catch(() => false))) continue;
+      saida.push({ c, nivel: s.nivel, desde: s.desde, minutos: s.minutos, regra });
+    }
+    return saida;
+  }
+
+  /** Cliente sem resposta além do limite: aviso (dona ou unidade) e alerta forte (também a gestão), uma vez por nível e por mensagem. */
   private async esperando(agora: Date): Promise<void> {
-    const limite = (this.o.esperaMin ?? 10) * MIN;
-    const conversas = await this.o.repo.listarConversas();
-    let us: Usuario[] | undefined;
-    for (const c of conversas) {
-      if (c.empresaId !== this.o.empresaId || c.modo === 'ia') continue;
-      const cl = c.ultimaMensagemCliente?.getTime() ?? 0;
-      const resp = Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
-      const espera = agora.getTime() - cl;
-      if (!cl || resp >= cl || espera < limite || espera > DIA) continue;
-      us ??= await this.equipe();
-      const chave = `espera:${c.id}:${cl}`;
-      const min = Math.floor(espera / MIN);
-      for (const u of this.donaOuUnidade(us, c)) {
-        if (await this.o.armazem.existeChave(u.id, chave)) continue;
-        await this.criar(u, { tipo: 'espera', titulo: `${nomeDa(c)} está esperando`, texto: `Sem resposta há ${min} minutos.`, conversaId: c.id, chave });
+    const lista = await this.esperas(agora);
+    if (!lista.length) return;
+    const us = await this.equipe();
+    for (const { c, nivel, desde, minutos } of lista) {
+      const alvos = new Map(this.donaOuUnidade(us, c).map((u) => [u.id, u]));
+      if (nivel === 2) for (const u of this.gestao(us, c)) alvos.set(u.id, u);
+      const base = `espera:${c.id}:${desde.getTime()}`;
+      for (const u of alvos.values()) {
+        // Passou dos dois limites de uma vez: só o alerta forte. Já avisada no nível: não repete.
+        if (await this.o.armazem.existeChave(u.id, `${base}:${nivel}`)) continue;
+        if (nivel === 1 && (await this.o.armazem.existeChave(u.id, `${base}:2`))) continue;
+        const forte = nivel === 2;
+        await this.criar(u, {
+          tipo: 'espera',
+          titulo: forte ? `Urgente: ${nomeDa(c)} espera há ${minutos} min` : `${nomeDa(c)} está esperando`,
+          texto: forte ? 'Ninguém respondeu ainda. Responda agora ou passe para alguém.' : `Sem resposta há ${minutos} minutos.`,
+          conversaId: c.id,
+          chave: `${base}:${nivel}`,
+          espera: true,
+        });
       }
     }
+  }
+
+  /** Para a faixa do app: as esperas que esta pessoa vê. */
+  async esperasPara(u: Usuario): Promise<EsperaParaTela[]> {
+    const lista = await this.esperas(this.agora());
+    return lista
+      .filter(({ c }) => podeVer(u, c))
+      .sort((a, b) => b.minutos - a.minutos)
+      .map(({ c, nivel, desde, minutos, regra }) => ({
+        conversaId: c.id,
+        nome: nomeDa(c),
+        unidade: c.unidade,
+        nivel,
+        desde,
+        minutos,
+        dona: c.responsavelNome ?? null,
+        repetirSeg: regra.repetirSeg,
+      }));
   }
 
   // ---------------------------------------------------------------- criar e entregar
@@ -279,10 +379,11 @@ export class Notificador {
 
   private async criar(
     u: Usuario,
-    n: { tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; chave?: string; contador?: number; em?: Date },
+    n: { tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; chave?: string; contador?: number; em?: Date; espera?: boolean },
   ): Promise<Notificacao | undefined> {
     const p = await this.prefsDe(u.id);
     if (n.tipo !== 'teste' && p.tipos[n.tipo] === false) return undefined;
+    const semPush = Boolean(n.espera && (!p.espera.push || esperaSilenciada(p, this.agora())));
     const agora = this.agora();
     const futura = Boolean(n.em && n.em.getTime() > agora.getTime());
     const criada = await this.o.armazem.criar({
@@ -299,17 +400,32 @@ export class Notificador {
       ...(futura ? {} : { entregueEm: agora }),
     });
     if (!futura) {
-      await this.entregar(criada, p).catch((x) => this.log('Falha no push', String(x)));
+      if (!semPush) await this.entregar(criada, p, false, n.espera ? { etiqueta: `espera-${n.conversaId}`, insistente: true } : undefined).catch((x) => this.log('Falha no push', String(x)));
       this.aoCriar?.(criada);
     }
     return criada;
   }
 
-  /** Mais uma mensagem na mesma notificação. O aparelho é atualizado em silêncio, no máximo uma vez por minuto. */
-  private async somar(u: Usuario, g: Notificacao, texto: string): Promise<void> {
+  /**
+   * Mais uma mensagem na mesma notificação (no sino continua uma só). Com "push a cada mensagem" (padrão),
+   * o aparelho toca de novo com o início da mensagem nova (mesma etiqueta da conversa, renotify);
+   * sem ela, é atualizado em silêncio, no máximo uma vez por minuto.
+   */
+  private async somar(u: Usuario, g: Notificacao, texto: string, porMensagem?: { titulo: string; texto: string; msgId: string }): Promise<void> {
     const agora = this.agora();
     const n = await this.o.armazem.somar(g.id, { texto, em: agora, somar: 1 });
     if (!n) return;
+    if (porMensagem) {
+      const p = await this.prefsDe(u.id);
+      if (p.mensagens.push && p.tipos[g.tipo as 'mensagem'] !== false) {
+        const chave = `${u.id}:${porMensagem.msgId}`;
+        if (this.avisadas.has(chave)) return;
+        this.lembrar(chave);
+        await this.o.armazem.marcarEntregue(n.id, agora);
+        await this.entregar(n, p, false, { titulo: porMensagem.titulo, texto: n.contador > 1 ? `${porMensagem.texto} · ${n.contador} mensagens` : porMensagem.texto }).catch((x) => this.log('Falha no push', String(x)));
+        return;
+      }
+    }
     if (!g.entregueEm || agora.getTime() - g.entregueEm.getTime() >= MIN) {
       await this.o.armazem.marcarEntregue(n.id, agora);
       await this.entregar(n, undefined, true).catch((x) => this.log('Falha no push', String(x)));
@@ -317,8 +433,13 @@ export class Notificador {
     void u;
   }
 
+  private lembrar(chave: string): void {
+    this.avisadas.add(chave);
+    if (this.avisadas.size > 5000) this.avisadas.delete(this.avisadas.values().next().value!);
+  }
+
   /** Push para os aparelhos da pessoa (se ela quer e não está no "não perturbe"). Inscrição morta (404/410) é apagada. */
-  async entregar(n: Notificacao, prefs?: Preferencias, silenciosa = false): Promise<number> {
+  async entregar(n: Notificacao, prefs?: Preferencias, silenciosa = false, troca?: { titulo?: string; texto?: string; etiqueta?: string; insistente?: boolean }): Promise<number> {
     if (!this.o.push) return 0;
     const p = prefs ?? (await this.prefsDe(n.usuarioId));
     if (!p.push || emNaoPerturbe(p, this.agora())) return 0;
@@ -327,9 +448,12 @@ export class Notificador {
     const chaves = await this.o.push.chaves.obter();
     const carga: CargaPush = {
       id: n.id,
-      titulo: n.titulo,
-      texto: n.contador > 1 ? `${n.texto} (${n.contador} mensagens)` : n.texto,
-      etiqueta: n.conversaId ? `conversa-${n.conversaId}` : `notificacao-${n.tipo}`,
+      titulo: troca?.titulo ?? n.titulo,
+      texto: troca?.texto ?? (n.contador > 1 ? `${n.texto} (${n.contador} mensagens)` : n.texto),
+      etiqueta: troca?.etiqueta ?? (n.conversaId ? `conversa-${n.conversaId}` : `notificacao-${n.tipo}`),
+      tipo: n.tipo,
+      ...(troca?.insistente ? { insistente: true } : {}),
+      ...(!silenciosa && p.mensagens.vibrar ? { vibrar: true } : {}),
       ...(n.conversaId ? { conversaId: n.conversaId } : {}),
       ...(n.vista ? { vista: n.vista } : {}),
       ...(silenciosa ? { silenciosa: true } : {}),
@@ -339,7 +463,7 @@ export class Notificador {
       try {
         await this.o.push.enviador.enviar(i, JSON.stringify(carga), { ...chaves, assunto: this.o.push.assunto }, {
           ttlSeg: n.tipo === 'falha' ? 3600 : 6 * 3600,
-          urgencia: n.tipo === 'mensagem' || n.tipo === 'nova_cliente' || n.tipo === 'ia_equipe' ? 'high' : 'normal',
+          urgencia: n.tipo === 'mensagem' || n.tipo === 'nova_cliente' || n.tipo === 'ia_equipe' || n.tipo === 'espera' ? 'high' : 'normal',
         });
         ok++;
         await this.o.armazem.usouInscricao(i.endpoint, this.agora());

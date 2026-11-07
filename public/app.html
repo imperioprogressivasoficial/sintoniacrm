@@ -1261,7 +1261,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (ehTeste(c) && !(c.tags || []).length) l2.append(el('span', { class: 'tag', text: 'teste' }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1' }));
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
-      caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
+      caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
         onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
@@ -2404,6 +2404,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/followup.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
+<script src="/telas/alertas.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>
 <script>
 // Bolinha de acesso rápido (AssistiveTouch): atalhos do dia a dia num toque. Liga/desliga em Mais.

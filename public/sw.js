@@ -1,5 +1,6 @@
 /* Service worker da Sintonia: só cuida das notificações (push). Não guarda páginas em cache.
- * A carga do push vem do servidor (src/notificacoes/notificador.ts): { id, titulo, texto, conversaId?, vista?, etiqueta, silenciosa? }.
+ * A carga do push vem do servidor (src/notificacoes/notificador.ts): { id, titulo, texto, conversaId?, vista?, etiqueta, silenciosa?, tipo?, vibrar?, insistente? }.
+ * Cada mensagem nova da cliente chega com a etiqueta da conversa e renotify: o celular apita de novo sem empilhar avisos.
  */
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
@@ -25,6 +26,9 @@ self.addEventListener('push', (e) => {
       tag: d.etiqueta || d.id || 'sintonia',
       renotify: !d.silenciosa,
       silent: Boolean(d.silenciosa),
+      ...(!d.silenciosa && d.vibrar ? { vibrate: d.insistente ? [300, 120, 300, 120, 600] : [180, 80, 180] } : {}),
+      ...(d.insistente ? { requireInteraction: true } : {}),
+      timestamp: Date.now(),
       data: { url: destino(d), id: d.id, conversaId: d.conversaId || null, vista: d.vista || null },
       lang: 'pt-BR',
     });
