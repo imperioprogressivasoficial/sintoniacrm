@@ -14,7 +14,9 @@
   --marca-gradiente: linear-gradient(135deg, #1a8be0 0%, #106ebe 50%, #0a4c86 100%);
   --brilho-menta: 0 0 0 1px rgba(15, 252, 190, .3), 0 6px 22px rgba(15, 252, 190, .35);
   --brilho-azul: 0 8px 24px rgba(16, 110, 190, .32);
-  --fonte: "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* tipografia: Sintony nos títulos, Poppins nos textos */
+  --fonte: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte-titulo: "Sintony", "Poppins", ui-sans-serif, system-ui, sans-serif;
 
   /* superfícies: branco e "papel" azulado da página de vendas */
   --fundo: #ffffff;
@@ -230,3 +232,6 @@
   .ar-botao::after { animation: none; }
   .ar-item { transition: opacity .15s ease; }
 }
+
+/* títulos em Sintony (só tem 400 e 700) */
+h1, h2, .titulo-grande, .lt-nome b, .folha-topo h2 { font-family: var(--fonte-titulo); font-weight: 700; letter-spacing: -.01em; }
