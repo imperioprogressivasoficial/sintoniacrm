@@ -70,7 +70,7 @@ import { registrarComercial } from './comercial/rotas.js';
 import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
 import { registrarDesempenho } from './desempenho/rotas.js';
 import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
-import { anotadorDe, comPorteiro, medirCliente, type Anotar } from './planos/medidor.js';
+import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type PorteiroCliente } from './planos/medidor.js';
 import { PagamentoManual } from './planos/pagamento.js';
 import { Planos } from './planos/porteiro.js';
 import { registrarPlanos } from './planos/rotas.js';
@@ -83,9 +83,11 @@ const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString
 
 // A chave da IA pode chegar depois (tela de Conexões): o agente usa sempre o cliente em vigor.
 let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
-// Cada chamada à IA tem o uso (tokens, custo, dentro/fora do horário) medido para o plano da IA (src/planos).
+// Cada chamada à IA tem o uso (tokens, custo, créditos) medido e passa pelo porteiro do plano (src/planos):
+// no Essencial ou com limite estourado sem crédito, nenhuma chamada sai (agente, copiloto, relatórios, comandos).
 let anotarUso: Anotar = () => {};
-const claude = medirCliente(new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) }), (r) => anotarUso(r));
+let porteiroIa: PorteiroCliente = async () => ({ pode: true });
+const claude = medirCliente(new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) }), (r) => anotarUso(r), () => porteiroIa());
 const trinks = new ClienteTrinks({ apiKey: cfg.TRINKS_API_KEY ?? '', intervaloMs: cfg.TRINKS_INTERVALO_MS });
 // Sistema de agenda de cada unidade, lido das Conexões a cada uso (vale o que está na tela agora;
 // `conexoes` é criada mais abaixo e só é lida depois, quando alguém usa a agenda).
@@ -120,6 +122,7 @@ const planos = new Planos({
   log,
 });
 anotarUso = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
+porteiroIa = porteiroDe(planos, cfg.SINTONIA_EMPRESA_ID);
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
 const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
@@ -359,7 +362,9 @@ const agentesIa = montarAgentesIa({
   padrao: agente,
   chaveGeral: (p) => (p === 'openai' ? conexoes.get('openaiApiKey') : conexoes.get('anthropicApiKey')) || undefined,
   claudeGeral: claude,
-  claudeComChave: (chave) => medirCliente(new Anthropic({ apiKey: chave }), (r) => anotarUso(r)),
+  claudeComChave: (chave) => medirCliente(new Anthropic({ apiKey: chave }), (r) => anotarUso(r), () => porteiroIa()),
+  // Agentes do estúdio na OpenAI: também medidos e com porteiro.
+  embrulhar: (c) => medirCliente(c, (r) => anotarUso(r), () => porteiroIa()),
   sintonia: () => sintonia,
   tags: tagsParaAgentes(tags, repo),
   moverEtapa: moverEtapaPara({ funis, armazemTags, empresaId: cfg.SINTONIA_EMPRESA_ID, repo, comConversa: (id, fn) => sintonia.comConversa(id, fn) }),

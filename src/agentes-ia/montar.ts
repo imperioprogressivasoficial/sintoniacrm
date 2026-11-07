@@ -33,6 +33,8 @@ export interface OpcoesAgentesIa {
   /** Cliente da Anthropic com a chave geral (o que já existe) e a fábrica para chave própria. */
   claudeGeral: ClienteClaude & ClienteClaudeParse;
   claudeComChave: (chave: string) => ClienteClaude;
+  /** Embrulha o cliente da OpenAI (medição de uso e porteiro do plano). */
+  embrulhar?: (c: ClienteClaude) => ClienteClaude;
   sintonia: () => { mudarModo(id: string, modo: ModoAtendimento): Promise<void> };
   tags?: { nomes(): Promise<string[]>; daConversa(id: string): Promise<string[]>; marcar(conversaId: string, nome: string, por: string): Promise<boolean> };
   moverEtapa: (conversaId: string, etapa: Etapa, por: string) => Promise<boolean>;
@@ -52,7 +54,8 @@ export function montarAgentesIa(o: OpcoesAgentesIa) {
       if (provedor === 'openai') {
         const k = chave ?? o.chaveGeral('openai');
         if (!k) throw new SemChave('openai');
-        return clienteOpenAI(k, o.fetch);
+        const c = clienteOpenAI(k, o.fetch);
+        return o.embrulhar ? o.embrulhar(c) : c;
       }
       if (chave) return o.claudeComChave(chave);
       if (!o.chaveGeral('anthropic')) throw new SemChave('anthropic');
