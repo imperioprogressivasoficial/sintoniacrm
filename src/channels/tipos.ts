@@ -30,6 +30,8 @@ export interface AnexoRecebido {
   voz?: boolean;
   /** Conteúdo já presente no webhook (Evolution com "base64" ligado, ou simulador). Sem ele, é baixado depois. */
   base64?: string;
+  /** Id da mídia no canal, quando é diferente do id da mensagem (API oficial: o media id da Graph API). */
+  ref?: string;
 }
 
 /** Arquivo baixado do canal. */
@@ -52,13 +54,56 @@ export interface EnvioResultado {
   idExterno: string;
 }
 
+/** Situação de entrega de uma mensagem que a loja enviou. */
+export type StatusEntrega = 'enviada' | 'entregue' | 'lida' | 'falhou';
+
+/** Aviso de entrega/leitura que o canal manda pelo webhook. */
+export interface StatusRecebido {
+  canalId: string;
+  idExterno: string;
+  status: StatusEntrega;
+  em: Date;
+  telefone?: string;
+  erro?: string;
+}
+
+/** Modelo de mensagem aprovado (API oficial): única forma de escrever fora da janela de 24 h. */
+export interface ModeloEnvio {
+  nome: string;
+  /** Código do idioma do modelo, ex.: "pt_BR". */
+  idioma: string;
+  /** Valores das variáveis {{1}}, {{2}}... do corpo, em ordem. */
+  parametros?: string[];
+}
+
+export interface ModeloAprovado {
+  nome: string;
+  idioma: string;
+  categoria: string;
+  status: string;
+  /** Texto do corpo, com as variáveis {{1}}, {{2}}... */
+  corpo: string;
+  variaveis: number;
+}
+
 export interface CanalWhatsApp {
   readonly tipo: 'evolution' | 'meta' | 'teste';
   /** Converte o corpo do webhook em mensagens de texto. Ignora o que não é conversa (status, grupos etc.). */
   lerWebhook(corpo: unknown): MensagemRecebida[];
+  /** Avisos de entrega e leitura que vieram no webhook. Opcional. */
+  lerStatus?(corpo: unknown): StatusRecebido[];
   enviarTexto(canalId: string, telefone: string, texto: string): Promise<EnvioResultado>;
-  /** Baixa a mídia de uma mensagem recebida (pelo id dela no canal). Opcional: sem ele, a mídia não é guardada. */
-  baixarMidia?(canalId: string, idExterno: string): Promise<MidiaBaixada>;
+  /**
+   * Baixa a mídia de uma mensagem recebida (pelo id dela no canal; `ref` é o id da mídia, quando o canal usa um à parte).
+   * Opcional: sem ele, a mídia não é guardada.
+   */
+  baixarMidia?(canalId: string, idExterno: string, ref?: string): Promise<MidiaBaixada>;
+  /** Envia um modelo aprovado (API oficial). */
+  enviarModelo?(canalId: string, telefone: string, modelo: ModeloEnvio): Promise<EnvioResultado>;
+  /** Modelos aprovados da conta (API oficial). */
+  listarModelos?(canalId: string): Promise<ModeloAprovado[]>;
+  /** Marca a mensagem recebida como lida (os dois tiques azuis para a cliente). */
+  marcarLida?(canalId: string, idExterno: string): Promise<void>;
   /** Envia foto, vídeo, documento ou nota de voz. Opcional: canal sem suporte recusa o envio de arquivo. */
   enviarMidia?(canalId: string, telefone: string, midia: MidiaEnvio): Promise<EnvioResultado>;
   /** Foto de perfil do WhatsApp da cliente (null quando ela não tem foto ou esconde). Opcional: a API oficial não oferece. */

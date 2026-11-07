@@ -3,11 +3,11 @@ import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
-import { assinaturaMetaValida } from './channels/meta.js';
+import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
-import type { MensagemRecebida } from './channels/tipos.js';
+import type { MensagemRecebida, StatusRecebido } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
 import type { Conversa } from './domain.js';
@@ -27,7 +27,8 @@ export interface DependenciasServidor {
   sintonia: Sintonia;
   repo: Repositorio;
   evolution?: { canal: CanalWhatsApp; token?: string };
-  meta?: { canal: CanalWhatsApp; verifyToken?: string; appSecret?: string };
+  /** WhatsApp oficial (Meta). Lido a cada webhook: as unidades podem mudar pela tela de Conexões. */
+  meta?: OpcoesWebhookMeta;
   revisar?: (conversaId: string, rascunho: string) => Promise<Revisao>;
   /** Fila persistente: o webhook só grava e responde; os trabalhadores processam. */
   fila?: { fila: FilaEntrada; avisar?: () => void };
@@ -59,6 +60,22 @@ export interface DependenciasServidor {
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
 }
 
+export interface OpcoesWebhookMeta {
+  /** Lê as mensagens (e os avisos de entrega) do corpo. */
+  canal: CanalWhatsApp;
+  /** Verify Tokens aceitos na verificação do webhook (um por unidade). */
+  verifyTokens: string[];
+  /**
+   * App Secrets que podem assinar o webhook. `numeros` = phone_number_id que cada um pode assinar
+   * (sem `numeros`, qualquer um: configuração antiga por variável de ambiente).
+   */
+  segredos: Array<{ appSecret: string; numeros?: string[] }>;
+  /** Só a configuração antiga sem META_APP_SECRET: aceita webhook sem assinatura. */
+  semAssinatura?: boolean;
+  /** Avisos de entrega/leitura. */
+  status?: (lista: StatusRecebido[]) => Promise<unknown>;
+}
+
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const app = Fastify({ logger: false });
   const log = d.log ?? (() => {});
@@ -76,7 +93,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
   if (d.auth) registrarAuth(app, d.auth);
   registrarPaginas(app, d.auth);
-  if (d.conexoes) registrarConexoes(app, { ...d.conexoes, auth: d.auth });
+  // Quando chegou o último webhook de cada número da API oficial (para a tela de Conexões mostrar se está chegando).
+  const vistosMeta = new Map<string, Date>();
+  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).
@@ -104,26 +123,41 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- WhatsApp oficial (Meta) ----------
-  app.get('/webhooks/meta', async (req, reply) => {
+  // URL para colar no painel da Meta: /webhook/meta (a antiga /webhooks/meta continua valendo).
+  const verificarMeta = async (req: FastifyRequest, reply: import('fastify').FastifyReply) => {
     const q = req.query as Record<string, string | undefined>;
-    if (d.meta?.verifyToken && q['hub.mode'] === 'subscribe' && q['hub.verify_token'] === d.meta.verifyToken) {
+    const token = q['hub.verify_token'];
+    if (d.meta && q['hub.mode'] === 'subscribe' && token && d.meta.verifyTokens.includes(token)) {
       return reply.type('text/plain').send(q['hub.challenge'] ?? '');
     }
     return reply.code(403).send();
-  });
+  };
 
-  app.post('/webhooks/meta', async (req, reply) => {
-    if (!d.meta) return reply.code(404).send();
-    if (d.meta.appSecret) {
-      const bruto = (req as unknown as { corpoBruto?: string }).corpoBruto ?? '';
-      const assinatura = req.headers['x-hub-signature-256'];
-      if (!assinaturaMetaValida(bruto, typeof assinatura === 'string' ? assinatura : undefined, d.meta.appSecret)) {
-        return reply.code(401).send();
-      }
+  const receberMeta = async (req: FastifyRequest, reply: import('fastify').FastifyReply) => {
+    const meta = d.meta;
+    if (!meta) return reply.code(404).send();
+    const bruto = (req as unknown as { corpoBruto?: string }).corpoBruto ?? '';
+    const assinatura = typeof req.headers['x-hub-signature-256'] === 'string' ? req.headers['x-hub-signature-256'] : undefined;
+    // Cada App Secret só vale para os números da unidade dele: uma unidade não assina pela outra.
+    let liberado: (numero: string) => boolean;
+    if (!meta.segredos.length) {
+      if (!meta.semAssinatura) return reply.code(401).send();
+      liberado = () => true;
+    } else {
+      const validos = meta.segredos.filter((s) => assinaturaMetaValida(bruto, assinatura, s.appSecret));
+      if (!validos.length) return reply.code(401).send();
+      liberado = (numero) => validos.some((s) => !s.numeros || s.numeros.includes(numero));
     }
-    const mensagens = d.meta.canal.lerWebhook(req.body);
-    return { recebidas: await entregar('meta', mensagens) };
-  });
+    const mensagens = meta.canal.lerWebhook(req.body).filter((m) => liberado(m.canalId));
+    const status = (meta.canal.lerStatus?.(req.body) ?? []).filter((x) => liberado(x.canalId));
+    for (const id of new Set([...mensagens, ...status].map((x) => x.canalId))) vistosMeta.set(id, new Date());
+    if (status.length && meta.status) await meta.status(status).catch((e) => log('Falha ao registrar entrega (Meta)', String(e)));
+    return { recebidas: await entregar('meta', mensagens), status: status.length };
+  };
+  app.get('/webhook/meta', verificarMeta);
+  app.get('/webhooks/meta', verificarMeta);
+  app.post('/webhook/meta', receberMeta);
+  app.post('/webhooks/meta', receberMeta);
 
   // ---------- Quem vê o quê ----------
   // Sem login configurado (testes antigos, uso local) tudo fica visível, como antes.
@@ -169,7 +203,15 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       ? { assumir: podeAssumir(u, conversa) && conversa.responsavelId !== u.id, transferir: podeTransferir(u, conversa) }
       : { assumir: !conversa.responsavelId, transferir: true };
     const tags = d.gestao?.tags ? await d.gestao.tags.daConversa(id) : [];
-    return { conversa: { ...conversa, tags }, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id), digitando, permissoes };
+    return {
+      conversa: { ...conversa, tags },
+      mensagens: await d.repo.mensagens(id, 200),
+      sugestao: await d.repo.sugestao(id),
+      digitando,
+      permissoes,
+      // API oficial: até quando dá para escrever livremente (depois, só modelo aprovado).
+      janela: d.sintonia.janelaDa(conversa),
+    };
   });
 
   app.get('/api/conversas/:id/foto', async (req, reply) => {
@@ -192,6 +234,28 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const c = await conversaVisivel(req);
     await d.sintonia.equipeEnviou(c.id, b.texto, nomeDe(req, b.atendente), req.usuario);
     return { ok: true };
+  });
+
+  // ---------- API oficial: janela de 24 h, modelos aprovados e "lida" ----------
+  const ModeloCorpo = z.object({
+    nome: z.string().min(1).max(512),
+    idioma: z.string().min(2).max(15),
+    parametros: z.array(z.string().max(1024)).max(20).optional(),
+    atendente: z.string().min(1).optional(),
+  });
+  app.get('/api/conversas/:id/modelos', async (req) => {
+    const c = await conversaVisivel(req);
+    return { janela: d.sintonia.janelaDa(c), modelos: await d.sintonia.modelosDa(c.id) };
+  });
+  app.post('/api/conversas/:id/modelo', async (req) => {
+    const b = ModeloCorpo.parse(req.body);
+    const c = await conversaVisivel(req);
+    const r = await d.sintonia.equipeEnviouModelo(c.id, { nome: b.nome, idioma: b.idioma, parametros: b.parametros }, nomeDe(req, b.atendente), req.usuario);
+    return { ok: true, texto: r.texto };
+  });
+  app.post('/api/conversas/:id/lida', async (req) => {
+    const c = await conversaVisivel(req);
+    return { ok: await d.sintonia.marcarLida(c.id) };
   });
 
   const Modo = z.object({ modo: z.enum(['ia', 'copiloto', 'humano']) });
@@ -419,8 +483,15 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.setErrorHandler((erro, _req, reply) => {
     if (erro instanceof z.ZodError) return reply.code(400).send({ erro: 'Dados inválidos', detalhes: erro.issues });
     if (erro instanceof ErroAgendamento) return reply.code(400).send({ erro: erro.message, codigo: erro.codigo });
+    // Recusa da Graph API (API oficial): a mensagem explicada chega à tela. Fora da janela de 24 h = 422.
+    if (erro instanceof ErroMeta) {
+      return erro.codigo === 131047
+        ? reply.code(422).send({ erro: erro.message, codigo: 'fora_da_janela' })
+        : reply.code(502).send({ erro: erro.message, codigo: 'meta' });
+    }
     const status = (erro as { statusCode?: number }).statusCode;
-    if (status && status >= 400 && status < 500) return reply.code(status).send({ erro: (erro as Error).message });
+    const codigo = (erro as { codigo?: string }).codigo;
+    if (status && status >= 400 && status < 500) return reply.code(status).send({ erro: (erro as Error).message, ...(codigo ? { codigo } : {}) });
     if (status === 501) return reply.code(501).send({ erro: (erro as Error).message });
     log('Erro na API', String(erro));
     return reply.code(500).send({ erro: 'Erro interno' });

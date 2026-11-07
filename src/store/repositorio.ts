@@ -61,11 +61,16 @@ export interface Digitando {
 export const VALIDADE_DIGITANDO_MS = 60_000;
 
 /** Mídia esperando download (fila própria, na tabela de mídias). */
+/** Ordem da entrega: só avança (um aviso atrasado de "entregue" não apaga o "lida"). */
+export const ORDEM_ENTREGA: Record<NonNullable<Mensagem['entrega']>, number> = { enviada: 1, entregue: 2, lida: 3, falhou: 4 };
+
 export interface MidiaPendente {
   mensagemId: string;
   conversaId: string;
   canalId: string;
   idExterno: string;
+  /** Id da mídia no canal, quando é outro (API oficial). */
+  ref?: string;
   /** Contando com esta. */
   tentativas: number;
 }
@@ -94,8 +99,11 @@ export interface Repositorio {
    * Retorna false se a mensagem (pelo idExterno) já foi registrada.
    * Com `anexo`, grava junto os dados da mídia (o arquivo vem depois, em `guardarMidia`).
    * `id` opcional: quem grava pode escolher o id para guardar a mídia logo em seguida.
+   * `refMidia`: id da mídia no canal, quando não é o da mensagem (API oficial), para o download.
    */
-  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }): Promise<boolean>;
+  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }): Promise<boolean>;
+  /** Aviso de entrega/leitura de uma mensagem que a loja enviou. Nunca volta atrás (lida não vira entregue). */
+  registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date): Promise<boolean>;
 
   // ---------- mídias (fotos, áudios, vídeos, documentos) ----------
   midia(mensagemId: string): Promise<MidiaGuardada | undefined>;
@@ -199,12 +207,19 @@ export class RepositorioMemoria implements Repositorio {
     return [...this.conversas.values()].map((c) => ({ ...c }));
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
-    const { anexo, ...resto } = m;
+    const { anexo, refMidia, ...resto } = m;
     const id = m.id ?? randomUUID();
     this.msgs.push({ ...resto, id });
-    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: 0 });
+    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: 0, ref: refMidia });
+    return true;
+  }
+
+  async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>) {
+    const m = this.msgs.find((x) => x.idExterno === idExterno);
+    if (!m || ORDEM_ENTREGA[status] <= (m.entrega ? ORDEM_ENTREGA[m.entrega] : 0)) return false;
+    m.entrega = status;
     return true;
   }
 
@@ -221,7 +236,7 @@ export class RepositorioMemoria implements Repositorio {
       .map((m) => this.comAnexo(m));
   }
 
-  private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string }>();
+  private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string; ref?: string }>();
 
   async midia(mensagemId: string) {
     const md = this.midias.get(mensagemId);
@@ -266,7 +281,7 @@ export class RepositorioMemoria implements Repositorio {
       if (!m?.idExterno || !c) continue;
       md.tentativas++;
       md.proxima = t + reservaMs;
-      saida.push({ mensagemId, conversaId: md.conversaId, canalId: c.canalId, idExterno: m.idExterno, tentativas: md.tentativas });
+      saida.push({ mensagemId, conversaId: md.conversaId, canalId: c.canalId, idExterno: m.idExterno, tentativas: md.tentativas, ...(md.ref ? { ref: md.ref } : {}) });
     }
     return saida;
   }
