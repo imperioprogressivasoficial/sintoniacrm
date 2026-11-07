@@ -19,6 +19,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/icone-192.png': { arquivo: 'icone-192.png', tipo: 'image/png' },
   '/icone-180.png': { arquivo: 'icone-180.png', tipo: 'image/png' },
   '/icone-32.png': { arquivo: 'icone-32.png', tipo: 'image/png' },
+  '/favicon-32.png': { arquivo: 'favicon-32.png', tipo: 'image/png' },
+  '/favicon-64.png': { arquivo: 'favicon-64.png', tipo: 'image/png' },
   '/logo.png': { arquivo: 'logo.png', tipo: 'image/png' },
   '/logo-escuro.png': { arquivo: 'logo-escuro.png', tipo: 'image/png' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
