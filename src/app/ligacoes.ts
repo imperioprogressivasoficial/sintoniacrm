@@ -72,7 +72,7 @@ export async function quemLigar(
 export async function registrarLigacao(
   repo: Repositorio,
   c: Conversa,
-  p: { resultado: ResultadoLigacao; nota?: string; atendente: string; agora: Date },
+  p: { resultado: ResultadoLigacao; nota?: string; atendente: string; atendenteId?: string; agora: Date },
 ): Promise<void> {
   const nota = p.nota?.trim();
   await repo.adicionarMensagem({
@@ -81,7 +81,7 @@ export async function registrarLigacao(
     texto: `📞 ${p.atendente} ligou: ${RESULTADOS[p.resultado]}${nota ? ` · ${nota}` : ''}`,
     em: p.agora,
   });
-  await repo.registrarEvento({ tipo: 'ligacao', conversaId: c.id, unidade: c.unidade, em: p.agora, dados: { resultado: p.resultado, atendente: p.atendente, nota } });
+  await repo.registrarEvento({ tipo: 'ligacao', conversaId: c.id, unidade: c.unidade, em: p.agora, dados: { resultado: p.resultado, atendente: p.atendente, atendenteId: p.atendenteId, nota } });
 }
 
 /** Ligações registradas hoje (mais novas primeiro). */

@@ -107,7 +107,7 @@ function paraMensagem(r: LinhaMensagem): Mensagem {
 }
 
 export class RepositorioPostgres implements Repositorio {
-  constructor(private readonly pool: pg.Pool) {}
+  constructor(readonly pool: pg.Pool) {}
 
   async buscarConversa(id: string) {
     const { rows } = await this.pool.query<LinhaConversa>(

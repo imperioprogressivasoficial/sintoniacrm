@@ -18,6 +18,8 @@ import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { registrarRotasMidia } from './web/midias.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
+import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
+import { fontePainelPara } from './painel/painel.js';
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -49,6 +51,8 @@ export interface DependenciasServidor {
   }) => Promise<void>;
   /** Baixador de mídias recebidas (fotos, áudios...): avisado para tentar de novo. */
   midias?: { avisar(): void };
+  /** Tags, aba IA (configuração, treinamento, testar), painel completo e empresa. */
+  gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
 }
 
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
@@ -134,14 +138,18 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   };
 
   // ---------- API da tela do CRM ----------
+  // ?tag=<id> mostra só as conversas com essa tag. Cada conversa vem com as tags dela (id, nome, cor).
   app.get('/api/conversas', async (req) => {
-    const [lista, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
+    const { tag } = z.object({ tag: z.string().min(1).optional() }).parse(req.query);
+    const [todas, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
+    const lista = todas.filter(visivelPara(req));
+    const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(lista.map((c) => c.id)) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
     return lista
-      .filter(visivelPara(req))
+      .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 
@@ -156,7 +164,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const permissoes = u
       ? { assumir: podeAssumir(u, conversa) && conversa.responsavelId !== u.id, transferir: podeTransferir(u, conversa) }
       : { assumir: !conversa.responsavelId, transferir: true };
-    return { conversa, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id), digitando, permissoes };
+    const tags = d.gestao?.tags ? await d.gestao.tags.daConversa(id) : [];
+    return { conversa: { ...conversa, tags }, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id), digitando, permissoes };
   });
 
   app.get('/api/conversas/:id/foto', async (req, reply) => {
@@ -315,8 +324,19 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.post('/api/conversas/:id/ligacao', async (req) => {
     const c = await conversaVisivel(req);
     const b = Ligacao.parse(req.body);
-    await registrarLigacao(d.repo, c, { resultado: b.resultado, nota: b.nota, atendente: nomeDe(req, b.atendente), agora: agora() });
+    await registrarLigacao(d.repo, c, { resultado: b.resultado, nota: b.nota, atendente: nomeDe(req, b.atendente), atendenteId: req.usuario?.id, agora: agora() });
     return { ok: true };
+  });
+
+  // ---------- Tags, aba IA, painel completo e empresa ----------
+  registrarGestao(app, {
+    ...d.gestao,
+    repo: d.repo,
+    agora,
+    visivelPara,
+    conversaVisivel,
+    contas: d.auth?.contas,
+    painel: d.gestao?.painel ?? fontePainelPara(d.repo),
   });
 
   // ---------- Botão "Agendar" dentro do CRM (sem abrir o Trinks) ----------

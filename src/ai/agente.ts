@@ -5,6 +5,7 @@ import {
   type AcaoAgente,
   type Agenda,
   executarFerramenta,
+  ferramentaMarcarTag,
   FERRAMENTAS_ESCRITA,
   FERRAMENTAS_LEITURA,
 } from './ferramentas.js';
@@ -26,6 +27,10 @@ export interface PedidoAgente {
   modo: 'responder' | 'sugerir';
   /** Para mensagens ativas (follow-up, lembrete, manutenção). */
   tipoAtivo?: keyof typeof INSTRUCAO_ATIVA;
+  /** Tags existentes que a IA pode marcar (só quando a empresa ligou "IA marca tags"). */
+  tagsDisponiveis?: string[];
+  /** "Testar a IA": responde como responderia, sem instrução de copiloto e sem gravar nada no Trinks. */
+  simulacao?: boolean;
 }
 
 export interface RespostaAgente {
@@ -42,20 +47,35 @@ export const TEXTO_PASSAGEM =
 export type ClienteClaude = { beta: { messages: Pick<Anthropic['beta']['messages'], 'create'> } };
 
 export class Agente {
-  private readonly system: string;
+  private system?: { base: string; texto: string };
 
+  /**
+   * `baseConhecimento`: o texto fixo, ou uma função que devolve a versão mais nova
+   * (base no banco: a edição vale na próxima resposta, sem reiniciar).
+   */
   constructor(
     private readonly claude: ClienteClaude,
     private readonly agenda: Agenda,
-    baseConhecimento: string,
+    private readonly baseConhecimento: string | (() => Promise<string>),
     private readonly opcoes: OpcoesAgente,
-  ) {
-    this.system = systemPrompt(baseConhecimento);
+  ) {}
+
+  /** System prompt da base atual (refeito só quando a base muda, para aproveitar o cache de prompt). */
+  private async systemAtual(): Promise<string> {
+    const base = typeof this.baseConhecimento === 'string' ? this.baseConhecimento : await this.baseConhecimento();
+    if (this.system?.base !== base) this.system = { base, texto: systemPrompt(base) };
+    return this.system.texto;
   }
 
   async executar(p: PedidoAgente): Promise<RespostaAgente> {
     const acoes: AcaoAgente[] = [];
-    const ferramentas = p.modo === 'responder' ? [...FERRAMENTAS_LEITURA, ...FERRAMENTAS_ESCRITA] : FERRAMENTAS_LEITURA;
+    const escreve = p.modo === 'responder' && !p.simulacao;
+    const ferramentas = [
+      ...FERRAMENTAS_LEITURA,
+      ...(escreve ? FERRAMENTAS_ESCRITA : []),
+      ...(p.tagsDisponiveis?.length ? [ferramentaMarcarTag(p.tagsDisponiveis)] : []),
+    ];
+    const system = await this.systemAtual();
     const messages = this.montarMensagens(p);
     const maxPassos = this.opcoes.maxPassos ?? 8;
 
@@ -63,7 +83,7 @@ export class Agente {
       const resp = await this.claude.beta.messages.create({
         model: this.opcoes.modelo,
         max_tokens: 16000,
-        system: [{ type: 'text', text: this.system, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
         tools: ferramentas,
         messages,
         output_config: { effort: this.opcoes.esforco },
@@ -86,7 +106,8 @@ export class Agente {
             conversa: p.conversa,
             agora: p.agora,
             acoes,
-            podeEscrever: p.modo === 'responder',
+            podeEscrever: escreve,
+            tagsDisponiveis: p.tagsDisponiveis,
           });
           resultados.push({ type: 'tool_result', tool_use_id: bloco.id, content: r.conteudo, is_error: r.erro });
         }
@@ -123,7 +144,7 @@ export class Agente {
         `<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`,
       );
     }
-    if (p.modo === 'sugerir') {
+    if (p.modo === 'sugerir' && !p.simulacao) {
       extra.push('Você está em modo copiloto: escreva a resposta que a atendente vai revisar e enviar.');
     }
     const ultimo = turnos.at(-1);

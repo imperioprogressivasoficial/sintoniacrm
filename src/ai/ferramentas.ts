@@ -21,7 +21,9 @@ export type Agenda = Pick<
 export type AcaoAgente =
   | { tipo: 'agendou'; agendamento: Agendamento; clienteTrinksId: number }
   | { tipo: 'passar_para_humano'; motivo: string }
-  | { tipo: 'etapa'; etapa: Etapa; motivo: string };
+  | { tipo: 'etapa'; etapa: Etapa; motivo: string }
+  /** Marcar uma tag que JÁ EXISTE na empresa (a IA nunca cria tag). */
+  | { tipo: 'marcar_tag'; nome: string };
 
 const UNIDADES_COM_AGENDA = ['norte', 'sumare'] as const;
 
@@ -62,6 +64,18 @@ export const FERRAMENTAS_LEITURA: Ferramenta[] = [
     motivo: { type: 'string', description: 'Uma frase curta explicando' },
   }),
 ];
+
+/**
+ * Ferramenta de tags: só entra quando a empresa ligou "IA marca tags" e existe alguma tag.
+ * A lista de nomes vai no enum (o modelo não consegue inventar um nome) e é conferida de novo ao aplicar.
+ */
+export function ferramentaMarcarTag(nomes: string[]): Ferramenta {
+  return def(
+    'marcar_tag',
+    `Marca na conversa uma das tags da loja, quando a conversa deixar isso claro (ex.: a cliente diz que veio pelo Instagram → "Instagram"). Use só se tiver certeza; não precisa avisar a cliente. Tags existentes: ${nomes.map((n) => `"${n}"`).join(', ')}.`,
+    { nome: { type: 'string', enum: nomes, description: 'Nome exato de uma tag existente' } },
+  );
+}
 
 export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   def(
@@ -113,6 +127,8 @@ export interface ContextoFerramentas {
   acoes: AcaoAgente[];
   /** Em modo sugestão, nada é gravado no Trinks. */
   podeEscrever: boolean;
+  /** Tags que a IA pode marcar (vazio = não marca). */
+  tagsDisponiveis?: string[];
 }
 
 
@@ -220,6 +236,14 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
       if (!ctx.podeEscrever) throw new Error('Modo sugestão: apenas sugira que alguém da equipe continue.');
       ctx.acoes.push({ tipo: 'passar_para_humano', motivo: i.motivo });
       return 'ok: a equipe foi avisada. Diga à cliente que alguém da equipe vai continuar o atendimento.';
+    }
+    case 'marcar_tag': {
+      const i = z.object({ nome: z.string() }).parse(entrada);
+      const alvo = i.nome.trim().toLowerCase();
+      const existente = (ctx.tagsDisponiveis ?? []).find((n) => n.toLowerCase() === alvo);
+      if (!existente) throw new Error('Essa tag não existe. Use só as tags da lista; a IA não cria tags.');
+      if (!ctx.acoes.some((a) => a.tipo === 'marcar_tag' && a.nome === existente)) ctx.acoes.push({ tipo: 'marcar_tag', nome: existente });
+      return 'ok';
     }
     default:
       throw new Error(`Ferramenta desconhecida: ${nome}`);
