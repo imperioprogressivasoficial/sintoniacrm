@@ -10,6 +10,7 @@ import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { registrarPaginas } from './web/paginas.js';
+import { atualizacoesDeHoje } from './app/atualizacoes.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
@@ -183,6 +184,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     await d.clienteTeste(ClienteTeste.parse(req.body));
     return { ok: true };
   });
+
+  // ---------- aba Atualizações ----------
+  app.get('/api/atualizacoes', async () => atualizacoesDeHoje(d.repo, agora()));
 
   app.get('/api/relatorio', async () => ({ texto: await d.sintonia.relatorioDoDia(agora()) }));
   app.get('/api/painel', async () => d.sintonia.resumoDoDia(agora()));
