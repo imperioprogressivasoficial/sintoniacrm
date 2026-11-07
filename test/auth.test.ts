@@ -85,7 +85,7 @@ describe('Páginas', () => {
     const vendas = await app.inject({ url: '/' });
     expect(vendas.statusCode).toBe(200);
     expect(vendas.headers['content-type']).toContain('text/html');
-    expect(vendas.body).toContain('Nenhuma cliente sem resposta');
+    expect(vendas.body).toContain('Nenhum cliente sem resposta');
     expect((await app.inject({ url: '/vendas/mac-crm-1440.webp' })).headers['content-type']).toBe('image/webp');
     expect((await app.inject({ url: '/estilo.css' })).headers['content-type']).toContain('text/css');
     expect((await app.inject({ url: '/entrar' })).statusCode).toBe(200);
