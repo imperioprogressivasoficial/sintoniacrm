@@ -678,6 +678,7 @@
   .acoes-selecao button:not(:disabled):hover { background: var(--vidro-item); }
   @media (max-width: 760px) { .acoes-selecao { position: fixed; left: 0; right: 0; bottom: calc(86px + env(safe-area-inset-bottom)); } }
 </style>
+<link rel="stylesheet" href="/responsivo.css">
 </head>
 <body>
 <div class="casca" id="casca">
@@ -2284,5 +2285,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
+<script src="/telas/responsivo.js" defer></script>
 </body>
 </html>
