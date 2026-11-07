@@ -11,6 +11,8 @@ import type { MensagemRecebida } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
+import { ligacoesDoDia, quemLigar, registrarLigacao } from './app/ligacoes.js';
+import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
@@ -187,6 +189,28 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   // ---------- aba Atualizações ----------
   app.get('/api/atualizacoes', async () => atualizacoesDeHoje(d.repo, agora()));
+
+  // ---------- aba Ligações ----------
+  app.get('/api/ligacoes', async () => {
+    const p = partesBahia(agora());
+    const inicio = bahia(p.ano, p.mes, p.dia);
+    return {
+      sugestoes: await quemLigar(d.repo, agora()),
+      hoje: await ligacoesDoDia(d.repo, inicio, new Date(inicio.getTime() + DIA)),
+    };
+  });
+  const Ligacao = z.object({
+    resultado: z.enum(['atendeu', 'nao_atendeu', 'agendou', 'caixa_postal']),
+    nota: z.string().max(500).optional(),
+    atendente: z.string().min(1),
+  });
+  app.post('/api/conversas/:id/ligacao', async (req, reply) => {
+    const c = await d.repo.buscarConversa((req.params as { id: string }).id);
+    if (!c) return reply.code(404).send();
+    const b = Ligacao.parse(req.body);
+    await registrarLigacao(d.repo, c, { ...b, agora: agora() });
+    return { ok: true };
+  });
 
   app.get('/api/relatorio', async () => ({ texto: await d.sintonia.relatorioDoDia(agora()) }));
   app.get('/api/painel', async () => d.sintonia.resumoDoDia(agora()));

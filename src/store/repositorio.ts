@@ -24,6 +24,8 @@ export type TipoEvento =
   | 'passou_para_humano'
   | 'etapa_mudou'
   | 'envio_ativo'
+  /** Atendente ligou para a cliente (aba Ligações). */
+  | 'ligacao'
   | 'falha';
 
 export interface Evento {
