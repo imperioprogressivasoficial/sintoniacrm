@@ -24,6 +24,10 @@ import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
 import { UNIDADES } from './unidades.js';
 import { dataISO, partesBahia } from './util/tempo.js';
+import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from './empresa/empresa.js';
+import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, TagsDaIa } from './tags/tags.js';
+import { ArmazemBaseMemoria, ArmazemBasePostgres, BaseConhecimento } from './ai/base.js';
+import { simularResposta } from './ai/simulacao.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -32,9 +36,6 @@ const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString
 let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
 const claude = new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) });
 const trinks = new ClienteTrinks({ apiKey: cfg.TRINKS_API_KEY ?? '', intervaloMs: cfg.TRINKS_INTERVALO_MS });
-const base = carregarBase();
-const agente = new Agente(claude, trinks, base, { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
-
 let repo: Repositorio;
 let fila: FilaEntrada;
 let trava: Trava;
@@ -55,6 +56,15 @@ if (cfg.DATABASE_URL) {
   trava = new TravaMemoria();
   contas = new ContasMemoria();
 }
+
+// Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
+const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
+const tags = new Tags(pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas()), cfg.SINTONIA_EMPRESA_ID);
+const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
+// Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
+const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
+await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
+const agente = new Agente(claude, trinks, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
 if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
@@ -128,6 +138,8 @@ const sintonia = new Sintonia({
   agente,
   log,
   trava,
+  configIa: async () => regrasDaConfig(await empresa.configIa()),
+  tagsIa: tagsDaIa,
   avisarEquipe: async (texto) => {
     // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
     const n = numeros.find(ehReal);
@@ -164,12 +176,20 @@ const app = criarServidor({
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
+  gestao: {
+    tags,
+    empresa,
+    base,
+    iaLigada: () => iaLigada,
+    tagsDaIa: () => tagsDaIa.nomes(),
+    simularIa: (p) => simularResposta(agente, cfg.SINTONIA_EMPRESA_ID, { ...p, agora: new Date() }),
+  },
   clienteTeste: async ({ unidade, nome, telefone, texto }) => {
     const canalId = canalTesteDa(unidade);
     const agora = new Date();
     // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
     const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
-    if (nova && !iaLigada) await sintonia.mudarModo(conversa.id, 'humano');
+    if (nova) await sintonia.mudarModo(conversa.id, iaLigada ? (await empresa.configIa()).modoPadrao : 'humano');
     await sintonia.receber({ canalId, telefone, nome, texto, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora });
   },
   revisar: async (conversaId, rascunho) => {
@@ -179,7 +199,7 @@ const app = criarServidor({
     const servicos = est ? await trinks.listarServicos(est).catch(() => []) : [];
     return revisarRascunho(
       claude,
-      { modelo: cfg.SINTONIA_MODELO, baseConhecimento: base },
+      { modelo: cfg.SINTONIA_MODELO, baseConhecimento: await base.texto() },
       { conversa, mensagens: await repo.mensagens(conversaId), rascunho, servicos, agora: new Date() },
     );
   },

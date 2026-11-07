@@ -40,6 +40,34 @@ export function podeVer(u: Quem, c: Conversa): boolean {
   return !c.responsavelId || c.responsavelId === u.id;
 }
 
+/**
+ * O mesmo "quem vê o quê" de podeVer, em forma de filtro (serve para o SQL do painel e das tags).
+ * Vazio = vê tudo (sem login). Mantenha as duas funções juntas: o teste confere que dizem o mesmo.
+ */
+export interface EscopoVisao {
+  empresaId?: string;
+  /** Só conversas destas unidades. */
+  unidades?: string[];
+  /** Só conversas sem dona ou desta pessoa. */
+  donaOuSemDona?: string;
+}
+
+export function escopoDe(u: Quem | undefined): EscopoVisao {
+  if (!u) return {};
+  const base: EscopoVisao = u.empresaId ? { empresaId: u.empresaId } : {};
+  if (veTudo(u)) return base;
+  if (u.papel === 'gerente') return { ...base, unidades: [...u.unidades] };
+  return { ...base, unidades: [...u.unidades], donaOuSemDona: u.id };
+}
+
+/** A conversa está dentro do escopo? (versão em memória do filtro SQL) */
+export function noEscopo(e: EscopoVisao, c: Pick<Conversa, 'empresaId' | 'unidade' | 'responsavelId'>): boolean {
+  if (e.empresaId && e.empresaId !== c.empresaId) return false;
+  if (e.unidades && !e.unidades.includes(c.unidade)) return false;
+  if (e.donaOuSemDona && c.responsavelId && c.responsavelId !== e.donaOuSemDona) return false;
+  return true;
+}
+
 /** Pode passar a conversa para outra pessoa? Gestor que a vê, ou a própria dona. */
 export const podeTransferir = (u: Quem, c: Conversa) => podeVer(u, c) && (ehGestor(u) || c.responsavelId === u.id);
 

@@ -28,6 +28,9 @@ export type TipoEvento =
   | 'ligacao'
   /** A conversa mudou de dona (assumiu, transferiu, liberou ou primeira resposta). */
   | 'transferencia'
+  /** Tag marcada/desmarcada numa conversa (dados: tagId, nome, por). */
+  | 'tag_marcada'
+  | 'tag_desmarcada'
   | 'falha';
 
 export interface Evento {

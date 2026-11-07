@@ -57,7 +57,7 @@ const COLUNAS_CONVERSA = `id, empresa_id, unidade, canal_id, telefone, nome, mod
   ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, responsavel_id, responsavel_nome, criada_em, atualizada_em`;
 
 export class RepositorioPostgres implements Repositorio {
-  constructor(private readonly pool: pg.Pool) {}
+  constructor(readonly pool: pg.Pool) {}
 
   async buscarConversa(id: string) {
     const { rows } = await this.pool.query<LinhaConversa>(

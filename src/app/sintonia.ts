@@ -28,6 +28,16 @@ export interface DependenciasSintonia {
   regras?: RegrasAtendimento;
   /** Trava por conversa. Com vários processos, use a do Postgres. */
   trava?: Trava;
+  /**
+   * Configuração da IA da empresa (gravada no banco), lida a cada decisão: mudou na tela, vale na hora.
+   * Sobrepõe `regras`; `modoPadrao` é o modo em que a conversa nova nasce.
+   */
+  configIa?: () => Promise<Partial<RegrasAtendimento> & { modoPadrao?: ModoAtendimento }>;
+  /** A IA marcando tags existentes (vazio/ausente = não marca). */
+  tagsIa?: {
+    nomes(): Promise<string[]>;
+    aplicar(c: Conversa, nome: string): Promise<{ id: string; nome: string } | undefined>;
+  };
   /** Avisa a equipe (ex.: WhatsApp da gerente) quando a IA passa uma conversa adiante. */
   avisarEquipe?: (texto: string, conversa: Conversa) => Promise<void>;
   log?: (msg: string, extra?: unknown) => void;
@@ -88,6 +98,7 @@ export class Sintonia {
       }
     }
 
+    const config = await this.configAgora();
     const criada = await this.d.repo.buscarOuCriarConversa({
       empresaId: this.d.empresaId,
       unidade: numero.unidade,
@@ -101,6 +112,8 @@ export class Sintonia {
     // dois processos nunca gravam um por cima do outro.
     const pensar = await this.mutar(criada.conversa.id, async (conversa) => {
       const agora = this.agora();
+      // Conversa nova nasce no modo padrão da empresa (configuração da IA).
+      if (criada.nova && config.modoPadrao) conversa.modo = config.modoPadrao;
       const gravou = await this.d.repo.adicionarMensagem({
         conversaId: conversa.id,
         autor: msg.deMim ? 'equipe' : 'cliente',
@@ -113,7 +126,7 @@ export class Sintonia {
       if (msg.deMim) {
         if (!gravou) return false;
         // A atendente respondeu pelo celular: a IA sai da frente e os follow-ups recomeçam a contar.
-        Object.assign(conversa, equipeAtuou(conversa, agora, this.regras), { ultimaMensagemEquipe: msg.em, atualizadaEm: agora });
+        Object.assign(conversa, equipeAtuou(conversa, agora, config.regras), { ultimaMensagemEquipe: msg.em, atualizadaEm: agora });
         await this.d.repo.salvarConversa(conversa);
         await this.d.repo.cancelarTarefas(conversa.id, ['reavaliar', ...FOLLOWUPS]);
         await this.programarFollowups(conversa, agora);
@@ -148,8 +161,9 @@ export class Sintonia {
 
   /** Atendente começou a digitar ou abriu a conversa para responder. Com `quem`, fica registrado quem é. */
   async equipeDigitando(conversaId: string, quem?: Pick<Quem, 'id' | 'nome'>): Promise<void> {
+    const { regras } = await this.configAgora();
     await this.mutar(conversaId, async (c) => {
-      Object.assign(c, equipeAtuou(c, this.agora(), this.regras));
+      Object.assign(c, equipeAtuou(c, this.agora(), regras));
       await this.d.repo.salvarConversa(c);
       if (quem) await this.d.repo.registrarDigitando(c.id, { usuarioId: quem.id, nome: quem.nome }, this.agora());
     });
@@ -176,23 +190,24 @@ export class Sintonia {
 
   /** Atendente enviou pelo CRM. Com `quem` (usuária logada), vale a anti-duplicidade e ela pode virar a dona. */
   async equipeEnviou(conversaId: string, texto: string, atendente: string, quem?: Quem): Promise<void> {
-    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente, quem));
+    const { regras } = await this.configAgora();
+    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente, regras, quem));
     if (feito === undefined) throw new Error('Conversa não encontrada');
   }
 
-  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string, quem?: Quem): Promise<true> {
+  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string, regras: RegrasAtendimento, quem?: Quem): Promise<true> {
     if (quem) await this.conferirVezEm(c, quem);
     const agora = this.agora();
     const espera = this.tempoDeResposta(c, agora);
     const id = await this.enviar(c, texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
-    Object.assign(c, equipeAtuou(c, agora, this.regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
+    Object.assign(c, equipeAtuou(c, agora, regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
     if (quem) await this.donaPelaPrimeiraResposta(c, quem);
     await this.d.repo.salvarConversa(c);
     if (quem) await this.d.repo.pararDigitando(c.id, quem.id);
     await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
     await this.programarFollowups(c, agora);
-    await this.evento('equipe_respondeu', c, { atendente, tempoRespostaMs: espera });
+    await this.evento('equipe_respondeu', c, { atendente, atendenteId: quem?.id, tempoRespostaMs: espera });
     return true;
   }
 
@@ -209,7 +224,7 @@ export class Sintonia {
   /** Agendamento feito pela atendente no botão "Agendar" do CRM (já gravado no Trinks). */
   async equipeAgendou(conversaId: string, acao: Extract<AcaoAgente, { tipo: 'agendou' }>, atendente: string, quem?: Quem): Promise<void> {
     await this.mutar(conversaId, async (c) => {
-      await this.aplicarAcoes(c, [acao], 'equipe', atendente);
+      await this.aplicarAcoes(c, [acao], 'equipe', atendente, quem?.id);
       if (quem) await this.donaPelaPrimeiraResposta(c, quem);
       await this.d.repo.salvarConversa(c);
     });
@@ -331,11 +346,12 @@ export class Sintonia {
   }
 
   private async processarAgora(conversaId: string): Promise<void> {
+    const { regras } = await this.configAgora();
     for (let rodada = 0; rodada < 3; rodada++) {
       const c = await this.d.repo.buscarConversa(conversaId);
       if (!c) return;
       const agora = this.agora();
-      const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, this.regras);
+      const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, regras);
 
       if (decisao.acao === 'nada') return;
       if (decisao.acao === 'aguardar') {
@@ -346,14 +362,14 @@ export class Sintonia {
       const marco = c.ultimaMensagemCliente?.getTime();
       const mensagens = await this.d.repo.mensagens(c.id);
       const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
-      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo });
+      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo, tagsDisponiveis: await this.tagsParaIa() });
 
       // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
       const depois = await this.d.repo.buscarConversa(c.id);
       if (!depois) return;
       if (depois.ultimaMensagemCliente?.getTime() !== marco) continue;
       // A equipe assumiu enquanto a IA pensava: não atropela.
-      if (modo === 'responder' && decidirQuemResponde(depois, UNIDADES[depois.unidade], this.agora(), this.regras).acao !== 'ia_responde') {
+      if (modo === 'responder' && decidirQuemResponde(depois, UNIDADES[depois.unidade], this.agora(), regras).acao !== 'ia_responde') {
         return;
       }
 
@@ -368,6 +384,7 @@ export class Sintonia {
 
       const enviadoEm = this.agora();
       const id = await this.enviar(depois, r.texto);
+      const espera = this.tempoDeResposta(depois, enviadoEm);
       await this.d.repo.adicionarMensagem({ conversaId: depois.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
       depois.ultimaMensagemIa = enviadoEm;
       depois.atualizadaEm = enviadoEm;
@@ -377,7 +394,7 @@ export class Sintonia {
       }
       await this.aplicarAcoes(depois, r.acoes, 'ia');
       await this.d.repo.salvarConversa(depois);
-      await this.evento('ia_respondeu', depois);
+      await this.evento('ia_respondeu', depois, espera === undefined ? undefined : { tempoRespostaMs: espera });
       await this.d.repo.cancelarTarefas(depois.id, ['reavaliar']);
       await this.programarFollowups(depois, enviadoEm);
       return;
@@ -396,7 +413,7 @@ export class Sintonia {
       }
     }
     const mensagens = await this.d.repo.mensagens(c.id);
-    const r = await this.d.agente.executar({ conversa: c, mensagens, agora: this.agora(), modo: 'responder', tipoAtivo: t.tipo });
+    const r = await this.d.agente.executar({ conversa: c, mensagens, agora: this.agora(), modo: 'responder', tipoAtivo: t.tipo, tagsDisponiveis: await this.tagsParaIa() });
     const enviadoEm = this.agora();
     const id = await this.enviar(c, r.texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
@@ -407,8 +424,16 @@ export class Sintonia {
     await this.evento('envio_ativo', c, { tipo: t.tipo });
   }
 
-  private async aplicarAcoes(c: Conversa, acoes: AcaoAgente[], autor: 'ia' | 'equipe', atendente?: string): Promise<void> {
+  private async aplicarAcoes(c: Conversa, acoes: AcaoAgente[], autor: 'ia' | 'equipe', atendente?: string, atendenteId?: string): Promise<void> {
     for (const a of acoes) {
+      if (a.tipo === 'marcar_tag' && autor === 'ia') {
+        // Só tags que existem e só com a opção ligada (conferido de novo aqui, não só na ferramenta).
+        const tag = await this.d.tagsIa?.aplicar(c, a.nome).catch((e) => {
+          this.log('Falha ao marcar tag da IA', String(e));
+          return undefined;
+        });
+        if (tag) await this.evento('tag_marcada', c, { tagId: tag.id, nome: tag.nome, por: 'IA' });
+      }
       if (a.tipo === 'etapa') await this.moverFunil(c, { tipo: 'ia_classificou', etapa: a.etapa }, a.motivo);
       if (a.tipo === 'agendou') {
         c.trinksClienteId = a.clienteTrinksId;
@@ -420,6 +445,7 @@ export class Sintonia {
         await this.evento(autor === 'ia' ? 'agendamento_ia' : 'agendamento_equipe', c, {
           trinksId: a.agendamento.trinksId,
           atendente: autor === 'equipe' ? atendente : undefined,
+          atendenteId: autor === 'equipe' ? atendenteId : undefined,
           servico: a.agendamento.servico,
           inicio: a.agendamento.inicio.toISOString(),
         });
@@ -432,6 +458,26 @@ export class Sintonia {
         await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${UNIDADES[c.unidade].nome}) para a equipe. Motivo: ${a.motivo}`, c);
       }
     }
+  }
+
+  /** Regras em vigor: as do código por baixo, a configuração da empresa por cima. Se a leitura falhar, fica no padrão. */
+  private async configAgora(): Promise<{ regras: RegrasAtendimento; modoPadrao?: ModoAtendimento }> {
+    if (!this.d.configIa) return { regras: this.regras };
+    try {
+      const { modoPadrao, ...resto } = await this.d.configIa();
+      const regras = { ...this.regras };
+      for (const [k, v] of Object.entries(resto)) if (v !== undefined) (regras as Record<string, unknown>)[k] = v;
+      return { regras, modoPadrao };
+    } catch (e) {
+      this.log('Falha ao ler a configuração da IA; usando o padrão', String(e));
+      return { regras: this.regras };
+    }
+  }
+
+  private async tagsParaIa(): Promise<string[] | undefined> {
+    if (!this.d.tagsIa) return undefined;
+    const nomes = await this.d.tagsIa.nomes().catch(() => []);
+    return nomes.length ? nomes : undefined;
   }
 
   private async moverFunil(c: Conversa, ev: EventoFunil, motivo?: string): Promise<void> {

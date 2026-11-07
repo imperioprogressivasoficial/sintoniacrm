@@ -10,6 +10,15 @@ export function estaAberta(unidade: Unidade, agora: Date): boolean {
   return m >= minutosDoDia(faixa.abre) && m < minutosDoDia(faixa.fecha);
 }
 
+/** Instante em que a unidade fecha hoje (undefined se hoje não abre). */
+export function fechamentoDeHoje(unidade: Unidade, agora: Date): Date | undefined {
+  const p = partesBahia(agora);
+  const faixa = unidade.horario[p.diaSemana];
+  if (!faixa) return undefined;
+  const m = minutosDoDia(faixa.fecha);
+  return bahia(p.ano, p.mes, p.dia, Math.floor(m / 60), m % 60);
+}
+
 /**
  * Janela em que é educado mandar mensagem ativa (lembrete, follow-up, campanha):
  * das 8h às 20h30, todos os dias. Respostas a quem acabou de escrever não passam por aqui.
