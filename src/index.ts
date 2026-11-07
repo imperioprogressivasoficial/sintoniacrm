@@ -37,6 +37,8 @@ import { simularResposta } from './ai/simulacao.js';
 import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis } from './funis/funis.js';
 import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, ligarFunis } from './automacoes/automacoes.js';
 import { registrarFunis } from './rotas/funis.js';
+import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
+import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './conversa/transcricao.js';
@@ -216,12 +218,13 @@ const funis = new Funis({
 // E-mail marketing (só com banco). EMAIL_TRANSPORTE=arquivo:/pasta grava os e-mails em arquivos em vez de enviar (desenvolvimento).
 const transporteEmail = process.env.EMAIL_TRANSPORTE?.startsWith('arquivo:') ? transporteArquivo(process.env.EMAIL_TRANSPORTE.slice('arquivo:'.length)) : transporteReal;
 const email = pool ? new EmailMarketing({ pool, cofre, empresaId: cfg.SINTONIA_EMPRESA_ID, transporte: transporteEmail, urlPublica: process.env.SINTONIA_URL_PUBLICA, log }) : undefined;
+const armazemAutomacoes = pool
+  ? new ArmazemAutomacoesPostgres(pool)
+  : new ArmazemAutomacoesMemoria(armazemTags, (id) => (armazemDemo as ArmazemDemoMemoria).ehConversaDemo(id));
 const automacoes = new Automacoes({
   email,
   calendario: pool ? calendarioPostgres(pool, cfg.SINTONIA_EMPRESA_ID) : undefined,
-  armazem: pool
-    ? new ArmazemAutomacoesPostgres(pool)
-    : new ArmazemAutomacoesMemoria(armazemTags, (id) => (armazemDemo as ArmazemDemoMemoria).ehConversaDemo(id)),
+  armazem: armazemAutomacoes,
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   sintonia: () => sintonia,
@@ -231,7 +234,20 @@ const automacoes = new Automacoes({
   log,
   transmissoes: () => transmissoes,
 });
-const ganchosBase = ligarFunis({ tags, funis, automacoes });
+// Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
+const bots = new Bots({
+  armazem: pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria(),
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  sintonia: () => sintonia,
+  funis,
+  tags,
+  contas,
+  contatos: armazemContatos,
+  envios: armazemAutomacoes,
+  log,
+});
+const ganchosBase = ligarBots(ligarFunis({ tags, funis, automacoes }), { bots, funis, tags });
 // Transmissões (disparo em massa): só com Postgres. Criadas depois da Sintonia; os ganchos as chamam quando existirem.
 let transmissoes: Transmissoes | undefined;
 const ganchos: typeof ganchosBase = {
@@ -413,6 +429,7 @@ agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids) });
+registrarBots(app, { repo, bots });
 // Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
 const extras = montarExtras({
   repo,
@@ -507,6 +524,7 @@ const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
   await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
+  await bots.tick().catch((e) => log('Falha no relógio dos bots', String(e))); // esperas, tempo limite das respostas, agente de IA
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram
   await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões

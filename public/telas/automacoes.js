@@ -362,6 +362,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     caixa.replaceChildren(tela);
     tela.append(el('div', { class: 'au-cab' }, el('h1', { class: 'titulo-grande' }, el('span', { class: 'au-raio', html: SVG.raio }), el('span', { text: 'Automações' })),
       ehGestao() ? el('button', { class: 'au-botao', type: 'button', onclick: () => abrirEditor({ funilId: s.filtro !== 'todas' && s.filtro !== 'geral' ? s.filtro : null, aoSalvar: () => desenhar(caixa, ui) }) }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Nova automação' })) : null));
+    // Aba Automações | Bots (o construtor de bots fica em /telas/bot.js).
+    if (window.SintoniaTelas.bot?.abasAutomacoes) tela.append(window.SintoniaTelas.bot.abasAutomacoes('automacoes'));
     tela.append(el('p', { class: 'au-sub', text: 'O que a Sintonia faz sozinha. Ex.: quando a cliente entrar em “Proposta” → esperar 1 dia → mandar uma mensagem. O jeito mais rápido de criar é pelo raio ⚡ em cada etapa do CRM.' }));
     if (!ehGestao()) { tela.append(el('div', { class: 'au-vazio' }, el('b', { text: 'Só a gestão mexe nas automações.' }), el('span', { text: 'Peça para a gerência criar ou mudar uma automação.' }))); return; }
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));

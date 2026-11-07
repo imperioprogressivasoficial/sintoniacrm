@@ -77,6 +77,8 @@ export interface GanchosSintonia {
   equipeRespondeu?(c: Conversa): Promise<void>;
   /** Objetivo do "fluxo de IA" em vigor para a conversa: vai como instrução extra para a IA. */
   objetivoIa?(c: Conversa): Promise<string | undefined>;
+  /** Um bot (src/bot) está conduzindo a conversa: a IA não responde nem sugere (o bot responde primeiro). */
+  botNoControle?(c: Conversa): Promise<boolean>;
 }
 
 const FOLLOWUPS: Tarefa['tipo'][] = ['followup_1h', 'followup_1d', 'followup_3d'];
@@ -507,6 +509,25 @@ export class Sintonia {
     return id;
   }
 
+  /** Foto/arquivo automático (bot), já sob a trava: envia, guarda o arquivo e grava como da IA (com `autorNome`). Quem chama grava a conversa. */
+  async enviarMidiaAutomatico(c: Conversa, midia: MidiaEnvio, autorNome: string): Promise<string> {
+    const n = this.numeroDa(c);
+    if (!n.canal.enviarMidia) throw new Error('Este número ainda não envia arquivos pela Sintonia.');
+    const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
+    const legenda = midia.tipo === 'audio' ? undefined : midia.legenda?.trim() || undefined;
+    const texto = textoDoAnexo(midia.tipo, legenda, midia.tipo === 'documento' ? midia.nomeArquivo : undefined);
+    const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }));
+    const mensagemId = randomUUID();
+    const anexo: Anexo = { tipo: midia.tipo, mimetype: midia.mimetype, tamanho: midia.conteudo.length, situacao: 'pendente' };
+    if (midia.nomeArquivo) anexo.nomeArquivo = midia.nomeArquivo;
+    if (legenda) anexo.legenda = legenda;
+    await this.d.repo.adicionarMensagem({ id: mensagemId, conversaId: c.id, autor: 'ia', autorNome, texto, em: agora, idExterno: id, anexo });
+    await this.d.repo.guardarMidia(mensagemId, { conteudo: midia.conteudo });
+    c.ultimaMensagemIa = agora;
+    c.atualizadaEm = agora;
+    return id;
+  }
+
   /** Troca a dona já sob a trava (automação). Quem chama grava a conversa. */
   async trocarDonaSobTrava(c: Conversa, para: { id: string; nome: string } | null, por: { id?: string; nome: string }, motivo: string): Promise<void> {
     if ((c.responsavelId ?? null) === (para?.id ?? null)) return;
@@ -518,6 +539,16 @@ export class Sintonia {
       await fn();
     } catch (e) {
       this.log(`Falha no gancho ${nome}`, String(e));
+    }
+  }
+
+  private async botConduz(c: Conversa): Promise<boolean> {
+    if (!this.d.ganchos?.botNoControle) return false;
+    try {
+      return await this.d.ganchos.botNoControle(c);
+    } catch (e) {
+      this.log('Falha ao conferir o bot da conversa', String(e));
+      return false;
     }
   }
 
@@ -614,6 +645,7 @@ export class Sintonia {
       const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, regras);
 
       if (decisao.acao === 'nada') return;
+      if (await this.botConduz(c)) return;
       if (decisao.acao === 'aguardar') {
         await this.reavaliarEm(c.id, decisao.reavaliarEm);
         return;
@@ -669,6 +701,7 @@ export class Sintonia {
 
   private async enviarAtivo(t: Tarefa, c: Conversa): Promise<void> {
     if (c.modo === 'humano' || t.tipo === 'reavaliar') return;
+    if (await this.botConduz(c)) return;
     const numero = this.numeroDa(c);
     // Na API oficial, mensagem ativa fora da janela de 24h exige modelo aprovado (Fase 3).
     if (numero.canal.tipo === 'meta') {
