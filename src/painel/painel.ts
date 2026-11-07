@@ -3,7 +3,7 @@ import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import type { Usuario } from '../auth/contas.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { bahia, DIA, MIN, partesBahia } from '../util/tempo.js';
+import { bahia, dataISO, DIA, MIN, partesBahia } from '../util/tempo.js';
 import { sqlEscopo } from './escopo-sql.js';
 
 /**
@@ -37,6 +37,11 @@ export interface DadosPeriodo {
   leads: number;
   /** 24 posições, hora da Bahia em que a conversa nova chegou. */
   leadsPorHora: number[];
+  /** 24 posições: agendamentos (IA + equipe) pela hora da Bahia. */
+  agendamentosPorHora: number[];
+  /** "AAAA-MM-DD" (Bahia) → quantos leads / agendamentos no dia (para a curva de 7 e 30 dias). */
+  leadsPorDia: Record<string, number>;
+  agendamentosPorDia: Record<string, number>;
   primeiraResposta: { equipe: Soma; ia: Soma };
   resposta: { equipe: Soma; ia: Soma };
   agendamentos: { ia: number; equipe: number };
@@ -91,6 +96,9 @@ export class PainelMemoria implements FontePainel {
     const r: DadosPeriodo = {
       leads: 0,
       leadsPorHora: Array(24).fill(0),
+      agendamentosPorHora: Array(24).fill(0),
+      leadsPorDia: {},
+      agendamentosPorDia: {},
       primeiraResposta: { equipe: zero(), ia: zero() },
       resposta: { equipe: zero(), ia: zero() },
       agendamentos: { ia: 0, equipe: 0 },
@@ -101,6 +109,7 @@ export class PainelMemoria implements FontePainel {
       if (e.tipo === 'conversa_nova') {
         r.leads++;
         r.leadsPorHora[horaBahia(e.em)] = (r.leadsPorHora[horaBahia(e.em)] ?? 0) + 1;
+        r.leadsPorDia[dataISO(e.em)] = (r.leadsPorDia[dataISO(e.em)] ?? 0) + 1;
         const primeira = todos.find((x) => x.conversaId === e.conversaId && (TIPOS_RESPOSTA as readonly string[]).includes(x.tipo) && x.em >= e.em);
         if (primeira) {
           const lado = primeira.tipo === 'ia_respondeu' ? 'ia' : 'equipe';
@@ -112,6 +121,10 @@ export class PainelMemoria implements FontePainel {
       if (e.tipo === 'equipe_respondeu' && t !== undefined) r.resposta.equipe = somar(r.resposta.equipe, { somaMs: t, n: 1 });
       if (e.tipo === 'agendamento_ia') r.agendamentos.ia++;
       if (e.tipo === 'agendamento_equipe') r.agendamentos.equipe++;
+      if (e.tipo === 'agendamento_ia' || e.tipo === 'agendamento_equipe') {
+        r.agendamentosPorHora[horaBahia(e.em)] = (r.agendamentosPorHora[horaBahia(e.em)] ?? 0) + 1;
+        r.agendamentosPorDia[dataISO(e.em)] = (r.agendamentosPorDia[dataISO(e.em)] ?? 0) + 1;
+      }
       if (e.tipo === 'equipe_respondeu' || e.tipo === 'agendamento_equipe' || e.tipo === 'ligacao') {
         const id = texto(e.dados?.atendenteId) ?? null;
         const nome = texto(e.dados?.atendente) ?? '';
@@ -174,12 +187,13 @@ export class PainelPostgres implements FontePainel {
                       and ${onde}
                     group by e.tipo`,
       ),
-      consulta<{ h: number; n: number }>(
-        // Hora da Bahia: UTC-3 fixo (sem horário de verão), igual a util/tempo.ts.
-        (onde) => `select extract(hour from (e.em at time zone 'UTC') - interval '3 hours')::int as h, count(*)::int as n
+      consulta<{ tipo: string; dia: string; h: number; n: number }>(
+        // Hora e dia da Bahia: UTC-3 fixo (sem horário de verão), igual a util/tempo.ts.
+        (onde) => `select e.tipo, to_char((e.em at time zone 'UTC') - interval '3 hours', 'YYYY-MM-DD') as dia,
+                          extract(hour from (e.em at time zone 'UTC') - interval '3 hours')::int as h, count(*)::int as n
                      from sintonia.eventos e join sintonia.conversas c on c.id = e.conversa_id
-                    where e.em >= $1 and e.em < $2 and e.tipo = 'conversa_nova' and ${onde}
-                    group by 1`,
+                    where e.em >= $1 and e.em < $2 and e.tipo in ('conversa_nova', 'agendamento_ia', 'agendamento_equipe') and ${onde}
+                    group by 1, 2, 3`,
       ),
       consulta<{ tipo: string; n: number; st: number }>(
         (onde) => `select r.tipo, count(*)::int as n, coalesce(sum(extract(epoch from (r.em - e.em)) * 1000), 0)::float8 as st
@@ -208,7 +222,16 @@ export class PainelPostgres implements FontePainel {
 
     const tipo = (t: string) => porTipo.find((x) => x.tipo === t);
     const leadsPorHora: number[] = Array(24).fill(0);
-    for (const x of porHora) leadsPorHora[x.h] = x.n;
+    const agendamentosPorHora: number[] = Array(24).fill(0);
+    const leadsPorDia: Record<string, number> = {};
+    const agendamentosPorDia: Record<string, number> = {};
+    for (const x of porHora) {
+      const lead = x.tipo === 'conversa_nova';
+      const porH = lead ? leadsPorHora : agendamentosPorHora;
+      const porD = lead ? leadsPorDia : agendamentosPorDia;
+      porH[x.h] = (porH[x.h] ?? 0) + x.n;
+      porD[x.dia] = (porD[x.dia] ?? 0) + x.n;
+    }
     const pr = (t: string): Soma => {
       const x = primeira.find((y) => y.tipo === t);
       return x ? { somaMs: x.st, n: x.n } : zero();
@@ -227,6 +250,9 @@ export class PainelPostgres implements FontePainel {
     return {
       leads: tipo('conversa_nova')?.n ?? 0,
       leadsPorHora,
+      agendamentosPorHora,
+      leadsPorDia,
+      agendamentosPorDia,
       primeiraResposta: { equipe: pr('equipe_respondeu'), ia: pr('ia_respondeu') },
       resposta: {
         equipe: { somaMs: tipo('equipe_respondeu')?.st ?? 0, n: tipo('equipe_respondeu')?.nt ?? 0 },
@@ -281,6 +307,33 @@ export function janela(periodo: Periodo, agora: Date) {
   // "Hoje até agora" compara com "ontem até a mesma hora".
   const desloca = dias * DIA;
   return { inicio, fim, dias, anterior: { inicio: new Date(inicio.getTime() - desloca), fim: new Date(fim.getTime() - desloca) } };
+}
+
+/**
+ * Série da curva do painel: hoje/ontem por hora (24 pontos); 7 e 30 dias por dia (o dia de hoje é o último).
+ * Rótulos prontos para o eixo ("9h", "05/11").
+ */
+export function serieDoPeriodo(periodo: Periodo, j: ReturnType<typeof janela>, d: DadosPeriodo) {
+  if (periodo === 'hoje' || periodo === 'ontem') {
+    return {
+      unidade: 'hora' as const,
+      pontos: d.leadsPorHora.map((n, h) => ({ chave: String(h), rotulo: `${h}h`, leads: n, agendamentos: d.agendamentosPorHora[h] ?? 0 })),
+    };
+  }
+  const pontos = [];
+  for (let i = 0; i < j.dias; i++) {
+    const dia = dataISO(new Date(j.inicio.getTime() + i * DIA + 12 * 3600_000));
+    pontos.push({ chave: dia, rotulo: `${dia.slice(8, 10)}/${dia.slice(5, 7)}`, leads: d.leadsPorDia[dia] ?? 0, agendamentos: d.agendamentosPorDia[dia] ?? 0 });
+  }
+  return { unidade: 'dia' as const, pontos };
+}
+
+/** Início do mês (Bahia) de `agora`, dias do mês e quantos faltam (contando hoje). */
+export function mesDe(agora: Date) {
+  const p = partesBahia(agora);
+  const inicio = bahia(p.ano, p.mes, 1);
+  const diasNoMes = new Date(Date.UTC(p.ano, p.mes, 0)).getUTCDate();
+  return { mes: `${p.ano}-${String(p.mes).padStart(2, '0')}`, inicio, diasNoMes, diasRestantes: diasNoMes - p.dia + 1, diaDoMes: p.dia };
 }
 
 const media = (s: Soma) => ({ mediaSeg: s.n ? Math.round(s.somaMs / s.n / 1000) : null, n: s.n });
@@ -388,6 +441,7 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
       conversaoAnteriorPct: pct(totalAgAnterior, anterior.leads),
     },
     leadsPorHora: atual.leadsPorHora,
+    serie: serieDoPeriodo(o.periodo, j, atual),
     funil: ETAPAS.map((e) => ({ etapa: e, nome: NOME_ETAPA[e], conversas: agora.funil[e] })),
     ranking,
     equipe:

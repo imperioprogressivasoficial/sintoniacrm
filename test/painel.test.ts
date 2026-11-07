@@ -84,6 +84,7 @@ type Painel = {
   ranking: Array<{ nome: string; respostas: number; agendamentos: number; tempoMedioRespostaSeg: number | null; conversasDona: number; ligacoes: number; online: boolean }>;
   equipe: { ativas: number; online: number; onlineNomes: string[] } | null;
 };
+type Serie = { unidade: 'hora' | 'dia'; pontos: Array<{ chave: string; rotulo: string; leads: number; agendamentos: number }> };
 const horas = (pares: Record<number, number>) => Array.from({ length: 24 }, (_, h) => pares[h] ?? 0);
 
 describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
@@ -132,6 +133,17 @@ describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
     expect(sete.leads.total).toBe(6);
     expect(sete.leadsPorHora).toEqual(horas({ 9: 1, 11: 1, 14: 1, 15: 1, 16: 1, 19: 1 }));
     expect(((await g.como(g.gente.admin, 'GET', '/api/painel/completo?periodo=30d')).json() as Painel).leads.total).toBe(6);
+    // Curva: 7 dias por dia (hoje é o último ponto), hoje por hora.
+    const serie7 = (sete as unknown as { serie: Serie }).serie;
+    expect(serie7.unidade).toBe('dia');
+    expect(serie7.pontos).toHaveLength(7);
+    expect(serie7.pontos.at(-1)).toEqual({ chave: '2026-11-05', rotulo: '05/11', leads: 4, agendamentos: 2 });
+    expect(serie7.pontos.at(-2)).toEqual({ chave: '2026-11-04', rotulo: '04/11', leads: 2, agendamentos: 0 });
+    expect(serie7.pontos[0]!.chave).toBe('2026-10-30');
+    const hoje = (await g.como(g.gente.admin, 'GET', '/api/painel/completo?periodo=hoje')).json() as { serie: Serie };
+    expect(hoje.serie.unidade).toBe('hora');
+    expect(hoje.serie.pontos.map((x) => x.leads)).toEqual(horas({ 9: 1, 14: 1, 15: 1, 16: 1 }));
+    expect(hoje.serie.pontos.map((x) => x.agendamentos)).toEqual(horas({ 14: 1, 16: 1 }));
     expect((await g.como(g.gente.admin, 'GET', '/api/painel/completo?periodo=ano')).statusCode).toBe(400);
     // Sem período: hoje.
     expect(((await g.como(g.gente.admin, 'GET', '/api/painel/completo')).json() as Painel).leads.total).toBe(4);
@@ -157,6 +169,35 @@ describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
     expect(rita.primeiraResposta.equipe).toEqual({ mediaSeg: 600, n: 1 });
     expect(rita.ranking).toEqual([expect.objectContaining({ nome: 'Rita Recepção', ligacoes: 1, respostas: 1 })]);
     expect(rita.funil.reduce((s, f) => s + f.conversas, 0)).toBe(1);
+  });
+});
+
+describe.each(ambientes)('Meta do mês do Dashboard ($nome)', (amb) => {
+  it('começa sem meta, a gestão define, todos veem o progresso do seu alcance', async () => {
+    const g = await cenario(amb);
+    const vazia = await g.como(g.gente.admin, 'GET', '/api/painel/meta');
+    expect(vazia.statusCode).toBe(200);
+    expect(vazia.json()).toMatchObject({ mes: '2026-11', meta: null, agendamentos: 2, ia: 1, equipe: 1, progressoPct: null, faltam: null, diasNoMes: 30, diasRestantes: 26, podeEditar: true });
+
+    // Atendente não muda a meta.
+    expect((await g.como(g.gente.carla, 'PUT', '/api/painel/meta', { agendamentosMes: 50 })).statusCode).toBe(403);
+    // Valor inválido.
+    expect((await g.como(g.gente.admin, 'PUT', '/api/painel/meta', { agendamentosMes: -3 })).statusCode).toBe(400);
+    expect((await g.como(g.gente.admin, 'PUT', '/api/painel/meta', { agendamentosMes: 2.5 })).statusCode).toBe(400);
+
+    const ok = await g.como(g.gente.gerenteNorte, 'PUT', '/api/painel/meta', { agendamentosMes: 8 });
+    expect(ok.statusCode).toBe(200);
+    // A gerente do Norte vê o progresso só da unidade dela (os 2 agendamentos são do Norte).
+    expect(ok.json()).toMatchObject({ meta: 8, agendamentos: 2, progressoPct: 25, faltam: 6, atualizadaPor: 'Gil Norte' });
+
+    const carla = (await g.como(g.gente.carla, 'GET', '/api/painel/meta')).json();
+    expect(carla).toMatchObject({ meta: 8, podeEditar: false });
+    const rita = (await g.como(g.gente.rita, 'GET', '/api/painel/meta')).json();
+    expect(rita).toMatchObject({ meta: 8, agendamentos: 0, progressoPct: 0, faltam: 8 });
+
+    // Tirar a meta.
+    expect((await g.como(g.gente.direcao, 'PUT', '/api/painel/meta', { agendamentosMes: null })).json()).toMatchObject({ meta: null, progressoPct: null });
+    expect((await g.empresa.meta()).agendamentosMes).toBeNull();
   });
 });
 
