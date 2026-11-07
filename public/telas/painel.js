@@ -228,7 +228,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (d?._em) sub.append(el('span', { text: `${quem ? '· ' : ''}atualizado às ${ui.hm(d._em)}` }));
     const pilulas = el('div', { class: 'pn-periodos', role: 'group', 'aria-label': 'Período' },
       ...PERIODOS.map(([k, t]) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(k === s.periodo), onclick: () => trocarPeriodo(k), text: t })));
-    return [el('div', { class: 'pn-topo' }, el('h1', { class: 'titulo-grande', text: 'Painel' }), el('span', { class: 'pn-espaco' }), botao), sub, pilulas];
+    return [el('div', { class: 'pn-topo' }, el('h1', { class: 'titulo-grande', text: 'Dashboard' }), el('span', { class: 'pn-espaco' }), botao), sub, pilulas];
   }
 
   function delta(ui, atual, anterior, pct, sufixo = '%') {
