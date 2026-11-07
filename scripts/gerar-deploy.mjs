@@ -2,9 +2,9 @@
 /**
  * Gera o docker-compose da Sintonia para o VPS (Hostinger, Docker + Traefik).
  *
- *   node scripts/gerar-deploy.mjs > sintonia-compose.yaml
+ *   SENHA_BANCO=<hex> node scripts/gerar-deploy.mjs > sintonia-compose.yaml
  *
- * O código vai dentro da própria receita (dockerfile_inline), em pedaços, com a soma SHA-256
+ * O código vai dentro da própria receita (variável PACOTE do serviço), com a soma SHA-256
  * conferida antes de montar: o servidor monta a imagem sem acesso ao GitHub e, se o pacote chegar
  * diferente, a montagem para (nada é instalado). Senhas e chaves NÃO entram aqui: vão nas variáveis
  * do projeto (POSTGRES_SENHA, ADMIN_*, ANTHROPIC_API_KEY...).
@@ -24,7 +24,6 @@ import path from 'node:path';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOMINIO = process.env.DOMINIO ?? 'sintonia.n8nimperio.tech';
-const PEDACO = 6000;
 
 // ---- monta o pacote numa pasta temporária
 const pasta = mkdtempSync(path.join(tmpdir(), 'sintonia-deploy-'));
@@ -42,59 +41,51 @@ try {
   const deps = Object.fromEntries(Object.keys(pkg.dependencies).map((n) => [n, lock.packages[`node_modules/${n}`].version]));
   writeFileSync(path.join(pasta, 'package.json'), JSON.stringify({ name: 'sintonia', private: true, type: 'module', dependencies: deps }));
 
-  const tar = execFileSync('tar', ['--sort=name', '--mtime=2026-01-01', '--owner=0', '--group=0', '-cf', '-', '.'], { cwd: pasta, maxBuffer: 64 << 20 });
-  const xz = execFileSync('xz', ['-9e', '-c'], { input: tar, maxBuffer: 64 << 20 });
-  const soma = createHash('sha256').update(xz).digest('hex');
-  const b64 = xz.toString('base64');
-  const pedacos = b64.match(new RegExp(`.{1,${PEDACO}}`, 'g'));
+  const tar = execFileSync('tar', ['--sort=name', '--mtime=2026-01-01', '--owner=0', '--group=0', '-czf', '-', '.'], { cwd: pasta, maxBuffer: 64 << 20 });
+  const soma = createHash('sha256').update(tar).digest('hex');
+  const b64 = tar.toString('base64');
 
-  const dockerfile = [
-    'FROM node:22-alpine',
-    'RUN apk add --no-cache xz',
-    'WORKDIR /app',
-    ...pedacos.map((p) => `RUN printf '%s' '${p}' >> /tmp/pacote.b64`),
-    `RUN base64 -d /tmp/pacote.b64 > /tmp/pacote.txz && echo '${soma}  /tmp/pacote.txz' | sha256sum -c - && xz -dc /tmp/pacote.txz | tar -x && rm /tmp/pacote.*`,
-    'RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force',
-    'ENV NODE_ENV=production PORT=3333',
-    'EXPOSE 3333',
-    'USER node',
-    'HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3333/saude || exit 1',
-    'CMD ["node", "dist/app/sintonia.mjs"]',
-  ];
-
-  const recuo = (txt, n) => txt.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
-  // Dentro do compose, "$" vira "$$" (o compose interpreta variáveis); o Dockerfile não usa "$".
-  if (dockerfile.some((l) => l.includes('$'))) throw new Error('O Dockerfile não pode ter "$"');
+  // Sem "build": o gerenciador de Docker da Hostinger só sobe imagens prontas. O pacote vai numa
+  // variável do próprio serviço; ao iniciar, o container confere a soma, extrai e instala.
+  // A senha do banco é fixada aqui (SENHA_BANCO) porque o painel não repassa variáveis do projeto.
+  const senha = process.env.SENHA_BANCO;
+  if (!senha || !/^[a-f0-9]{32,}$/.test(senha)) throw new Error('Defina SENHA_BANCO (hex, 32+ caracteres)');
+  const iniciar = [
+    'mkdir -p /home/node/app', 'cd /home/node/app',
+    'printenv PACOTE | base64 -d > /tmp/pacote.tgz',
+    `echo '${soma}  /tmp/pacote.tgz' | sha256sum -c -`,
+    'tar -xzf /tmp/pacote.tgz', 'rm /tmp/pacote.tgz',
+    'npm install --omit=dev --no-audit --no-fund',
+    'exec node dist/app/sintonia.mjs',
+  ].join(' && ');
+  if (iniciar.includes('$') || iniciar.includes('"')) throw new Error('comando não pode ter $ ou aspas duplas');
 
   process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
   app:
-    build:
-      context: .
-      dockerfile_inline: |
-${recuo(dockerfile.join('\n'), 8)}
-    image: sintonia-app:local
+    image: node:22-alpine
     restart: unless-stopped
+    user: node
     depends_on:
       db:
         condition: service_healthy
+    command: ["sh", "-c", "${iniciar}"]
     environment:
-      DATABASE_URL: postgres://sintonia:\${POSTGRES_SENHA:?defina POSTGRES_SENHA}@db:5432/sintonia
+      NODE_ENV: production
+      PORT: "3333"
+      DATABASE_URL: postgres://sintonia:${senha}@db:5432/sintonia
       COOKIE_SEGURO: "1"
       TZ: America/Bahia
-      SINTONIA_EMPRESA_ID: \${SINTONIA_EMPRESA_ID:-imperio}
-      ADMIN_NOME: \${ADMIN_NOME:-}
-      ADMIN_EMAIL: \${ADMIN_EMAIL:-}
-      ADMIN_SENHA: \${ADMIN_SENHA:-}
-      ANTHROPIC_API_KEY: \${ANTHROPIC_API_KEY:-}
-      TRINKS_API_KEY: \${TRINKS_API_KEY:-}
-      EVOLUTION_URL: \${EVOLUTION_URL:-}
-      EVOLUTION_API_KEY: \${EVOLUTION_API_KEY:-}
-      EVOLUTION_WEBHOOK_TOKEN: \${EVOLUTION_WEBHOOK_TOKEN:-}
-      SINTONIA_NUMEROS: \${SINTONIA_NUMEROS:-[]}
-      RELATORIO_DESTINOS: \${RELATORIO_DESTINOS:-}
+      SINTONIA_EMPRESA_ID: imperio
+      PACOTE: ${b64}
     networks:
       - interna
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3333/saude || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sintonia.rule=Host(\`${DOMINIO}\`)"
@@ -108,7 +99,7 @@ ${recuo(dockerfile.join('\n'), 8)}
     environment:
       POSTGRES_USER: sintonia
       POSTGRES_DB: sintonia
-      POSTGRES_PASSWORD: \${POSTGRES_SENHA:?defina POSTGRES_SENHA}
+      POSTGRES_PASSWORD: ${senha}
     volumes:
       - banco:/var/lib/postgresql/data
     networks:
