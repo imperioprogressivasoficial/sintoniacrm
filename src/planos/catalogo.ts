@@ -34,8 +34,10 @@ export interface PrecoModelo {
 
 export interface ConfigPlanos {
   clt: CustoClt;
-  /** Fração do custo CLT cobrada pelo plano IA Expediente (0,5 = metade). */
+  /** Fração do custo CLT (referência do comparativo). */
   fatorPreco: number;
+  /** Preço mensal do Funcionário de IA (R$), definido pelo dono. */
+  precoFuncionarioIa: number;
   /** Adicional "Fora do horário" (noite, madrugada, domingo e feriado), em % do plano base. */
   adicionalForaPct: number;
   /** Cota extra que o adicional dá, em % da cota base (a IA trabalha mais horas, gasta mais). */
@@ -98,6 +100,7 @@ export const FERIADOS_NACIONAIS = ['01-01', '04-21', '05-01', '09-07', '10-12', 
 export const CONFIG_SUGERIDA: ConfigPlanos = {
   clt: { salario: 1800, encargosPct: 70, beneficios: 600, horasSemana: 44 },
   fatorPreco: 0.5,
+  precoFuncionarioIa: 1997,
   adicionalForaPct: 50,
   adicionalCotaPct: 50,
   cotaTokens: 40_000_000,
@@ -132,7 +135,7 @@ export function horasDaJanela(j: Janela): number {
 }
 
 export function precoExpediente(cfg: ConfigPlanos): number {
-  return centavos(custoMensalClt(cfg.clt) * cfg.fatorPreco);
+  return cfg.precoFuncionarioIa;
 }
 
 export function precoAdicionalFora(cfg: ConfigPlanos): number {
@@ -141,12 +144,11 @@ export function precoAdicionalFora(cfg: ConfigPlanos): number {
 
 export function catalogo(cfg: ConfigPlanos): Plano[] {
   return [
-    { id: 'gratis', nome: 'Grátis', descricao: 'CRM completo, sem IA: a equipe atende tudo.', ia: false, preco: 0, cotaTokens: 0, cotaConversas: 0, horasSemana: 0, sugestao: true },
+    { id: 'gratis', nome: 'CRM', descricao: 'CRM completo, sem IA: grátis no 1º ano, depois R$ 497/mês.', ia: false, preco: 497, mesesGratis: 12, cotaTokens: 0, cotaConversas: 0, horasSemana: 0, sugestao: true },
     {
       id: 'expediente',
-      nome: 'IA Expediente',
-      descricao: `A IA no horário de um atendente CLT (${horasDaJanela(cfg.janela)} h por semana). 1º ano grátis. Fora do horário, a IA usa créditos.`,
-      mesesGratis: 12,
+      nome: 'Funcionário de IA',
+      descricao: `A IA no horário de um atendente CLT (${horasDaJanela(cfg.janela)} h por semana). Fora do horário ou passou da cota: créditos adicionais.`,
       ia: true,
       preco: precoExpediente(cfg),
       cotaTokens: cfg.cotaTokens,

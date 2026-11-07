@@ -28,8 +28,8 @@ const uso = (tokens: number) => ({ entrada: tokens, saida: 0, cacheLeitura: 0, c
 describe('catálogo e fórmulas', () => {
   it('CLT, metade, adicional e janela de 44 h', () => {
     expect(custoMensalClt({ salario: 1800, encargosPct: 70, beneficios: 600, horasSemana: 44 })).toBe(3660);
-    expect(precoExpediente(CONFIG_SUGERIDA)).toBe(1830);
-    expect(precoAdicionalFora(CONFIG_SUGERIDA)).toBe(915);
+    expect(precoExpediente(CONFIG_SUGERIDA)).toBe(1997);
+    expect(precoAdicionalFora(CONFIG_SUGERIDA)).toBe(998.5);
     expect(horasDaJanela(CONFIG_SUGERIDA.janela)).toBe(44);
     expect(catalogo(CONFIG_SUGERIDA).map((p) => p.id)).toEqual(['gratis', 'expediente', 'fundador']);
   });

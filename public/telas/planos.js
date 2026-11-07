@@ -148,7 +148,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             <button class="pl-bt pl-sec" data-ac="recarga">Recarregar</button>
           </div>
           <div data-escolha></div>
-          <p class="pl-sug" style="margin-top:10px">Valores em definição. IA no expediente: 1º ano grátis. Fora do horário (noite, madrugada, domingo e feriado), a IA trabalha só com créditos: compre recargas quando quiser.</p>
+          <p class="pl-sug" style="margin-top:10px">CRM: grátis no 1º ano, depois R$ 497/mês (sem IA). Funcionário de IA: R$ 1.997/mês no horário de expediente. Fora do horário (noite, madrugada, domingo e feriado) ou acima da cota, a IA usa créditos adicionais. Empresarial ou personalizado: fale com a gente.</p>
         </section>
         <section class="pl-c">
           <h2>Uso do mês</h2>

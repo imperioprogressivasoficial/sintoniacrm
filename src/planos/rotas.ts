@@ -94,7 +94,7 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
     } else if (corpo.tipo === 'mudar_plano') {
       valor = corpo.plano === 'expediente' ? precoExpediente(cfg) : 0;
       dados = { plano: corpo.plano, de: a.plano, valor };
-      descricao = `Plano ${corpo.plano === 'expediente' ? 'IA Expediente' : 'Grátis'}`;
+      descricao = `Plano ${corpo.plano === 'expediente' ? 'Funcionário de IA' : 'Grátis'}`;
     } else {
       valor = corpo.ligar ? precoAdicionalFora(cfg) : 0;
       dados = { ligar: corpo.ligar, valor };

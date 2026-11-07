@@ -702,3 +702,7 @@ html { overflow-x: clip; }
 .v-creditos-preco span { font-size: 12.5px; color: rgba(255,255,255,.65); }
 .v-creditos-preco b { font-family: var(--fonte-titulo); font-size: 30px; color: var(--menta); }
 @media (max-width: 900px) { .v-planos.dois { grid-template-columns: 1fr; } .v-creditos { flex-direction: column; align-items: flex-start; } .v-creditos-preco { justify-items: start; } }
+.v-plano-depois { margin: -6px 0 0; font-size: 13.5px; color: rgba(255,255,255,.7); }
+.v-plano.destaque .v-plano-depois { color: var(--menta); }
+.v-planos .v-plano-selo { white-space: nowrap; }
+.v-planos:not(.dois) + .v-creditos { max-width: 1100px; }
