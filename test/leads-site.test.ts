@@ -55,6 +55,18 @@ describe('Horários da demonstração', () => {
 });
 
 describe('POST /api/leads-site e a demonstração', () => {
+  it('aceita o Instagram da empresa (limpa @ e link) e o setor é opcional', async () => {
+    const contas = new ContasMemoria();
+    const { app } = montar(contas);
+    const { setor: _, ...semSetor } = lead;
+    const r = await app.inject({ method: 'POST', url: '/api/leads-site', payload: { ...semSetor, instagram: 'https://instagram.com/minhaempresa/' } });
+    expect(r.statusCode).toBe(200);
+    expect(contas.leadsSite[0]).toMatchObject({ instagram: 'minhaempresa' });
+    expect(contas.leadsSite[0]!.setor).toBeUndefined();
+    const r2 = await app.inject({ method: 'POST', url: '/api/leads-site', payload: { ...lead, instagram: '@outra.loja' } });
+    expect(r2.statusCode).toBe(200);
+    expect(contas.leadsSite[1]).toMatchObject({ instagram: 'outra.loja' });
+  });
   it('salva o lead, agenda a demonstração e não deixa dois no mesmo horário', async () => {
     const contas = new ContasMemoria();
     const { app } = montar(contas);

@@ -238,7 +238,8 @@ const LeadSiteEntrada = z.object({
     .refine((v) => v.length >= 10 && v.length <= 13, 'WhatsApp inválido'),
   email: z.string().trim().toLowerCase().max(160).email(),
   empresa: z.string().trim().max(160).optional(),
-  setor: z.enum(SETORES),
+  setor: z.enum(SETORES).optional(),
+  instagram: z.string().trim().max(80).transform((v) => v.replace(/^@+/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/.*$/, '')).optional(),
   faturamento: z.enum(FATURAMENTOS),
   plano: z.enum(PLANOS_SITE),
   origem: z.string().trim().max(60).optional(),
@@ -267,7 +268,7 @@ function registrarLeadsSite(app: FastifyInstance, contas: Contas, agora: () => D
     const b = LeadSiteEntrada.safeParse(req.body);
     if (!b.success) {
       const campo = String(b.error.issues[0]?.path[0] ?? '');
-      const erro = campo === 'email' ? 'Confira o e-mail.' : campo === 'whatsapp' ? 'Confira o WhatsApp com DDD.' : campo === 'nome' ? 'Confira o seu nome.' : 'Escolha o setor, o faturamento e o plano.';
+      const erro = campo === 'email' ? 'Confira o e-mail.' : campo === 'whatsapp' ? 'Confira o WhatsApp com DDD.' : campo === 'nome' ? 'Confira o seu nome.' : 'Escolha o faturamento e o plano.';
       return reply.code(400).send({ erro });
     }
     // Robô: finge que deu certo e não grava nada.

@@ -31,7 +31,8 @@ export interface Interessado {
 /** Lead do pop-up da página de vendas (antes da demonstração). */
 export interface LeadSite extends Interessado {
   email: string;
-  setor: string;
+  setor?: string;
+  instagram?: string;
   faturamento: string;
   plano: string;
 }
@@ -271,9 +272,9 @@ export class ContasPostgres implements Contas {
   async registrarLeadSite(l: LeadSite) {
     const token = novoToken();
     const { rows } = await this.pool.query<{ id: string }>(
-      `insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem, email, setor, faturamento, plano, token_hash)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
-      [l.nome, l.empresa ?? null, l.whatsapp, l.mensagem ?? null, l.origem ?? null, l.email, l.setor, l.faturamento, l.plano, resumoToken(token)],
+      `insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem, email, setor, faturamento, plano, token_hash, instagram)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
+      [l.nome, l.empresa ?? null, l.whatsapp, l.mensagem ?? null, l.origem ?? null, l.email, l.setor ?? null, l.faturamento, l.plano, resumoToken(token), l.instagram || null],
     );
     return { id: String(rows[0]!.id), token };
   }

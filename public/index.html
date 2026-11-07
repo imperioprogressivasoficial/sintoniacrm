@@ -458,9 +458,12 @@
       </div>
       <form class="cartao" id="form-contato" novalidate aria-labelledby="titulo-form">
         <h3 id="titulo-form">Quero uma demonstração</h3>
-        <div class="campo"><label for="nome">Seu nome</label><input id="nome" name="nome" autocomplete="name" required maxlength="120"></div>
+        <div class="campo"><label for="nome">Nome</label><input id="nome" name="nome" autocomplete="name" required maxlength="120"></div>
         <div class="campo"><label for="whatsapp">WhatsApp</label><input id="whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(71) 9 0000-0000" required></div>
-        <div class="campo"><label for="plano-final">Plano de interesse</label><select id="plano-final" name="plano"><option>Essencial</option><option selected>Colaborador de IA</option><option>Empresarial</option></select></div>
+        <div class="campo"><label for="email-final">E-mail</label><input id="email-final" name="email" type="email" inputmode="email" autocomplete="email" required maxlength="160"></div>
+        <div class="campo"><label for="instagram-final">Instagram da empresa</label><input id="instagram-final" name="instagram" autocomplete="off" autocapitalize="off" placeholder="@suaempresa" maxlength="80"></div>
+        <div class="campo"><label for="faturamento-final">Faturamento mensal</label><select id="faturamento-final" name="faturamento" required><option value="">Escolha</option><option>até R$ 50 mil</option><option>R$ 50 mil a R$ 200 mil</option><option>R$ 200 mil a R$ 1 milhão</option><option>acima de R$ 1 milhão</option></select></div>
+        <input type="hidden" name="plano" value="Colaborador de IA">
         <button class="botao botao-azul" type="submit">Continuar e agendar</button>
         <p class="miudo">Usamos seus dados só para falar com você sobre a Sintonia.</p>
       </form>
@@ -488,7 +491,7 @@
         <div class="campo"><label for="lead-nome">Nome</label><input id="lead-nome" name="nome" autocomplete="name" required maxlength="120"></div>
         <div class="campo"><label for="lead-whatsapp">WhatsApp</label><input id="lead-whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(71) 9 0000-0000" required></div>
         <div class="campo largo"><label for="lead-email">E-mail</label><input id="lead-email" name="email" type="email" inputmode="email" autocomplete="email" required maxlength="160"></div>
-        <div class="campo"><label for="lead-setor">Setor da empresa</label><select id="lead-setor" name="setor" required><option value="">Escolha</option><option>Serviços</option><option>Saúde e estética</option><option>Varejo e e-commerce</option><option>Educação</option><option>Imobiliário</option><option>Indústria</option><option>Outro</option></select></div>
+        <div class="campo"><label for="lead-instagram">Instagram da empresa</label><input id="lead-instagram" name="instagram" autocomplete="off" autocapitalize="off" placeholder="@suaempresa" maxlength="80"></div>
         <div class="campo"><label for="lead-faturamento">Faturamento mensal</label><select id="lead-faturamento" name="faturamento" required><option value="">Escolha</option><option>até R$ 50 mil</option><option>R$ 50 mil a R$ 200 mil</option><option>R$ 200 mil a R$ 1 milhão</option><option>acima de R$ 1 milhão</option></select></div>
         <div class="campo largo"><label for="lead-plano">Plano de interesse</label><select id="lead-plano" name="plano" required><option>Essencial</option><option>Colaborador de IA</option><option>Empresarial</option></select></div>
       </div>
@@ -582,6 +585,8 @@
     e.preventDefault();
     const d = Object.fromEntries(new FormData(final));
     abrir(d.plano, d);
+    ['email', 'instagram', 'faturamento'].forEach((k) => { if (d[k] && form[k]) form[k].value = d[k]; });
+    if (d.nome && d.whatsapp && d.email && d.faturamento) setTimeout(() => form.requestSubmit(), 60);
   });
 
   const postar = async (url, corpo) => {
@@ -596,7 +601,7 @@
     if (d.nome.trim().length < 2) return aviso(1, 'erro', 'Preencha o seu nome.');
     if (d.whatsapp.replace(/\D/g, '').length < 10) return aviso(1, 'erro', 'Preencha um WhatsApp com DDD.');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim())) return aviso(1, 'erro', 'Confira o e-mail.');
-    if (!d.setor || !d.faturamento) return aviso(1, 'erro', 'Escolha o setor e o faturamento.');
+    if (!d.faturamento) return aviso(1, 'erro', 'Escolha o faturamento mensal.');
     const botao = form.querySelector('button[type=submit]');
     botao.disabled = true; aviso(1, '', 'Enviando…');
     try {
@@ -689,6 +694,21 @@
   addEventListener('scroll', () => { if (!pedido) { pedido = true; requestAnimationFrame(quadro); } }, { passive: true });
   quadro();
   // entrada suave
+  // Entrada com desfoque: marca também títulos e cartões, com cascata entre irmãos.
+  const ALVOS = '.v-titulo, .v-plano, .v-noticia, .v-perda, .v-27-lado, .v-27-resultado > div, .v-27-motivos article, .v-perda-saidas > div, .v-perda-solucao li, .v-6x1, .v-6x1-colunas > div, .v-comp-rolagem, .v-faq details, .v-modo, .v-tv-pontos li, .v-pontos li, .v-final .cartao, .v-prova';
+  document.querySelectorAll(ALVOS).forEach((e) => {
+    if (e.closest('.v-modal')) return;
+    e.classList.add('revela');
+    if (!e.style.getPropertyValue('--atraso')) {
+      const irmaos = [...e.parentElement.children].filter((x) => x.matches(ALVOS));
+      const i = irmaos.indexOf(e);
+      if (i > 0) e.style.setProperty('--atraso', Math.min(i * 0.08, 0.4) + 's');
+    }
+  });
+  // barra de progresso de leitura
+  const barra = document.createElement('div'); barra.className = 'v-progresso'; barra.setAttribute('aria-hidden', 'true'); document.body.append(barra);
+  const progresso = () => { const h = document.documentElement.scrollHeight - innerHeight; barra.style.transform = `scaleX(${h > 0 ? Math.min(1, scrollY / h) : 0})`; };
+  addEventListener('scroll', progresso, { passive: true }); progresso();
   const itens = document.querySelectorAll('.revela');
   if (!document.documentElement.classList.contains('anima') || !('IntersectionObserver' in window)) { itens.forEach((e) => e.classList.add('visto')); return; }
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('visto'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
