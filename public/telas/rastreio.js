@@ -58,10 +58,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   `;
   /** Ícones próprios (16px), legíveis no claro e no escuro. */
   const SVG_ICONE = {
-    instagram: '<svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="4.2" fill="#E1306C"/><path d="M1 10.5V11a4 4 0 0 0 4 4h6a4 4 0 0 0 3.9-3.2Z" fill="#F77737" opacity=".7"/><rect x="3.6" y="3.6" width="8.8" height="8.8" rx="2.8" fill="none" stroke="#fff" stroke-width="1.4"/><circle cx="8" cy="8" r="2.1" fill="none" stroke="#fff" stroke-width="1.4"/><circle cx="11" cy="5" r=".8" fill="#fff"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ig-o" cx="0.15" cy="1.05" r="1.25"><stop offset="0" stop-color="#FFD600"/><stop offset=".22" stop-color="#FF7A00"/><stop offset=".45" stop-color="#FF0069"/><stop offset=".7" stop-color="#D300C5"/><stop offset="1" stop-color="#7638FA"/></radialGradient></defs><rect x="1" y="1" width="22" height="22" rx="6.4" fill="url(#ig-o)"/><rect x="5.3" y="5.3" width="13.4" height="13.4" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16.4" cy="7.6" r="1.05" fill="#fff"/></svg>',
     facebook: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.3" fill="#1877F2"/><path d="M8.9 15.2V9.6h1.8l.3-2.1H8.9V6.2c0-.6.2-1 1-1h1.1V3.3c-.2 0-.8-.1-1.6-.1-1.6 0-2.7 1-2.7 2.8v1.5H5v2.1h1.7v5.6Z" fill="#fff"/></svg>',
     whatsapp: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.3" fill="#25D366"/><path d="M4.1 12.1l.6-2.1a3.9 3.9 0 1 1 1.5 1.5Z" fill="none" stroke="#fff" stroke-width="1.1" stroke-linejoin="round"/><path d="M6.6 6.1c.1-.3.3-.3.5-.3l.3.6c0 .1 0 .2-.1.3l-.2.2c.2.5.6.9 1.1 1.1l.2-.2c.1-.1.2-.1.3-.1l.6.3c0 .2 0 .4-.3.5-.4.2-.9.1-1.5-.3a3 3 0 0 1-1-1.1c-.2-.4-.1-.8.1-1Z" fill="#fff"/></svg>',
-    google_ads: '<svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="4" fill="#fff" stroke="#DADCE0"/><path d="M6.6 3.6 3.4 9.2" stroke="#FBBC04" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 3.6l3.6 6.2" stroke="#4285F4" stroke-width="2.6" stroke-linecap="round"/><circle cx="4" cy="11.4" r="1.6" fill="#34A853"/><circle cx="11.5" cy="11.6" r="0" fill="none"/></svg>',
+    google_ads: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 17.8 12 6.2" stroke="#FBBC04" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M12 6.2l6.8 11.6" stroke="#4285F4" stroke-width="6.6" stroke-linecap="round" fill="none"/><circle cx="5.2" cy="17.8" r="3.3" fill="#34A853"/></svg>',
     indicacao: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.3" fill="#F5B800"/><circle cx="6" cy="6.3" r="1.6" fill="#3a2a00"/><circle cx="10.3" cy="6.8" r="1.3" fill="#3a2a00"/><path d="M3.3 11.6c.3-1.6 1.4-2.5 2.7-2.5s2.4.9 2.7 2.5ZM8.9 11.6c.2-1.2 1-1.9 1.9-1.9s1.6.7 1.8 1.9Z" fill="#3a2a00"/></svg>',
     estabelecimento: '<svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="4" fill="#19C3A6"/><path d="M3.6 6.6 4.5 4h7l.9 2.6c0 .8-.6 1.3-1.3 1.3s-1.3-.5-1.3-1.3c0 .8-.6 1.3-1.3 1.3s-1.3-.5-1.3-1.3c0 .8-.6 1.3-1.3 1.3s-1.3-.5-1.3-1.3Z" fill="#fff"/><path d="M4.5 8.6V12h7V8.6M7 12V9.8h2V12" fill="none" stroke="#fff" stroke-width="1.1"/></svg>',
     desconhecido: '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.3" fill="#8B8D98" fill-opacity=".28" stroke="#8B8D98" stroke-opacity=".7"/><path d="M6.3 6.3a1.8 1.8 0 1 1 2.6 1.6c-.6.3-.9.6-.9 1.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11.3" r=".85" fill="currentColor"/></svg>',
@@ -103,7 +103,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     e.setAttribute('role', 'img');
     e.setAttribute('aria-label', `Origem: ${nome}`);
     e.title = rot && rot !== nome ? `Origem: ${nome} · ${rot}` : `Origem: ${nome}`;
-    e.innerHTML = SVG_ICONE[ic] || SVG_ICONE.desconhecido;
+    // id do degradê único por ícone: com o mesmo id repetido, um ícone escondido apagaria a cor dos outros
+    const unico = `g${Math.random().toString(36).slice(2, 8)}`;
+    e.innerHTML = (SVG_ICONE[ic] || SVG_ICONE.desconhecido).replaceAll('ig-o', unico);
     return e;
   }
 
