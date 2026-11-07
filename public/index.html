@@ -32,7 +32,7 @@
   <div class="v-barra">
     <a class="v-logo" href="/" aria-label="Sintonia CRM, início"><img src="/simbolo-escuro.png" alt="" width="32" height="32"><span class="v-marca-txt"><span>sintonia<b>.</b></span><small class="v-by">by Império Progressivas</small></span></a>
     <nav class="v-menu" aria-label="Principal">
-      <a class="v-link some" href="#como-funciona">Como funciona</a>
+      <a class="v-link some" href="#mudou-2026">O que mudou</a>
       <a class="v-link some" href="#equipe-2027">Por que IA</a>
       <a class="v-link some" href="#crm">CRM</a>
       <a class="v-link some" href="#planos">Planos</a>
@@ -88,6 +88,49 @@
         <div class="v-prova revela"><b>0 perdidas</b><span>em teste com 1.000 mensagens em 10 segundos e um servidor derrubado no meio</span></div>
         <div class="v-prova revela" style="--atraso:.08s"><b>15 minutos</b><span>é o máximo que um cliente espera: sem resposta da equipe, a IA assume</span></div>
         <div class="v-prova revela" style="--atraso:.16s"><b>24 horas por dia</b><span>madrugada, domingo e feriado: a IA atende, vende e agenda sozinha</span></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="v-secao v-noite" id="mudou-2026" aria-labelledby="titulo-2026">
+    <div class="v-miolo">
+      <div class="v-titulo centro revela">
+        <p class="v-olho">O que mudou em 2026</p>
+        <h2 id="titulo-2026">Atender cliente ficou mais caro. <em>E quem demora, paga duas vezes.</em></h2>
+      </div>
+      <div class="v-noticias">
+        <article class="v-noticia revela">
+          <span class="v-noticia-selo">Meta · WhatsApp</span>
+          <h3>Cada mensagem agora tem preço</h3>
+          <p>A Meta cobra por mensagem enviada no WhatsApp oficial: cerca de <b>R$ 0,32 por mensagem de marketing</b> no Brasil. E a cobrança vai chegando também ao atendimento. Cliente que esfria e precisa ser chamado de volta custa dinheiro.</p>
+        </article>
+        <article class="v-noticia revela" style="--atraso:.06s">
+          <span class="v-noticia-selo">Lei · fim da escala 6x1</span>
+          <h3>Menos horas, mesmo salário</h3>
+          <p>A Emenda Constitucional 141/2026 leva a jornada de 44 h para <b>40 h por semana</b>, com duas folgas. Cada hora de atendimento humano fica cerca de 10% mais cara, e cobrir noite e fim de semana exige mais gente.</p>
+        </article>
+      </div>
+
+      <div class="v-perda revela">
+        <h3>Quanto a sua empresa pode estar perdendo <em>por mês</em></h3>
+        <form class="v-perda-entradas" id="perda" novalidate>
+          <div class="v-calc-campo v-calc-faixa"><label for="perda-leads">Contatos novos por mês</label><div class="v-calc-faixa-linha"><input id="perda-leads" name="leads" type="range" min="50" max="3000" step="50" value="600"><output id="perda-leads-v" for="perda-leads">600</output></div></div>
+          <div class="v-calc-campo v-calc-faixa"><label for="perda-demora">Respondidos depois de 5 min</label><div class="v-calc-faixa-linha"><input id="perda-demora" name="demora" type="range" min="5" max="90" step="5" value="40"><output id="perda-demora-v" for="perda-demora">40%</output></div></div>
+          <div class="v-calc-campo"><label for="perda-ticket">Ticket médio (R$)</label><input id="perda-ticket" name="ticket" type="number" inputmode="numeric" min="0" step="10" value="300"></div>
+        </form>
+        <div class="v-perda-saidas" aria-live="polite">
+          <div class="alerta"><span>Vendas que esfriam</span><b id="perda-vendas">R$ 7.200</b><small id="perda-vendas-det">24 clientes que comprariam se fossem respondidos na hora</small></div>
+          <div class="alerta"><span>Mensagens pagas para reabrir conversas</span><b id="perda-meta">R$ 154</b><small id="perda-meta-det">480 mensagens de reengajamento a R$ 0,32</small></div>
+          <div class="total"><span>Perda estimada no ano</span><b id="perda-ano">R$ 88.250</b><small>o Colaborador de IA custa R$ 23.964 por ano</small></div>
+        </div>
+        <ul class="v-perda-solucao">
+          <li><b>Resposta em segundos, 24 h:</b> o cliente é atendido enquanto ainda está com vontade de comprar.</li>
+          <li><b>Follow-up antes de esfriar:</b> a IA retoma a conversa no momento certo, sem gastar com mensagem paga à toa.</li>
+          <li><b>Transmissão inteligente:</b> mensagem paga só para quem tem chance de comprar, segmentada por etiqueta e etapa.</li>
+        </ul>
+        <p class="v-perda-nota">Simulação com premissas ajustáveis: 1 em cada 10 contatos que esperam demais deixaria de comprar; 2 mensagens pagas para reabrir cada conversa que esfriou, a R$ 0,32 cada. Fontes da Meta: tabelas de preço do WhatsApp Business Platform divulgadas em 2025–2026.</p>
+        <a class="botao botao-menta" href="#demonstracao" data-lead="Colaborador de IA">Quero parar de perder vendas</a>
       </div>
     </div>
   </section>
@@ -214,7 +257,7 @@
         <article class="revela" style="--atraso:.05s"><b>Pico sem contratar</b><p>Campanha, promoção ou data especial: a IA atende 10 ou 500 conversas ao mesmo tempo, sem hora extra.</p></article>
         <article class="revela" style="--atraso:.1s"><b>Follow-up que não esquece</b><p>Quem sumiu é chamado de volta no momento certo. Nenhum lead fica parado no CRM por esquecimento.</p></article>
       </div>
-      <p class="v-calc-nota" style="text-align:center;max-width:820px;margin:18px auto 0">Simulação com as premissas da página: custo por pessoa = salário × 1,7 de encargos + R$ 600 de benefícios; cada pessoa conversa com cerca de 3 clientes ao mesmo tempo; o Colaborador de IA custa R$ 1.997/mês e cobre cerca de 1.500 conversas, com créditos a partir de R$ 99 para o excedente. Os números da sua empresa entram na demonstração.</p>
+      <p class="v-calc-nota" style="text-align:center;max-width:820px;margin:18px auto 0">Simulação com as premissas da página: custo por pessoa = salário × 1,7 de encargos + R$ 600 de benefícios; cada pessoa conversa com cerca de 3 clientes ao mesmo tempo; o Colaborador de IA custa R$ 1.997/mês e cobre cerca de 1.500 conversas por mês. Os números da sua empresa entram na demonstração.</p>
     </div>
   </section>
 
@@ -273,11 +316,10 @@
 
   <section class="v-secao v-noite v-logos-secao" aria-labelledby="titulo-integracoes">
     <div class="v-miolo">
-      <p class="v-olho revela">Integrações</p>
-      <h2 id="titulo-integracoes" class="revela">Conectada aos canais que vendem para você</h2>
-      <div class="v-logos revela"><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#25D366"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg><span><b>WhatsApp Business API</b><small>oficial da Meta</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#0081FB"><path fill="currentColor" d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg><span><b>Meta</b><small>API de Conversões</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ig-v" cx="0.15" cy="1.05" r="1.25"><stop offset="0" stop-color="#FFD600"/><stop offset=".22" stop-color="#FF7A00"/><stop offset=".45" stop-color="#FF0069"/><stop offset=".7" stop-color="#D300C5"/><stop offset="1" stop-color="#7638FA"/></radialGradient></defs><rect x="1" y="1" width="22" height="22" rx="6.4" fill="url(#ig-v)"/><rect x="5.3" y="5.3" width="13.4" height="13.4" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16.4" cy="7.6" r="1.05" fill="#fff"/></svg><span><b>Instagram</b><small>origem dos anúncios</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#0866FF"><path fill="currentColor" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg><span><b>Facebook</b><small>origem dos anúncios</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 17.8 12 6.2" stroke="#FBBC04" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M12 6.2l6.8 11.6" stroke="#4285F4" stroke-width="6.6" stroke-linecap="round" fill="none"/><circle cx="5.2" cy="17.8" r="3.3" fill="#34A853"/></svg><span><b>Google Ads</b><small>origem por UTM</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gm-vv" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#EE6AA7"/><stop offset=".35" stop-color="#EA4335"/><stop offset=".65" stop-color="#EA4335"/><stop offset=".85" stop-color="#F28B2E"/><stop offset="1" stop-color="#F9D648"/></linearGradient><linearGradient id="gm-vd" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6CC96A"/><stop offset=".5" stop-color="#3FA98C"/><stop offset="1" stop-color="#4285F4"/></linearGradient></defs><rect x="1.6" y="6.4" width="4.8" height="14" rx="1.8" fill="#EA4335"/><rect x="17.6" y="6.4" width="4.8" height="14" rx="1.8" fill="url(#gm-vd)"/><path d="M4 7.6 12 14l8-6.4" stroke="url(#gm-vv)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span><b>Gmail e e-mail</b><small>Gmail, Outlook, Hostinger</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#EA4B71"><path fill="currentColor" d="M21.4737 5.6842c-1.1772 0-2.1663.8051-2.4468 1.8947h-2.8955c-1.235 0-2.289.893-2.492 2.111l-.1038.623a1.263 1.263 0 0 1-1.246 1.0555H11.289c-.2805-1.0896-1.2696-1.8947-2.4468-1.8947s-2.1663.8051-2.4467 1.8947H4.973c-.2805-1.0896-1.2696-1.8947-2.4468-1.8947C1.1311 9.4737 0 10.6047 0 12s1.131 2.5263 2.5263 2.5263c1.1772 0 2.1663-.8051 2.4468-1.8947h1.4223c.2804 1.0896 1.2696 1.8947 2.4467 1.8947 1.1772 0 2.1663-.8051 2.4468-1.8947h1.0008a1.263 1.263 0 0 1 1.2459 1.0555l.1038.623c.203 1.218 1.257 2.111 2.492 2.111h.3692c.2804 1.0895 1.2696 1.8947 2.4468 1.8947 1.3952 0 2.5263-1.131 2.5263-2.5263s-1.131-2.5263-2.5263-2.5263c-1.1772 0-2.1664.805-2.4468 1.8947h-.3692a1.263 1.263 0 0 1-1.246-1.0555l-.1037-.623A2.52 2.52 0 0 0 13.9607 12a2.52 2.52 0 0 0 .821-1.4794l.1038-.623a1.263 1.263 0 0 1 1.2459-1.0555h2.8955c.2805 1.0896 1.2696 1.8947 2.4468 1.8947 1.3952 0 2.5263-1.131 2.5263-2.5263s-1.131-2.5263-2.5263-2.5263m0 1.2632a1.263 1.263 0 0 1 1.2631 1.2631 1.263 1.263 0 0 1-1.2631 1.2632 1.263 1.263 0 0 1-1.2632-1.2632 1.263 1.263 0 0 1 1.2632-1.2631M2.5263 10.7368A1.263 1.263 0 0 1 3.7895 12a1.263 1.263 0 0 1-1.2632 1.2632A1.263 1.263 0 0 1 1.2632 12a1.263 1.263 0 0 1 1.2631-1.2632m6.3158 0A1.263 1.263 0 0 1 10.1053 12a1.263 1.263 0 0 1-1.2632 1.2632A1.263 1.263 0 0 1 7.579 12a1.263 1.263 0 0 1 1.2632-1.2632m10.1053 3.7895a1.263 1.263 0 0 1 1.2631 1.2632 1.263 1.263 0 0 1-1.2631 1.2631 1.263 1.263 0 0 1-1.2632-1.2631 1.263 1.263 0 0 1 1.2632-1.2632"/></svg><span><b>n8n</b><small>automações externas</small></span></div><div class="v-int"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><mask id="trinks-m"><rect width="24" height="24" fill="#fff"/><path d="M12 7.6Q12.7 11.3 16.4 12Q12.7 12.7 12 16.4Q11.3 12.7 7.6 12Q11.3 11.3 12 7.6Z" fill="#000"/></mask></defs><g fill="#D9622B" mask="url(#trinks-m)"><circle cx="7.6" cy="7.6" r="5.4"/><circle cx="16.4" cy="7.6" r="5.4"/><circle cx="7.6" cy="16.4" r="5.4"/><circle cx="16.4" cy="16.4" r="5.4"/><rect x="7.6" y="7.6" width="8.8" height="8.8"/></g></svg><span><b>Trinks</b><small>agenda integrada</small></span></div></div>
-      <p class="v-logos-nota">WhatsApp pela API oficial da Meta ou pela conexão por QR Code. Marcas citadas pertencem aos seus donos.</p>
+      <p class="v-olho revela">Canais conectados</p>
+      <h2 id="titulo-integracoes" class="revela">Todos os seus canais <em>numa caixa só</em></h2>
     </div>
+    <div class="v-carrossel" aria-label="Canais conectados"><ul class="v-car-trilho"><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#25D366"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg><span>WhatsApp</span></li><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ig-c1" cx="0.15" cy="1.05" r="1.25"><stop offset="0" stop-color="#FFD600"/><stop offset=".22" stop-color="#FF7A00"/><stop offset=".45" stop-color="#FF0069"/><stop offset=".7" stop-color="#D300C5"/><stop offset="1" stop-color="#7638FA"/></radialGradient></defs><rect x="1" y="1" width="22" height="22" rx="6.4" fill="url(#ig-c1)"/><rect x="5.3" y="5.3" width="13.4" height="13.4" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16.4" cy="7.6" r="1.05" fill="#fff"/></svg><span>Instagram</span></li><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#0866FF"><path fill="currentColor" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg><span>Facebook</span></li><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#25F4EE" d="M9.4 9.6v-.9a6.6 6.6 0 0 0-.9-.1 6.6 6.6 0 1 0 3.8 12 6.6 6.6 0 0 1-2.9-11Z"/><path fill="#25F4EE" d="M9.6 19.7a3 3 0 0 0 3-2.9V2.5h2.6a5 5 0 0 1-.1-.9h-3.6v14.2a3 3 0 0 1-3 2.9 3 3 0 0 1-1.4-.4 3 3 0 0 0 2.5 1.4Zm10.5-12.3v-.9a5 5 0 0 1-2.7-.8 5 5 0 0 0 2.7 1.7Z"/><path fill="#FE2C55" d="M17.4 5.7a5 5 0 0 1-1.2-3.2h-.9a5 5 0 0 0 2.1 3.2ZM9.4 12.6a3 3 0 0 0-1.4 5.7 3 3 0 0 1 2.4-4.8 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-.9-.1h-.2v2.8a3 3 0 0 0-.8 0Z"/><path fill="#FE2C55" d="M20.1 7.4v2.8a8.5 8.5 0 0 1-5-1.6v7.2a6.6 6.6 0 0 1-10.3 5.4 6.6 6.6 0 0 0 11.2-4.7V9.2a8.5 8.5 0 0 0 5 1.6V7.6a5 5 0 0 1-.9-.2Z"/><path fill="#111" d="M15.1 16.5V9.2a8.5 8.5 0 0 0 5 1.6V7.4a5 5 0 0 1-2.7-1.7 5 5 0 0 1-2.1-3.2h-2.6v14.2a3 3 0 0 1-5.4 1.8 3 3 0 0 1 1.4-5.7 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-4.6 11.2 6.6 6.6 0 0 0 10.1-4.6Z"/></svg><span>TikTok</span></li><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 17.8 12 6.2" stroke="#FBBC04" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M12 6.2l6.8 11.6" stroke="#4285F4" stroke-width="6.6" stroke-linecap="round" fill="none"/><circle cx="5.2" cy="17.8" r="3.3" fill="#34A853"/></svg><span>Google Ads</span></li><li class="v-car-item"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gm-c5v" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#EE6AA7"/><stop offset=".35" stop-color="#EA4335"/><stop offset=".65" stop-color="#EA4335"/><stop offset=".85" stop-color="#F28B2E"/><stop offset="1" stop-color="#F9D648"/></linearGradient><linearGradient id="gm-c5d" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6CC96A"/><stop offset=".5" stop-color="#3FA98C"/><stop offset="1" stop-color="#4285F4"/></linearGradient></defs><rect x="1.6" y="6.4" width="4.8" height="14" rx="1.8" fill="#EA4335"/><rect x="17.6" y="6.4" width="4.8" height="14" rx="1.8" fill="url(#gm-c5d)"/><path d="M4 7.6 12 14l8-6.4" stroke="url(#gm-c5v)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span>Gmail</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#25D366"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg><span>WhatsApp</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ig-c11" cx="0.15" cy="1.05" r="1.25"><stop offset="0" stop-color="#FFD600"/><stop offset=".22" stop-color="#FF7A00"/><stop offset=".45" stop-color="#FF0069"/><stop offset=".7" stop-color="#D300C5"/><stop offset="1" stop-color="#7638FA"/></radialGradient></defs><rect x="1" y="1" width="22" height="22" rx="6.4" fill="url(#ig-c11)"/><rect x="5.3" y="5.3" width="13.4" height="13.4" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16.4" cy="7.6" r="1.05" fill="#fff"/></svg><span>Instagram</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#0866FF"><path fill="currentColor" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg><span>Facebook</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#25F4EE" d="M9.4 9.6v-.9a6.6 6.6 0 0 0-.9-.1 6.6 6.6 0 1 0 3.8 12 6.6 6.6 0 0 1-2.9-11Z"/><path fill="#25F4EE" d="M9.6 19.7a3 3 0 0 0 3-2.9V2.5h2.6a5 5 0 0 1-.1-.9h-3.6v14.2a3 3 0 0 1-3 2.9 3 3 0 0 1-1.4-.4 3 3 0 0 0 2.5 1.4Zm10.5-12.3v-.9a5 5 0 0 1-2.7-.8 5 5 0 0 0 2.7 1.7Z"/><path fill="#FE2C55" d="M17.4 5.7a5 5 0 0 1-1.2-3.2h-.9a5 5 0 0 0 2.1 3.2ZM9.4 12.6a3 3 0 0 0-1.4 5.7 3 3 0 0 1 2.4-4.8 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-.9-.1h-.2v2.8a3 3 0 0 0-.8 0Z"/><path fill="#FE2C55" d="M20.1 7.4v2.8a8.5 8.5 0 0 1-5-1.6v7.2a6.6 6.6 0 0 1-10.3 5.4 6.6 6.6 0 0 0 11.2-4.7V9.2a8.5 8.5 0 0 0 5 1.6V7.6a5 5 0 0 1-.9-.2Z"/><path fill="#111" d="M15.1 16.5V9.2a8.5 8.5 0 0 0 5 1.6V7.4a5 5 0 0 1-2.7-1.7 5 5 0 0 1-2.1-3.2h-2.6v14.2a3 3 0 0 1-5.4 1.8 3 3 0 0 1 1.4-5.7 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-4.6 11.2 6.6 6.6 0 0 0 10.1-4.6Z"/></svg><span>TikTok</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 17.8 12 6.2" stroke="#FBBC04" stroke-width="6.6" stroke-linecap="round" fill="none"/><path d="M12 6.2l6.8 11.6" stroke="#4285F4" stroke-width="6.6" stroke-linecap="round" fill="none"/><circle cx="5.2" cy="17.8" r="3.3" fill="#34A853"/></svg><span>Google Ads</span></li><li class="v-car-item" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gm-c15v" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#EE6AA7"/><stop offset=".35" stop-color="#EA4335"/><stop offset=".65" stop-color="#EA4335"/><stop offset=".85" stop-color="#F28B2E"/><stop offset="1" stop-color="#F9D648"/></linearGradient><linearGradient id="gm-c15d" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6CC96A"/><stop offset=".5" stop-color="#3FA98C"/><stop offset="1" stop-color="#4285F4"/></linearGradient></defs><rect x="1.6" y="6.4" width="4.8" height="14" rx="1.8" fill="#EA4335"/><rect x="17.6" y="6.4" width="4.8" height="14" rx="1.8" fill="url(#gm-c15d)"/><path d="M4 7.6 12 14l8-6.4" stroke="url(#gm-c15v)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg><span>Gmail</span></li></ul></div>
   </section>
   
   
@@ -330,7 +372,7 @@
             <li>A IA organiza o CRM sozinha</li>
             <li>Painel IA × equipe</li>
           </ul>
-          <p class="v-plano-limite">Limites de uso a cada 5 horas, por semana e por mês. Passou do limite? Créditos extras a partir de R$ 99.</p>
+          <p class="v-plano-limite">Limites de uso a cada 5 horas, por semana e por mês.</p>
           <a class="botao botao-menta" href="#demonstracao" data-lead="Colaborador de IA">Contratar o Colaborador de IA</a>
         </article>
         <article class="v-plano revela" style="--atraso:.12s" data-plano="Empresarial">
@@ -348,13 +390,6 @@
           <a class="botao v-vidro-btn" href="#demonstracao" data-lead="Empresarial">Falar com a gente</a>
         </article>
       </div>
-      <div class="v-creditos revela">
-        <div class="v-creditos-txt">
-          <p class="v-plano-nome">Créditos de IA</p>
-          <p>Usados só quando a IA passa do limite de uso do plano (a cada 5 horas, na semana ou no mês). Você recarrega quando precisar, sem trocar de plano.</p>
-        </div>
-        <div class="v-creditos-preco"><span>recargas a partir de</span><b>R$ 99</b></div>
-      </div>
       <p class="v-plano-demo revela"><b>Como contratar:</b> a contratação é feita depois de uma demonstração. Escolha o plano, conte um pouco da sua empresa e marque o melhor horário.</p>
     </div>
   </section>
@@ -371,35 +406,23 @@
     <div class="v-miolo">
       <div class="v-titulo centro revela">
         <p class="v-olho">Comparativo</p>
-        <h2 id="titulo-comparativo">Sem pagar por usuário. <em>Sem limite de pipeline.</em></h2>
-        <p>Compare a Sintonia com outros CRMs conhecidos, pelo que cada um publica no próprio site.</p>
+        <h2 id="titulo-comparativo">Mais completo. <em>E sem pagar por usuário.</em></h2>
+        <p>A Sintonia com IA ao lado dos CRMs mais conhecidos do mercado.</p>
       </div>
       <div class="v-comp-rolagem revela" tabindex="0" role="region" aria-label="Tabela comparativa, role para os lados no celular">
         <table class="v-comp">
           <thead>
             <tr>
-              <th scope="col"><span class="v-comp-canto">Item</span></th>
-              <th scope="col" class="nosso">Sintonia<small>Essencial</small></th>
-              <th scope="col" class="nosso forte">Sintonia<small>Colaborador de IA</small></th>
+              <th scope="col"><span class="v-comp-canto">Recurso</span></th>
+              <th scope="col" class="nosso forte">Sintonia<small>com Colaborador de IA</small></th>
               <th scope="col">Kommo</th>
-              <th scope="col">HubSpot<small>Sales Hub</small></th>
-              <th scope="col">RD Station<small>CRM</small></th>
+              <th scope="col">HubSpot</th>
+              <th scope="col">RD Station CRM</th>
             </tr>
           </thead>
-          <tbody>
-            <tr><th scope="row">Preço de entrada</th><td class="nosso"><b>Grátis no 1º ano</b>depois R$ 497/mês</td><td class="nosso forte"><b>R$ 1.997/mês</b>valor fechado</td><td>US$ 25 por usuário/mês<small>plano Base, cobrança mínima de 6 meses</small></td><td>Grátis até 2 usuários<small>Starter: US$ 7 a US$ 20 por licença/mês, conforme o período de cobrança</small></td><td>Grátis (Free)<small>Basic: R$ 73 por usuário/mês</small></td></tr>
-            <tr><th scope="row">Cobra por usuário</th><td class="nosso sim">Não</td><td class="nosso forte sim">Não</td><td class="nao">Sim</td><td class="nao">Sim, por licença</td><td class="nao">Sim</td></tr>
-            <tr><th scope="row">Pipelines</th><td class="nosso sim">Ilimitados</td><td class="nosso forte sim">Ilimitados</td><td>Consulte</td><td>Até 15 no Starter<small>100 no Professional</small></td><td>1 no Free<small>ilimitados nos pagos</small></td></tr>
-            <tr><th scope="row">Contatos</th><td class="nosso sim">Ilimitados</td><td class="nosso forte sim">Ilimitados</td><td>2.500 leads por usuário<small>no plano Base</small></td><td>Consulte</td><td>Consulte</td></tr>
-            <tr><th scope="row">WhatsApp API oficial nativo</th><td class="nosso sim">Sim</td><td class="nosso forte sim">Sim</td><td class="sim">Sim</td><td>Consulte</td><td>Extensão para WhatsApp Web<small>API oficial: consulte</small></td></tr>
-            <tr><th scope="row">IA que atende sozinha</th><td class="nosso nao">Não (sem IA)</td><td class="nosso forte sim">Sim, 24 horas</td><td>Agentes de IA<small>nos planos Advanced e Pro</small></td><td>Agente de clientes<small>usa créditos HubSpot; consulte</small></td><td>Consulte<small>criador de agentes é produto à parte</small></td></tr>
-            <tr><th scope="row">Copiloto de IA</th><td class="nosso nao">Não</td><td class="nosso forte sim">Sim</td><td class="sim">Sim<small>sugestões de resposta</small></td><td>Consulte</td><td class="sim">Sim<small>do Basic em diante</small></td></tr>
-            <tr><th scope="row">Agenda integrada</th><td class="nosso sim">Sim</td><td class="nosso forte sim">Sim</td><td>Calendário<small>página de agendamento no Pro</small></td><td>Links de reunião</td><td>Tarefas e lembretes<small>agenda: consulte</small></td></tr>
-            <tr><th scope="row">Em português / suporte no Brasil</th><td class="nosso sim">Sim, equipe no Brasil</td><td class="nosso forte sim">Sim, equipe no Brasil</td><td>Em português<small>suporte: consulte</small></td><td>Em português<small>suporte: consulte</small></td><td class="sim">Sim, empresa brasileira</td></tr>
-          </tbody>
+          <tbody><tr><th scope="row">Preço</th><td class="nosso forte"><b>R$ 1.997/mês</b>valor fechado, equipe inteira</td><td>US$ 25 a 45<small>por usuário/mês</small></td><td>US$ 7 a 150<small>por licença/mês</small></td><td>R$ 73 a 131<small>por usuário/mês</small></td></tr><tr><th scope="row">Cobra por usuário</th><td class="nosso forte"><span class="ok">Não · ilimitados</span></td><td>Sim</td><td>Sim</td><td>Sim</td></tr><tr><th scope="row">Pipelines e contatos</th><td class="nosso forte"><span class="ok">Ilimitados</span></td><td>Limite de leads por usuário</td><td>Limite por plano</td><td>Ilimitados só nos pagos</td></tr><tr><th scope="row">WhatsApp API oficial</th><td class="nosso forte"><span class="ok">Nativo</span></td><td>Sim</td><td>Via integração</td><td>Via extensão</td></tr><tr><th scope="row">IA que atende, vende e agenda sozinha 24 h</th><td class="nosso forte"><span class="ok">Sim, incluída</span></td><td>Em planos superiores</td><td>Pago à parte (créditos)</td><td>Não</td></tr><tr><th scope="row">Copiloto de IA para a equipe</th><td class="nosso forte"><span class="ok">Sim</span></td><td>Sim</td><td>Em planos superiores</td><td>Sim</td></tr><tr><th scope="row">Automações por etapa do funil</th><td class="nosso forte"><span class="ok">Sim</span></td><td>Sim</td><td>Em planos superiores</td><td>Sim</td></tr><tr><th scope="row">Transmissão de mensagens em massa</th><td class="nosso forte"><span class="ok">Sim, com modelos da Meta</span></td><td>Sim</td><td>Em planos superiores</td><td>Não</td></tr><tr><th scope="row">Ligação pelo WhatsApp com registro</th><td class="nosso forte"><span class="ok">Sim</span></td><td>Via integração</td><td>Telefonia própria</td><td>Via integração</td></tr><tr><th scope="row">Agenda integrada</th><td class="nosso forte"><span class="ok">Sim</span></td><td>No plano Pro</td><td>Links de reunião</td><td>Tarefas</td></tr><tr><th scope="row">Painel da sala comercial na TV</th><td class="nosso forte"><span class="ok">Sim</span></td><td>Não</td><td>Não</td><td>Não</td></tr><tr><th scope="row">Suporte no Brasil, em português</th><td class="nosso forte"><span class="ok">Sim</span></td><td>Em português</td><td>Em português</td><td>Sim</td></tr></tbody>
         </table>
       </div>
-      <p class="v-comp-nota">Preços públicos consultados em 07/11/2026; podem mudar. Valores em dólar são cobrados em dólar. “Consulte” quer dizer que o site oficial não deixa claro. Kommo, HubSpot e RD Station são marcas de seus donos.</p>
     </div>
   </section>
 
@@ -685,7 +708,7 @@
       $('eq27-equipe-v').textContent = r.hoje.pessoas; $('eq27-pessoas-v').textContent = r.depois.pessoas;
       $('eq27-gente-hoje').textContent = gente(r.hoje.pessoas, false); $('eq27-gente-depois').textContent = gente(r.depois.pessoas, true);
       $('eq27-hoje-mes').textContent = brl(r.hoje.mes); $('eq27-depois-mes').textContent = brl(r.depois.mes);
-      $('eq27-depois-det').textContent = 'por mês · ' + r.depois.pessoas + (r.depois.pessoas > 1 ? ' pessoas' : ' pessoa') + ' + IA' + (r.depois.recargas ? ' + ' + r.depois.recargas + ' recarga(s)' : '');
+      $('eq27-depois-det').textContent = 'por mês · ' + r.depois.pessoas + (r.depois.pessoas > 1 ? ' pessoas' : ' pessoa') + ' + IA' + (r.depois.recargas ? ' + uso adicional' : '');
       $('eq27-hoje-sim').textContent = '~' + r.hoje.simultaneas;
       $('eq27-hoje-horas').textContent = (r.hoje.pessoas * r.hoje.horasSemana) + ' h de gente/semana';
       $('eq27-hoje-conv').textContent = brl(r.hoje.porConversa); $('eq27-depois-conv').textContent = brl(r.depois.porConversa);
@@ -725,6 +748,24 @@
     const proximo = () => { if (!visivel) return; if (i >= passos.length) { i = 0; mostrar(0); timer = setTimeout(proximo, 1200); return; } const [n, t] = passos[i++]; mostrar(n); timer = setTimeout(proximo, t); };
     new IntersectionObserver(([e]) => { visivel = e.isIntersecting; clearTimeout(timer); if (visivel) { i = 0; mostrar(0); timer = setTimeout(proximo, 900); } }, { threshold: .35 }).observe(a);
     mostrar(0);
+  })();
+  (() => {
+    const f = document.getElementById('perda'); if (!f) return;
+    const $ = (id) => document.getElementById(id);
+    const brl = (n) => 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+    function desenhar() {
+      const d = Object.fromEntries(new FormData(f));
+      const leads = Number(d.leads) || 0, pct = (Number(d.demora) || 0) / 100, ticket = Number(d.ticket) || 0;
+      const atrasados = Math.round(leads * pct);
+      const perdidos = Math.round(atrasados * 0.10);
+      const vendas = perdidos * ticket;
+      const msgs = atrasados * 2, meta = msgs * 0.32;
+      $('perda-leads-v').textContent = leads.toLocaleString('pt-BR'); $('perda-demora-v').textContent = Math.round(pct * 100) + '%';
+      $('perda-vendas').textContent = brl(vendas); $('perda-vendas-det').textContent = perdidos + (perdidos === 1 ? ' cliente que compraria' : ' clientes que comprariam') + ' se fossem respondidos na hora';
+      $('perda-meta').textContent = brl(meta); $('perda-meta-det').textContent = msgs.toLocaleString('pt-BR') + ' mensagens de reengajamento a R$ 0,32';
+      $('perda-ano').textContent = brl((vendas + meta) * 12);
+    }
+    f.addEventListener('input', desenhar); desenhar();
   })();
 </script>
 </body>

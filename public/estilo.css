@@ -915,3 +915,43 @@ html.modal-aberto { overflow: hidden; }
 .v-anim .va-cartao[data-p].ver { display: grid; }
 @keyframes va-entra { from { opacity: 0; transform: translateY(2cqw) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .v-anim [data-p].ver { animation: none; } .va-digitando span { animation: none; } }
+.v-comp .ok { color: #0a8f7a; font-weight: 700; }
+
+/* ---------- carrossel de canais ---------- */
+.v-carrossel { overflow: hidden; margin-top: 28px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.v-car-trilho { display: flex; gap: 16px; list-style: none; margin: 0; padding: 6px 0; width: max-content; animation: v-car 28s linear infinite; }
+.v-carrossel:hover .v-car-trilho { animation-play-state: paused; }
+.v-car-item { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #fff; font-family: var(--fonte-titulo); font-size: 18px; font-weight: 600; white-space: nowrap; }
+.v-car-item svg { width: 34px; height: 34px; flex: none; }
+@keyframes v-car { to { transform: translateX(calc(-50% - 8px)); } }
+@media (prefers-reduced-motion: reduce) { .v-car-trilho { animation: none; flex-wrap: wrap; justify-content: center; width: auto; } .v-car-item[aria-hidden] { display: none; } .v-carrossel { -webkit-mask-image: none; mask-image: none; } }
+@media (max-width: 760px) { .v-car-item { padding: 10px 16px; font-size: 15px; } .v-car-item svg { width: 26px; height: 26px; } }
+
+/* ---------- o que mudou em 2026 + perda estimada ---------- */
+.v-noticias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 1100px; margin: 0 auto; }
+.v-noticia { padding: 22px 24px; border-radius: 22px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); color: #fff; }
+.v-noticia-selo { display: inline-block; padding: 3px 10px; border-radius: 999px; background: rgba(255,155,138,.16); color: #ff9b8a; font-size: 12px; font-weight: 700; }
+.v-noticia h3 { margin: 10px 0 6px; font-family: var(--fonte-titulo); font-size: 22px; }
+.v-noticia p { margin: 0; color: rgba(255,255,255,.78); font-size: 15px; line-height: 1.55; }
+.v-noticia b { color: #fff; }
+.v-perda { max-width: 1100px; margin: 18px auto 0; padding: 26px; border-radius: 26px; background: linear-gradient(160deg, #0a2a4a, #04121f); border: 1px solid rgba(15,252,190,.35); color: #fff; display: grid; gap: 16px; }
+.v-perda h3 { margin: 0; font-family: var(--fonte-titulo); font-size: clamp(20px, 2.4vw, 26px); }
+.v-perda h3 em { font-style: normal; color: var(--menta); }
+.v-perda-entradas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.v-perda-saidas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.v-perda-saidas div { display: grid; gap: 3px; padding: 16px 18px; border-radius: 18px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
+.v-perda-saidas span { font-size: 13px; color: rgba(255,255,255,.7); }
+.v-perda-saidas b { font-family: var(--fonte-titulo); font-size: 30px; }
+.v-perda-saidas small { font-size: 12.5px; color: rgba(255,255,255,.7); }
+.v-perda-saidas .alerta b { color: #ff9b8a; }
+.v-perda-saidas .total { background: rgba(255,155,138,.12); border-color: rgba(255,155,138,.45); }
+.v-perda-saidas .total b { color: #ff9b8a; }
+.v-perda-solucao { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.v-perda-solucao li { padding: 14px 16px; border-radius: 16px; background: rgba(15,252,190,.08); border: 1px solid rgba(15,252,190,.3); font-size: 14px; line-height: 1.5; color: rgba(255,255,255,.85); }
+.v-perda-solucao b { color: var(--menta); }
+.v-perda-nota { margin: 0; font-size: 12px; color: rgba(255,255,255,.55); }
+.v-perda .botao { justify-self: start; }
+@media (max-width: 900px) { .v-noticias, .v-perda-entradas, .v-perda-saidas, .v-perda-solucao { grid-template-columns: minmax(0, 1fr); } .v-perda { padding: 20px; } .v-perda .botao { justify-self: stretch; justify-content: center; } }
+.v-menu .v-link, .v-menu .botao { white-space: nowrap; }
+.v-logos-secao h2 em { font-style: normal; color: var(--menta); }
+#perda-leads-v, #perda-demora-v { white-space: nowrap; min-width: 64px; text-align: center; }
