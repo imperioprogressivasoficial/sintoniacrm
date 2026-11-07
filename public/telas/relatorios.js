@@ -62,6 +62,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   @media (min-width: 1100px) { .rl-grade { grid-template-columns: repeat(12, minmax(0, 1fr)); } .rl-g8 { grid-column: span 8; } .rl-g4 { grid-column: span 4; } .rl-g6 { grid-column: span 6; } .rl-g12 { grid-column: 1 / -1; } }
   .rl-painel { border-radius: 24px; padding: 18px; min-width: 0; display: grid; gap: 14px; align-content: start; container: rlpainel / inline-size; }
   .rl-cab { display: flex; align-items: flex-start; gap: 10px; }
+  .rl-foco { box-shadow: 0 0 0 2px var(--marca-menta), var(--vidro-brilho) !important; transition: box-shadow .4s ease; }
   .rl-cab h2 { margin: 0; font-size: 15px; font-weight: 700; flex: 1; min-width: 0; }
   .rl-cab h2 small { display: block; font-size: 12.5px; font-weight: 500; color: var(--sub); margin-top: 3px; line-height: 1.4; }
   .rl-redondo { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); flex: none; background: var(--vidro-item); border: 1px solid var(--vidro-borda); transition: transform .18s; box-sizing: border-box; }
@@ -197,7 +198,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function painel(ui, nome, titulo, sub, classe, ...filhos) {
     const el = ui.el;
     const csv = el('a', { class: 'rl-redondo', href: csvDe(nome), download: '', title: `Exportar "${titulo}" (CSV)`, 'aria-label': `Exportar ${titulo} em CSV`, html: IC.baixar });
-    return el('section', { class: `rl-painel rl-vidro ${classe || ''}`, 'aria-label': titulo },
+    return el('section', { class: `rl-painel rl-vidro ${classe || ''}`, 'aria-label': titulo, 'data-rel': nome },
       el('div', { class: 'rl-cab' }, el('h2', {}, titulo, sub ? el('small', { text: sub }) : null), csv), ...filhos);
   }
 
@@ -441,6 +442,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       raiz.append(el('div', { class: 'rl-grade' }, painelDias(ui, r), painelOrigem(ui, r), painelConversao(ui, r), painelIaEquipe(ui, r), painelAtendentes(ui, r), painelPerdas(ui, r), painelTags(ui, r)));
     }
     caixa.replaceChildren(raiz);
+    // Menu lateral (Relatórios › Origem e marketing, IA × equipe): rola até a parte pedida.
+    if (s.foco && r) {
+      const alvo = raiz.querySelector(`[data-rel="${s.foco}"]`);
+      s.foco = '';
+      if (alvo) requestAnimationFrame(() => { alvo.scrollIntoView({ block: 'start', behavior: 'smooth' }); alvo.classList.add('rl-foco'); setTimeout(() => alvo.classList.remove('rl-foco'), 1600); });
+    }
   }
 
   function mudar(p) {
@@ -470,6 +477,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   window.SintoniaTelas.relatorios = {
+    /** Abre a visão geral; com nome ('origem', 'ia-equipe'…), rola até aquele relatório. */
+    focar(nome) { s.aba = 'geral'; s.foco = nome || ''; if (!nome) s.caixa?.closest('.vista')?.scrollTo?.(0, 0); },
     async desenhar(caixa, ui) {
       estilo();
       s.caixa = caixa;

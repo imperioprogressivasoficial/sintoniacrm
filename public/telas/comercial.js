@@ -341,4 +341,20 @@
     abrirMetas: () => abrirMetas(),
     abrirTv: () => abrirTv(),
   };
+
+  // Tela própria (menu Relatórios › Comercial): o mesmo bloco do Dashboard, com metas, comissão e o link da TV no topo.
+  window.SintoniaTelas = window.SintoniaTelas || {};
+  window.SintoniaTelas.comercial = {
+    desenhar(caixa, ui) {
+      const el = ui.el;
+      const gestao = ui.ehGestor(ui.estado.eu || {});
+      const topo = el('div', { class: 'ds-cab-tela' },
+        el('div', { class: 'ds-cab-txt' }, el('h1', { class: 'titulo-grande', text: 'Comercial' }), el('p', { text: 'Metas, ranking da equipe, comissão e o painel da sala comercial na TV.' })),
+        gestao ? el('div', { class: 'ds-cab-acoes' },
+          el('button', { class: 'botao leve', type: 'button', text: 'Metas e comissão', onclick: () => abrirMetas() }),
+          el('button', { class: 'botao', type: 'button', text: 'Painel na TV', onclick: () => abrirTv() })) : null);
+      caixa.replaceChildren(el('div', { class: 'ds-tela' }, topo, window.SintoniaComercial.bloco(ui)));
+      carregar(true);
+    },
+  };
 })();

@@ -52,6 +52,7 @@
   .avatar.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
   .area { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .topo-pc { display: none; }
   .aviso-topo { background: var(--aviso); color: var(--aviso-txt); font-size: 12.5px; padding: 7px 14px; display: flex; gap: 4px 14px; flex-wrap: wrap; border-bottom: 1px solid var(--linha); }
   .vista { flex: 1; min-height: 0; min-width: 0; display: none; }
   .vista.ativa { display: flex; }
@@ -598,13 +599,14 @@
     .lt-busca input { all: unset; flex: 1; min-width: 0; font-size: 14px; color: var(--texto); }
     .lt-busca input::placeholder { color: var(--sub); }
     .lt-busca kbd { font: 600 11px var(--fonte); padding: 2px 6px; border-radius: 6px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); }
-    .lt-secao { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); padding: 12px 10px 4px; }
-    .lt-item, .nav.lt-item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: var(--texto);
-      font-size: 15px; font-weight: 600; position: relative; transition: background .15s ease, box-shadow .15s ease; width: auto; }
-    .lt-item svg { width: 21px; height: 21px; flex: none; color: var(--icone); }
+    .lt-secao { font-size: var(--ds-fs-secao); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); padding: 12px 10px 4px; }
+    .lt-item, .nav.lt-item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: var(--ds-esp-3); height: var(--ds-item); padding: 0 var(--ds-esp-3); border-radius: var(--ds-raio-p); color: var(--texto); font-size: var(--ds-fs); font-weight: var(--ds-peso-medio);
+      position: relative; transition: background .15s ease, box-shadow .15s ease; width: 100%; }
+    .lt-item svg { width: var(--ds-icone); height: var(--ds-icone); flex: none; color: var(--icone); }
     .lt-item .lt-rot { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lt-item:hover { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
     .lt-item[aria-current="page"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 20px rgba(16,110,190,.18); }
+    .lt-item[aria-current="page"] { font-weight: var(--ds-peso-forte); }
     .lt-item[aria-current="page"] svg { color: var(--marca-azul); }
     [data-tema="escuro"] .lt-item[aria-current="page"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 24px rgba(0,0,0,.35); }
     [data-tema="escuro"] .lt-item[aria-current="page"] svg { color: var(--marca-menta); }
@@ -614,14 +616,15 @@
     [data-tema="claro"] .lt-ia svg { color: #0a8f7a !important; }
     .lt-espaco { flex: 1; min-height: 12px; }
     /* menu em cascata: grupos que abrem e fecham (um aberto por vez) */
-    .lt-grupos { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+    .lt-grupos { display: flex; flex-direction: column; gap: 2px; margin-top: var(--ds-esp-1); }
+    .lt-grupos > .lt-item + .lt-grupo, .lt-grupos > .lt-grupo + .lt-item { margin-top: 0; }
     .lt-grupo[hidden] { display: none; }
-    .lt-cab { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: 14px; color: var(--texto); font-size: 15px; font-weight: 700; position: relative; transition: background .15s ease; }
+    .lt-cab { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: flex; align-items: center; gap: var(--ds-esp-3); height: var(--ds-item); padding: 0 var(--ds-esp-3); border-radius: var(--ds-raio-p); color: var(--texto); font-size: var(--ds-fs); font-weight: var(--ds-peso-medio); position: relative; transition: background .15s ease; }
     .lt-cab:hover { background: var(--vidro-item); }
     .lt-cab:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 1px; }
-    .lt-cab > svg:first-child { width: 21px; height: 21px; flex: none; color: var(--icone); }
+    .lt-cab > svg:first-child { width: var(--ds-icone); height: var(--ds-icone); flex: none; color: var(--icone); }
     .lt-cab .lt-rot { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lt-cab .lt-seta { margin-left: auto; width: 16px; height: 16px; flex: none; color: var(--sub); transition: transform .22s ease; }
+    .lt-cab .lt-seta { margin-left: auto; width: var(--ds-icone-seta); height: var(--ds-icone-seta); flex: none; color: var(--sub); transition: transform .22s ease; }
     .lt-cab[aria-expanded="true"] .lt-seta { transform: rotate(90deg); }
     .lt-cab[aria-expanded="true"] { color: var(--texto); }
     .lt-cab.tem-ativo > svg:first-child { color: var(--marca-azul); }
@@ -630,10 +633,18 @@
     .lt-aviso[hidden] { display: none; }
     .lt-filhos { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .24s ease; }
     .lt-grupo.aberto .lt-filhos { grid-template-rows: 1fr; }
-    .lt-filhos-in { overflow: hidden; display: flex; flex-direction: column; gap: 2px; padding-left: 14px; margin-left: 22px; border-left: 1.5px solid var(--vidro-linha, var(--vidro-borda)); }
+    .lt-filhos-in { overflow: hidden; display: flex; flex-direction: column; gap: 2px; padding-left: var(--ds-esp-2); margin-left: 21px; border-left: var(--ds-linha) solid var(--vidro-linha, var(--vidro-borda)); }
     .lt-grupo.aberto .lt-filhos-in { padding-bottom: 6px; padding-top: 2px; }
-    .lt-filhos-in .lt-item { height: 40px; font-size: 14.5px; font-weight: 550; padding: 0 10px; }
-    .lt-filhos-in .lt-item svg { width: 19px; height: 19px; }
+    .lt-filhos-in .lt-item, .lt-filhos-in .nav.lt-item { height: var(--ds-item-p); font-size: var(--ds-fs); font-weight: var(--ds-peso-texto); padding: 0 var(--ds-esp-2); color: var(--sub); }
+    .lt-filhos-in .lt-item:hover, .lt-filhos-in .lt-item[aria-current="page"] { color: var(--texto); }
+    .lt-filhos-in .lt-item[aria-current="page"] { font-weight: var(--ds-peso-forte); }
+    .lt-filhos-in .lt-item svg { width: var(--ds-icone-p); height: var(--ds-icone-p); }
+    .lt-filhos-in .lt-novo { color: var(--marca-azul); font-weight: var(--ds-peso-forte); }
+    [data-tema="escuro"] .lt-filhos-in .lt-novo { color: var(--marca-menta); }
+    .lt-filhos-in .lt-novo svg { color: currentColor; }
+    .lt-so-recolhido { display: none !important; }
+    .recolhida .lt-so-recolhido { display: flex !important; }
+    .recolhida .lt-funil, .recolhida .lt-novo { display: none !important; }
     .lt-filhos-in [hidden] { display: none !important; }
     @media (prefers-reduced-motion: reduce) { .lt-filhos, .lt-cab .lt-seta { transition: none; } }
     .recolhida .lt-cab { display: none; }
@@ -653,7 +664,18 @@
     .lt-eu b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lt-eu small { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lt-eu > svg { width: 16px; height: 16px; color: var(--sub); flex: none; }
-    .area { padding: 12px 12px 12px 12px; }
+    .area { padding: 0 12px 12px 12px; }
+    .topo-pc { display: flex; align-items: center; gap: var(--ds-esp-3); height: var(--ds-cabecalho); flex: none; padding: 0 var(--ds-esp-1) 0 var(--ds-esp-2); }
+    .tp-trilha { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--ds-esp-2); font-size: var(--ds-fs); color: var(--sub); white-space: nowrap; overflow: hidden; }
+    .tp-trilha b { color: var(--texto); font-weight: var(--ds-peso-forte); overflow: hidden; text-overflow: ellipsis; }
+    .tp-sep { opacity: .6; }
+    .tp-botao { all: unset; box-sizing: border-box; cursor: pointer; position: relative; width: var(--ds-controle); height: var(--ds-controle); border-radius: var(--ds-raio-pilula); display: grid; place-items: center; color: var(--icone);
+      background: var(--vidro-fundo); border: var(--ds-linha) solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
+    .tp-botao:hover { background: var(--vidro-ativo); }
+    .tp-botao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+    .tp-botao svg { width: var(--ds-icone); height: var(--ds-icone); }
+    .tp-qtd { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: var(--ds-raio-pilula); display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 10px rgba(15,252,190,.55); }
+    .tp-qtd[hidden] { display: none; }
     .area > .vista { border-radius: 26px; overflow: hidden; border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
     /* recolhida: só ícones */
     .recolhida .lateral { padding: 14px 10px; align-items: center; }
@@ -661,6 +683,8 @@
     .recolhida .lt-topo { flex-direction: column; padding-bottom: 14px; }
     .recolhida .lt-recolher { position: static; transform: rotate(180deg); }
     .recolhida .lt-item { width: 48px; justify-content: center; padding: 0; }
+    .recolhida .lt-filhos-in .lt-item { padding: 0; }
+    .recolhida .lt-grupo .lt-filhos-in .lt-item svg { width: var(--ds-icone); height: var(--ds-icone); }
     .recolhida .lt-qtd { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; font-size: 10px; padding: 0 5px; }
     .recolhida .lt-eu { padding: 6px; }
   }
@@ -732,46 +756,61 @@
       <button class="lt-recolher" id="lt-recolher" title="Recolher menu" aria-label="Recolher menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>
     </div>
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
-    <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
     <nav class="lt-grupos" id="lt-grupos" aria-label="Seções">
-      <div class="lt-grupo" data-grupo="atendimento">
-        <button class="lt-cab" type="button" aria-expanded="false" title="Atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-1v-6h3M4 12v4a2 2 0 0 0 2 2h1v-6H4"/></svg><span class="lt-rot">Atendimento</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
-        <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
-          <button class="lt-item" id="lt-sino" title="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="lt-rot">Notificações</span><span class="lt-qtd" id="lt-sino-qtd" hidden></span></button>
-          <button class="nav lt-item" data-vista="agenda" title="Agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
+      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
+      <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
+      <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
+      <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
+
+      <div class="lt-grupo" data-grupo="crm">
+        <button class="lt-cab" type="button" aria-expanded="false" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <div class="lt-filhos"><div class="lt-filhos-in" id="lt-funis">
+          <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
+          <button class="so-gestao lt-item lt-novo" id="lt-novo-funil" type="button" title="Criar novo pipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lt-rot">Criar novo pipeline</span></button>
         </div></div>
       </div>
-      <div class="lt-grupo" data-grupo="vendas">
-        <button class="lt-cab" type="button" aria-expanded="false" title="Vendas e CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8L3 4Z"/></svg><span class="lt-rot">Vendas e CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+
+      <button class="nav lt-item" data-vista="clientes" title="Clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Clientes</span></button>
+
+      <div class="lt-grupo" data-grupo="marketing">
+        <button class="lt-cab" type="button" aria-expanded="false" title="Marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span class="lt-rot">Marketing</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="nav lt-item" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
-          <button class="so-gestao nav lt-item" data-vista="transmissoes" title="Transmissões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span class="lt-rot">Transmissões</span></button>
+          <button class="so-gestao nav lt-item" data-vista="transmissoes" title="Transmissões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></svg><span class="lt-rot">Transmissões</span></button>
           <button class="so-gestao nav lt-item" data-vista="email" title="E-mail marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><span class="lt-rot">E-mail marketing</span></button>
+          <button class="so-gestao nav lt-item" data-vista="links" title="Rastreamento e links UTM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="lt-rot">Rastreamento e UTM</span></button>
+          <a class="so-admin lt-item" href="/conexoes#t-capi" title="Conexões de anúncios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="3"/><path d="M8 21h8M12 18v3M9 11l2 2 4-4"/></svg><span class="lt-rot">Conexões de anúncios</span></a>
         </div></div>
       </div>
-      <div class="lt-grupo" data-grupo="inteligencia">
-        <button class="lt-cab" type="button" aria-expanded="false" title="IA e automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/></svg><span class="lt-rot">IA e automações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+
+      <div class="lt-grupo" data-grupo="automacoes">
+        <button class="lt-cab" type="button" aria-expanded="false" title="Automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="nav lt-item lt-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
-          <button class="so-gestao nav lt-item lt-raio" data-vista="automacoes" title="Automações"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span></button>
-          <button class="so-gestao nav lt-item" data-vista="bot" title="Bots"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/><circle cx="12" cy="3.5" r="1"/></svg><span class="lt-rot">Bots</span></button>
+          <button class="so-gestao nav lt-item" data-vista="automacoes" title="Fluxos de automação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 3 3v6.5M6 8.5V15a3 3 0 0 0 3 3h6.5"/></svg><span class="lt-rot">Fluxos ⚡</span></button>
+          <button class="so-gestao nav lt-item" data-vista="bot" title="Bots"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span class="lt-rot">Bots</span></button>
         </div></div>
       </div>
-      <div class="lt-grupo" data-grupo="resultados">
-        <button class="lt-cab" type="button" aria-expanded="false" title="Resultados"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></svg><span class="lt-rot">Resultados</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+
+      <div class="lt-grupo" data-grupo="relatorios" data-navega="1">
+        <button class="lt-cab" type="button" aria-expanded="false" title="Relatórios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-8"/></svg><span class="lt-rot">Relatórios</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="so-relatorios nav lt-item" data-vista="desempenho" id="lt-desempenho" title="Desempenho do atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/><circle cx="19" cy="8" r="1.2"/></svg><span class="lt-rot">Desempenho</span></button>
-          <button class="so-gestao nav lt-item" data-vista="relatorios" title="Relatórios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-2"/></svg><span class="lt-rot">Relatórios</span></button>
-          <button class="so-gestao nav lt-item" data-vista="leads" title="Importar e exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span class="lt-rot">Importar e exportar</span></button>
+          <button class="so-gestao nav lt-item" data-vista="relatorios" data-rel="" title="Relatório geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-2"/></svg><span class="lt-rot">Relatório geral</span></button>
+          <button class="so-relatorios nav lt-item" data-vista="desempenho" id="lt-desempenho" title="Atendimento (desempenho)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-1v-6h3M4 12v4a2 2 0 0 0 2 2h1v-6H4"/></svg><span class="lt-rot">Atendimento</span></button>
+          <button class="so-gestao lt-item lt-rel" data-rel="origem" type="button" title="Origem e marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg><span class="lt-rot">Origem e marketing</span></button>
+          <button class="so-gestao nav lt-item" data-vista="comercial" title="Comercial: metas, ranking, comissão e TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 6h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4"/></svg><span class="lt-rot">Comercial</span></button>
+          <button class="so-gestao lt-item lt-rel" data-rel="ia-equipe" type="button" title="IA × equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7.5 6.5 4 5 7.5 1.5 9 5 10.5 6.5 14 8 10.5 11.5 9Z"/><circle cx="17.5" cy="8" r="2.5"/><path d="M14 16a3.5 3.5 0 0 1 7 0"/></svg><span class="lt-rot">IA × equipe</span></button>
         </div></div>
       </div>
+
       <div class="lt-grupo" data-grupo="configuracoes">
-        <button class="lt-cab" type="button" aria-expanded="false" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span class="lt-rot">Configurações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="lt-cab" type="button" aria-expanded="false" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="lt-rot">Configurações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="so-gestao lt-item" id="lt-tags" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
-          <button class="so-gestao lt-item" id="lt-equipe" title="Atendentes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Atendentes</span></button>
-          <a class="so-admin lt-item" id="lt-conexoes" href="/conexoes" title="Conexões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="lt-rot">Conexões</span></a>
+          <button class="so-gestao nav lt-item" data-vista="equipe" id="lt-equipe" title="Atendentes e acessos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="lt-rot">Atendentes e acessos</span></button>
+          <button class="so-gestao lt-item" id="lt-tags" type="button" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
+          <button class="nav lt-item" data-vista="respostas" title="Respostas rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg><span class="lt-rot">Respostas rápidas</span></button>
+          <button class="so-gestao nav lt-item" data-vista="leads" title="Importar e exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span class="lt-rot">Importar e exportar</span></button>
+          <a class="so-admin lt-item" id="lt-conexoes" href="/conexoes" title="Conexões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0V7ZM12 17v4"/></svg><span class="lt-rot">Conexões</span></a>
+          <button class="lt-item" id="lt-pref-notif" type="button" title="Preferências de notificação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="lt-rot">Notificações</span></button>
+          <button class="so-admin lt-item" id="lt-empresa-item" type="button" title="Empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg><span class="lt-rot">Empresa</span></button>
         </div></div>
       </div>
     </nav>
@@ -792,6 +831,10 @@
 
   <div class="area">
     <div class="aviso-topo" id="aviso" hidden></div>
+    <header class="topo-pc" id="topo-pc">
+      <nav class="tp-trilha" id="tp-trilha" aria-label="Você está em"></nav>
+      <button class="tp-botao" id="lt-sino" type="button" title="Notificações" aria-label="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="tp-qtd" id="lt-sino-qtd" hidden></span></button>
+    </header>
 
     <section class="vista ativa" id="v-conversas">
       <div class="lista">
@@ -949,6 +992,10 @@
     <section class="vista" id="v-transmissoes"><div class="painel" id="transmissoes"></div></section>
     <section class="vista" id="v-email"><div class="painel" id="email"></div></section>
     <section class="vista" id="v-agenda"><div class="painel" id="agenda"></div></section>
+    <section class="vista" id="v-clientes"><div class="painel" id="clientes"></div></section>
+    <section class="vista" id="v-respostas"><div class="painel" id="respostas"></div></section>
+    <section class="vista" id="v-links"><div class="painel" id="links"></div></section>
+    <section class="vista" id="v-comercial"><div class="painel" id="comercial-tela"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
     <section class="vista" id="v-configuracoes"><div class="painel"><div class="gestao" id="configuracoes" style="display:grid;gap:14px"></div></div></section>
   </div>
@@ -1276,7 +1323,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
+    window.SintoniaMenu?.vistaMudou?.(v);
   }
 
   // lista
@@ -2365,6 +2414,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       el('div', { class: 'opcoes-conta' },
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_EMPRESA, 'Empresa', abrirEmpresa)] : []),
         botao(ICONE_AGENDA, 'Agenda', () => mostrar('agenda')),
+        botao(ICONE_EQUIPE, 'Clientes', () => mostrar('clientes')),
+        botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg>', 'Respostas rápidas', () => mostrar('respostas')),
         botao(ICONE_IA, 'Inteligência Artificial', () => mostrar('ia')),
         ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>', 'Transmissões', () => mostrar('transmissoes')), botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>', 'E-mail marketing', () => mostrar('email')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_RELATORIO, 'Desempenho do atendimento', () => mostrar('desempenho')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; }), botao(ICONE_CAMPOS, 'Dados de demonstração', abrirDemo)] : [])),
@@ -2470,11 +2521,90 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       }
       avisos();
     }).observe($('lt-grupos'), { subtree: true, attributes: true, attributeFilter: ['aria-current', 'hidden'], childList: true, characterData: true });
+    // Relatórios: o cabeçalho também abre a primeira tela que a pessoa pode ver (o relatório geral).
+    for (const g of grupos.filter((x) => x.dataset.navega)) g.querySelector('.lt-cab').addEventListener('click', () => {
+      if (!g.classList.contains('aberto')) return;
+      const primeiro = [...g.querySelectorAll('.lt-filhos-in > .lt-item')].find((i) => !i.hidden);
+      if (primeiro && primeiro.getAttribute('aria-current') !== 'page') primeiro.click();
+    });
+
+    // ---------- CRM: um item por pipeline (funil), vindos de /api/funis ----------
+    const caixaFunis = $('lt-funis');
+    let funis = [], funisEm = 0, assinatura = '';
+    const ICONE_FUNIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
+    function marcarFunil() {
+      const atual = estado.vista === 'funil' ? (window.SintoniaTelas?.funil?.atual?.() || funis[0]?.id) : null;
+      for (const b of caixaFunis.querySelectorAll('[data-funil]')) {
+        if (b.dataset.funil === atual) { if (b.getAttribute('aria-current') !== 'page') b.setAttribute('aria-current', 'page'); }
+        else if (b.hasAttribute('aria-current')) b.removeAttribute('aria-current');
+      }
+    }
+    function desenharFunis() {
+      const nova = JSON.stringify(funis.map((f) => [f.id, f.nome]));
+      if (nova !== assinatura) {
+        assinatura = nova;
+        caixaFunis.querySelectorAll('[data-funil]').forEach((b) => b.remove());
+        for (const f of funis) {
+          const b = el('button', { class: 'lt-item lt-funil', type: 'button', 'data-funil': f.id, title: f.nome });
+          b.insertAdjacentHTML('beforeend', ICONE_FUNIL);
+          b.append(el('span', { class: 'lt-rot', text: f.nome }));
+          b.addEventListener('click', () => { window.SintoniaTelas?.funil?.abrirFunil(f.id); mostrar('funil'); marcarFunil(); });
+          caixaFunis.append(b);
+        }
+      }
+      marcarFunil();
+    }
+    async function carregarFunis(forcar) {
+      if (!forcar && Date.now() - funisEm < 30000) return desenharFunis();
+      funisEm = Date.now();
+      try { const l = await api('/api/funis'); funis = Array.isArray(l) ? l : []; } catch { /* sem funis: fica só o item CRM */ }
+      desenharFunis();
+    }
+    $('lt-novo-funil').addEventListener('click', async () => {
+      mostrar('funil');
+      await window.SintoniaTelas?.funil?.novoFunil?.();
+      carregarFunis(true);
+    });
+    grupos.find((g) => g.dataset.grupo === 'crm')?.querySelector('.lt-cab').addEventListener('click', () => carregarFunis(false));
+
+    // ---------- Relatórios: sub-relatórios que abrem uma parte da tela geral ----------
+    document.querySelectorAll('#lt-grupos .lt-rel').forEach((b) => b.addEventListener('click', () => {
+      window.SintoniaTelas?.relatorios?.focar?.(b.dataset.rel);
+      mostrar('relatorios');
+      document.querySelectorAll('#lt-grupos .lt-rel').forEach((x) => (x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
+      document.querySelector('#lt-grupos [data-vista="relatorios"]')?.removeAttribute('aria-current');
+      trilha();
+    }));
+    document.querySelector('#lt-grupos [data-vista="relatorios"]')?.addEventListener('click', () => window.SintoniaTelas?.relatorios?.focar?.(''));
+    // IA: sempre começa pela visão geral (o que a IA atendeu hoje).
+    $('lt-ia').addEventListener('click', () => { window.SintoniaTelas?.agentesIa?.inicio?.(); if (estado.vista === 'ia') mostrar('ia'); });
+
+    // ---------- trilha do topo ("CRM › Funil de agendamento") ----------
+    function trilha() {
+      const caixa = $('tp-trilha'); if (!caixa) return;
+      const item = document.querySelector('#lt-grupos .lt-item[aria-current="page"]:not(.lt-so-recolhido)') || document.querySelector('#lt-grupos .lt-item[aria-current="page"]');
+      const grupo = item?.closest('.lt-grupo');
+      const partes = [];
+      if (grupo) partes.push(grupo.querySelector('.lt-cab .lt-rot').textContent);
+      const nome = item ? item.querySelector('.lt-rot')?.textContent : estado.vista === 'configuracoes' ? 'Conta' : estado.vista === 'equipe' ? 'Atendentes e acessos' : '';
+      if (nome && nome !== partes[0]) partes.push(nome);
+      caixa.replaceChildren(...partes.flatMap((p, i) => [i ? el('span', { class: 'tp-sep', 'aria-hidden': 'true', text: '›' }) : null, el(i === partes.length - 1 ? 'b' : 'span', { text: p })].filter(Boolean)));
+    }
+    function vistaMudou(v) {
+      if (v !== 'relatorios') document.querySelectorAll('#lt-grupos .lt-rel[aria-current]').forEach((x) => x.removeAttribute('aria-current'));
+      else if (document.querySelector('#lt-grupos .lt-rel[aria-current]')) document.querySelector('#lt-grupos [data-vista="relatorios"]')?.removeAttribute('aria-current');
+      if (v === 'funil') carregarFunis(false); else marcarFunil();
+      trilha();
+    }
     arrumar();
-    return { arrumar, abrir: (id) => abrirGrupo(grupos.find((g) => g.dataset.grupo === id), true) };
+    carregarFunis(true);
+    setTimeout(trilha, 0);
+    setInterval(() => { if (estado.vista === 'funil') marcarFunil(); }, 1500);
+    return { arrumar, vistaMudou, recarregarFunis: () => carregarFunis(true), abrir: (id) => abrirGrupo(grupos.find((g) => g.dataset.grupo === id), true) };
   })();
-  $('lt-equipe').addEventListener('click', () => mostrar('equipe'));
   $('lt-tags').addEventListener('click', () => abrirTags());
+  $('lt-pref-notif').addEventListener('click', () => window.SintoniaTelas?.notificacoes?.preferencias());
+  $('lt-empresa-item').addEventListener('click', () => abrirEmpresa());
   $('lt-busca').addEventListener('input', (e) => {
     if (estado.vista !== 'conversas') mostrar('conversas');
     $('busca').value = e.target.value; estado.busca = e.target.value.toLowerCase(); desenharLista();
@@ -2568,5 +2698,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/responsivo.js" defer></script>
 <script src="/telas/rastreio.js" defer></script>
 <script src="/telas/acessos.js" defer></script>
+<script src="/telas/clientes.js" defer></script>
+<script src="/telas/respostas.js" defer></script>
 </body>
 </html>

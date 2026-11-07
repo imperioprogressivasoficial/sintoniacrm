@@ -5,6 +5,24 @@
  * Claro e escuro seguem o aparelho.
  */
 :root {
+  /* ---------- tokens de medida (docs/DESIGN-SYSTEM.md) ----------
+   * Um tamanho de ícone por lugar, alturas fixas de item, espaçamento em passos de 4 px e linhas de 1 px. */
+  --ds-icone: 20px;          /* ícone padrão (lateral, cabeçalho, botões) */
+  --ds-icone-p: 18px;        /* ícone de subitem e de pílula */
+  --ds-icone-seta: 14px;     /* setas e indicadores */
+  --ds-item: 40px;           /* altura do item de menu principal */
+  --ds-item-p: 36px;         /* altura do subitem */
+  --ds-controle: 40px;       /* botão, campo, seletor */
+  --ds-cabecalho: 48px;      /* barra do topo da área principal */
+  --ds-esp-1: 4px; --ds-esp-2: 8px; --ds-esp-3: 12px; --ds-esp-4: 16px; --ds-esp-5: 24px; --ds-esp-6: 32px;
+  --ds-raio-p: 10px;         /* item de menu, campo */
+  --ds-raio: 14px;           /* botão, card pequeno */
+  --ds-raio-g: 22px;         /* card, painel de vidro */
+  --ds-raio-pilula: 999px;
+  --ds-linha: 1px;           /* toda linha divisória e borda */
+  --ds-peso-texto: 400; --ds-peso-medio: 500; --ds-peso-forte: 600; --ds-peso-titulo: 700;
+  --ds-fs-p: 12px; --ds-fs: 14px; --ds-fs-m: 15px; --ds-fs-titulo: 26px; --ds-fs-secao: 11px;
+
   /* marca (iguais à página de vendas) */
   --marca-azul: #106ebe;
   --marca-azul-escuro: #0a4c86;
@@ -172,3 +190,52 @@ h1, h2, .titulo-grande, .lt-nome b, .folha-topo h2 { font-family: var(--fonte-ti
 .ar.aberta { opacity: 0; pointer-events: none; }
 /* Poppins é mais larga: rótulos da barra lateral sem cortar */
 .lt-item .lt-rot { font-size: 14px; letter-spacing: -.005em; }
+
+/* ---------- componentes do design system (docs/DESIGN-SYSTEM.md) ---------- */
+/* Cabeçalho de tela: título Sintony + uma linha de apoio à esquerda, ações à direita. */
+.ds-tela { display: grid; gap: var(--ds-esp-4); align-content: start; min-width: 0; }
+.ds-cab-tela { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--ds-esp-3) var(--ds-esp-4); flex-wrap: wrap; }
+.ds-cab-txt { display: grid; gap: var(--ds-esp-1); min-width: 0; }
+.ds-cab-txt h1.titulo-grande, .ds-cab-tela h1.titulo-grande { margin: 0 !important; font-size: var(--ds-fs-titulo) !important; line-height: 1.15; }
+.ds-cab-txt p { margin: 0; font-size: var(--ds-fs); color: var(--sub); }
+.ds-cab-acoes { display: flex; gap: var(--ds-esp-2); flex-wrap: wrap; align-items: center; }
+.ds-cab-acoes .botao { min-height: var(--ds-controle); box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 var(--ds-esp-4); }
+
+/* Card de vidro */
+.ds-card { background: var(--vidro-fundo); border: var(--ds-linha) solid var(--vidro-borda); box-shadow: var(--vidro-brilho); border-radius: var(--ds-raio-g); padding: var(--ds-esp-4); min-width: 0;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); }
+.ds-card.sem-padding { padding: 0; overflow: hidden; }
+
+/* Barra de filtros: campos da mesma altura */
+.ds-filtros { display: flex; gap: var(--ds-esp-2); flex-wrap: wrap; align-items: center; }
+.ds-campo, .ds-filtros select, .ds-filtros input { box-sizing: border-box; height: var(--ds-controle); padding: 0 var(--ds-esp-3); border-radius: var(--ds-raio-p); font: inherit; font-size: var(--ds-fs);
+  color: var(--texto); background: var(--vidro-item); border: var(--ds-linha) solid var(--vidro-borda); min-width: 0; }
+.ds-filtros .ds-busca { flex: 1 1 220px; display: flex; align-items: center; gap: var(--ds-esp-2); }
+.ds-filtros .ds-busca input { all: unset; flex: 1; min-width: 0; font-size: var(--ds-fs); color: var(--texto); }
+.ds-filtros .ds-busca svg { width: var(--ds-icone-p); height: var(--ds-icone-p); color: var(--sub); flex: none; }
+
+/* Pílula: etiqueta curta (etapa, quem atende, status). Cor só quando informa algo. */
+.ds-pilula { display: inline-flex; align-items: center; gap: var(--ds-esp-1); height: 24px; padding: 0 var(--ds-esp-2); border-radius: var(--ds-raio-pilula); font-size: var(--ds-fs-p); font-weight: var(--ds-peso-medio);
+  white-space: nowrap; background: var(--vidro-item); border: var(--ds-linha) solid var(--vidro-borda); color: var(--texto); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.ds-pilula.ia { background: color-mix(in srgb, var(--marca-menta) 18%, transparent); border-color: color-mix(in srgb, var(--marca-menta) 50%, transparent); }
+
+/* Tabela: linhas finas, cabeçalho discreto, linha inteira clicável */
+.ds-tabela { width: 100%; border-collapse: collapse; font-size: var(--ds-fs); }
+.ds-tabela th { text-align: left; font-size: var(--ds-fs-p); font-weight: var(--ds-peso-forte); color: var(--sub); text-transform: uppercase; letter-spacing: .06em; padding: var(--ds-esp-3) var(--ds-esp-3); border-bottom: var(--ds-linha) solid var(--vidro-linha); white-space: nowrap; }
+.ds-tabela td { padding: var(--ds-esp-2) var(--ds-esp-3); border-bottom: var(--ds-linha) solid var(--vidro-linha); vertical-align: middle; white-space: nowrap; }
+.ds-tabela tbody tr { cursor: pointer; }
+.ds-tabela tbody tr:hover { background: var(--vidro-item); }
+.ds-tabela tbody tr:last-child td { border-bottom: 0; }
+.ds-tabela tbody tr:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: -2px; }
+.ds-rolagem { overflow-x: auto; }
+
+/* Rodapé de paginação */
+.ds-paginas { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-esp-3); padding: var(--ds-esp-3) var(--ds-esp-4); border-top: var(--ds-linha) solid var(--vidro-linha); font-size: var(--ds-fs); color: var(--sub); flex-wrap: wrap; }
+.ds-paginas .ds-cab-acoes .botao { min-height: 36px; }
+.ds-vazio { padding: var(--ds-esp-6) var(--ds-esp-4); text-align: center; color: var(--sub); font-size: var(--ds-fs); }
+
+/* Títulos de tela: um tamanho só no computador (Sintony 700). No celular ficam os títulos grandes do iOS. */
+@media (min-width: 761px) {
+  .vista h1.titulo-grande, .vista .agx-topo h1 { font-family: var(--fonte-titulo) !important; font-size: var(--ds-fs-titulo) !important; font-weight: var(--ds-peso-titulo) !important; letter-spacing: -.01em !important; line-height: 1.15 !important; }
+  .vista h1.titulo-grande small { font-family: var(--fonte); font-size: var(--ds-fs-p); font-weight: var(--ds-peso-medio); letter-spacing: 0; }
+}

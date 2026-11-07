@@ -789,5 +789,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', observar); else observar();
 
   window.SintoniaTelas.ia = { desenhar };
-  window.SintoniaTelas.agentesIa = { desenhar, faixaConversa };
+  // Pelo menu lateral, a Inteligência sempre abre na Visão geral (o que a IA atendeu).
+  window.SintoniaTelas.agentesIa = { desenhar, faixaConversa, inicio: () => { aba = 'geral'; gravarAba('geral'); } };
 })();

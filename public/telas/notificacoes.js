@@ -28,7 +28,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 24px 60px rgba(0,0,0,.22);
     -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); transition: transform .24s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
   @media (min-width: 761px) {
-    .nt-painel { top: 12px; width: 430px; max-height: calc(100vh - 24px); border-radius: 26px; opacity: 0; transform: translateX(-10px) scale(.98); }
+    .nt-painel { top: 12px; width: 430px; max-height: calc(100vh - 24px); border-radius: 26px; opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; }
     .nt-painel.nt-ver { opacity: 1; transform: none; }
     .nt-fundo { background: transparent; }
   }
@@ -330,9 +330,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function posicionar() {
     if (!painel) return;
-    const lateral = $('lateral');
-    if (matchMedia('(min-width: 761px)').matches && lateral) painel.style.left = `${Math.round(lateral.getBoundingClientRect().right + 12)}px`;
-    else painel.style.left = '';
+    // Computador: abre embaixo do sininho do topo, alinhado à direita. Celular: folha que sobe de baixo.
+    const sino = $('lt-sino');
+    if (matchMedia('(min-width: 761px)').matches && sino && sino.offsetParent) {
+      const r = sino.getBoundingClientRect();
+      painel.style.left = 'auto';
+      painel.style.right = `${Math.max(12, Math.round(innerWidth - r.right))}px`;
+      painel.style.top = `${Math.round(r.bottom + 8)}px`;
+      painel.style.maxHeight = `calc(100vh - ${Math.round(r.bottom + 20)}px)`;
+    } else { painel.style.left = ''; painel.style.right = ''; painel.style.top = ''; painel.style.maxHeight = ''; }
   }
 
   async function abrir() {

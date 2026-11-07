@@ -1230,5 +1230,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     await carregarQuadro();
   }
 
-  window.SintoniaTelas.funil = { desenhar, recarregar: () => s.ui && recarregarTudo(), redesenhar: () => { if (s.q && s.quadro) desenharQuadro(); } };
+  // Para o menu lateral (app.html): funil escolhido, abrir o quadro de um funil e criar um novo.
+  function abrirFunil(id) {
+    if (!id) return;
+    if (!s.montado || !s.quadro) { s.funilId = id; gravarLocal('sintonia.crm.funil', id); return; }
+    trocarFunil(id);
+  }
+  window.SintoniaTelas.funil = { desenhar, recarregar: () => s.ui && recarregarTudo(), redesenhar: () => { if (s.q && s.quadro) desenharQuadro(); },
+    atual: () => s.funilId, abrirFunil, novoFunil: () => (s.ui ? novoFunil() : undefined) };
 })();

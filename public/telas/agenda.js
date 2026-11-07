@@ -7,7 +7,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const ANTES = 7;   // dias antes de hoje na faixa
   const DEPOIS = 34; // dias depois
-  const INTERVALO = 60000;
+  const INTERVALO = 20000; // agenda "em tempo real": confere a cada 20 s com a tela aberta
   const CURTO = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
   const COR_UNIDADE = { norte: 'var(--cor-norte)', sumare: 'var(--marca-menta)', feira: '#9db8ff' };
 
@@ -73,6 +73,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ag-info span { font-size: 13.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ag-info em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--sub); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .ag-tag { padding: 3px 9px; border-radius: 999px; background: var(--vidro-item); border: 1px solid var(--vidro-borda); }
+  .ag-tag.ag-quem { font-weight: 600; }
   .ag-tag.ag-ia { background: var(--acento-suave); color: var(--acento); border-color: transparent; }
   .ag-item.ag-foi { opacity: .6; }
   .ag-agora { display: flex; align-items: center; gap: 8px; color: var(--acento); font-size: 12px; font-weight: 800; padding: 0 2px; }
@@ -154,7 +155,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ag-info' },
         el('b', { text: i.cliente || ui.formatarTel?.(i.telefone) || i.telefone }),
         el('span', { text: [i.servico, i.profissional ? `com ${i.profissional}` : null, duracao(i.duracaoMin)].filter(Boolean).join(' · ') }),
-        el('em', {}, el('span', { class: 'ag-tag', text: ui.UNIDADE[i.unidade] || i.unidade }), el('span', { class: 'ag-tag' + (i.porIa ? ' ag-ia' : ''), text: i.porIa ? 'pela IA' : `por ${String(i.por).split(' ')[0]}` }),
+        el('em', {}, el('span', { class: 'ag-tag', text: ui.UNIDADE[i.unidade] || i.unidade }), el('span', { class: 'ag-tag ag-quem' + (i.porIa ? ' ag-ia' : ''), title: i.porIa ? 'Quem agendou: a IA, sozinha, pelo WhatsApp' : `Quem agendou: ${i.por || 'equipe'}`, text: i.porIa ? '✦ Agendado pela IA' : `Agendado por ${String(i.por || 'equipe').split(' ')[0]}` }),
           // Confirmação automática (src/followup): Aguardando / Confirmado / Remarcar / Sem resposta.
           !foi && s.conf?.[i.id] && window.SintoniaTelas?.followup?.seloConfirmacao ? window.SintoniaTelas.followup.seloConfirmacao(ui, s.conf[i.id]) : null)));
     return b;
@@ -253,7 +254,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const mes = fmt(s.dia, { month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase());
     const topo = el('div', { class: 'ag-topo' },
       el('div', { class: 'ag-cab' },
-        el('h1', { class: 'titulo-grande' }, el('small', { text: mes }), 'Agenda'),
+        el('h1', { class: 'titulo-grande' }, el('small', { text: `${mes} · em tempo real` }), 'Agenda'),
         numeros(ui),
         el('div', { class: 'ag-acoes' },
           el('button', { class: 'ag-btn', type: 'button', text: 'Hoje', onclick: () => { s.dia = s.hoje; desenhar(); centralizar(true); } }),

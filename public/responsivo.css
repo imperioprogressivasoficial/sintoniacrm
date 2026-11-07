@@ -29,7 +29,8 @@ html[data-tema="claro"] { --sub: #4f6073; }
 @media (min-width: 761px) {
   .casca { grid-template-columns: 280px minmax(0, 1fr); }
   .lateral > * { flex-shrink: 0; }
-  .lt-item, .nav.lt-item { height: auto; min-height: 42px; font-size: 14.5px; gap: 11px; padding: 6px 12px; }
+  .lt-item, .nav.lt-item { height: auto; min-height: var(--ds-item); font-size: var(--ds-fs); gap: var(--ds-esp-3); padding: 0 var(--ds-esp-3); }
+  .lt-filhos-in .lt-item, .lt-filhos-in .nav.lt-item { min-height: var(--ds-item-p); padding: 0 var(--ds-esp-2); }
   /* rótulo longo quebra linha com elegância em vez de virar "Inteligência Artific…" */
   .lt-item .lt-rot { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; overflow-wrap: anywhere; }
   .recolhida .lt-item { min-height: 48px; height: 48px; padding: 0; }
@@ -40,7 +41,12 @@ html[data-tema="claro"] { --sub: #4f6073; }
   .lateral { padding: 14px 10px; align-items: center; }
   .lt-nome, .lt-busca, .lt-secao, .lt-rot, .lt-chave, .lt-eu > svg, .lt-luz, .lt-recolher { display: none !important; }
   .lt-topo { flex-direction: column; padding-bottom: 14px; }
-  .lt-item, .nav.lt-item { width: 48px; min-height: 48px; height: 48px; justify-content: center; padding: 0; }
+  .lt-item, .nav.lt-item, .lt-filhos-in .lt-item, .lt-filhos-in .nav.lt-item { width: 48px; min-height: 48px; height: 48px; justify-content: center; padding: 0; }
+  .lt-cab { display: none !important; }
+  .lt-filhos { grid-template-rows: 1fr !important; }
+  .lt-filhos-in { padding: 4px 0 !important; margin: 0 !important; border-left: 0 !important; align-items: center; }
+  .lt-so-recolhido { display: flex !important; }
+  .lt-funil, .lt-novo { display: none !important; }
   .lt-qtd { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; font-size: 10px; padding: 0 5px; }
   .lt-eu { padding: 6px; }
   /* conversas em uma coluna só (lista ou conversa), com o botão voltar, como no celular */

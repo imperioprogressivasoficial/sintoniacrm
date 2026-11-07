@@ -79,6 +79,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/rastreio.js': { arquivo: 'telas/rastreio.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/comercial.js': { arquivo: 'telas/comercial.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/desempenho.js': { arquivo: 'telas/desempenho.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/clientes.js': { arquivo: 'telas/clientes.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/respostas.js': { arquivo: 'telas/respostas.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
   '/sw.js': { arquivo: 'sw.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
