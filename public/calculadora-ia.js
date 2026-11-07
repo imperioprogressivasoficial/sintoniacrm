@@ -1,6 +1,7 @@
 /*
- * Calculadora "Quanto custa ter IA no seu negócio" (página de vendas e app).
- * Uso: window.SintoniaCalculadora.calcular({ atendentes, salario, encargos, beneficios, conversas })
+ * Calculadoras da página de vendas.
+ * Na página: window.SintoniaCalculadora.escala6x1({ horas, salario }) (nova jornada × Colaborador de IA).
+ * Também: window.SintoniaCalculadora.calcular({ atendentes, salario, encargos, beneficios, conversas })
  *
  * Funcionários: (salário × (1 + encargos%) + benefícios) × atendentes.
  * Colaborador de IA: R$ 1.997/mês + créditos estimados. ESTIMATIVA: o plano cobre cerca de
@@ -65,49 +66,28 @@
   }
 
   /**
-   * Equipe de 2027: a equipe de hoje (só pessoas) × 1 pessoa (ou poucas) + Colaborador de IA.
-   * Custo por pessoa = salário × (1 + encargos%) + benefícios. IA = plano + créditos estimados.
-   * Capacidade: cada pessoa conversa com ~3 clientes ao mesmo tempo no WhatsApp (premissa); a IA, com todos.
-   */
-  function equipe2027(entradas) {
-    var e = entradas || {};
-    var hoje = Math.round(numero(e.equipe, 4, 1, 30));
-    var depois = Math.round(numero(e.pessoas, 1, 1, hoje));
-    var salario = numero(e.salario, PADRAO.salario, 0, 1000000);
-    var encargos = numero(e.encargos, PADRAO.encargos, 0, 300);
-    var beneficios = numero(e.beneficios, PADRAO.beneficios, 0, 1000000);
-    var conversas = Math.round(numero(e.conversas, 400 * hoje, 0, 10000000));
-    var porPessoa = salario * (1 + encargos / 100) + beneficios;
-    var excedente = Math.max(0, conversas - PREMISSAS.conversasIncluidas);
-    var recargas = Math.ceil(excedente / PREMISSAS.conversasPorRecarga);
-    var ia = PREMISSAS.precoPlano + recargas * PREMISSAS.precoRecarga;
-    var custoHoje = porPessoa * hoje;
-    var custo2027 = porPessoa * depois + ia;
-    var economia = custoHoje - custo2027;
-    return {
-      hoje: { pessoas: hoje, mes: arred(custoHoje), ano: arred(custoHoje * 12), horasSemana: PREMISSAS.horasSemanaFuncionario, simultaneas: hoje * 3, porConversa: conversas ? arred(custoHoje / conversas) : 0 },
-      depois: { pessoas: depois, ia: ia, recargas: recargas, mes: arred(custo2027), ano: arred(custo2027 * 12), horasSemana: 168, simultaneas: null, porConversa: conversas ? arred(custo2027 / conversas) : 0 },
-      conversas: conversas,
-      economia: { mes: arred(economia), ano: arred(economia * 12), percentual: custoHoje > 0 ? Math.round((economia / custoHoje) * 100) : 0 },
-      horasLivres: (hoje - depois) * PREMISSAS.horasSemanaFuncionario,
-    };
-  }
-
-  /**
-   * Fim da escala 6x1: quantas pessoas a empresa precisa para cobrir as horas em que atende,
-   * com a jornada antiga (44 h), a de transição (42 h) e a nova (40 h); e quanto custa cada hora de atendimento.
+   * Calculadora da nova jornada (fim da escala 6x1, EC 141/2026: 44 h → 42 h → 40 h, mesmo salário).
+   * Entradas: horas por semana que a empresa atende e salário médio.
+   * Pessoas necessárias = horas ÷ jornada, arredondado para cima.
+   * Custo por pessoa = salário × 1,7 (encargos) + R$ 600 (benefícios).
+   * Com IA: 1 pessoa + Colaborador de IA (R$ 1.997/mês), que cobre as 168 h da semana.
    */
   function escala6x1(entradas) {
     var e = entradas || {};
-    var horas = Math.round(numero(e.horas, 72, 1, 168));
+    var horas = Math.round(numero(e.horas, 84, 1, 168));
     var salario = numero(e.salario, PADRAO.salario, 0, 1000000);
     var porPessoa = salario * (1 + PADRAO.encargos / 100) + PADRAO.beneficios;
-    function cenario(j) { var p = Math.ceil(horas / j); return { jornada: j, pessoas: p, mes: arred(p * porPessoa), hora: arred(porPessoa / (j * 4.33)) }; }
+    function cenario(j) { var p = Math.ceil(horas / j); return { jornada: j, pessoas: p, mes: arred(p * porPessoa), ano: arred(p * porPessoa * 12), hora: arred(porPessoa / (j * 4.33)) }; }
     var antes = cenario(44), transicao = cenario(42), depois = cenario(40);
-    return { horas: horas, antes: antes, transicao: transicao, depois: depois,
+    var comIaMes = porPessoa + PREMISSAS.precoPlano;
+    var economiaMes = depois.mes - comIaMes;
+    return {
+      horas: horas, porPessoa: arred(porPessoa), antes: antes, transicao: transicao, depois: depois,
       aumentoHora: Math.round((depois.hora / antes.hora - 1) * 100),
-      comIa: { pessoas: 1, mes: arred(porPessoa + PREMISSAS.precoPlano), horas: 168 } };
+      comIa: { pessoas: 1, ia: PREMISSAS.precoPlano, mes: arred(comIaMes), ano: arred(comIaMes * 12), horas: PREMISSAS.horasSemanaIA },
+      economia: { mes: arred(economiaMes), ano: arred(economiaMes * 12), percentual: depois.mes > 0 ? Math.round((economiaMes / depois.mes) * 100) : 0 },
+    };
   }
 
-  raiz.SintoniaCalculadora = Object.freeze({ calcular: calcular, equipe2027: equipe2027, escala6x1: escala6x1, PREMISSAS: PREMISSAS, PADRAO: PADRAO });
+  raiz.SintoniaCalculadora = Object.freeze({ calcular: calcular, escala6x1: escala6x1, PREMISSAS: PREMISSAS, PADRAO: PADRAO });
 })(typeof window !== 'undefined' ? window : globalThis);
