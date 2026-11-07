@@ -74,6 +74,8 @@ export interface Plano {
   cotaConversas: number | null;
   /** Horas por semana cobertas pela janela (sem adicional). */
   horasSemana: number;
+  /** Meses grátis no início da assinatura (o 1º ano do IA Expediente). */
+  mesesGratis?: number;
   /** Fundador: IA sem cota, 24 h, sem cobrança (conta original). */
   ilimitado?: boolean;
   sugestao: boolean;
@@ -143,7 +145,8 @@ export function catalogo(cfg: ConfigPlanos): Plano[] {
     {
       id: 'expediente',
       nome: 'IA Expediente',
-      descricao: `A IA no horário de um atendente CLT (${horasDaJanela(cfg.janela)} h por semana) pela metade do custo dele.`,
+      descricao: `A IA no horário de um atendente CLT (${horasDaJanela(cfg.janela)} h por semana). 1º ano grátis. Fora do horário, a IA usa créditos.`,
+      mesesGratis: 12,
       ia: true,
       preco: precoExpediente(cfg),
       cotaTokens: cfg.cotaTokens,

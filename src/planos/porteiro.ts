@@ -12,7 +12,7 @@ export type MotivoBloqueio = 'sem_plano' | 'suspensa' | 'fora_do_horario' | 'sem
 export const TEXTO_MOTIVO: Record<MotivoBloqueio, string> = {
   sem_plano: 'A empresa está no plano Grátis (CRM sem IA): a equipe atende.',
   suspensa: 'A assinatura da IA está suspensa: a equipe atende.',
-  fora_do_horario: 'Fora do horário do plano da IA (sem o adicional "Fora do horário"): a equipe atende.',
+  fora_do_horario: 'Fora do horário do plano e sem créditos para a IA: a equipe atende.',
   sem_cota: 'A cota de IA do mês acabou (sem recarga): a equipe atende.',
 };
 
@@ -107,8 +107,9 @@ export class Planos {
     if (a.status !== 'ativa') return nao('suspensa');
     if (p.ilimitado) return { pode: true, dentro, ilimitado: true };
     if (!p.ia) return nao('sem_plano');
-    if (!dentro && !a.adicionalFora) return nao('fora_do_horario');
-    const { cota } = await this.cotaDoMes(empresaId, agora);
+    const { cota, uso } = await this.cotaDoMes(empresaId, agora);
+    // Fora do expediente a IA só trabalha com créditos (recargas): cada token fora do horário sai do saldo de créditos.
+    if (!dentro && !a.adicionalFora && cota.recargas - uso.tokensFora <= 0) return nao('fora_do_horario');
     if (cota.restantes !== null && cota.restantes <= 0) return nao('sem_cota');
     return { pode: true, dentro, ilimitado: false };
   }

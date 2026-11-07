@@ -145,11 +145,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           <p class="pl-sub">Feriados contam como fora do horário. Agora: ${d.agora.dentro ? 'dentro' : 'fora'} da janela.</p>
           <div class="pl-acoes" style="margin-top:12px">
             <button class="pl-bt" data-ac="plano">Mudar de plano</button>
-            <button class="pl-bt pl-sec" data-ac="fora">${d.assinatura.adicionalFora ? 'Desligar fora do horário' : 'Ativar fora do horário'}</button>
             <button class="pl-bt pl-sec" data-ac="recarga">Recarregar</button>
           </div>
           <div data-escolha></div>
-          <p class="pl-sug" style="margin-top:10px">Preços e cotas são sugestão inicial. Base: atendente CLT a ${brl(d.precos.custoClt)}/mês; IA Expediente = ${Math.round(d.precos.fatorPreco * 100)}% disso (${brl(d.precos.expediente)}); fora do horário = +${d.precos.adicionalForaPct}% (${brl(d.precos.adicionalFora)}).</p>
+          <p class="pl-sug" style="margin-top:10px">Valores em definição. IA no expediente: 1º ano grátis. Fora do horário (noite, madrugada, domingo e feriado), a IA trabalha só com créditos: compre recargas quando quiser.</p>
         </section>
         <section class="pl-c">
           <h2>Uso do mês</h2>
