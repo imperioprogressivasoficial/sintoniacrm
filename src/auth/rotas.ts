@@ -6,6 +6,7 @@ import { registrarEquipe } from './equipe.js';
 import { comNivel, dentroDoHorario, permissaoDaRota, resolver, type Permissoes } from './permissoes.js';
 import { registrarUsuarios } from './usuarios-rotas.js';
 import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
+import { diasDemonstracao, horarioValido, janelaDemonstracao } from '../vendas/demonstracao.js';
 
 export const COOKIE = 'sintonia_sessao';
 
@@ -20,7 +21,7 @@ export interface OpcoesAuth {
 }
 
 /** Rotas da API que não pedem login. */
-const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite']);
+const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao']);
 /** O que quem precisa trocar a senha (ou está fora do horário) ainda pode chamar. */
 const SEMPRE = new Set(['/api/auth/eu', '/api/auth/senha', '/api/auth/sair']);
 
@@ -217,5 +218,80 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     const { site: _, ...dados } = b.data;
     await o.contas.registrarInteressado(dados);
     return { ok: true };
+  });
+
+  registrarLeadsSite(app, o.contas, agora);
+}
+
+// ---------------------------------------------------------------- leads do pop-up da página de vendas
+
+export const SETORES = ['Serviços', 'Saúde e estética', 'Varejo e e-commerce', 'Educação', 'Imobiliário', 'Indústria', 'Outro'] as const;
+export const FATURAMENTOS = ['até R$ 50 mil', 'R$ 50 mil a R$ 200 mil', 'R$ 200 mil a R$ 1 milhão', 'acima de R$ 1 milhão'] as const;
+export const PLANOS_SITE = ['Essencial', 'Colaborador de IA', 'Empresarial'] as const;
+
+const LeadSiteEntrada = z.object({
+  nome: z.string().trim().min(2).max(120),
+  whatsapp: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => v.length >= 10 && v.length <= 13, 'WhatsApp inválido'),
+  email: z.string().trim().toLowerCase().max(160).email(),
+  empresa: z.string().trim().max(160).optional(),
+  setor: z.enum(SETORES),
+  faturamento: z.enum(FATURAMENTOS),
+  plano: z.enum(PLANOS_SITE),
+  origem: z.string().trim().max(60).optional(),
+  // Armadilha para robôs, como no /api/contato.
+  site: z.string().optional(),
+});
+
+const AgendaEntrada = z.object({
+  id: z.string().trim().min(1).max(40),
+  token: z.string().trim().min(20).max(100),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hora: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+function registrarLeadsSite(app: FastifyInstance, contas: Contas, agora: () => Date): void {
+  const leads = new Limite(5, 60 * 60_000);
+  const agendas = new Limite(20, 60 * 60_000);
+
+  app.get('/api/leads-site/horarios', async () => {
+    const t = agora();
+    const { de, ate } = janelaDemonstracao(t);
+    return { fuso: 'America/Sao_Paulo', dias: diasDemonstracao(t, await contas.demonstracoesOcupadas(de, ate)) };
+  });
+
+  app.post('/api/leads-site', async (req, reply) => {
+    const b = LeadSiteEntrada.safeParse(req.body);
+    if (!b.success) {
+      const campo = String(b.error.issues[0]?.path[0] ?? '');
+      const erro = campo === 'email' ? 'Confira o e-mail.' : campo === 'whatsapp' ? 'Confira o WhatsApp com DDD.' : campo === 'nome' ? 'Confira o seu nome.' : 'Escolha o setor, o faturamento e o plano.';
+      return reply.code(400).send({ erro });
+    }
+    // Robô: finge que deu certo e não grava nada.
+    if (b.data.site) return { ok: true, id: '0', token: 'x'.repeat(43) };
+    const t = agora().getTime();
+    if (leads.excedeu(req.ip, t)) return reply.code(429).send({ erro: 'Recebemos seus dados. Já já falamos com você.' });
+    leads.registrar(req.ip, t);
+    const { site: _, ...dados } = b.data;
+    const { id, token } = await contas.registrarLeadSite({ ...dados, origem: dados.origem ?? 'pagina-vendas' });
+    return { ok: true, id, token };
+  });
+
+  app.post('/api/leads-site/demonstracao', async (req, reply) => {
+    const b = AgendaEntrada.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ erro: 'Escolha o dia e o horário.' });
+    const t = agora();
+    if (agendas.excedeu(req.ip, t.getTime())) return reply.code(429).send({ erro: 'Muitas tentativas. Tente de novo mais tarde.' });
+    agendas.registrar(req.ip, t.getTime());
+    const em = horarioValido(b.data.data, b.data.hora, t);
+    if (!em) return reply.code(400).send({ erro: 'Esse horário não está disponível. Escolha outro.' });
+    const r = await contas.agendarDemonstracao(b.data.id, b.data.token, em, t);
+    if (r === 'nao-achou') return reply.code(404).send({ erro: 'Não achamos o seu cadastro. Envie os dados de novo.' });
+    if (r === 'ocupado') return reply.code(409).send({ erro: 'Alguém acabou de marcar esse horário. Escolha outro.' });
+    if (r === 'ja-agendado') return reply.code(409).send({ erro: 'Sua demonstração já está agendada. A gente confirma pelo WhatsApp.' });
+    return { ok: true, data: b.data.data, hora: b.data.hora, em: em.toISOString() };
   });
 }

@@ -28,6 +28,16 @@ export interface Interessado {
   origem?: string;
 }
 
+/** Lead do pop-up da página de vendas (antes da demonstração). */
+export interface LeadSite extends Interessado {
+  email: string;
+  setor: string;
+  faturamento: string;
+  plano: string;
+}
+
+export type ResultadoAgenda = 'ok' | 'nao-achou' | 'ocupado' | 'ja-agendado';
+
 export interface Contas {
   criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }): Promise<Usuario>;
   buscarPorEmail(email: string): Promise<UsuarioComSenha | undefined>;
@@ -37,6 +47,12 @@ export interface Contas {
   usuarioDaSessao(token: string, agora: Date): Promise<Usuario | undefined>;
   encerrarSessao(token: string): Promise<void>;
   registrarInteressado(i: Interessado): Promise<void>;
+  /** Guarda o lead do pop-up e devolve o id e um token para ele agendar a demonstração sem login. */
+  registrarLeadSite(l: LeadSite): Promise<{ id: string; token: string }>;
+  /** Marca a demonstração do lead (o token precisa ser o que voltou no cadastro). */
+  agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda>;
+  /** Horários de demonstração já tomados no intervalo. */
+  demonstracoesOcupadas(de: Date, ate: Date): Promise<Date[]>;
 
   // ---- equipe ----
   listarUsuarios(empresaId: string): Promise<Usuario[]>;
@@ -70,6 +86,7 @@ export class ContasMemoria implements Contas {
   usuarios: UsuarioComSenha[] = [];
   sessoes = new Map<string, { usuarioId: string; expiraEm: Date }>();
   interessados: Interessado[] = [];
+  leadsSite: (LeadSite & { id: string; tokenHash: string; demoEm?: Date; demoMarcadaEm?: Date })[] = [];
 
   async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
     if (this.usuarios.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) {
@@ -106,6 +123,27 @@ export class ContasMemoria implements Contas {
 
   async registrarInteressado(i: Interessado) {
     this.interessados.push(i);
+  }
+
+  async registrarLeadSite(l: LeadSite) {
+    const token = novoToken();
+    const id = String(this.leadsSite.length + 1);
+    this.leadsSite.push({ ...l, id, tokenHash: resumoToken(token) });
+    return { id, token };
+  }
+
+  async agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda> {
+    const l = this.leadsSite.find((x) => x.id === id && x.tokenHash === resumoToken(token));
+    if (!l) return 'nao-achou';
+    if (l.demoEm) return l.demoEm.getTime() === em.getTime() ? 'ok' : 'ja-agendado';
+    if (this.leadsSite.some((x) => x.demoEm?.getTime() === em.getTime())) return 'ocupado';
+    l.demoEm = em;
+    l.demoMarcadaEm = marcadaEm;
+    return 'ok';
+  }
+
+  async demonstracoesOcupadas(de: Date, ate: Date) {
+    return this.leadsSite.flatMap((x) => (x.demoEm && x.demoEm >= de && x.demoEm < ate ? [x.demoEm] : []));
   }
 
   async listarUsuarios(empresaId: string) {
@@ -228,6 +266,44 @@ export class ContasPostgres implements Contas {
       'insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem) values ($1, $2, $3, $4, $5)',
       [i.nome, i.empresa ?? null, i.whatsapp, i.mensagem ?? null, i.origem ?? null],
     );
+  }
+
+  async registrarLeadSite(l: LeadSite) {
+    const token = novoToken();
+    const { rows } = await this.pool.query<{ id: string }>(
+      `insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem, email, setor, faturamento, plano, token_hash)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
+      [l.nome, l.empresa ?? null, l.whatsapp, l.mensagem ?? null, l.origem ?? null, l.email, l.setor, l.faturamento, l.plano, resumoToken(token)],
+    );
+    return { id: String(rows[0]!.id), token };
+  }
+
+  async agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda> {
+    if (!/^\d{1,18}$/.test(id)) return 'nao-achou';
+    const { rows } = await this.pool.query<{ demo_em: Date | null }>(
+      'select demo_em from sintonia.interessados where id = $1 and token_hash = $2',
+      [id, resumoToken(token)],
+    );
+    if (!rows[0]) return 'nao-achou';
+    if (rows[0].demo_em) return rows[0].demo_em.getTime() === em.getTime() ? 'ok' : 'ja-agendado';
+    try {
+      const r = await this.pool.query(
+        'update sintonia.interessados set demo_em = $3, demo_marcada_em = $4 where id = $1 and token_hash = $2 and demo_em is null',
+        [id, resumoToken(token), em, marcadaEm],
+      );
+      return r.rowCount ? 'ok' : 'ja-agendado';
+    } catch (e) {
+      if ((e as { code?: string }).code === '23505') return 'ocupado';
+      throw e;
+    }
+  }
+
+  async demonstracoesOcupadas(de: Date, ate: Date) {
+    const { rows } = await this.pool.query<{ demo_em: Date }>(
+      'select demo_em from sintonia.interessados where demo_em >= $1 and demo_em < $2',
+      [de, ate],
+    );
+    return rows.map((r) => r.demo_em);
   }
 
   async listarUsuarios(empresaId: string) {

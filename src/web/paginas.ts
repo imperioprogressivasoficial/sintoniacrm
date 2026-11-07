@@ -89,6 +89,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/responsivo.js': { arquivo: 'telas/responsivo.js', tipo: 'text/javascript; charset=utf-8' },
   '/ds.css': { arquivo: 'ds.css', tipo: 'text/css; charset=utf-8' },
   '/acesso-rapido.js': { arquivo: 'acesso-rapido.js', tipo: 'text/javascript; charset=utf-8' },
+  // Calculadora de custo da IA (mesma fórmula na página de vendas e no app).
+  '/calculadora-ia.js': { arquivo: 'calculadora-ia.js', tipo: 'text/javascript; charset=utf-8' },
 };
 
 export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void {
