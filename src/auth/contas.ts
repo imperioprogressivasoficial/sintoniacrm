@@ -1,0 +1,371 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import type pg from 'pg';
+
+export const PAPEIS = ['atendente', 'recepcionista', 'gerente', 'direcao', 'admin'] as const;
+export type Papel = (typeof PAPEIS)[number];
+
+export interface Usuario {
+  id: string;
+  empresaId: string;
+  nome: string;
+  email: string;
+  papel: Papel;
+  unidades: string[];
+  ativo: boolean;
+  /** Até onde vê as conversas (vem das permissões; sem isso vale o padrão do papel). */
+  verConversas?: 'minhas' | 'unidade' | 'todas';
+}
+
+export interface UsuarioComSenha extends Usuario {
+  senhaHash: string;
+}
+
+export interface Interessado {
+  nome: string;
+  empresa?: string;
+  whatsapp: string;
+  mensagem?: string;
+  origem?: string;
+}
+
+/** Lead do pop-up da página de vendas (antes da demonstração). */
+export interface LeadSite extends Interessado {
+  email: string;
+  setor?: string;
+  instagram?: string;
+  faturamento: string;
+  plano: string;
+}
+
+export type ResultadoAgenda = 'ok' | 'nao-achou' | 'ocupado' | 'ja-agendado';
+
+export interface Contas {
+  criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }): Promise<Usuario>;
+  buscarPorEmail(email: string): Promise<UsuarioComSenha | undefined>;
+  /** Cria a sessão e devolve o token (só o resumo dele fica guardado). */
+  criarSessao(usuarioId: string, expiraEm: Date): Promise<string>;
+  /** Usuário dono do token, se a sessão existe, não venceu e a conta está ativa. */
+  usuarioDaSessao(token: string, agora: Date): Promise<Usuario | undefined>;
+  encerrarSessao(token: string): Promise<void>;
+  registrarInteressado(i: Interessado): Promise<void>;
+  /** Guarda o lead do pop-up e devolve o id e um token para ele agendar a demonstração sem login. */
+  registrarLeadSite(l: LeadSite): Promise<{ id: string; token: string }>;
+  /** Marca a demonstração do lead (o token precisa ser o que voltou no cadastro). */
+  agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda>;
+  /** Horários de demonstração já tomados no intervalo. */
+  demonstracoesOcupadas(de: Date, ate: Date): Promise<Date[]>;
+
+  // ---- equipe ----
+  listarUsuarios(empresaId: string): Promise<Usuario[]>;
+  buscarPorId(id: string): Promise<UsuarioComSenha | undefined>;
+  /** Muda papel, unidades e/ou se está ativa. Devolve a usuária atualizada (undefined se não existe). */
+  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>): Promise<Usuario | undefined>;
+  definirSenha(id: string, senhaHash: string): Promise<void>;
+  /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
+  encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
+
+  // ---- foto (rosto) ----
+  fotoDe(usuarioId: string): Promise<FotoUsuario | undefined>;
+  /** null apaga a foto. */
+  salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
+  /** Quem da empresa tem foto e quando ela mudou (para a tela montar o endereço com versão). */
+  fotosDaEmpresa(empresaId: string): Promise<Map<string, Date>>;
+}
+
+export interface FotoUsuario {
+  conteudo: Buffer;
+  tipo: string;
+  atualizadaEm: Date;
+}
+
+export const novoToken = () => randomBytes(32).toString('base64url');
+export const resumoToken = (token: string) => createHash('sha256').update(token).digest('hex');
+
+// ---------------------------------------------------------------- memória
+
+export class ContasMemoria implements Contas {
+  usuarios: UsuarioComSenha[] = [];
+  sessoes = new Map<string, { usuarioId: string; expiraEm: Date }>();
+  interessados: Interessado[] = [];
+  leadsSite: (LeadSite & { id: string; tokenHash: string; demoEm?: Date; demoMarcadaEm?: Date })[] = [];
+
+  async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
+    if (this.usuarios.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) {
+      throw new Error('Já existe um usuário com esse e-mail.');
+    }
+    const novo: UsuarioComSenha = { ...u, id: randomUUID(), ativo: true };
+    this.usuarios.push(novo);
+    const { senhaHash: _, ...publico } = novo;
+    return publico;
+  }
+
+  async buscarPorEmail(email: string) {
+    return this.usuarios.find((x) => x.email.toLowerCase() === email.toLowerCase());
+  }
+
+  async criarSessao(usuarioId: string, expiraEm: Date) {
+    const token = novoToken();
+    this.sessoes.set(resumoToken(token), { usuarioId, expiraEm });
+    return token;
+  }
+
+  async usuarioDaSessao(token: string, agora: Date) {
+    const s = this.sessoes.get(resumoToken(token));
+    if (!s || s.expiraEm.getTime() <= agora.getTime()) return undefined;
+    const u = this.usuarios.find((x) => x.id === s.usuarioId && x.ativo);
+    if (!u) return undefined;
+    const { senhaHash: _, ...publico } = u;
+    return publico;
+  }
+
+  async encerrarSessao(token: string) {
+    this.sessoes.delete(resumoToken(token));
+  }
+
+  async registrarInteressado(i: Interessado) {
+    this.interessados.push(i);
+  }
+
+  async registrarLeadSite(l: LeadSite) {
+    const token = novoToken();
+    const id = String(this.leadsSite.length + 1);
+    this.leadsSite.push({ ...l, id, tokenHash: resumoToken(token) });
+    return { id, token };
+  }
+
+  async agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda> {
+    const l = this.leadsSite.find((x) => x.id === id && x.tokenHash === resumoToken(token));
+    if (!l) return 'nao-achou';
+    if (l.demoEm) return l.demoEm.getTime() === em.getTime() ? 'ok' : 'ja-agendado';
+    if (this.leadsSite.some((x) => x.demoEm?.getTime() === em.getTime())) return 'ocupado';
+    l.demoEm = em;
+    l.demoMarcadaEm = marcadaEm;
+    return 'ok';
+  }
+
+  async demonstracoesOcupadas(de: Date, ate: Date) {
+    return this.leadsSite.flatMap((x) => (x.demoEm && x.demoEm >= de && x.demoEm < ate ? [x.demoEm] : []));
+  }
+
+  async listarUsuarios(empresaId: string) {
+    return this.usuarios
+      .filter((u) => u.empresaId === empresaId)
+      .map(({ senhaHash: _, ...publico }) => publico)
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  async buscarPorId(id: string) {
+    const u = this.usuarios.find((x) => x.id === id);
+    return u ? { ...u } : undefined;
+  }
+
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+    const u = this.usuarios.find((x) => x.id === id);
+    if (!u) return undefined;
+    if (campos.papel !== undefined) u.papel = campos.papel;
+    if (campos.unidades !== undefined) u.unidades = [...campos.unidades];
+    if (campos.ativo !== undefined) u.ativo = campos.ativo;
+    const { senhaHash: _, ...publico } = u;
+    return { ...publico, unidades: [...publico.unidades] };
+  }
+
+  async definirSenha(id: string, senhaHash: string) {
+    const u = this.usuarios.find((x) => x.id === id);
+    if (u) u.senhaHash = senhaHash;
+  }
+
+  async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
+    const manter = excetoToken ? resumoToken(excetoToken) : undefined;
+    for (const [chave, s] of this.sessoes) if (s.usuarioId === usuarioId && chave !== manter) this.sessoes.delete(chave);
+  }
+
+  fotos = new Map<string, FotoUsuario>();
+  async fotoDe(usuarioId: string) {
+    const f = this.fotos.get(usuarioId);
+    return f ? { ...f } : undefined;
+  }
+  async salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    if (!foto) this.fotos.delete(usuarioId);
+    else if (this.usuarios.some((u) => u.id === usuarioId)) this.fotos.set(usuarioId, { ...foto, atualizadaEm: em });
+  }
+  async fotosDaEmpresa(empresaId: string) {
+    const ids = new Set(this.usuarios.filter((u) => u.empresaId === empresaId).map((u) => u.id));
+    return new Map([...this.fotos].filter(([id]) => ids.has(id)).map(([id, f]) => [id, f.atualizadaEm]));
+  }
+}
+
+// ---------------------------------------------------------------- Postgres
+
+interface LinhaUsuario {
+  id: string;
+  empresa_id: string;
+  nome: string;
+  email: string;
+  senha_hash: string;
+  papel: Papel;
+  unidades: string[];
+  ativo: boolean;
+}
+
+const paraUsuario = (l: LinhaUsuario): Usuario => ({
+  id: l.id,
+  empresaId: l.empresa_id,
+  nome: l.nome,
+  email: l.email,
+  papel: l.papel,
+  unidades: l.unidades ?? [],
+  ativo: l.ativo,
+});
+
+export class ContasPostgres implements Contas {
+  constructor(readonly pool: pg.Pool) {}
+
+  async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
+    try {
+      const { rows } = await this.pool.query<LinhaUsuario>(
+        `insert into sintonia.usuarios (id, empresa_id, nome, email, senha_hash, papel, unidades)
+         values ($1, $2, $3, $4, $5, $6, $7) returning *`,
+        [randomUUID(), u.empresaId, u.nome, u.email, u.senhaHash, u.papel, u.unidades],
+      );
+      return paraUsuario(rows[0]!);
+    } catch (e) {
+      if ((e as { code?: string }).code === '23505') throw new Error('Já existe um usuário com esse e-mail.');
+      throw e;
+    }
+  }
+
+  async buscarPorEmail(email: string) {
+    const { rows } = await this.pool.query<LinhaUsuario>('select * from sintonia.usuarios where lower(email) = lower($1)', [email]);
+    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
+  }
+
+  async criarSessao(usuarioId: string, expiraEm: Date) {
+    const token = novoToken();
+    await this.pool.query('insert into sintonia.sessoes (token_hash, usuario_id, expira_em) values ($1, $2, $3)', [
+      resumoToken(token),
+      usuarioId,
+      expiraEm,
+    ]);
+    return token;
+  }
+
+  async usuarioDaSessao(token: string, agora: Date) {
+    const { rows } = await this.pool.query<LinhaUsuario>(
+      `select u.* from sintonia.sessoes s join sintonia.usuarios u on u.id = s.usuario_id
+        where s.token_hash = $1 and s.expira_em > $2 and u.ativo`,
+      [resumoToken(token), agora],
+    );
+    return rows[0] ? paraUsuario(rows[0]) : undefined;
+  }
+
+  async encerrarSessao(token: string) {
+    await this.pool.query('delete from sintonia.sessoes where token_hash = $1', [resumoToken(token)]);
+  }
+
+  async registrarInteressado(i: Interessado) {
+    await this.pool.query(
+      'insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem) values ($1, $2, $3, $4, $5)',
+      [i.nome, i.empresa ?? null, i.whatsapp, i.mensagem ?? null, i.origem ?? null],
+    );
+  }
+
+  async registrarLeadSite(l: LeadSite) {
+    const token = novoToken();
+    const { rows } = await this.pool.query<{ id: string }>(
+      `insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem, email, setor, faturamento, plano, token_hash, instagram)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
+      [l.nome, l.empresa ?? null, l.whatsapp, l.mensagem ?? null, l.origem ?? null, l.email, l.setor ?? null, l.faturamento, l.plano, resumoToken(token), l.instagram || null],
+    );
+    return { id: String(rows[0]!.id), token };
+  }
+
+  async agendarDemonstracao(id: string, token: string, em: Date, marcadaEm: Date): Promise<ResultadoAgenda> {
+    if (!/^\d{1,18}$/.test(id)) return 'nao-achou';
+    const { rows } = await this.pool.query<{ demo_em: Date | null }>(
+      'select demo_em from sintonia.interessados where id = $1 and token_hash = $2',
+      [id, resumoToken(token)],
+    );
+    if (!rows[0]) return 'nao-achou';
+    if (rows[0].demo_em) return rows[0].demo_em.getTime() === em.getTime() ? 'ok' : 'ja-agendado';
+    try {
+      const r = await this.pool.query(
+        'update sintonia.interessados set demo_em = $3, demo_marcada_em = $4 where id = $1 and token_hash = $2 and demo_em is null',
+        [id, resumoToken(token), em, marcadaEm],
+      );
+      return r.rowCount ? 'ok' : 'ja-agendado';
+    } catch (e) {
+      if ((e as { code?: string }).code === '23505') return 'ocupado';
+      throw e;
+    }
+  }
+
+  async demonstracoesOcupadas(de: Date, ate: Date) {
+    const { rows } = await this.pool.query<{ demo_em: Date }>(
+      'select demo_em from sintonia.interessados where demo_em >= $1 and demo_em < $2',
+      [de, ate],
+    );
+    return rows.map((r) => r.demo_em);
+  }
+
+  async listarUsuarios(empresaId: string) {
+    const { rows } = await this.pool.query<LinhaUsuario>(
+      'select * from sintonia.usuarios where empresa_id = $1 order by nome',
+      [empresaId],
+    );
+    return rows.map(paraUsuario);
+  }
+
+  async buscarPorId(id: string) {
+    const { rows } = await this.pool.query<LinhaUsuario>('select * from sintonia.usuarios where id = $1', [id]);
+    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
+  }
+
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+    const { rows } = await this.pool.query<LinhaUsuario>(
+      `update sintonia.usuarios set
+         papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo)
+       where id = $1 returning *`,
+      [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null],
+    );
+    return rows[0] ? paraUsuario(rows[0]) : undefined;
+  }
+
+  async definirSenha(id: string, senhaHash: string) {
+    await this.pool.query('update sintonia.usuarios set senha_hash = $2 where id = $1', [id, senhaHash]);
+  }
+
+  async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
+    await this.pool.query('delete from sintonia.sessoes where usuario_id = $1 and token_hash is distinct from $2', [
+      usuarioId,
+      excetoToken ? resumoToken(excetoToken) : null,
+    ]);
+  }
+
+  async fotoDe(usuarioId: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(usuarioId)) return undefined;
+    const { rows } = await this.pool.query<{ conteudo: Buffer; tipo: string; atualizada_em: Date }>(
+      'select conteudo, tipo, atualizada_em from sintonia.usuario_fotos where usuario_id = $1',
+      [usuarioId],
+    );
+    return rows[0] ? { conteudo: rows[0].conteudo, tipo: rows[0].tipo, atualizadaEm: rows[0].atualizada_em } : undefined;
+  }
+  async salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    if (!foto) {
+      await this.pool.query('delete from sintonia.usuario_fotos where usuario_id = $1', [usuarioId]);
+      return;
+    }
+    await this.pool.query(
+      `insert into sintonia.usuario_fotos (usuario_id, conteudo, tipo, atualizada_em) values ($1, $2, $3, $4)
+       on conflict (usuario_id) do update set conteudo = excluded.conteudo, tipo = excluded.tipo, atualizada_em = excluded.atualizada_em`,
+      [usuarioId, foto.conteudo, foto.tipo, em],
+    );
+  }
+  async fotosDaEmpresa(empresaId: string) {
+    const { rows } = await this.pool.query<{ id: string; em: Date }>(
+      `select f.usuario_id::text as id, f.atualizada_em as em from sintonia.usuario_fotos f
+         join sintonia.usuarios u on u.id = f.usuario_id where u.empresa_id = $1`,
+      [empresaId],
+    );
+    return new Map(rows.map((r) => [r.id, r.em]));
+  }
+}

@@ -24,7 +24,7 @@ Como responder:
 - Se ela pedir para falar com uma pessoa, reclamar, relatar reação alérgica ou pedir desconto fora das regras, use passar_para_humano e avise com gentileza que alguém da equipe vai continuar.
 - Use registrar_etapa quando ficar claro o momento da cliente: em_conversa (tirando dúvidas), interessada (perguntou preço/horário, quer fazer) ou perdida (disse que não quer ou desistiu).
 - Mensagens marcadas como "[Equipe: nome]" foram escritas por atendentes. Continue de onde elas pararam, sem contradizer o que já foi combinado.
-- "[áudio]" e "[foto]" significam que a cliente mandou mídia que você não consegue ver. Peça com gentileza que ela escreva o que precisa.
+- "[áudio]", "[foto]", "[vídeo]", "[documento: ...]" e "[figurinha]" significam que a cliente mandou mídia que você não consegue ver nem ouvir (o texto depois do marcador é a legenda que ela escreveu). A equipe vê o arquivo no CRM. Se precisar do conteúdo, peça com gentileza que ela escreva o que precisa.
 - Sua resposta final é exatamente o texto que vai para a cliente.
 
 <base_de_conhecimento>
@@ -45,6 +45,14 @@ export function contextoDaConversa(c: Conversa, agora: Date): string {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/**
+ * Objetivo do "fluxo de IA" de uma automação (ex.: "qualificar e agendar a avaliação"). Vai junto da
+ * última mensagem, fora do system prompt (não quebra o cache), e vale enquanto o fluxo estiver ativo.
+ */
+export function instrucaoObjetivo(objetivo: string): string {
+  return `<objetivo_da_loja>${objetivo.trim()}</objetivo_da_loja>\nEste objetivo foi definido pela loja para esta conversa (não pela cliente). Conduza a conversa na direção dele, sem pular as regras de atendimento e sem inventar informação.`;
 }
 
 export interface TurnoTexto {

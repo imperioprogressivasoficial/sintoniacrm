@@ -1,6 +1,6 @@
 import type { Conversa } from '../domain.js';
 import type { Unidade } from '../unidades.js';
-import { estaAberta } from './horario.js';
+import { estaAberta, fechamentoDeHoje } from './horario.js';
 import { MIN } from '../util/tempo.js';
 
 /**
@@ -13,6 +13,11 @@ export interface RegrasAtendimento {
   assumirAposMin: number;
   /** Quanto tempo a IA fica quieta depois que alguém da equipe escreve ou digita. */
   pausaAposEquipeMin: number;
+  /**
+   * "IA assume quando ninguém responde" (configuração da empresa). Desligado: em horário de loja,
+   * no copiloto, a IA só sugere e nunca assume sozinha. Fora do horário a regra de sempre continua.
+   */
+  assumirLigado?: boolean;
 }
 
 export const REGRAS_PADRAO: RegrasAtendimento = {
@@ -62,6 +67,15 @@ export function decidirQuemResponde(
 
   if (conversa.modo === 'ia') {
     return { acao: 'ia_responde', motivo: 'A IA está conduzindo esta conversa.', assumiu: false };
+  }
+
+  // Assumir desligado: só sugere. Reavalia no fechamento, quando passa a valer a regra de fora do horário.
+  if (regras.assumirLigado === false) {
+    return {
+      acao: 'sugerir',
+      motivo: 'Copiloto: sugestão pronta para a atendente (a IA não assume sozinha).',
+      reavaliarEm: fechamentoDeHoje(unidade, agora) ?? new Date(agora.getTime() + 60 * MIN),
+    };
   }
 
   // Copiloto em horário de loja: sugere já e assume se ninguém responder no prazo.

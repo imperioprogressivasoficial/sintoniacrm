@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conexões · Sintonia</title>
+<meta name="theme-color" content="#eef4fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#04121f" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icone-180.png" media="(prefers-color-scheme: light)">
+<link rel="apple-touch-icon" href="/icone-escuro-180.png" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="/icone-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sintonia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
+<link rel="stylesheet" href="/ds.css">
+<script src="/telas/email-conexoes.js" defer></script>
+<style>
+  :root { --erro: #c43a3a; --ok: #087a5c; --ok-fundo: rgba(15, 252, 190, .18); --raio: 22px; }
+  @media (prefers-color-scheme: dark) { :root { --erro: #ff8a8a; --ok: #0ffcbe; --ok-fundo: rgba(15, 252, 190, .12); } }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { scroll-padding-top: 128px; }
+  body { margin: 0; min-height: 100vh; font-family: var(--fonte); background: var(--aurora); background-attachment: fixed; color: var(--texto); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+
+  /* cabeçalho de vidro */
+  .topo { position: sticky; top: 0; z-index: 5; padding: 10px 12px 8px; padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--vidro-fundo); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid var(--vidro-borda); }
+  .topo-linha { max-width: 920px; margin: 0 auto; display: flex; align-items: center; gap: 8px; }
+  .voltar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; text-decoration: none; flex: none; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .voltar svg { width: 22px; height: 22px; }
+  .topo h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  .topo .sub { font-size: 12.5px; color: var(--sub); }
+  .atalhos { max-width: 920px; margin: 8px auto 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .atalhos::-webkit-scrollbar { display: none; }
+  .atalhos a { flex: none; text-decoration: none; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); white-space: nowrap; }
+  .atalhos a:hover { background: var(--vidro-ativo); }
+
+  main { max-width: 920px; margin: 0 auto; padding: 16px 16px calc(60px + env(safe-area-inset-bottom)); display: grid; gap: 16px; }
+  .grupo { font-size: 11.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); margin: 10px 4px -4px; }
+  section { background: var(--vidro-fundo); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho);
+    border-radius: var(--raio); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  h2 { margin: 0; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 12px; line-height: 1.25; }
+  h2 small { display: block; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-top: 2px; }
+  .ic { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff; flex: none; background: var(--marca-gradiente); box-shadow: var(--brilho-azul); }
+  .ic.menta { background: linear-gradient(135deg, #0ffcbe, #0a8f7a); color: #08243f; box-shadow: var(--brilho-menta); }
+  .ic.tinta { background: linear-gradient(135deg, #1b4a74, #08243f); }
+  .ic svg { width: 20px; height: 20px; }
+  h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  p { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.5; }
+  p b, li b { color: var(--texto); font-weight: 700; }
+  label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sub); min-width: 0; }
+  label .dica { font-weight: 500; font-size: 12px; }
+  .cab .dica { font-size: 12px; color: var(--sub); }
+  input { background: var(--vidro-item); border: 1px solid var(--vidro-borda); box-shadow: inset 0 1px 2px rgba(8,36,63,.06); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; min-width: 0; }
+  input:focus { outline: 2px solid color-mix(in srgb, var(--marca-azul) 60%, transparent); outline-offset: 1px; background: var(--vidro-ativo); }
+  input[readonly] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .campos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .copia { display: flex; gap: 6px; min-width: 0; }
+  .copia input { flex: 1; }
+
+  .botao { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 700; text-align: center; background: var(--marca-gradiente); color: #fff; box-shadow: var(--brilho-azul); }
+  .botao:hover { filter: brightness(1.06); }
+  .botao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+  .botao.leve { background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .botao.perigo { background: transparent; color: var(--erro); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .botao.mini { padding: 8px 12px; font-size: 13px; }
+  .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
+
+  .estado { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); white-space: nowrap; }
+  .estado.ok { background: var(--ok-fundo); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(15,252,190,.35); }
+  .estado.aviso { background: var(--aviso); color: var(--aviso-txt); box-shadow: none; }
+  .res { font-size: 13.5px; font-weight: 600; }
+  .res.ok { color: var(--ok); }
+  .res.erro { color: var(--erro); }
+  .cartoes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .cartao { border-radius: 18px; padding: 14px; display: grid; gap: 12px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); min-width: 0; align-content: start; }
+  .cartao .cab { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cartao .cab b { font-size: 15px; }
+  .aviso { background: var(--aviso); color: var(--aviso-txt); border-radius: 14px; padding: 11px 13px; font-size: 13.5px; line-height: 1.5; }
+
+  /* escolha do canal por unidade */
+  .escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .escolha.quatro { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 420px) { .escolha.quatro { grid-template-columns: 1fr 1fr; } }
+  .escolha button { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 12px; padding: 10px 8px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--sub); line-height: 1.2; }
+  .escolha button small { display: block; font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+  .escolha button[aria-pressed="true"] { background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(16,110,190,.16); }
+  [data-tema="escuro"] .escolha button[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px rgba(15,252,190,.55), 0 8px 22px rgba(0,0,0,.3); }
+  .escolha button:focus-visible { outline: 2px solid var(--marca-menta); }
+
+  details.passos { border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); padding: 2px 14px; }
+  details.passos summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 12px 0; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+  details.passos summary::-webkit-details-marker { display: none; }
+  details.passos summary::after { content: "＋"; color: var(--sub); }
+  details.passos[open] summary::after { content: "－"; }
+  details.passos ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--sub); line-height: 1.5; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--vidro-ativo); padding: 1px 6px; border-radius: 6px; color: var(--texto); word-break: break-all; }
+  .modelos { display: grid; gap: 8px; }
+  .modelo { border-radius: 12px; padding: 10px 12px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda); display: grid; gap: 4px; font-size: 13px; }
+  .modelo b { font-size: 13.5px; word-break: break-all; }
+  .modelo span { color: var(--sub); }
+  .reservado { border-style: dashed; }
+  select.sel { background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; }
+  section[data-rede] h2 { flex-wrap: wrap; }
+  .reservado .ic { opacity: .75; }
+
+  dialog { border: 0; border-radius: 24px; padding: 22px; width: min(380px, calc(100vw - 24px)); background: var(--vidro-forte); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); color: var(--texto); text-align: center; box-shadow: var(--vidro-brilho); }
+  dialog::backdrop { background: rgba(4,12,20,.55); }
+  dialog img { width: 264px; max-width: 100%; aspect-ratio: 1; background: #fff; border-radius: 12px; padding: 8px; }
+  dialog ol { text-align: left; font-size: 14px; color: var(--sub); padding-left: 20px; margin: 12px 0; line-height: 1.6; }
+  @media (max-width: 520px) {
+    main { padding-left: 12px; padding-right: 12px; }
+    section { padding: 16px 14px; border-radius: 20px; }
+    .cartoes, .campos { grid-template-columns: minmax(0, 1fr); }
+    .linha .botao { flex: 1 1 auto; }
+  }
+</style>
+</head>
+<body>
+<script>
+/* Tema: o mesmo do app ("auto" segue o aparelho; "claro"/"escuro" vale para a página inteira). */
+(() => {
+  let tema = 'auto';
+  try { tema = localStorage.getItem('sintonia.tema') || 'auto'; } catch {}
+  const escuroDoAparelho = matchMedia('(prefers-color-scheme: dark)');
+  const original = new WeakMap();
+  const aplicarEm = (regras) => {
+    for (const r of regras) {
+      if (!(r instanceof CSSMediaRule)) continue;
+      if (!original.has(r)) original.set(r, r.media.mediaText);
+      const m = original.get(r);
+      if (/prefers-color-scheme:\s*dark/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'escuro' ? m.replace(/\(prefers-color-scheme:\s*dark\)/, 'all') : 'not all';
+      else if (/prefers-color-scheme:\s*light/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'claro' ? m.replace(/\(prefers-color-scheme:\s*light\)/, 'all') : 'not all';
+      aplicarEm(r.cssRules);
+    }
+  };
+  const aplicar = () => {
+    for (const f of document.styleSheets) { try { aplicarEm(f.cssRules); } catch {} }
+    document.documentElement.dataset.tema = tema === 'escuro' || (tema === 'auto' && escuroDoAparelho.matches) ? 'escuro' : 'claro';
+  };
+  escuroDoAparelho.addEventListener('change', aplicar);
+  addEventListener('load', aplicar);
+  aplicar();
+})();
+</script>
+
+<header class="topo">
+  <div class="topo-linha">
+    <a class="voltar" href="/app" aria-label="Voltar para o app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></a>
+    <div><h1>Conexões</h1><div class="sub">WhatsApp, IA, agenda e relatório</div></div>
+  </div>
+  <nav class="atalhos" aria-label="Seções">
+    <a href="#lojas-canal">Cada loja</a>
+    <a href="#nao-oficial">WhatsApp não oficial</a>
+    <a href="#oficial">WhatsApp oficial</a>
+    <a href="#messenger">Messenger</a>
+    <a href="#instagram">Instagram</a>
+    <a href="#tiktok">TikTok</a>
+    <a href="#ia">IA</a>
+    <a href="#agenda">Agenda</a>
+    <a href="#transcricao">Transcrição</a>
+    <a href="#relatorio">Relatório</a>
+    <a href="#capi">Meta Ads</a>
+    <a href="#email">E-mail</a>
+  </nav>
+</header>
+
+<main>
+  <div class="grupo">WhatsApp</div>
+
+  <section id="lojas-canal" aria-labelledby="t-canal">
+    <h2 id="t-canal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span><span>Qual WhatsApp cada loja usa<small>Uma loja usa um só caminho por vez</small></span></h2>
+    <p><b>Não oficial (QR Code)</b>: liga o WhatsApp que a loja já tem, lendo um QR Code. Rápido, mas o número pode ser bloqueado pelo WhatsApp. <b>Oficial (Meta)</b>: a API da própria Meta, mais estável; exige uma conta no Gerenciador do WhatsApp e, depois de 24 horas sem a cliente escrever, só aceita modelos aprovados.</p>
+    <div class="cartoes" id="escolhas"></div>
+  </section>
+
+  <section id="nao-oficial" aria-labelledby="t-nao-oficial">
+    <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>Evolution, conexão por QR Code</small></span></h2>
+    <div class="aviso">Atenção: se o número já está ligado na Assia (n8n), as duas vão receber as mesmas mensagens e podem responder em dobro. Antes de conectar aqui, decida qual das duas atende esse número.</div>
+    <h3>1. Servidor da Evolution</h3>
+    <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
+    <div class="campos">
+      <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com" autocomplete="off"></label>
+      <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
+    </div>
+    <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution" role="status"></span></div>
+    <h3>2. Número de cada loja</h3>
+    <p id="wa-sem-evolution">Preencha a Evolution acima para conectar os números.</p>
+    <div class="cartoes" id="lojas"></div>
+  </section>
+
+  <section id="oficial" aria-labelledby="t-oficial">
+    <h2 id="t-oficial"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span><span>WhatsApp — API oficial<small>WhatsApp Cloud API da Meta</small></span></h2>
+    <p>As mensagens chegam direto da Meta, sem celular ligado. Preencha os dados de cada loja (copiados do painel da Meta), cole a <b>URL do webhook</b> e o <b>Verify Token</b> lá, e depois escolha “Oficial” em <a href="#lojas-canal">Qual WhatsApp cada loja usa</a>.</p>
+    <label>URL do webhook (igual para as duas lojas)
+      <span class="copia"><input id="webhookUrl" readonly value="" aria-label="URL do webhook"><button class="botao leve mini" data-copiar="webhookUrl">Copiar</button></span>
+    </label>
+    <details class="passos">
+      <summary>Passo a passo no painel da Meta</summary>
+      <ol>
+        <li>Entre em <b>developers.facebook.com</b> › <b>Meus apps</b> e abra (ou crie) o app do tipo <b>Empresa</b> com o produto <b>WhatsApp</b>.</li>
+        <li>Em <b>WhatsApp › Configuração da API</b>, copie o <b>Phone Number ID</b> (identificação do número) e o <b>WhatsApp Business Account ID</b> de cada loja e cole aqui.</li>
+        <li>Crie um <b>token permanente</b>: Configurações do negócio › <b>Usuários do sistema</b> › gerar token com as permissões <code>whatsapp_business_messaging</code> e <code>whatsapp_business_management</code>. Cole em “Token de acesso”.</li>
+        <li>Em <b>Configurações do app › Básico</b>, clique em “Mostrar” no <b>Chave secreta do app</b> (App Secret) e cole aqui. Com ela a Sintonia confere que cada aviso veio mesmo da Meta.</li>
+        <li>Em <b>WhatsApp › Configuração › Webhook</b>, clique em <b>Editar</b>: cole a <b>URL do webhook</b> acima e o <b>Verify Token</b> da loja. Salve e, em “Campos do webhook”, assine <code>messages</code>.</li>
+        <li>Volte aqui, toque em <b>Testar</b> na loja e, se responder, escolha <b>Oficial</b> para ela lá em cima.</li>
+      </ol>
+    </details>
+    <div class="cartoes" id="meta-lojas"></div>
+  </section>
+
+  <div class="grupo">Redes sociais</div>
+
+  <section id="messenger" aria-labelledby="t-messenger" data-rede="messenger">
+    <h2 id="t-messenger"><span class="ic "><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3C6.9 3 3 6.7 3 11.4c0 2.6 1.2 4.9 3.2 6.4V21l2.9-1.6c.9.3 1.9.4 2.9.4 5.1 0 9-3.7 9-8.4S17.1 3 12 3Z"/><path d="m7.5 13.5 3-3 2.2 2 3.8-3"/></svg></span><span>Facebook Messenger<small>Mensagens da Página do Facebook (Messenger Platform)</small></span><span class="estado" id="soc-estado-messenger" style="margin-left:auto">…</span></h2>
+    <p class="soc-visto" id="soc-visto-messenger"></p>
+    <p>As mensagens que chegam na <b>Página</b> viram conversas na Sintonia, com nome e foto da cliente. A loja responde até <b>24 horas</b> depois da última mensagem da cliente.</p>
+    <div class="campos">
+      <label>Situação<select id="messengerLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
+      <label>Unidade que recebe as conversas<select id="messengerUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Page ID<input id="messengerPageId" inputmode="numeric" autocomplete="off" placeholder="Ex.: 104857362912345"></label>
+      <label>Token da Página<input id="messengerToken" type="password" autocomplete="off" placeholder="Page Access Token (usuário do sistema)"></label>
+      <label>App Secret<input id="messengerAppSecret" type="password" autocomplete="off" placeholder="Chave secreta do app da Meta"></label>
+    </div>
+    <label>URL do webhook <span class="dica">cole no painel da Meta</span>
+        <span class="copia"><input id="soc-url-messenger" readonly aria-label="URL do webhook"><button class="botao leve mini" data-copiar="soc-url-messenger">Copiar</button></span>
+      </label>
+    <label>Verify Token <span class="dica">gerado pela Sintonia</span>
+        <span class="copia"><input id="soc-vt-messenger" readonly aria-label="Verify Token"><button class="botao leve mini" data-copiar="soc-vt-messenger">Copiar</button><button class="botao leve mini" data-soc-novo="messenger">Gerar outro</button></span>
+      </label>
+    <div class="linha"><button class="botao" data-salvar="messengerLigado,messengerUnidade,messengerPageId,messengerToken,messengerAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="messenger">Testar</button><span class="res" id="soc-res-messenger"></span></div>
+    <details class="passos">
+      <summary>Passo a passo no painel da Meta</summary>
+      <ol>
+        <li>Em <b>developers.facebook.com</b>, abra o app do tipo <b>Empresa</b> e adicione o produto <b>Messenger</b>.</li>
+        <li>Em <b>Messenger › Configurações da API</b>, ligue a Página da loja e copie o <b>Page ID</b>.</li>
+        <li>Gere o token: Configurações do negócio › <b>Usuários do sistema</b> › atribuir a Página › gerar token com <code>pages_messaging</code>, <code>pages_manage_metadata</code> e <code>pages_show_list</code>. Cole em “Token da Página”.</li>
+        <li>Em <b>Configurações do app › Básico</b>, copie a <b>Chave secreta do app</b> (App Secret).</li>
+        <li>Em <b>Messenger › Webhooks</b>, cole a <b>URL do webhook</b> e o <b>Verify Token</b> acima e assine <code>messages</code>, <code>messaging_postbacks</code>, <code>messaging_referrals</code> e <code>message_echoes</code> para a Página.</li>
+        <li>Para atender clientes de fora da equipe do app, a Meta pede <b>análise do app</b> (App Review) da permissão <code>pages_messaging</code> e a verificação da empresa.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section id="instagram" aria-labelledby="t-instagram" data-rede="instagram">
+    <h2 id="t-instagram"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17" cy="7" r=".6" fill="currentColor"/></svg></span><span>Instagram Direct<small>Mensagens diretas da conta profissional (Instagram Messaging)</small></span><span class="estado" id="soc-estado-instagram" style="margin-left:auto">…</span></h2>
+    <p class="soc-visto" id="soc-visto-instagram"></p>
+    <p>As DMs da conta profissional do Instagram viram conversas na Sintonia. A loja responde até <b>24 horas</b> depois da última mensagem da cliente. Funciona pelo <b>login do Instagram</b> (token que começa com “IG”) ou pelo <b>login do Facebook</b> (token da Página ligada).</p>
+    <div class="campos">
+      <label>Situação<select id="instagramLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
+      <label>Unidade que recebe as conversas<select id="instagramUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Instagram Business Account ID<input id="instagramAccountId" inputmode="numeric" autocomplete="off" placeholder="Ex.: 17841400000000000"></label>
+      <label>Page ID <span class="dica">só no login do Facebook</span><input id="instagramPageId" inputmode="numeric" autocomplete="off" placeholder="Página ligada ao Instagram"></label>
+      <label>Token de acesso<input id="instagramToken" type="password" autocomplete="off" placeholder="Token do Instagram ou da Página"></label>
+      <label>App Secret<input id="instagramAppSecret" type="password" autocomplete="off" placeholder="Chave secreta do app"></label>
+    </div>
+    <label>URL do webhook <span class="dica">cole no painel da Meta</span>
+        <span class="copia"><input id="soc-url-instagram" readonly aria-label="URL do webhook"><button class="botao leve mini" data-copiar="soc-url-instagram">Copiar</button></span>
+      </label>
+    <label>Verify Token <span class="dica">gerado pela Sintonia</span>
+        <span class="copia"><input id="soc-vt-instagram" readonly aria-label="Verify Token"><button class="botao leve mini" data-copiar="soc-vt-instagram">Copiar</button><button class="botao leve mini" data-soc-novo="instagram">Gerar outro</button></span>
+      </label>
+    <div class="linha"><button class="botao" data-salvar="instagramLigado,instagramUnidade,instagramAccountId,instagramPageId,instagramToken,instagramAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="instagram">Testar</button><span class="res" id="soc-res-instagram"></span></div>
+    <details class="passos">
+      <summary>Passo a passo no painel da Meta</summary>
+      <ol>
+        <li>A conta do Instagram precisa ser <b>profissional</b> (Empresa ou Criador). No app do Instagram, em Configurações › Mensagens, ligue <b>Permitir acesso às mensagens</b> (ferramentas conectadas).</li>
+        <li>No app da Meta, adicione o produto <b>Instagram</b> › <b>API com login do Instagram</b>, conecte a conta e gere o token (permissões <code>instagram_business_basic</code> e <code>instagram_business_manage_messages</code>). Copie o <b>ID da conta</b>.</li>
+        <li>Caminho alternativo (login do Facebook): conta ligada a uma Página; token da Página com <code>instagram_basic</code>, <code>instagram_manage_messages</code> e <code>pages_manage_metadata</code>; preencha também o Page ID.</li>
+        <li>Copie a <b>Chave secreta do app</b> (no login do Instagram é a “Chave secreta do app do Instagram”).</li>
+        <li>Em <b>Webhooks</b> do produto Instagram, cole a <b>URL</b> e o <b>Verify Token</b> acima e assine <code>messages</code>, <code>messaging_postbacks</code> e <code>messaging_referral</code>.</li>
+        <li>Para clientes de fora da equipe do app: <b>análise do app</b> da permissão de mensagens + acesso avançado e verificação da empresa.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section id="tiktok" aria-labelledby="t-tiktok" data-rede="tiktok">
+    <h2 id="t-tiktok"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 3c.4 2.6 2.2 4.4 5 4.6"/></svg></span><span>TikTok<small>Leads dos formulários instantâneos (Lead Generation)</small></span><span class="estado" id="soc-estado-tiktok" style="margin-left:auto">…</span></h2>
+    <p class="soc-visto" id="soc-visto-tiktok"></p>
+    <div class="aviso">Mensagens diretas do TikTok (Business Messaging API) só existem para <b>parceiros aprovados pelo TikTok</b>, com janela de 48 horas e até 10 mensagens por conversa. Por enquanto a Sintonia recebe os <b>leads dos formulários instantâneos</b> dos anúncios do TikTok.</div>
+    <div class="campos">
+      <label>Situação<select id="tiktokLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
+      <label>Unidade que recebe as conversas<select id="tiktokUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Client Key <span class="dica">opcional</span><input id="tiktokClientKey" autocomplete="off" placeholder="App do TikTok for Business"></label>
+      <label>Client Secret <span class="dica">opcional: confere a assinatura</span><input id="tiktokClientSecret" type="password" autocomplete="off" placeholder="Chave secreta do app"></label>
+    </div>
+    <label>URL do webhook <span class="dica">cole no painel da TikTok</span>
+        <span class="copia"><input id="soc-url-tiktok" readonly aria-label="URL do webhook"><button class="botao leve mini" data-copiar="soc-url-tiktok">Copiar</button></span>
+      </label>
+    <label>Token do webhook <span class="dica">gerado pela Sintonia</span>
+        <span class="copia"><input id="soc-vt-tiktok" readonly aria-label="Token do webhook"><button class="botao leve mini" data-copiar="soc-vt-tiktok">Copiar</button><button class="botao leve mini" data-soc-novo="tiktok">Gerar outro</button></span>
+      </label>
+    <div class="linha"><button class="botao" data-salvar="tiktokLigado,tiktokUnidade,tiktokClientKey,tiktokClientSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="tiktok">Testar</button><span class="res" id="soc-res-tiktok"></span></div>
+    <details class="passos">
+      <summary>Passo a passo no TikTok</summary>
+      <ol>
+        <li>No <b>Gerenciador de Anúncios do TikTok</b>, abra <b>Ferramentas › Leads</b> (ou o formulário instantâneo do anúncio).</li>
+        <li>Em integrações de CRM, escolha <b>API personalizada com webhooks</b> e cole a <b>URL do webhook</b> acima (ela já leva o token).</li>
+        <li>Envie um lead de teste pelo próprio TikTok e veja aqui “Último aviso”.</li>
+      </ol>
+    </details>
+  </section>
+
+  <div class="grupo">Inteligência e integrações</div>
+
+  <section id="ia" aria-labelledby="t-ia">
+    <h2 id="t-ia"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span><span>Inteligência artificial<small>Anthropic (Claude)</small></span></h2>
+    <p>Chave da API da Anthropic. Com ela, a IA responde, sugere e revisa mensagens.</p>
+    <label>Chave da IA <input id="anthropicApiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
+    <div class="linha"><button class="botao" data-salvar="anthropicApiKey">Salvar</button><button class="botao leve" data-testar="ia">Testar</button><span class="res" id="res-ia" role="status"></span></div>
+  </section>
+
+  <section id="agenda" aria-labelledby="t-agenda">
+    <h2 id="t-agenda"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span><span>Agenda<small>Trinks, Avec ou AppBarber, por unidade</small></span></h2>
+    <p>Escolha o sistema de agenda de cada unidade e preencha os dados dele. Com a agenda conectada, o botão <b>Agendar</b> e a IA consultam horários e marcam direto no sistema, sem abrir outra tela.</p>
+    <div class="cartoes" id="agenda-unidades"><p>Carregando…</p></div>
+    <div class="cartao" id="agenda-geral">
+      <div class="cab"><b>Dados de conta</b><span class="dica">valem para todas as unidades</span></div>
+      <label id="ag-g-trinks">Chave da API do Trinks <span class="dica">No Trinks: Meu Cadastro › Token de API Pessoal › Gerar token. Uma chave serve para todos os estabelecimentos.</span><input id="trinksApiKey" type="password" autocomplete="off"></label>
+      <label id="ag-g-avec">URL base da API da Avec <span class="dica">A Avec informa junto com o token. A documentação pública só mostra um endereço de exemplo.</span><input id="avecUrl" type="url" autocomplete="off" placeholder="https://…"></label>
+      <label id="ag-g-appbarber">URL base da API do AppBarber <span class="dica">O AppBarber ainda não publica API: preencha quando o comercial enviar a documentação.</span><input id="appbarberUrl" type="url" autocomplete="off" placeholder="https://…"></label>
+      <div class="linha"><button class="botao" data-salvar="trinksApiKey,avecUrl,appbarberUrl">Salvar</button><span class="res" role="status"></span></div>
+    </div>
+  </section>
+
+  <section id="transcricao" aria-labelledby="t-transcricao">
+    <h2 id="t-transcricao"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span>Transcrição de áudio<small>Áudios das clientes viram texto</small></span></h2>
+    <div id="transcricao-campos">
+      <p>Chave da API da OpenAI (Whisper). Com ela, o botão Transcrever dos áudios da conversa escreve o que a cliente falou. Cada áudio é transcrito uma vez só.</p>
+      <label>Chave da OpenAI <input id="openaiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+      <div class="linha"><button class="botao" data-salvar="openaiApiKey">Salvar</button><button class="botao leve" data-testar="openai">Testar</button><span class="res" id="res-openai" role="status"></span></div>
+    </div>
+  </section>
+
+  <section id="relatorio" aria-labelledby="t-relatorio">
+    <h2 id="t-relatorio"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span><span>Relatório do dia<small>Todo dia às 20h</small></span></h2>
+    <p>Telefones que recebem, às 20h, o resumo do dia pelo WhatsApp da loja. Separe por vírgula, com DDD.</p>
+    <label>Telefones <input id="relatorioDestinos" type="text" inputmode="tel" placeholder="71 99999-9999, 71 98888-8888"></label>
+    <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio" role="status"></span></div>
+  </section>
+
+  <div class="grupo">Anúncios</div>
+
+  <section id="capi" aria-labelledby="t-capi">
+    <h2 id="t-capi"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><span>Meta Ads — API de Conversões<small>Avisa a Meta quando o lead do anúncio agenda e comparece</small></span></h2>
+    <p>Quando uma cliente vem de um <b>anúncio de clique para WhatsApp</b> ou de um <b>link rastreado</b>, a Sintonia avisa a Meta a cada passo: virou lead, ficou interessada, agendou, compareceu. Assim o Gerenciador de Anúncios otimiza para quem <b>agenda</b>, não só para quem chama. Telefone e e-mail vão sempre em hash (SHA-256).</p>
+    <div class="linha"><span class="estado" id="capi-estado">Desligada</span><label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--texto)"><input type="checkbox" id="capi-ligado" style="width:20px;height:20px"> Enviar eventos para a Meta</label></div>
+    <div class="campos">
+      <label>Dataset ID (Pixel ID) <input id="capi-dataset" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1234567890123456"></label>
+      <label>Token de acesso da API de Conversões <input id="capi-token" type="password" autocomplete="off"></label>
+      <label>Código de evento de teste <span class="dica">opcional — Gerenciador de Eventos › Eventos de teste</span><input id="capi-teste" autocomplete="off" placeholder="TEST12345"></label>
+      <label>WhatsApp Business Account ID <span class="dica">vazio = o da unidade na API oficial</span><input id="capi-waba" inputmode="numeric" autocomplete="off"></label>
+      <label>Page ID do Facebook <span class="dica">opcional</span><input id="capi-page" inputmode="numeric" autocomplete="off"></label>
+      <label>Valor padrão do Purchase (R$) <span class="dica">quando a ficha não tem o valor</span><input id="capi-valor" inputmode="decimal" autocomplete="off" placeholder="250,00"></label>
+      <label>Versão da Graph API <input id="capi-versao" autocomplete="off" placeholder="v27.0"></label>
+      <label>Token para ler nomes dos anúncios <span class="dica">ads_read; vazio = o token acima</span><input id="capi-ads" type="password" autocomplete="off"></label>
+    </div>
+    <h3>Eventos</h3>
+    <p>Nome do evento para <b>links e telefone</b> (website/sistema) e para <b>anúncio de clique para WhatsApp</b> (só os nomes aceitos pela Meta nesse caminho).</p>
+    <div class="cartoes" id="capi-eventos"></div>
+    <h3>Eventos personalizados por etapa do CRM</h3>
+    <p>Quando o cartão entrar na etapa, a Sintonia manda o evento com este nome (sem espaços nem acentos, ex.: <code>AvaliacaoMarcada</code>).</p>
+    <div id="capi-etapas" style="display:grid;gap:8px"></div>
+    <div class="linha"><button class="botao leve mini" id="capi-mais-etapa" type="button">+ Evento por etapa</button></div>
+    <div class="linha"><button class="botao" id="capi-salvar" type="button">Salvar</button><button class="botao leve" id="capi-testar" type="button">Enviar evento de teste</button><span class="res" id="res-capi" role="status"></span></div>
+    <details class="passos">
+      <summary>Passo a passo na Meta</summary>
+      <ol>
+        <li>No <b>Gerenciador de Eventos</b> (business.facebook.com/events_manager), crie ou abra o <b>conjunto de dados</b> (dataset/pixel) da Império e copie o <b>ID</b>.</li>
+        <li>Em <b>Configurações › API de Conversões › Gerar token de acesso</b>, gere o token e cole aqui.</li>
+        <li>Para anúncios de clique para WhatsApp: em <b>Configurações do negócio › Fontes de dados</b>, ligue o conjunto de dados à <b>conta do WhatsApp Business</b> (WABA) e à página do Facebook.</li>
+        <li>Na aba <b>Eventos de teste</b>, copie o código, cole aqui, salve e toque em <b>Enviar evento de teste</b>. O evento aparece lá em segundos. Depois apague o código de teste para os eventos contarem de verdade.</li>
+        <li>Nos anúncios, em <b>Parâmetros de URL</b>, use <code>utm_source=meta&amp;utm_medium=paid&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>.</li>
+      </ol>
+    </details>
+    <h3>Últimos envios</h3>
+    <div id="capi-registro" style="display:grid;gap:8px"><p>Nenhum evento enviado ainda.</p></div>
+  </section>
+  <div class="grupo">E-mail marketing</div>
+  <!-- Contas remetentes (SMTP/IMAP ou API): /telas/email-conexoes.js -->
+  <section id="email" aria-labelledby="t-email"></section>
+</main>
+
+<dialog id="d-qr">
+  <h2 style="justify-content:center">Conectar <span id="qr-loja"></span></h2>
+  <div id="qr-area" style="margin-top:14px"></div>
+  <ol>
+    <li>Abra o WhatsApp no celular da loja</li>
+    <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
+    <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
+  </ol>
+  <p id="qr-estado">Aguardando a leitura…</p>
+  <div class="linha" style="justify-content:center;margin-top:12px"><button class="botao leve" id="qr-fechar">Fechar</button></div>
+</dialog>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const UNIDADES = [['norte', 'Norte', 'Salvador Norte Shopping'], ['sumare', 'Sumare', 'Shopping Sumaré']];
+  const NOMES = Object.fromEntries(UNIDADES.map(([u, , n]) => [u, n]));
+  const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...filhos.filter((f) => f !== null && f !== undefined)); return e; };
+  const api = async (url, opcoes = {}) => {
+    const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
+    if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    if (r.status === 403) { location.href = '/app'; throw new Error('sem permissão'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.detalhes?.[0]?.message || j.erro || 'Algo deu errado');
+    return j;
+  };
+  const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
+  const haQuanto = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'agora há pouco' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia(s)`; };
+  const mostrar = (res, ok, texto) => { res.className = 'res ' + (ok ? 'ok' : 'erro'); res.textContent = texto; };
+  let resumo = null;
+  let meta = null;
+
+  // ---------- campos (genérico: o id do input é o nome do campo) ----------
+  function preencher() {
+    for (const [campo, info] of Object.entries(resumo.campos)) {
+      const input = $(campo); if (!input || input.readOnly) continue;
+      if (input.type === 'password') { input.value = ''; input.placeholder = info.definido ? `Salvo (termina em ${info.final}). Cole outro para trocar.` : (input.dataset.ph || ''); }
+      else if (document.activeElement !== input) input.value = info.valor ?? '';
+    }
+    $('relatorioDestinos').value = resumo.destinosRelatorio.map(formatarTel).join(', ');
+  }
+
+  async function salvarCampos(botao, campos) {
+    const corpo = {};
+    for (const campo of campos) {
+      const v = $(campo).value.trim();
+      if ($(campo).type === 'password' && !v) continue; // vazio = manter o segredo salvo
+      corpo[campo] = v;
+    }
+    const res = botao.parentElement.querySelector('.res') || botao.closest('.cartao, section').querySelector('.res');
+    if (!Object.keys(corpo).length) { mostrar(res, false, 'Preencha antes de salvar.'); return false; }
+    botao.setAttribute('aria-busy', 'true');
+    try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify(corpo) }); preencher(); mostrar(res, true, 'Salvo ✓'); return true; }
+    catch (x) { mostrar(res, false, x.message); return false; }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
+
+  function ligarBotoes(raiz) {
+    raiz.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
+      if (await salvarCampos(b, b.dataset.salvar.split(','))) { carregarLojas(); carregarMeta(); desenharEscolhas(); carregarAgenda(); }
+    }));
+    raiz.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
+      const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+      try { const r = await api('/api/conexoes/testar', { method: 'POST', body: JSON.stringify({ alvo: b.dataset.testar }) }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+      catch (x) { mostrar(res, false, x.message); }
+      finally { b.removeAttribute('aria-busy'); }
+    }));
+    raiz.querySelectorAll('[data-copiar]').forEach((b) => b.addEventListener('click', async () => {
+      const input = $(b.dataset.copiar);
+      try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand?.('copy'); }
+      const antes = b.textContent; b.textContent = 'Copiado ✓'; setTimeout(() => (b.textContent = antes), 1500);
+    }));
+  }
+
+  // ---------- Agenda: sistema de cada unidade ----------
+  let agenda = null;
+  const SISTEMAS = [['trinks', 'Trinks', 'API pública'], ['avec', 'Avec', 'Avec Salão'], ['appbarber', 'AppBarber', 'Barbearias'], ['nenhum', 'Nenhum', 'Sem agenda']];
+  // Campos de cada sistema, por unidade (o id do input é o nome do campo salvo).
+  const CAMPOS_AGENDA = {
+    trinks: (suf, nome, u) => [['trinksEstabelecimento' + suf, 'ID do estabelecimento no Trinks', 'text', u === 'norte' ? 'Padrão: 240643 (confira no Trinks)' : 'Padrão: 222074 (confira no Trinks)']],
+    avec: (suf) => [['avecToken' + suf, 'Token da API da Avec', 'password', 'Gerado no painel da Avec (API de relatórios)'], ['avecUnidade' + suf, 'ID da unidade na Avec (opcional)', 'text', 'Ex.: 1234']],
+    appbarber: (suf) => [['appbarberToken' + suf, 'Token do AppBarber', 'password', 'Enviado pelo AppBarber'], ['appbarberLoja' + suf, 'ID da loja no AppBarber', 'text', 'Ex.: 1234']],
+    nenhum: () => [],
+  };
+  async function carregarAgenda() {
+    try { agenda = await api('/api/conexoes/agenda'); } catch (x) { $('agenda-unidades').textContent = x.message; return; }
+    desenharAgenda();
+  }
+  function desenharAgenda() {
+    if (!agenda) return;
+    const usados = new Set(agenda.unidades.map((u) => u.sistema));
+    $('ag-g-trinks').hidden = !usados.has('trinks');
+    $('ag-g-avec').hidden = !usados.has('avec');
+    $('ag-g-appbarber').hidden = !usados.has('appbarber');
+    $('agenda-geral').hidden = !['trinks', 'avec', 'appbarber'].some((s) => usados.has(s));
+    $('agenda-unidades').replaceChildren(...agenda.unidades.map((info) => {
+      const [, suf, nome] = UNIDADES.find(([u]) => u === info.unidade);
+      const atual = info.sistema;
+      const estado = el('span', {
+        className: 'estado' + (info.pronta ? ' ok' : atual === 'nenhum' ? '' : ' aviso'),
+        textContent: info.pronta ? `${info.sistemaNome} conectado` : atual === 'nenhum' ? 'Sem agenda' : info.conectada ? `${info.sistemaNome}: aguardando documentação` : `${info.sistemaNome}: falta configurar`,
+      });
+      const res = el('span', { className: 'res', role: 'status' });
+      const opcao = ([valor, titulo, sub]) => {
+        const b = el('button', { type: 'button' }, titulo, el('small', { textContent: sub }));
+        b.setAttribute('aria-pressed', String(atual === valor));
+        b.addEventListener('click', async () => {
+          if (valor === atual) return;
+          if (!confirm(valor === 'nenhum' ? `${nome} fica sem agenda: o Agendar e a IA deixam de marcar horário nesta unidade. Continuar?` : `${nome} passa a usar o ${titulo} para consultar e marcar horários. Continuar?`)) return;
+          b.parentElement.setAttribute('aria-busy', 'true');
+          try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify({ ['agendaSistema' + suf]: valor }) }); await carregarAgenda(); preencher(); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { b.parentElement.removeAttribute('aria-busy'); }
+        });
+        return b;
+      };
+      const escolha = el('div', { className: 'escolha quatro', role: 'group' }, ...SISTEMAS.map(opcao));
+      escolha.setAttribute('aria-label', `Sistema de agenda de ${nome}`);
+      const campos = CAMPOS_AGENDA[atual](suf, nome, info.unidade);
+      const inputs = campos.map(([id, rotulo, tipo, ph]) => {
+        const input = el('input', { id, type: tipo, autocomplete: 'off', placeholder: ph });
+        input.dataset.ph = ph;
+        return el('label', {}, rotulo, input);
+      });
+      const avisos = [];
+      if (info.falta.length && atual !== 'nenhum') avisos.push(el('p', {}, el('b', { textContent: 'Falta: ' }), info.falta.join(', ') + '.'));
+      if (info.aviso) avisos.push(el('div', { className: 'aviso', textContent: info.aviso }));
+      const botoes = [];
+      if (campos.length) {
+        const salvar = el('button', { className: 'botao', textContent: 'Salvar' });
+        salvar.dataset.salvar = campos.map(([id]) => id).join(',');
+        botoes.push(salvar);
+      }
+      if (atual !== 'nenhum') {
+        const testar = el('button', { className: 'botao leve', textContent: 'Testar' });
+        testar.addEventListener('click', async () => {
+          testar.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+          try { const r = await api(`/api/conexoes/agenda/${info.unidade}/testar`, { method: 'POST', body: '{}' }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { testar.removeAttribute('aria-busy'); }
+        });
+        botoes.push(testar);
+      }
+      const cartao = el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: nome }), estado),
+        escolha, ...inputs, ...avisos,
+        el('div', { className: 'linha' }, ...botoes, res));
+      ligarBotoes(cartao);
+      return cartao;
+    }));
+    if (resumo) preencher();
+  }
+
+  // ---------- qual WhatsApp cada loja usa ----------
+  function desenharEscolhas() {
+    if (!resumo) return;
+    $('escolhas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => {
+      const atual = resumo.canais?.[u] || 'evolution';
+      const infoMeta = meta?.unidades.find((x) => x.unidade === u);
+      const evoNum = resumo.numeros.some((n) => n.unidade === u);
+      const pronta = atual === 'meta' ? Boolean(infoMeta?.pronta) : evoNum;
+      const estado = el('span', { className: 'estado' + (pronta ? ' ok' : ' aviso'), textContent: atual === 'meta' ? (pronta ? 'Oficial ativa' : 'Oficial: falta configurar') : (evoNum ? 'QR Code conectado' : 'Sem número conectado') });
+      const res = el('span', { className: 'res', role: 'status' });
+      const opcao = (valor, titulo, sub) => {
+        const b = el('button', { type: 'button' }, titulo, el('small', { textContent: sub }));
+        b.setAttribute('aria-pressed', String(atual === valor));
+        b.addEventListener('click', async () => {
+          if (valor === atual) return;
+          const aviso = valor === 'meta'
+            ? `${nome} passa a usar a API oficial: as mensagens chegam pelo número da Meta e o QR Code deixa de ser usado. Continuar?`
+            : `${nome} volta para a API não oficial (QR Code). As mensagens da API oficial deixam de entrar. Continuar?`;
+          if (!confirm(aviso)) return;
+          b.parentElement.setAttribute('aria-busy', 'true');
+          try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify({ ['canal' + suf]: valor }) }); desenharEscolhas(); carregarMeta(); carregarLojas(); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { b.parentElement.removeAttribute('aria-busy'); }
+        });
+        return b;
+      };
+      const escolha = el('div', { className: 'escolha', role: 'group' }, opcao('evolution', 'Não oficial', 'QR Code'), opcao('meta', 'Oficial', 'Meta'));
+      escolha.setAttribute('aria-label', `API de WhatsApp de ${nome}`);
+      return el('div', { className: 'cartao' }, el('div', { className: 'cab' }, el('b', { textContent: nome }), estado), escolha, res);
+    }));
+  }
+
+  // ---------- não oficial: números por QR Code ----------
+  async function carregarLojas() {
+    const caixa = $('lojas');
+    let r; try { r = await api('/api/conexoes/whatsapp'); } catch (x) { caixa.textContent = x.message; return; }
+    $('wa-sem-evolution').hidden = r.configurada;
+    caixa.replaceChildren(...r.unidades.map((u) => {
+      const ok = u.estado === 'conectada';
+      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando QR Code' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado' });
+      const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar WhatsApp' });
+      b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade, b)));
+      const usaOficial = resumo?.canais?.[u.unidade] === 'meta';
+      return el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: NOMES[u.unidade] || u.unidade }), est),
+        ok && u.numero ? el('p', { textContent: `${formatarTel(u.numero)}${u.perfil ? ' · ' + u.perfil : ''}` }) : null,
+        u.erro ? el('p', { className: 'res erro', textContent: u.erro }) : null,
+        usaOficial ? el('p', { textContent: 'Esta loja está usando a API oficial agora; o QR Code fica sem uso.' }) : null,
+        el('div', { className: 'linha' }, b));
+    }));
+  }
+
+  let espera = null;
+  async function conectar(unidade, botao) {
+    botao.setAttribute('aria-busy', 'true');
+    try {
+      const r = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' });
+      if (r.estado === 'conectada') { await carregarLojas(); return; }
+      $('qr-loja').textContent = NOMES[unidade]; mostrarQr(r.qr); $('qr-estado').textContent = 'Aguardando a leitura…';
+      $('d-qr').showModal();
+      let voltas = 0;
+      clearInterval(espera);
+      espera = setInterval(async () => {
+        voltas++;
+        const lista = await api('/api/conexoes/whatsapp').catch(() => null);
+        const u = lista?.unidades.find((x) => x.unidade === unidade);
+        if (u?.estado === 'conectada') { clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓'; setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas(); return; }
+        if (voltas % 8 === 0) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
+      }, 3000);
+    } catch (x) { alert(x.message); }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
+  function mostrarQr(qr) {
+    const area = $('qr-area'); area.replaceChildren();
+    if (!qr) { area.textContent = 'A Evolution não devolveu o QR Code. Tente de novo.'; return; }
+    area.append(el('img', { alt: 'QR Code para conectar', src: qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr }));
+  }
+  $('qr-fechar').addEventListener('click', () => { clearInterval(espera); $('d-qr').close(); carregarLojas(); });
+  async function desconectar(unidade, botao) {
+    if (!confirm(`Desconectar o WhatsApp de ${NOMES[unidade]}? As mensagens deixam de chegar na Sintonia.`)) return;
+    botao.setAttribute('aria-busy', 'true');
+    try { await api(`/api/conexoes/whatsapp/${unidade}/desconectar`, { method: 'POST', body: '{}' }); resumo = await api('/api/conexoes'); await carregarLojas(); desenharEscolhas(); }
+    catch (x) { alert(x.message); }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
+
+  // ---------- oficial: dados de cada loja ----------
+  // ---------- Meta Ads: API de Conversões ----------
+  let capi = null; let funisCapi = [];
+  const ROTULO_EVENTO = { lead: 'Lead (conversa nova de anúncio/link)', qualificado: 'Contato qualificado (Interessada)', agendada: 'Agendou (Agendada)', compareceu: 'Compareceu (com valor)' };
+  const quandoBr = (d) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }).format(new Date(d));
+  async function carregarCapi() {
+    try { capi = await api('/api/rastreio/capi'); } catch (x) { $('res-capi').textContent = x.message; return; }
+    try { funisCapi = await api('/api/funis'); } catch { funisCapi = []; }
+    desenharCapi();
+  }
+  function linhaEtapa(x) {
+    const opcoes = [];
+    for (const f of funisCapi) for (const e of (f.etapas || [])) opcoes.push([e.id, `${f.nome} › ${e.nome}`]);
+    const sel = el('select', { className: 'capi-etapa-sel', ariaLabel: 'Etapa' }, ...opcoes.map(([v, t]) => el('option', { value: v, textContent: t })));
+    sel.style.cssText = 'font:inherit;padding:10px;border-radius:12px;background:var(--vidro-item);border:1px solid var(--vidro-borda);color:var(--texto);min-width:0';
+    if (x?.etapaId) sel.value = x.etapaId;
+    const nome = el('input', { className: 'capi-etapa-nome', value: x?.nome || '', placeholder: 'AvaliacaoMarcada', ariaLabel: 'Nome do evento' });
+    const ligado = el('input', { type: 'checkbox', className: 'capi-etapa-ligado', checked: x ? x.ligado : true, ariaLabel: 'Ligado' });
+    ligado.style.cssText = 'width:20px;height:20px';
+    const tirar = el('button', { className: 'botao perigo mini', type: 'button', textContent: 'Tirar', onclick: () => linha.remove() });
+    const linha = el('div', { className: 'linha capi-etapa' }, ligado, sel, nome, tirar);
+    nome.style.flex = '1 1 160px'; sel.style.flex = '1 1 200px';
+    return linha;
+  }
+  function desenharCapi() {
+    if (!capi) return;
+    $('capi-ligado').checked = capi.ligado;
+    const est = $('capi-estado'); est.textContent = capi.ligado ? 'Ligada' : 'Desligada'; est.className = 'estado' + (capi.ligado ? ' ok' : '');
+    $('capi-dataset').value = capi.datasetId; $('capi-teste').value = capi.testeCodigo; $('capi-waba').value = capi.wabaId; $('capi-page').value = capi.pageId;
+    $('capi-valor').value = capi.valorPadrao; $('capi-versao').value = capi.versao;
+    $('capi-token').value = ''; $('capi-token').placeholder = capi.token.definido ? `Salvo (termina em ${capi.token.final}). Cole outro para trocar.` : 'Cole o token';
+    $('capi-ads').value = ''; $('capi-ads').placeholder = capi.adsToken.definido ? `Salvo (termina em ${capi.adsToken.final}).` : 'Opcional';
+    $('capi-eventos').replaceChildren(...['lead', 'qualificado', 'agendada', 'compareceu'].map((k) => {
+      const r = capi.eventos[k];
+      const lig = el('input', { type: 'checkbox', checked: r.ligado, id: `capi-ev-${k}-lig` }); lig.style.cssText = 'width:20px;height:20px';
+      const site = el('input', { id: `capi-ev-${k}-site`, value: r.site, placeholder: capi.padrao[k].site });
+      const msg = el('select', { id: `capi-ev-${k}-msg` }, el('option', { value: '', textContent: '— usar o caminho do telefone —' }), ...capi.eventosMensagem.map((n) => el('option', { value: n, textContent: n })));
+      msg.style.cssText = 'font:inherit;padding:10px;border-radius:12px;background:var(--vidro-item);border:1px solid var(--vidro-borda);color:var(--texto)';
+      msg.value = r.mensagem;
+      return el('div', { className: 'cartao' }, el('div', { className: 'cab' }, el('b', { textContent: ROTULO_EVENTO[k] }), el('label', { style: 'display:flex;gap:6px;align-items:center' }, lig, 'Ligado')),
+        el('label', {}, 'Links / telefone', site), el('label', {}, 'Anúncio de clique para WhatsApp', msg));
+    }));
+    $('capi-etapas').replaceChildren(...capi.eventos.etapas.map(linhaEtapa));
+    const reg = capi.registro || [];
+    const COR = { enviado: 'ok', pendente: '', erro: 'aviso', desistiu: 'aviso' };
+    const NOME = { enviado: 'Enviado', pendente: 'Na fila', erro: 'Recusado', desistiu: 'Sem resposta' };
+    $('capi-registro').replaceChildren(...(reg.length ? reg.map((e) => {
+      const linha = el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: `${e.nome}${e.teste ? ' (teste)' : ''}` }), el('span', { className: 'estado ' + (COR[e.situacao] || ''), textContent: NOME[e.situacao] || e.situacao })),
+        el('p', { textContent: `${quandoBr(e.criadoEm)} · ${e.origem === 'business_messaging' ? 'anúncio de WhatsApp (ctwa_clid)' : 'telefone em hash'} · ${e.tentativas} tentativa(s)` }),
+        e.resposta ? el('p', { style: 'font-family:ui-monospace,Menlo,monospace;font-size:12px;overflow-wrap:anywhere', textContent: `Resposta da Meta: ${e.resposta.slice(0, 300)}` }) : null);
+      if (e.situacao === 'erro' || e.situacao === 'desistiu') linha.append(el('div', { className: 'linha' }, el('button', { className: 'botao leve mini', type: 'button', textContent: 'Reenviar', onclick: async () => { try { await api(`/api/rastreio/capi/eventos/${e.id}/reenviar`, { method: 'POST', body: '{}' }); carregarCapi(); } catch (x) { alert(x.message); } } })));
+      return linha;
+    }) : [el('p', { textContent: 'Nenhum evento enviado ainda.' })]));
+  }
+  $('capi-mais-etapa').addEventListener('click', () => { if (!funisCapi.some((f) => (f.etapas || []).length)) { mostrar($('res-capi'), false, 'Crie antes um funil com etapas no CRM.'); return; } $('capi-etapas').append(linhaEtapa(null)); });
+  function corpoCapi() {
+    const eventos = { etapas: [...document.querySelectorAll('.capi-etapa')].map((l) => ({ etapaId: l.querySelector('.capi-etapa-sel').value, nome: l.querySelector('.capi-etapa-nome').value.trim(), ligado: l.querySelector('.capi-etapa-ligado').checked })).filter((x) => x.etapaId && x.nome) };
+    for (const k of ['lead', 'qualificado', 'agendada', 'compareceu']) eventos[k] = { ligado: $(`capi-ev-${k}-lig`).checked, site: $(`capi-ev-${k}-site`).value.trim(), mensagem: $(`capi-ev-${k}-msg`).value };
+    const c = { ligado: $('capi-ligado').checked, datasetId: $('capi-dataset').value.trim(), testeCodigo: $('capi-teste').value.trim(), wabaId: $('capi-waba').value.trim(), pageId: $('capi-page').value.trim(), valorPadrao: $('capi-valor').value.trim(), versao: $('capi-versao').value.trim(), eventos };
+    if ($('capi-token').value.trim()) c.token = $('capi-token').value.trim();
+    if ($('capi-ads').value.trim()) c.adsToken = $('capi-ads').value.trim();
+    return c;
+  }
+  $('capi-salvar').addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.setAttribute('aria-busy', 'true');
+    try { capi = await api('/api/rastreio/capi', { method: 'PUT', body: JSON.stringify(corpoCapi()) }); desenharCapi(); mostrar($('res-capi'), true, 'Salvo ✓'); }
+    catch (x) { mostrar($('res-capi'), false, x.message); }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+  $('capi-testar').addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.setAttribute('aria-busy', 'true');
+    try {
+      const r = await api('/api/rastreio/capi/teste', { method: 'POST', body: '{}' });
+      mostrar($('res-capi'), r.ok, r.ok ? 'Evento de teste enviado ✓ Confira em Eventos de teste.' : `A Meta recusou: ${r.evento.resposta || ''}`.slice(0, 300));
+      carregarCapi();
+    } catch (x) { mostrar($('res-capi'), false, x.message); }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+
+  function cartaoMeta(u, suf, nome) {
+    const campo = (rotulo, parte, tipo, dica, extra = {}) => el('label', {}, rotulo, dica ? el('span', { className: 'dica', textContent: dica }) : null,
+      el('input', { id: `meta${parte}${suf}`, type: tipo, autocomplete: 'off', ...extra }));
+    const verify = el('input', { id: `metaVerifyToken${suf}`, readOnly: true });
+    verify.setAttribute('aria-label', `Verify Token de ${nome}`);
+    const copiar = el('button', { className: 'botao leve mini', textContent: 'Copiar' }); copiar.dataset.copiar = verify.id;
+    const novo = el('button', { className: 'botao leve mini', textContent: 'Gerar outro' });
+    novo.addEventListener('click', async () => {
+      if (!confirm('Gerar outro Verify Token? O atual deixa de valer: cole o novo no painel da Meta.')) return;
+      try { const r = await api(`/api/conexoes/meta/${u}/verify-token`, { method: 'POST', body: '{}' }); verify.value = r.verifyToken; } catch (x) { alert(x.message); }
+    });
+    const salvar = el('button', { className: 'botao', textContent: 'Salvar' });
+    salvar.dataset.salvar = ['PhoneNumberId', 'WabaId', 'Token', 'AppSecret'].map((p) => `meta${p}${suf}`).join(',');
+    const testar = el('button', { className: 'botao leve', textContent: 'Testar' });
+    const res = el('span', { className: 'res', role: 'status', id: `res-meta-${u}` });
+    testar.addEventListener('click', async () => {
+      testar.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Consultando o número na Meta…';
+      try { const r = await api(`/api/conexoes/meta/${u}/testar`, { method: 'POST', body: '{}' }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+      catch (x) { mostrar(res, false, x.message); }
+      finally { testar.removeAttribute('aria-busy'); }
+    });
+    const verModelos = el('button', { className: 'botao leve', textContent: 'Modelos aprovados' });
+    const lista = el('div', { className: 'modelos', id: `modelos-${u}` });
+    verModelos.addEventListener('click', async () => {
+      verModelos.setAttribute('aria-busy', 'true'); lista.replaceChildren(el('p', { textContent: 'Buscando…' }));
+      try {
+        const r = await api(`/api/conexoes/meta/${u}/modelos`);
+        lista.replaceChildren(...(r.modelos.length ? r.modelos.map((m) => el('div', { className: 'modelo' }, el('b', { textContent: `${m.nome} · ${m.idioma}` }), el('span', { textContent: m.corpo || '(sem texto)' }), el('span', { textContent: `${m.categoria.toLowerCase()} · ${m.variaveis} variável(is)` }))) : [el('p', { textContent: 'Nenhum modelo aprovado ainda. Crie em WhatsApp Manager › Modelos de mensagem.' })]));
+      } catch (x) { lista.replaceChildren(el('p', { className: 'res erro', textContent: x.message })); }
+      finally { verModelos.removeAttribute('aria-busy'); }
+    });
+    return el('div', { className: 'cartao', id: `meta-${u}` },
+      el('div', { className: 'cab' }, el('b', { textContent: nome }), el('span', { className: 'estado', id: `meta-estado-${u}`, textContent: '…' })),
+      el('p', { id: `meta-visto-${u}` }),
+      campo('Phone Number ID', 'PhoneNumberId', 'text', null, { inputMode: 'numeric', placeholder: 'ex.: 109876543210987' }),
+      campo('WhatsApp Business Account ID', 'WabaId', 'text', 'Para listar os modelos aprovados', { inputMode: 'numeric', placeholder: 'ex.: 102030405060708' }),
+      campo('Token de acesso', 'Token', 'password', 'Token permanente do usuário do sistema'),
+      campo('App Secret', 'AppSecret', 'password', 'Confere que os avisos vêm mesmo da Meta'),
+      el('label', {}, 'Verify Token', el('span', { className: 'dica', textContent: 'Gerado pela Sintonia: cole no painel da Meta' }), el('span', { className: 'copia' }, verify, copiar)),
+      el('div', { className: 'linha' }, salvar, testar, verModelos, novo),
+      res, lista);
+  }
+
+  async function carregarMeta() {
+    try { meta = await api('/api/conexoes/meta'); } catch { return; }
+    $('webhookUrl').value = meta.webhookUrl;
+    for (const info of meta.unidades) {
+      const suf = UNIDADES.find(([u]) => u === info.unidade)[1];
+      $(`metaVerifyToken${suf}`).value = info.verifyToken || '';
+      const est = $(`meta-estado-${info.unidade}`);
+      const usando = info.canal === 'meta';
+      est.className = 'estado' + (info.pronta ? ' ok' : info.faltando.length < 4 ? ' aviso' : '');
+      est.textContent = info.pronta ? (usando ? 'Pronta · em uso' : 'Pronta · não está em uso') : info.faltando.length < 4 ? 'Incompleta' : 'Não configurada';
+      $(`meta-visto-${info.unidade}`).textContent = info.pronta || info.faltando.length < 4
+        ? [info.faltando.length ? `Falta: ${info.faltando.join(', ')}.` : null, info.ultimoWebhook ? `Último aviso da Meta ${haQuanto(info.ultimoWebhook)}.` : 'Nenhum aviso da Meta chegou ainda.'].filter(Boolean).join(' ')
+        : 'Preencha os dados abaixo com o que está no painel da Meta.';
+    }
+    desenharEscolhas();
+  }
+
+  (async () => {
+    $('meta-lojas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => cartaoMeta(u, suf, nome)));
+    document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
+    ligarBotoes(document);
+    resumo = await api('/api/conexoes'); preencher(); desenharEscolhas();
+    carregarAgenda();
+    carregarCapi();
+    carregarLojas(); carregarMeta();
+  })();
+})();
+</script>
+<script>
+/* Redes sociais: status (ligado / desligado / falta X), webhook, Verify Token e "Testar". */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const api = async (url, opcoes = {}) => {
+    const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || 'Algo deu errado');
+    return j;
+  };
+  const haQuanto = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'agora há pouco' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia(s)`; };
+  async function carregar() {
+    let d; try { d = await api('/api/conexoes/sociais'); } catch { return; }
+    for (const r of d.redes) {
+      $(`soc-url-${r.rede}`).value = r.webhookUrl;
+      $(`soc-vt-${r.rede}`).value = r.verifyToken || '';
+      const est = $(`soc-estado-${r.rede}`);
+      est.className = 'estado' + (r.status === 'ligado' ? ' ok' : r.status === 'falta' ? ' aviso' : '');
+      est.textContent = r.status === 'ligado' ? 'Ligado' : r.status === 'falta' ? `Falta ${r.faltando.join(', ')}` : 'Desligado';
+      $(`soc-visto-${r.rede}`).textContent = r.ultimoWebhook ? `Último aviso ${haQuanto(r.ultimoWebhook)}.` : 'Nenhum aviso chegou ainda.';
+    }
+  }
+  document.querySelectorAll('[data-soc-salvar]').forEach((b) => b.addEventListener('click', () => setTimeout(carregar, 700)));
+  document.querySelectorAll('[data-soc-testar]').forEach((b) => b.addEventListener('click', async () => {
+    const rede = b.dataset.socTestar; const res = $(`soc-res-${rede}`);
+    b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+    try { const r = await api(`/api/conexoes/sociais/${rede}/testar`, { method: 'POST' }); res.className = 'res ' + (r.ok ? 'ok' : 'erro'); res.textContent = r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro; }
+    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
+    finally { b.removeAttribute('aria-busy'); }
+  }));
+  document.querySelectorAll('[data-soc-novo]').forEach((b) => b.addEventListener('click', async () => {
+    if (!confirm('Gerar outro token? O atual deixa de valer: cole o novo no painel.')) return;
+    try { await api(`/api/conexoes/sociais/${b.dataset.socNovo}/verify-token`, { method: 'POST' }); carregar(); } catch {}
+  }));
+  carregar();
+})();
+</script>
+</body>
+</html>

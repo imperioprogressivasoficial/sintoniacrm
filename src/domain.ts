@@ -48,6 +48,33 @@ export interface Mensagem {
   em: Date;
   /** Id da mensagem no canal (Evolution/Meta), para não processar duas vezes. */
   idExterno?: string;
+  /** Foto, áudio, vídeo, documento ou figurinha. O `texto` continua com o marcador para a IA ("[foto] legenda"). */
+  anexo?: Anexo;
+  /** Mensagem da loja: como está a entrega no WhatsApp (API oficial avisa enviada, entregue, lida ou falhou). */
+  entrega?: 'enviada' | 'entregue' | 'lida' | 'falhou';
+}
+
+export type TipoAnexo = 'imagem' | 'audio' | 'video' | 'documento' | 'figurinha';
+
+/**
+ * Situação do arquivo guardado:
+ * pendente = ainda baixando (ou esperando nova tentativa); pronta = guardado no banco;
+ * grande = passou do limite, só os dados ficam; falhou = não deu para baixar.
+ */
+export type SituacaoAnexo = 'pendente' | 'pronta' | 'grande' | 'falhou';
+
+export interface Anexo {
+  tipo: TipoAnexo;
+  mimetype?: string;
+  nomeArquivo?: string;
+  /** Duração em segundos (áudio e vídeo). */
+  duracaoSeg?: number;
+  legenda?: string;
+  /** Tamanho em bytes, quando conhecido. */
+  tamanho?: number;
+  /** Nota de voz (áudio gravado na hora). */
+  voz?: boolean;
+  situacao: SituacaoAnexo;
 }
 
 export interface Conversa {
@@ -70,6 +97,10 @@ export interface Conversa {
   ultimaMensagemIa?: Date;
   etiquetas: string[];
   resumo?: string;
+  /** Dona da conversa: a pessoa da equipe responsável por ela (vazio = sem dona). */
+  responsavelId?: string;
+  /** Nome da dona, para exibir sem consultar a equipe. */
+  responsavelNome?: string;
   criadaEm: Date;
   atualizadaEm: Date;
 }

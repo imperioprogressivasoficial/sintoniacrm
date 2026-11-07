@@ -1,5 +1,17 @@
 import { normalizarCelular, partesTrinks } from '../util/telefone.js';
 import { MIN, HORA } from '../util/tempo.js';
+import { ClienteHttpFila, type MetodoHttp } from './fila-http.js';
+import {
+  ErroAgenda,
+  type AgendamentoDoSistema,
+  type ClienteAgenda,
+  type DadosNovoAgendamento,
+  type FiltrosHorarios,
+  type ProfissionalAgenda,
+  type ProfissionalComHorarios,
+  type ServicoAgenda,
+  type SistemaAgenda,
+} from './sistema.js';
 
 /**
  * Cliente da API do Trinks (https://api.trinks.com/v1), conforme o OpenAPI público
@@ -11,44 +23,11 @@ import { MIN, HORA } from '../util/tempo.js';
  * - cache de serviços/profissionais (horas) e de horários vagos (minutos).
  */
 
-export interface TrinksServico {
-  id: number;
-  nome: string;
-  categoria?: string | null;
-  duracaoEmMinutos: number;
-  preco: number;
-  valorPromocional?: number | null;
-  visivelParaCliente?: boolean;
-}
-
-export interface TrinksProfissional {
-  id: number;
-  nome: string;
-  apelido?: string | null;
-  possuiAgenda?: boolean;
-}
-
-export interface TrinksProfissionalComAgenda {
-  id: number;
-  nome: string | null;
-  horariosVagos: string[] | null;
-}
-
-export interface TrinksCliente {
-  id: number;
-  nome: string | null;
-  telefones?: Array<{ ddi?: string | null; ddd?: string | null; telefone?: string | null }> | null;
-}
-
-export interface TrinksAgendamento {
-  id: number;
-  status?: { id: number; nome?: string | null };
-  servico?: { id?: number; nome?: string | null };
-  profissional?: { id?: number; nome?: string | null };
-  dataHoraInicio: string;
-  duracaoEmMinutos: number;
-  valor: number;
-}
+export type TrinksServico = ServicoAgenda;
+export type TrinksProfissional = ProfissionalAgenda;
+export type TrinksProfissionalComAgenda = ProfissionalComHorarios;
+export type TrinksCliente = ClienteAgenda;
+export type TrinksAgendamento = AgendamentoDoSistema;
 
 interface Paginado<T> {
   page: number;
@@ -56,14 +35,7 @@ interface Paginado<T> {
   data: T[] | null;
 }
 
-export class ErroTrinks extends Error {
-  constructor(
-    readonly status: number,
-    mensagem: string,
-  ) {
-    super(mensagem);
-  }
-}
+export class ErroTrinks extends ErroAgenda {}
 
 export interface OpcoesTrinks {
   apiKey: string;
@@ -75,24 +47,23 @@ export interface OpcoesTrinks {
   dormir?: (ms: number) => Promise<void>;
 }
 
-export class ClienteTrinks {
-  private readonly baseUrl: string;
-  private readonly intervaloMs: number;
-  private readonly fetchFn: typeof fetch;
-  private readonly agora: () => number;
-  private readonly dormir: (ms: number) => Promise<void>;
-  private fila: Promise<unknown> = Promise.resolve();
-  private ultimaChamada = 0;
-  private readonly cache = new Map<string, { expira: number; valor: unknown }>();
-  /** Quantas chamadas reais foram feitas (para o painel de consumo). */
-  chamadas = 0;
+export class ClienteTrinks extends ClienteHttpFila implements SistemaAgenda {
+  readonly sistema = 'trinks' as const;
+  protected readonly rotulo = 'Trinks';
 
   constructor(private readonly opcoes: OpcoesTrinks) {
-    this.baseUrl = (opcoes.baseUrl ?? 'https://api.trinks.com').replace(/\/$/, '');
-    this.intervaloMs = opcoes.intervaloMs ?? 1200;
-    this.fetchFn = opcoes.fetchFn ?? fetch;
-    this.agora = opcoes.agora ?? Date.now;
-    this.dormir = opcoes.dormir ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+    super({ ...opcoes, baseUrl: opcoes.baseUrl ?? 'https://api.trinks.com' });
+  }
+
+  protected erroHttp(status: number, mensagem: string): Error {
+    return new ErroTrinks(status, mensagem);
+  }
+
+  /** Troca a chave sem reiniciar (tela de Conexões). Limpa o cache, que pode ser de outra conta. */
+  definirChave(apiKey: string): void {
+    if (this.opcoes.apiKey === apiKey) return;
+    this.opcoes.apiKey = apiKey;
+    this.limparCache();
   }
 
   // ---------- leitura (com cache) ----------
@@ -116,7 +87,7 @@ export class ClienteTrinks {
   async horariosVagos(
     estabelecimentoId: string,
     data: string,
-    filtros: { servicoId?: number; profissionalId?: number; intervalos?: number } = {},
+    filtros: FiltrosHorarios = {},
   ): Promise<TrinksProfissionalComAgenda[]> {
     const query: Record<string, string> = {};
     if (filtros.servicoId) query.servicoId = String(filtros.servicoId);
@@ -159,7 +130,8 @@ export class ClienteTrinks {
     if (dataInicio) query.dataInicio = dataInicio;
     if (dataFim) query.dataFim = dataFim;
     const r = await this.pedir<Paginado<TrinksAgendamento>>(estabelecimentoId, 'GET', '/v1/agendamentos', { query });
-    return r.data ?? [];
+    // Status 9 = cancelado no Trinks.
+    return (r.data ?? []).map((a) => ({ ...a, cancelado: a.status?.id === 9 }));
   }
 
   // ---------- escrita ----------
@@ -180,16 +152,7 @@ export class ClienteTrinks {
    */
   async criarAgendamento(
     estabelecimentoId: string,
-    dados: {
-      clienteId: number;
-      servicoId: number;
-      profissionalId: number;
-      data: string;
-      hora: string;
-      duracaoEmMinutos: number;
-      valor: number;
-      observacoes?: string;
-    },
+    dados: DadosNovoAgendamento,
   ): Promise<number> {
     this.invalidar(`vagos:${estabelecimentoId}:${dados.data}:`);
     const agenda = await this.horariosVagos(estabelecimentoId, dados.data, {
@@ -216,19 +179,17 @@ export class ClienteTrinks {
     return r.id;
   }
 
+  /** Cancela no Trinks (PATCH /v1/agendamentos/{id}/status/cancelado) e libera o cache de horários. */
+  async cancelarAgendamento(estabelecimentoId: string, agendamentoId: number): Promise<void> {
+    await this.pedir(estabelecimentoId, 'PATCH', `/v1/agendamentos/${agendamentoId}/status/cancelado`);
+    this.invalidar(`vagos:${estabelecimentoId}:`);
+  }
+
+  async testar(estabelecimentoId: string): Promise<string> {
+    return `${(await this.listarProfissionais(estabelecimentoId)).length} profissionais`;
+  }
+
   // ---------- infraestrutura ----------
-
-  private invalidar(prefixo: string) {
-    for (const k of this.cache.keys()) if (k.startsWith(prefixo)) this.cache.delete(k);
-  }
-
-  private async emCache<T>(chave: string, ttlMs: number, carregar: () => Promise<T>): Promise<T> {
-    const c = this.cache.get(chave);
-    if (c && c.expira > this.agora()) return c.valor as T;
-    const valor = await carregar();
-    this.cache.set(chave, { expira: this.agora() + ttlMs, valor });
-    return valor;
-  }
 
   private async todasAsPaginas<T>(
     estabelecimentoId: string,
@@ -247,51 +208,12 @@ export class ClienteTrinks {
     return itens;
   }
 
-  /** Toda chamada passa por uma fila única: nunca duas ao mesmo tempo, sempre com pausa entre elas. */
   private pedir<T>(
     estabelecimentoId: string,
-    metodo: 'GET' | 'POST' | 'PATCH',
+    metodo: MetodoHttp,
     caminho: string,
     op: { query?: Record<string, string>; corpo?: unknown } = {},
   ): Promise<T> {
-    const tarefa = this.fila.then(() => this.executar<T>(estabelecimentoId, metodo, caminho, op));
-    this.fila = tarefa.catch(() => undefined);
-    return tarefa;
-  }
-
-  private async executar<T>(
-    estabelecimentoId: string,
-    metodo: 'GET' | 'POST' | 'PATCH',
-    caminho: string,
-    op: { query?: Record<string, string>; corpo?: unknown },
-  ): Promise<T> {
-    const url = new URL(this.baseUrl + caminho);
-    for (const [k, v] of Object.entries(op.query ?? {})) url.searchParams.set(k, v);
-
-    for (let tentativa = 0; ; tentativa++) {
-      const espera = this.ultimaChamada + this.intervaloMs - this.agora();
-      if (espera > 0) await this.dormir(espera);
-      this.ultimaChamada = this.agora();
-      this.chamadas++;
-
-      const resp = await this.fetchFn(url, {
-        method: metodo,
-        headers: {
-          'X-Api-Key': this.opcoes.apiKey,
-          estabelecimentoId,
-          accept: 'application/json',
-          ...(op.corpo ? { 'content-type': 'application/json' } : {}),
-        },
-        body: op.corpo ? JSON.stringify(op.corpo) : undefined,
-      });
-
-      if (resp.status === 429 && tentativa < 3) {
-        await this.dormir(2000 * 2 ** tentativa);
-        continue;
-      }
-      const texto = await resp.text();
-      if (!resp.ok) throw new ErroTrinks(resp.status, `Trinks ${metodo} ${caminho} → ${resp.status}: ${texto.slice(0, 300)}`);
-      return (texto ? JSON.parse(texto) : {}) as T;
-    }
+    return this.enfileirar<T>(metodo, caminho, { ...op, cabecalhos: { 'X-Api-Key': this.opcoes.apiKey, estabelecimentoId } });
   }
 }

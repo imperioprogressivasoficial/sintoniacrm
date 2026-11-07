@@ -1,27 +1,23 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { Agendamento, Conversa, Etapa } from '../domain.js';
-import type { ClienteTrinks } from '../agenda/trinks.js';
-import { agendarNoTrinks, estabelecimentoDa, horariosLivres } from '../agenda/agendar.js';
+import { agendar, agendaDaUnidade, horariosLivres } from '../agenda/agendar.js';
+import type { FonteAgenda } from '../agenda/sistema.js';
 import { dataISO, DIA } from '../util/tempo.js';
 
-/** O que o agente precisa da agenda. O ClienteTrinks atende; nos testes usamos um falso. */
-export type Agenda = Pick<
-  ClienteTrinks,
-  | 'listarServicos'
-  | 'listarProfissionais'
-  | 'horariosVagos'
-  | 'buscarClientePorTelefone'
-  | 'criarCliente'
-  | 'criarAgendamento'
-  | 'listarAgendamentosDoCliente'
->;
+/**
+ * O que o agente precisa da agenda (src/agenda/sistema.ts): o roteador que escolhe o sistema de cada unidade
+ * (Trinks, Avec ou AppBarber) ou um sistema só (nos testes, um falso no formato do Trinks).
+ */
+export type Agenda = FonteAgenda;
 
 /** Efeitos que o agente pede e o app aplica depois (funil, lembretes, alerta para a equipe). */
 export type AcaoAgente =
   | { tipo: 'agendou'; agendamento: Agendamento; clienteTrinksId: number }
   | { tipo: 'passar_para_humano'; motivo: string }
-  | { tipo: 'etapa'; etapa: Etapa; motivo: string };
+  | { tipo: 'etapa'; etapa: Etapa; motivo: string }
+  /** Marcar uma tag que JÁ EXISTE na empresa (a IA nunca cria tag). */
+  | { tipo: 'marcar_tag'; nome: string };
 
 const UNIDADES_COM_AGENDA = ['norte', 'sumare'] as const;
 
@@ -41,7 +37,7 @@ const unidadeProp = {
 };
 
 export const FERRAMENTAS_LEITURA: Ferramenta[] = [
-  def('ver_servicos', 'Lista os serviços da unidade no Trinks, com id, preço de tabela, preço promocional de hoje e duração.', {
+  def('ver_servicos', 'Lista os serviços da unidade no sistema de agenda do salão, com id, preço de tabela, preço promocional de hoje e duração.', {
     unidade: unidadeProp,
   }),
   def(
@@ -63,10 +59,22 @@ export const FERRAMENTAS_LEITURA: Ferramenta[] = [
   }),
 ];
 
+/**
+ * Ferramenta de tags: só entra quando a empresa ligou "IA marca tags" e existe alguma tag.
+ * A lista de nomes vai no enum (o modelo não consegue inventar um nome) e é conferida de novo ao aplicar.
+ */
+export function ferramentaMarcarTag(nomes: string[]): Ferramenta {
+  return def(
+    'marcar_tag',
+    `Marca na conversa uma das tags da loja, quando a conversa deixar isso claro (ex.: a cliente diz que veio pelo Instagram → "Instagram"). Use só se tiver certeza; não precisa avisar a cliente. Tags existentes: ${nomes.map((n) => `"${n}"`).join(', ')}.`,
+    { nome: { type: 'string', enum: nomes, description: 'Nome exato de uma tag existente' } },
+  );
+}
+
 export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   def(
     'agendar',
-    'Marca o horário no Trinks. Só use depois que a cliente confirmou serviço, unidade, dia, hora e profissional.',
+    'Marca o horário no sistema de agenda do salão. Só use depois que a cliente confirmou serviço, unidade, dia, hora e profissional.',
     {
       unidade: unidadeProp,
       servico_id: { type: 'integer' },
@@ -111,8 +119,10 @@ export interface ContextoFerramentas {
   conversa: Conversa;
   agora: Date;
   acoes: AcaoAgente[];
-  /** Em modo sugestão, nada é gravado no Trinks. */
+  /** Em modo sugestão, nada é gravado na agenda. */
   podeEscrever: boolean;
+  /** Tags que a IA pode marcar (vazio = não marca). */
+  tagsDisponiveis?: string[];
 }
 
 
@@ -141,7 +151,8 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
   switch (nome) {
     case 'ver_servicos': {
       const i = ENTRADAS.ver_servicos.parse(entrada);
-      const servicos = await agenda.listarServicos(estabelecimentoDa(i.unidade));
+      const { sistema, local } = agendaDaUnidade(agenda, i.unidade);
+      const servicos = await sistema.listarServicos(local);
       return servicos
         .filter((s) => s.visivelParaCliente !== false)
         .map((s) => ({
@@ -161,17 +172,18 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
     }
     case 'ver_agendamentos_da_cliente': {
       const i = ENTRADAS.ver_agendamentos_da_cliente.parse(entrada);
-      const est = estabelecimentoDa(i.unidade);
+      const { sistema, tipo, local: est } = agendaDaUnidade(agenda, i.unidade);
       const clienteId =
-        conversa.trinksClienteId ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id;
-      if (!clienteId) return 'Cliente ainda não tem cadastro no Trinks.';
-      const lista = await agenda.listarAgendamentosDoCliente(
+        (tipo === 'trinks' ? conversa.trinksClienteId : undefined) ?? (await sistema.buscarClientePorTelefone(est, conversa.telefone))?.id;
+      if (!clienteId) return 'Cliente ainda não tem cadastro na agenda do salão.';
+      const lista = await sistema.listarAgendamentosDoCliente(
         est,
         clienteId,
         dataISO(agora),
         dataISO(new Date(agora.getTime() + 60 * DIA)),
       );
-      const ativos = lista.filter((a) => a.status?.id !== 9);
+      // Status 9 = cancelado no Trinks; os outros sistemas marcam `cancelado`.
+      const ativos = lista.filter((a) => !a.cancelado && !(tipo === 'trinks' && a.status?.id === 9));
       return ativos.length
         ? ativos.map((a) => ({
             id: a.id,
@@ -190,7 +202,7 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
     case 'agendar': {
       const i = ENTRADAS.agendar.parse(entrada);
       if (!ctx.podeEscrever) throw new Error('Modo sugestão: não agende. Escreva a mensagem propondo o horário.');
-      const r = await agendarNoTrinks(
+      const r = await agendar(
         agenda,
         conversa,
         {
@@ -220,6 +232,14 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
       if (!ctx.podeEscrever) throw new Error('Modo sugestão: apenas sugira que alguém da equipe continue.');
       ctx.acoes.push({ tipo: 'passar_para_humano', motivo: i.motivo });
       return 'ok: a equipe foi avisada. Diga à cliente que alguém da equipe vai continuar o atendimento.';
+    }
+    case 'marcar_tag': {
+      const i = z.object({ nome: z.string() }).parse(entrada);
+      const alvo = i.nome.trim().toLowerCase();
+      const existente = (ctx.tagsDisponiveis ?? []).find((n) => n.toLowerCase() === alvo);
+      if (!existente) throw new Error('Essa tag não existe. Use só as tags da lista; a IA não cria tags.');
+      if (!ctx.acoes.some((a) => a.tipo === 'marcar_tag' && a.nome === existente)) ctx.acoes.push({ tipo: 'marcar_tag', nome: existente });
+      return 'ok';
     }
     default:
       throw new Error(`Ferramenta desconhecida: ${nome}`);

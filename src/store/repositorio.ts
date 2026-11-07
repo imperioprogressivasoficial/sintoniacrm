@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Conversa, Mensagem, UnidadeId } from '../domain.js';
+import type { Anexo, Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { TipoEnvio } from '../engine/followups.js';
 
 /** Envio ativo programado, ou uma reavaliação de "quem responde". */
@@ -24,6 +24,29 @@ export type TipoEvento =
   | 'passou_para_humano'
   | 'etapa_mudou'
   | 'envio_ativo'
+  /** Atendente ligou para a cliente (aba Ligações). */
+  | 'ligacao'
+  /** A conversa mudou de dona (assumiu, transferiu, liberou ou primeira resposta). */
+  | 'transferencia'
+  /** Tag marcada/desmarcada numa conversa (dados: tagId, nome, por). */
+  | 'tag_marcada'
+  | 'tag_desmarcada'
+  /** Cartão mudou de etapa num funil (dados: funilId, de, para, por, porId, automatico). */
+  | 'etapa_movida'
+  /** Uma automação agiu numa conversa (dados: automacaoId, execucaoId, acao, ...). */
+  | 'automacao'
+  /** Lembrete de ligação criado por automação (dados: quando, texto, automacaoId): aparece em "Ligar hoje". */
+  | 'lembrete_ligacao'
+  /** Lead que entrou por importação de planilha (dados: por). Não conta como conversa nova no painel. */
+  | 'lead_importado'
+  /** Contatos duplicados juntados num só (dados: principal, mesclados, por, porId...). */
+  | 'leads_mesclados'
+  /** Transmissão (disparo em massa) enviada, respondida ou descadastro (dados: transmissaoId, nome, acao). */
+  | 'transmissao'
+  /** Follow-up ou confirmação de agenda enviados (src/followup; dados: situacao, passo, total, agendamento). */
+  | 'followup'
+  /** A cliente respondeu à confirmação de agenda (dados: status confirmado|remarcar, agendamento, inicio, servico). */
+  | 'confirmacao'
   | 'falha';
 
 export interface Evento {
@@ -32,6 +55,41 @@ export interface Evento {
   unidade?: UnidadeId;
   em: Date;
   dados?: Record<string, unknown>;
+}
+
+/** Alguém da equipe digitando numa conversa (anti-duplicidade). */
+export interface Digitando {
+  usuarioId: string;
+  nome: string;
+  /** Início da sequência de digitação: quem começou primeiro tem a vez. */
+  desde: Date;
+  /** Último sinal de digitação. */
+  em: Date;
+}
+
+/** Depois de quanto tempo sem sinal a pessoa deixa de contar como "respondendo". */
+export const VALIDADE_DIGITANDO_MS = 60_000;
+
+/** Mídia esperando download (fila própria, na tabela de mídias). */
+/** Ordem da entrega: só avança (um aviso atrasado de "entregue" não apaga o "lida"). */
+export const ORDEM_ENTREGA: Record<NonNullable<Mensagem['entrega']>, number> = { enviada: 1, entregue: 2, lida: 3, falhou: 4 };
+
+export interface MidiaPendente {
+  mensagemId: string;
+  conversaId: string;
+  canalId: string;
+  idExterno: string;
+  /** Id da mídia no canal, quando é outro (API oficial). */
+  ref?: string;
+  /** Contando com esta. */
+  tentativas: number;
+}
+
+/** Arquivo guardado de uma mensagem. */
+export interface MidiaGuardada {
+  conversaId: string;
+  anexo: Anexo;
+  conteudo: Buffer | null;
 }
 
 export interface Repositorio {
@@ -47,9 +105,37 @@ export interface Repositorio {
   salvarConversa(c: Conversa): Promise<void>;
   listarConversas(): Promise<Conversa[]>;
 
-  /** Retorna false se a mensagem (pelo idExterno) já foi registrada. */
-  adicionarMensagem(m: Omit<Mensagem, 'id'>): Promise<boolean>;
+  /**
+   * Retorna false se a mensagem (pelo idExterno) já foi registrada.
+   * Com `anexo`, grava junto os dados da mídia (o arquivo vem depois, em `guardarMidia`).
+   * `id` opcional: quem grava pode escolher o id para guardar a mídia logo em seguida.
+   * `refMidia`: id da mídia no canal, quando não é o da mensagem (API oficial), para o download.
+   */
+  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }): Promise<boolean>;
+  /** Aviso de entrega/leitura de uma mensagem que a loja enviou. Nunca volta atrás (lida não vira entregue). */
+  registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date): Promise<boolean>;
+
+  // ---------- mídias (fotos, áudios, vídeos, documentos) ----------
+  midia(mensagemId: string): Promise<MidiaGuardada | undefined>;
+  /** Arquivo baixado: situação "pronta". */
+  guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }): Promise<void>;
+  /** Passou do limite: ficam só os dados. */
+  midiaGrande(mensagemId: string, tamanho?: number): Promise<void>;
+  /** Falha ao baixar: com `proxima`, tenta de novo nessa hora; sem, desiste (situação "falhou"). */
+  falhaMidia(mensagemId: string, erro: string, proxima?: Date): Promise<void>;
+  /**
+   * Pega as mídias pendentes vencidas e as reserva por `reservaMs` (se o processo cair, outro retoma).
+   * Com vários processos, cada mídia sai para um só.
+   */
+  reivindicarMidias(agora: Date, limite?: number, reservaMs?: number): Promise<MidiaPendente[]>;
+  /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
+  rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
+  foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
+  salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
+  /** Última mensagem de cada conversa (prévia da lista), numa consulta só. */
+  ultimasMensagens(): Promise<Map<string, Mensagem>>;
 
   /** Marca ids de mensagens que a própria Sintonia enviou, para não confundi-las com a atendente. */
   registrarEnviadoPorNos(idExterno: string): Promise<void>;
@@ -70,6 +156,12 @@ export interface Repositorio {
 
   guardarSugestao(conversaId: string, texto: string): Promise<void>;
   sugestao(conversaId: string): Promise<string | undefined>;
+
+  /** Registra o sinal de "digitando" de alguém da equipe. */
+  registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date): Promise<void>;
+  /** Quem deu sinal de digitação a partir de `desde`, de quem começou primeiro para quem começou depois. */
+  digitando(conversaId: string, desde: Date): Promise<Digitando[]>;
+  pararDigitando(conversaId: string, usuarioId: string): Promise<void>;
 }
 
 /** Implementação em memória: usada nos testes e para rodar local sem banco. */
@@ -125,14 +217,109 @@ export class RepositorioMemoria implements Repositorio {
     return [...this.conversas.values()].map((c) => ({ ...c }));
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'>) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
-    this.msgs.push({ ...m, id: randomUUID() });
+    const { anexo, refMidia, ...resto } = m;
+    const id = m.id ?? randomUUID();
+    this.msgs.push({ ...resto, id });
+    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: 0, ref: refMidia });
     return true;
   }
 
+  async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>) {
+    const m = this.msgs.find((x) => x.idExterno === idExterno);
+    if (!m || ORDEM_ENTREGA[status] <= (m.entrega ? ORDEM_ENTREGA[m.entrega] : 0)) return false;
+    m.entrega = status;
+    return true;
+  }
+
+  /** A mensagem com os dados atuais da mídia (a situação muda depois do download). */
+  private comAnexo(m: Mensagem): Mensagem {
+    const md = this.midias.get(m.id);
+    return md ? { ...m, anexo: { ...md.anexo } } : { ...m };
+  }
+
   async mensagens(conversaId: string, limite = 40) {
-    return this.msgs.filter((m) => m.conversaId === conversaId).slice(-limite);
+    return this.msgs
+      .filter((m) => m.conversaId === conversaId)
+      .slice(-limite)
+      .map((m) => this.comAnexo(m));
+  }
+
+  private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string; ref?: string }>();
+
+  async midia(mensagemId: string) {
+    const md = this.midias.get(mensagemId);
+    return md ? { conversaId: md.conversaId, anexo: { ...md.anexo }, conteudo: md.conteudo } : undefined;
+  }
+
+  async guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.conteudo = r.conteudo;
+    md.erro = undefined;
+    md.anexo = {
+      ...md.anexo,
+      situacao: 'pronta',
+      tamanho: r.conteudo.length,
+      mimetype: md.anexo.mimetype ?? r.mimetype,
+      nomeArquivo: md.anexo.nomeArquivo ?? r.nomeArquivo,
+    };
+  }
+
+  async midiaGrande(mensagemId: string, tamanho?: number) {
+    const md = this.midias.get(mensagemId);
+    if (md) md.anexo = { ...md.anexo, situacao: 'grande', tamanho: tamanho ?? md.anexo.tamanho };
+  }
+
+  async falhaMidia(mensagemId: string, erro: string, proxima?: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.erro = erro;
+    if (proxima) md.proxima = proxima.getTime();
+    else md.anexo = { ...md.anexo, situacao: 'falhou' };
+  }
+
+  async reivindicarMidias(agora: Date, limite = 10, reservaMs = 5 * 60_000) {
+    const t = agora.getTime();
+    const saida: MidiaPendente[] = [];
+    for (const [mensagemId, md] of this.midias) {
+      if (saida.length >= limite) break;
+      if (md.anexo.situacao !== 'pendente' || md.proxima > t) continue;
+      const m = this.msgs.find((x) => x.id === mensagemId);
+      const c = this.conversas.get(md.conversaId);
+      if (!m?.idExterno || !c) continue;
+      md.tentativas++;
+      md.proxima = t + reservaMs;
+      saida.push({ mensagemId, conversaId: md.conversaId, canalId: c.canalId, idExterno: m.idExterno, tentativas: md.tentativas, ...(md.ref ? { ref: md.ref } : {}) });
+    }
+    return saida;
+  }
+
+  async rebaixarMidia(mensagemId: string, agora: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md || md.anexo.situacao !== 'falhou') return false;
+    Object.assign(md, { tentativas: 0, proxima: agora.getTime(), erro: undefined });
+    md.anexo = { ...md.anexo, situacao: 'pendente' };
+    return true;
+  }
+
+  private fotos = new Map<string, { conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date }>();
+  async foto(telefone: string) {
+    return this.fotos.get(telefone);
+  }
+  async salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    this.fotos.set(telefone, { conteudo: foto?.conteudo ?? null, tipo: foto?.tipo ?? null, atualizadaEm: em });
+  }
+
+  async ultimasMensagens() {
+    const r = new Map<string, Mensagem>();
+    for (const m of this.msgs) {
+      const atual = r.get(m.conversaId);
+      if (!atual || atual.em.getTime() <= m.em.getTime()) r.set(m.conversaId, m);
+    }
+    for (const [k, m] of r) r.set(k, this.comAnexo(m));
+    return r;
   }
 
   async registrarEnviadoPorNos(id: string) {
@@ -184,5 +371,64 @@ export class RepositorioMemoria implements Repositorio {
 
   async sugestao(conversaId: string) {
     return this.sugestoes.get(conversaId);
+  }
+
+  private digitandoAgora = new Map<string, Map<string, Digitando>>();
+  async registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date) {
+    const m = this.digitandoAgora.get(conversaId) ?? new Map<string, Digitando>();
+    const antes = m.get(quem.usuarioId);
+    const continua = antes && em.getTime() - antes.em.getTime() <= VALIDADE_DIGITANDO_MS;
+    m.set(quem.usuarioId, { usuarioId: quem.usuarioId, nome: quem.nome, desde: continua ? antes.desde : em, em });
+    this.digitandoAgora.set(conversaId, m);
+  }
+  async digitando(conversaId: string, desde: Date) {
+    return [...(this.digitandoAgora.get(conversaId)?.values() ?? [])]
+      .filter((d) => d.em.getTime() >= desde.getTime())
+      .sort((a, b) => a.desde.getTime() - b.desde.getTime())
+      .map((d) => ({ ...d }));
+  }
+  async pararDigitando(conversaId: string, usuarioId: string) {
+    this.digitandoAgora.get(conversaId)?.delete(usuarioId);
+  }
+
+  /** Só na memória (dados de demonstração, src/demo): apaga as conversas e tudo o que é delas. Devolve quantas mensagens e eventos saíram. */
+  async apagarConversas(ids: string[]) {
+    const fora = new Set(ids);
+    const antes = { mensagens: this.msgs.length, eventos: this.eventos.length };
+    this.msgs = this.msgs.filter((m) => !fora.has(m.conversaId));
+    for (const [k, md] of this.midias) if (fora.has(md.conversaId)) this.midias.delete(k);
+    this.eventos = this.eventos.filter((e) => !e.conversaId || !fora.has(e.conversaId));
+    this.tarefas = this.tarefas.filter((t) => !fora.has(t.conversaId));
+    for (const id of fora) {
+      this.sugestoes.delete(id);
+      this.digitandoAgora.delete(id);
+      this.conversas.delete(id);
+    }
+    return { mensagens: antes.mensagens - this.msgs.length, eventos: antes.eventos - this.eventos.length };
+  }
+
+  /** Só na memória (demonstração): todas as tarefas, para conferir que nada ficou programado. */
+  todasAsTarefas(): Tarefa[] {
+    return this.tarefas.map((t) => ({ ...t }));
+  }
+
+  /**
+   * Só na memória (mesclar duplicatas, src/leads): passa mensagens, mídias, eventos e tarefas pendentes
+   * (dos tipos que a outra ainda não tem) de `deId` para `paraId` e apaga `deId`. No Postgres é SQL (leads/armazem.ts).
+   */
+  async unirConversas(deId: string, paraId: string) {
+    for (const m of this.msgs) if (m.conversaId === deId) m.conversaId = paraId;
+    for (const md of this.midias.values()) if (md.conversaId === deId) md.conversaId = paraId;
+    for (const e of this.eventos) if (e.conversaId === deId) e.conversaId = paraId;
+    const jaTem = new Set(this.tarefas.filter((t) => t.conversaId === paraId && !t.feita).map((t) => t.tipo));
+    for (const t of this.tarefas) {
+      if (t.conversaId !== deId) continue;
+      if (!t.feita && !jaTem.has(t.tipo)) t.conversaId = paraId;
+      else t.feita = true;
+    }
+    if (!this.sugestoes.has(paraId) && this.sugestoes.has(deId)) this.sugestoes.set(paraId, this.sugestoes.get(deId)!);
+    this.sugestoes.delete(deId);
+    this.digitandoAgora.delete(deId);
+    this.conversas.delete(deId);
   }
 }
