@@ -49,6 +49,8 @@ export interface Variaveis {
   nome?: string | null;
   email?: string | null;
   unidade?: string | null;
+  /** Variáveis próprias do envio (ex.: {servico}, {data}, {hora} da confirmação de agenda). */
+  extras?: Record<string, string> | null;
 }
 
 export interface OpcoesHtml {
@@ -79,7 +81,9 @@ export function trocarVariaveis(texto: string, v: Variaveis, escapar: boolean): 
   const nome = (v.nome ?? '').trim();
   const primeiro = nome.split(/\s+/)[0] ?? '';
   const f = (s: string) => (escapar ? esc(s) : s);
-  return texto
+  let t = texto;
+  for (const [k, val] of Object.entries(v.extras ?? {})) if (/^[a-z_]+$/.test(k)) t = t.split(`{${k}}`).join(f(String(val)));
+  return t
     .replace(/\{primeiro_nome\}/g, f(primeiro || 'cliente'))
     .replace(/\{nome\}/g, f(nome || 'cliente'))
     .replace(/\{email\}/g, f((v.email ?? '').trim()))

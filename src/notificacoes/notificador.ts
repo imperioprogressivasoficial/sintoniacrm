@@ -185,6 +185,16 @@ export class Notificador {
         }
         return;
       }
+      case 'confirmacao': {
+        // A cliente pediu para remarcar pela confirmação automática: a dona (ou a unidade) e a gerência ficam sabendo.
+        if (d.status !== 'remarcar') return;
+        const quando = d.data && d.hora ? `${String(d.data)} às ${String(d.hora)}` : '';
+        const alvos = new Map([...this.donaOuUnidade(us, c), ...this.gestao(us, c)].map((u) => [u.id, u]));
+        for (const u of alvos.values()) {
+          await this.criar(u, { tipo: 'agendamento', titulo: `${nome} quer remarcar`, texto: curto(`${d.servico ? String(d.servico) : 'Horário'}${quando ? ` · ${quando}` : ''} · ${unidade}`), conversaId: c.id });
+        }
+        return;
+      }
       case 'lembrete_ligacao': {
         if (d.teste) return;
         const quando = typeof d.quando === 'string' ? new Date(d.quando) : this.agora();

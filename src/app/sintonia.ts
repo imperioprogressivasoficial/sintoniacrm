@@ -61,6 +61,11 @@ export interface DependenciasSintonia {
    * undefined = vale o modo padrão da empresa (comportamento de sempre).
    */
   modoInicial?: (c: Conversa, agora: Date) => Promise<ModoAtendimento | undefined>;
+  /**
+   * Follow-up configurável (src/followup): quando a cadência "Não respondeu" ou a confirmação de agenda estão ligadas,
+   * os follow-ups fixos (1h/1d/3d) e os lembretes fixos (véspera/2h) do motor saem. Ausente = tudo como sempre.
+   */
+  motor?: (c: Conversa) => Promise<{ followups: boolean; lembretes: boolean }>;
 }
 
 /**
@@ -718,8 +723,10 @@ export class Sintonia {
         c.trinksClienteId = a.clienteTrinksId;
         await this.moverFunil(c, { tipo: 'agendamento_criado' });
         await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
-        for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) {
-          await this.d.repo.programar({ conversaId: c.id, tipo: l.tipo, quando: l.quando });
+        if ((await this.motorDe(c)).lembretes) {
+          for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) {
+            await this.d.repo.programar({ conversaId: c.id, tipo: l.tipo, quando: l.quando });
+          }
         }
         await this.evento(autor === 'ia' ? 'agendamento_ia' : 'agendamento_equipe', c, {
           trinksId: a.agendamento.trinksId,
@@ -774,7 +781,14 @@ export class Sintonia {
   private async programarFollowups(c: Conversa, desde: Date): Promise<void> {
     if (c.modo === 'humano' || c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida') return;
     await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
+    if (!(await this.motorDe(c)).followups) return;
     for (const f of followupsSemAgendamento(desde)) await this.d.repo.programar({ conversaId: c.id, tipo: f.tipo, quando: f.quando });
+  }
+
+  /** O que o motor fixo ainda faz (o follow-up configurável pode assumir). Se a leitura falhar, faz tudo. */
+  private async motorDe(c: Conversa): Promise<{ followups: boolean; lembretes: boolean }> {
+    if (!this.d.motor) return { followups: true, lembretes: true };
+    return this.d.motor(c).catch(() => ({ followups: true, lembretes: true }));
   }
 
   private async reavaliarEm(conversaId: string, quando: Date): Promise<void> {

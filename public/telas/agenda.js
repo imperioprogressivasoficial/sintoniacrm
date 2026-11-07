@@ -154,7 +154,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ag-info' },
         el('b', { text: i.cliente || ui.formatarTel?.(i.telefone) || i.telefone }),
         el('span', { text: [i.servico, i.profissional ? `com ${i.profissional}` : null, duracao(i.duracaoMin)].filter(Boolean).join(' · ') }),
-        el('em', {}, el('span', { class: 'ag-tag', text: ui.UNIDADE[i.unidade] || i.unidade }), el('span', { class: 'ag-tag' + (i.porIa ? ' ag-ia' : ''), text: i.porIa ? 'pela IA' : `por ${String(i.por).split(' ')[0]}` }))));
+        el('em', {}, el('span', { class: 'ag-tag', text: ui.UNIDADE[i.unidade] || i.unidade }), el('span', { class: 'ag-tag' + (i.porIa ? ' ag-ia' : ''), text: i.porIa ? 'pela IA' : `por ${String(i.por).split(' ')[0]}` }),
+          // Confirmação automática (src/followup): Aguardando / Confirmado / Remarcar / Sem resposta.
+          !foi && s.conf?.[i.id] && window.SintoniaTelas?.followup?.seloConfirmacao ? window.SintoniaTelas.followup.seloConfirmacao(ui, s.conf[i.id]) : null)));
     return b;
   }
 
@@ -287,6 +289,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (g !== s.geracao) return;
       s.dados = r;
       s.erro = null;
+      // Status da confirmação de cada horário (não segura a Agenda se falhar).
+      const fim = new Date(Date.parse(s.inicio) + (ANTES + DEPOIS + 2) * 86400000).toISOString();
+      s.conf = await ui.api(`/api/followup/confirmacoes?de=${encodeURIComponent(new Date(Date.parse(s.inicio) - 86400000).toISOString())}&ate=${encodeURIComponent(fim)}`).then((x) => x.status).catch(() => s.conf || {});
+      if (g !== s.geracao) return;
       if (s.unidade && !r.unidades.some((u) => u.id === s.unidade)) s.unidade = '';
     } catch (x) {
       if (g !== s.geracao) return;

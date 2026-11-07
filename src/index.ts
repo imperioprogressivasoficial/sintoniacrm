@@ -59,6 +59,9 @@ import { EmailMarketing } from './email/email.js';
 import { registrarEmail } from './email/rotas.js';
 import { transporteArquivo, transporteReal } from './email/transporte.js';
 import { calendarioPostgres } from './automacoes/calendario.js';
+import { Followup } from './followup/followup.js';
+import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
+import { registrarFollowup } from './followup/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -234,10 +237,24 @@ const automacoes = new Automacoes({
 const ganchosBase = ligarFunis({ tags, funis, automacoes });
 // Transmissões (disparo em massa): só com Postgres. Criadas depois da Sintonia; os ganchos as chamam quando existirem.
 let transmissoes: Transmissoes | undefined;
+// Follow-up configurável e confirmação automática de agenda (src/followup): ouve os eventos, envia pelo relógio.
+const followup = new Followup({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemFollowupPostgres(pool) : new ArmazemFollowupMemoria(),
+  repo,
+  sintonia: () => sintonia,
+  agente: { executar: (p) => agentesIa.agente.executar(p) },
+  iaDisponivel: () => iaLigada,
+  email,
+  tags,
+  log,
+});
+observarEventos(repo, (e) => followup.aoEvento(e));
 const ganchos: typeof ganchosBase = {
   ...ganchosBase,
   mensagemCliente: async (c, m) => {
     await ganchosBase.mensagemCliente?.(c, m);
+    await followup.mensagemCliente(c, m).catch((e) => log('Falha no follow-up (resposta da cliente)', String(e)));
     await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
   },
 };
@@ -309,6 +326,7 @@ const sintonia = new Sintonia({
   midias,
   configIa: async () => regrasDaConfig(await empresa.configIa()),
   tagsIa: tagsDaIa,
+  motor: (c) => followup.motor(c),
   avisarEquipe: async (texto) => {
     // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
     const n = numeros.find(ehReal);
@@ -500,6 +518,7 @@ const demo = new Demo({
   log,
 });
 registrarDemo(app, demo);
+registrarFollowup(app, { followup, repo });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
@@ -511,6 +530,7 @@ const relogio = setInterval(async () => {
   midias.avisar(); // novas tentativas de download que já venceram
   await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões
   await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
+  await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);
