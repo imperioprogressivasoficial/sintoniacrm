@@ -601,3 +601,8 @@ html { overflow-x: clip; }
 .v-logos-secao .v-olho { display: block; }
 .v-int b { color: #fff; }
 .v-logos-nota { color: rgba(255,255,255,.7); }
+/* assinatura "by Império Progressivas" junto da marca */
+.v-marca-txt { display: inline-flex; flex-direction: column; line-height: 1; }
+.v-marca-txt > span { white-space: nowrap; }
+.v-by { font-size: 10.5px; font-weight: 500; letter-spacing: .02em; opacity: .7; margin-top: 3px; white-space: nowrap; color: inherit; }
+@media (max-width: 520px) { .v-by { font-size: 9.5px; } }
