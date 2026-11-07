@@ -129,6 +129,27 @@ describe('Calculadora de custo da IA (public/calculadora-ia.js)', () => {
     expect(tres.horas.equipe).toBe(120);
     expect(calc.calcular({ atendentes: 50 }).entradas.atendentes).toBe(10);
   });
+  it('calcula a nova jornada (fim da 6x1) contra 1 pessoa + Colaborador de IA', async () => {
+    await import(/* @vite-ignore */ new URL('../public/calculadora-ia.js', import.meta.url).href);
+    const calc = (globalThis as unknown as { SintoniaCalculadora: { escala6x1(e: object): any } }).SintoniaCalculadora;
+    // 84 h por semana, salário de R$ 1.800: custo por pessoa = 1.800 × 1,7 + 600 = 3.660
+    const r = calc.escala6x1({ horas: 84, salario: 1800 });
+    expect(r.porPessoa).toBe(3660);
+    expect(r.antes).toMatchObject({ jornada: 44, pessoas: 2, mes: 7320 });
+    expect(r.transicao).toMatchObject({ jornada: 42, pessoas: 2 });
+    expect(r.depois).toMatchObject({ jornada: 40, pessoas: 3, mes: 10980 });
+    expect(r.comIa).toMatchObject({ pessoas: 1, ia: 1997, mes: 5657, horas: 168 });
+    expect(r.economia).toMatchObject({ mes: 5323, ano: 63876 });
+    expect(r.aumentoHora).toBe(10);
+    // 24 h por dia: 168 ÷ 40 = 4,2 → 5 pessoas
+    const cheio = calc.escala6x1({ horas: 168, salario: '2.000' });
+    expect(cheio.depois.pessoas).toBe(5);
+    expect(cheio.porPessoa).toBe(4000);
+    expect(cheio.economia.mes).toBe(5 * 4000 - (4000 + 1997));
+    // entradas fora da faixa são limitadas
+    expect(calc.escala6x1({ horas: 500 }).horas).toBe(168);
+    expect((calc as any).equipe2027).toBeUndefined();
+  });
 });
 
 describe.runIf(temPostgres)('Leads do site no Postgres', () => {

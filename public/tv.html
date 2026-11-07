@@ -39,6 +39,13 @@ body {
 .topo .tela-nome span { width: 1rem; height: 1rem; border-radius: 50%; background: rgba(255,255,255,.18); transition: background .3s; }
 .topo .tela-nome span.ativa { background: var(--menta); box-shadow: 0 0 1rem rgba(15,252,190,.6); }
 .relogio { margin-left: auto; text-align: right; }
+.ao-vivo { margin-left: auto; display: inline-flex; align-items: center; gap: .7rem; padding: .6rem 1.3rem; border-radius: 99rem; font-size: 1.25rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+           color: #ffd9d2; background: rgba(255,77,77,.14); border: 1px solid rgba(255,107,107,.45); }
+.ao-vivo i { width: .9rem; height: .9rem; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 0 0 rgba(255,77,77,.7); animation: vivo 1.8s ease-out infinite; }
+@keyframes vivo { 0% { box-shadow: 0 0 0 0 rgba(255,77,77,.7); } 70% { box-shadow: 0 0 0 .9rem rgba(255,77,77,0); } 100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); } }
+.ao-vivo + .relogio { margin-left: 2rem; }
+.meta .valor { font-size: 2.2rem; font-weight: 800; letter-spacing: -.02em; color: var(--texto); }
+.meta .valor small { font-size: .55em; font-weight: 600; color: var(--sub); letter-spacing: 0; }
 .relogio .h { font-size: 4.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .relogio .d { color: var(--sub); font-size: 1.3rem; }
 .vidro { background: var(--vidro); border: 1px solid var(--borda); border-radius: 2rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1.5rem 4rem rgba(0,0,0,.25);
@@ -131,7 +138,13 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
 .aviso { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; font-size: 2.4rem; padding: 4rem; z-index: 9; background: var(--noite); }
 .aviso[hidden] { display: none; }
 .offline { position: fixed; right: 2rem; bottom: 1.2rem; font-size: 1.1rem; color: var(--sub); }
-@media (prefers-reduced-motion: reduce) { .tela, .barra i, .anel .frente, .festa .cartao { transition: none; } .novo { animation: none; } }
+/* encaixe da tela 1: anel menor e números de hoje que cabem com as unidades */
+.anel { width: 18rem; height: 18rem; }
+.anel .pct { font-size: 5.6rem; }
+.hoje .n { font-size: 8rem; }
+.hoje .r { font-size: 1.7rem; }
+.t1 .servs { gap: .75rem; } .t1 .serv .l { font-size: 1.55rem; } .t1 .serv .l b { font-size: 1.9rem; } .t1 .serv .barra { height: 1rem; margin-top: .4rem; } .t1 .ultimo .quem { font-size: 2.3rem; }
+@media (prefers-reduced-motion: reduce) { .tela, .barra i, .anel .frente, .festa .cartao { transition: none; } .novo, .ao-vivo i { animation: none; } }
 </style>
 </head>
 <body>
@@ -140,6 +153,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
     <img src="/simbolo-escuro.png" alt="">
     <div><h1 id="titulo">Sala comercial</h1><div class="sub" id="sub">Agendamentos pelo WhatsApp</div></div>
     <div class="tela-nome" id="pontos" aria-hidden="true"></div>
+    <div class="ao-vivo" aria-label="Ao vivo"><i></i>Ao vivo</div>
     <div class="relogio"><div class="h" id="hora">--:--</div><div class="d" id="data"></div></div>
   </header>
   <main class="telas" id="telas">
@@ -233,6 +247,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
     $('meta').innerHTML = `<h2 style="margin:0">Meta do mês da equipe</h2>
       <div class="anel">${anel(pct)}<div class="centro"><div class="pct">${pct != null ? Math.round(pct) + '<small>%</small>' : n(m.agendamentos)}</div><div class="de">${pct != null ? 'da meta' : 'no mês'}</div></div></div>
       <div class="linha"><b>${alvo}</b></div>
+      ${m.valor ? `<div class="valor">${brl(m.valor)} <small>faturados no mês</small></div>` : ''}
       <div class="linha">${m.meta.agendamentos && m.agendamentos < m.meta.agendamentos ? `faltam <b>${n(m.meta.agendamentos - m.agendamentos)}</b> · ` : ''}${m.diasRestantes} dia${m.diasRestantes === 1 ? '' : 's'} no mês</div>`;
     const h = d.hoje;
     $('hoje').innerHTML = `<div class="n">${n(h.agendamentos)}</div><div class="r">agendamento${h.agendamentos === 1 ? '' : 's'} hoje</div>
