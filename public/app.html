@@ -688,6 +688,7 @@
   #tema-cel .ic-sol { display: none; } [data-tema="escuro"] #tema-cel .ic-sol { display: block; } [data-tema="escuro"] #tema-cel .ic-lua { display: none; }
   @media (min-width: 761px) { #tema-cel { display: none !important; } }
 </style>
+<link rel="stylesheet" href="/responsivo.css">
 </head>
 <body>
 <div class="casca" id="casca">
@@ -2410,5 +2411,6 @@ addEventListener('load', () => {
 // Atalho de claro/escuro no topo das Conversas (celular): um toque troca.
 addEventListener('load', () => { const b = document.getElementById('tema-cel'); if (!b || !window.SintoniaTema) return; b.addEventListener('click', () => window.SintoniaTema.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro')); });
 </script>
+<script src="/telas/responsivo.js" defer></script>
 </body>
 </html>
