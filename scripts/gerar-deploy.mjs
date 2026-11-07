@@ -77,7 +77,7 @@ services:
       COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
-      PACOTE: ${b64}
+${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}      PACOTE: ${b64}
     networks:
       - interna
     healthcheck:

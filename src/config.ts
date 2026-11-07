@@ -27,6 +27,7 @@ const Env = z.object({
   ADMIN_NOME: z.string().optional(),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_SENHA: z.string().optional(),
+  ADMIN_SENHA_HASH: z.string().transform((h) => h.replaceAll('$$', '$')).pipe(z.string().startsWith('scrypt$')).optional(),
   SINTONIA_PARALELO: z.coerce.number().int().min(1).max(64).default(8),
 });
 

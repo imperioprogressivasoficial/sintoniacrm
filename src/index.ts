@@ -52,9 +52,9 @@ if (cfg.DATABASE_URL) {
   contas = new ContasMemoria();
 }
 
-// Primeiro administrador (só se ainda não existir).
-if (cfg.ADMIN_EMAIL && cfg.ADMIN_SENHA) {
-  const fraca = senhaFraca(cfg.ADMIN_SENHA);
+// Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
+if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
+  const fraca = cfg.ADMIN_SENHA_HASH ? null : senhaFraca(cfg.ADMIN_SENHA!);
   if (fraca) log(`ADMIN_SENHA recusada: ${fraca}`);
   else if (!(await contas.buscarPorEmail(cfg.ADMIN_EMAIL))) {
     await contas.criarUsuario({
@@ -63,7 +63,7 @@ if (cfg.ADMIN_EMAIL && cfg.ADMIN_SENHA) {
       email: cfg.ADMIN_EMAIL,
       papel: 'admin',
       unidades: [],
-      senhaHash: await gerarHash(cfg.ADMIN_SENHA),
+      senhaHash: cfg.ADMIN_SENHA_HASH ?? (await gerarHash(cfg.ADMIN_SENHA!)),
     });
     log(`Administrador ${cfg.ADMIN_EMAIL} criado.`);
   }
