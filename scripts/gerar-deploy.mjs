@@ -50,14 +50,18 @@ try {
   // A senha do banco é fixada aqui (SENHA_BANCO) porque o painel não repassa variáveis do projeto.
   const senha = process.env.SENHA_BANCO;
   if (!senha || !/^[a-f0-9]{32,}$/.test(senha)) throw new Error('Defina SENHA_BANCO (hex, 32+ caracteres)');
-  const iniciar = [
-    'mkdir -p /home/node/app', 'cd /home/node/app',
+  // Instala uma vez só, num volume fixo (sintonia_app, montado em /home/node). Ao reiniciar, se a marca
+  // da versão existe, sobe direto do disco, sem depender da internet. Versão nova: refaz a pasta.
+  const marca = `app/.versao-${soma}`;
+  const instalar = [
+    'rm -rf app', 'mkdir app', 'cd app',
     'printenv PACOTE | base64 -d > /tmp/pacote.tgz',
     `echo '${soma}  /tmp/pacote.tgz' | sha256sum -c -`,
     'tar -xzf /tmp/pacote.tgz', 'rm /tmp/pacote.tgz',
     'npm install --omit=dev --no-audit --no-fund',
-    'exec node dist/app/sintonia.mjs',
+    `touch .versao-${soma}`,
   ].join(' && ');
+  const iniciar = `cd /home/node && { [ -f ${marca} ] || { ${instalar}; }; } && cd /home/node/app && exec node dist/app/sintonia.mjs`;
   if (iniciar.includes('$') || iniciar.includes('"')) throw new Error('comando não pode ter $ ou aspas duplas');
 
   process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
@@ -78,6 +82,8 @@ services:
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
 ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}      PACOTE: ${b64}
+    volumes:
+      - app:/home/node
     networks:
       - interna
     healthcheck:
@@ -113,6 +119,8 @@ ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Admi
 volumes:
   banco:
     name: sintonia_banco
+  app:
+    name: sintonia_app
 
 networks:
   interna:
