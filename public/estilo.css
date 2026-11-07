@@ -855,3 +855,26 @@ html.modal-aberto { overflow: hidden; }
   .v-27-lado li { font-size: 13.5px; }
 }
 @media (max-width: 560px) { .v-27-entradas { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- fim da escala 6x1 ---------- */
+.v-6x1 { max-width: 1100px; margin: 26px auto 0; padding: 26px; border-radius: 26px; background: linear-gradient(160deg, #04121f, #0a2a4a); color: #fff; border: 1px solid rgba(15,252,190,.35); box-shadow: 0 30px 70px rgba(4,18,31,.25); }
+.v-6x1-selo { display: inline-block; margin: 0 0 10px; padding: 4px 12px; border-radius: 999px; background: var(--menta); color: #04121f; font-size: 12px; font-weight: 700; }
+.v-6x1 h3 { margin: 0 0 8px; font-family: var(--fonte-titulo); font-size: clamp(22px, 2.6vw, 30px); line-height: 1.2; }
+.v-6x1 h3 em { font-style: normal; color: var(--menta); }
+.v-6x1-cab p:last-child { margin: 0; color: rgba(255,255,255,.78); font-size: 15px; line-height: 1.55; max-width: 900px; }
+.v-6x1-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 16px; margin-top: 18px; }
+.v-6x1-entradas { display: grid; gap: 12px; align-content: start; }
+.v-6x1-colunas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.v-6x1-colunas div { display: grid; gap: 4px; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); }
+.v-6x1-colunas span { font-size: 12.5px; color: rgba(255,255,255,.7); }
+.v-6x1-colunas b { font-family: var(--fonte-titulo); font-size: 20px; }
+.v-6x1-colunas small { font-size: 12.5px; color: rgba(255,255,255,.7); }
+.v-6x1-colunas .alerta { border-color: rgba(255,140,120,.5); }
+.v-6x1-colunas .alerta b { color: #ff9b8a; }
+.v-6x1-colunas .ia { background: rgba(15,252,190,.12); border-color: rgba(15,252,190,.5); }
+.v-6x1-colunas .ia b { color: var(--menta); }
+.v-6x1-conclusao { margin: 16px 0 0; font-size: 15.5px; font-weight: 600; }
+.v-6x1-fontes { margin: 10px 0 0; font-size: 12px; color: rgba(255,255,255,.55); }
+.v-6x1-fontes a { color: rgba(255,255,255,.75); }
+@media (max-width: 900px) { .v-6x1-grade { grid-template-columns: minmax(0, 1fr); } .v-6x1-colunas { grid-template-columns: repeat(2, minmax(0, 1fr)); } .v-6x1 { padding: 20px; } }
+#e6x1-horas-v { white-space: nowrap; min-width: 64px; text-align: center; }

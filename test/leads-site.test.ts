@@ -109,12 +109,12 @@ describe('Calculadora de custo da IA (public/calculadora-ia.js)', () => {
     expect(r.funcionarios.ano).toBe(43920);
     expect(r.ia).toMatchObject({ mes: 1997, recargas: 0, estimativa: true });
     expect(r.economia.mes).toBe(1663);
-    expect(r.horas).toMatchObject({ ia: 168, funcionario: 44 });
+    expect(r.horas).toMatchObject({ ia: 168, funcionario: 40 });
     const tres = calc.calcular({ atendentes: 3, conversas: 2000 });
     expect(tres.funcionarios.mes).toBe(10980);
     expect(tres.ia.recargas).toBe(3); // 500 a mais ÷ 190
     expect(tres.ia.mes).toBe(1997 + 297);
-    expect(tres.horas.equipe).toBe(132);
+    expect(tres.horas.equipe).toBe(120);
     expect(calc.calcular({ atendentes: 50 }).entradas.atendentes).toBe(10);
   });
 });

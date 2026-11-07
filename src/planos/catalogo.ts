@@ -100,7 +100,8 @@ export interface Plano {
 
 /** Valores iniciais. TODOS SÃO SUGESTÃO: o dono ajusta aqui; limites do Empresarial vão na assinatura. */
 export const CONFIG_SUGERIDA: ConfigPlanos = {
-  clt: { salario: 1800, encargosPct: 70, beneficios: 600, horasSemana: 44 },
+  // Jornada: EC 141/2026 (fim da escala 6x1) leva o limite de 44 h para 42 h e, um ano depois, para 40 h, sem reduzir salário.
+  clt: { salario: 1800, encargosPct: 70, beneficios: 600, horasSemana: 40 },
   precoColaborador: 1997,
   precoEssencial: 497,
   limites: { cincoHoras: 2_500_000, semana: 12_000_000, mes: 40_000_000 },
@@ -258,7 +259,7 @@ export function calcularCalculadora(e: EntradaCalculadora, cfg: ConfigPlanos = C
     economiaMensal: centavos(func - ia),
     economiaAnual: centavos((func - ia) * 12),
     horasIaSemana: 168,
-    horasEquipeSemana: 44 * atendentes,
+    horasEquipeSemana: cfg.clt.horasSemana * atendentes,
     calibrada: Boolean(tpc),
   };
 }

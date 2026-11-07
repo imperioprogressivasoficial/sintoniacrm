@@ -61,12 +61,12 @@ describe('calculadora "Quanto custa ter a IA no seu negócio"', () => {
   const base = { atendentes: 1, salario: 1800, encargosPct: 70, beneficios: 600, conversasMes: 1500 };
   it('1 atendente, 1.500 conversas: só o plano', () => {
     const c = calcularCalculadora(base);
-    expect(c).toMatchObject({ custoFuncionariosMensal: 3660, custoFuncionariosAnual: 43920, recargasEstimadas: 0, creditosEstimadosMensal: 0, custoIaMensal: 1997, custoIaAnual: 23964, economiaMensal: 1663, economiaAnual: 19956, horasIaSemana: 168, horasEquipeSemana: 44, calibrada: false });
+    expect(c).toMatchObject({ custoFuncionariosMensal: 3660, custoFuncionariosAnual: 43920, recargasEstimadas: 0, creditosEstimadosMensal: 0, custoIaMensal: 1997, custoIaAnual: 23964, economiaMensal: 1663, economiaAnual: 19956, horasIaSemana: 168, horasEquipeSemana: 40, calibrada: false });
   });
   it('mais conversas: recargas de R$ 99 a cada ~190 conversas (arredonda para cima)', () => {
     const c = calcularCalculadora({ ...base, atendentes: 3, conversasMes: 2000 });
     // (2000 − 1500) / 190 = 2,6 → 3 recargas = R$ 297
-    expect(c).toMatchObject({ custoFuncionariosMensal: 10980, recargasEstimadas: 3, creditosEstimadosMensal: 297, custoIaMensal: 2294, economiaMensal: 8686, economiaAnual: 104232, horasEquipeSemana: 132 });
+    expect(c).toMatchObject({ custoFuncionariosMensal: 10980, recargasEstimadas: 3, creditosEstimadosMensal: 297, custoIaMensal: 2294, economiaMensal: 8686, economiaAnual: 104232, horasEquipeSemana: 120 });
   });
   it('limita atendentes a 1–10 e calibra pela média real de tokens por conversa', () => {
     expect(calcularCalculadora({ ...base, atendentes: 40 }).custoFuncionariosMensal).toBe(36600);

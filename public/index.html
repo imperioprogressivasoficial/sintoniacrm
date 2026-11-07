@@ -428,7 +428,7 @@
             <p class="v-27-gente" id="eq27-gente-hoje" aria-hidden="true"></p>
             <b id="eq27-hoje-mes">R$ 14.640</b><small>por mês</small>
             <ul>
-              <li><span>Horário coberto</span><b>44 h/semana</b></li>
+              <li><span>Horas de trabalho somadas</span><b id="eq27-hoje-horas">160 h/semana</b></li>
               <li><span>Conversas ao mesmo tempo</span><b id="eq27-hoje-sim">~12</b></li>
               <li><span>Resposta à noite e no domingo</span><b class="nao">não</b></li>
               <li><span>Custo por conversa</span><b id="eq27-hoje-conv">R$ 9,15</b></li>
@@ -450,10 +450,35 @@
         <div class="v-27-resultado" aria-live="polite">
           <div><span>Economia por ano</span><b id="eq27-eco-ano">R$ 107.796</b><small id="eq27-eco-pct">61% a menos que hoje</small></div>
           <div><span>Horas de gente liberadas</span><b id="eq27-horas">132 h</b><small>por semana para vender e cuidar dos clientes</small></div>
-          <div><span>Horário atendido</span><b>3,8×</b><small>168 h da IA contra 44 h de uma pessoa</small></div>
+          <div><span>Horário atendido</span><b>4,2×</b><small>168 h da IA contra 40 h de uma pessoa na nova jornada</small></div>
         </div>
       </div>
 
+
+      <div class="v-6x1 revela" id="escala-6x1">
+        <div class="v-6x1-cab">
+          <p class="v-6x1-selo">Nova lei · Emenda Constitucional 141/2026</p>
+          <h3>Acabou a escala 6x1. <em>Sua equipe vai trabalhar menos horas pelo mesmo salário.</em></h3>
+          <p>O Congresso promulgou em 16/10/2026 o fim da escala 6x1: dois dias de folga por semana e jornada máxima caindo de 44 h para 42 h dois meses depois da publicação, e para 40 h um ano depois disso, sem redução de salário. Para quem atende cliente, isso significa hora de atendimento mais cara e mais gente para cobrir sábado, domingo e horário estendido.</p>
+        </div>
+        <div class="v-6x1-grade">
+          <form class="v-6x1-entradas" id="e6x1" novalidate>
+            <div class="v-calc-campo v-calc-faixa">
+              <label for="e6x1-horas">Horas por semana que sua empresa atende</label>
+              <div class="v-calc-faixa-linha"><input id="e6x1-horas" name="horas" type="range" min="40" max="168" step="4" value="84"><output id="e6x1-horas-v" for="e6x1-horas">84 h</output></div>
+            </div>
+            <div class="v-calc-campo"><label for="e6x1-salario">Salário médio (R$)</label><input id="e6x1-salario" name="salario" type="number" inputmode="numeric" min="0" step="50" value="1800"></div>
+          </form>
+          <div class="v-6x1-colunas" aria-live="polite">
+            <div><span>Antes (44 h)</span><b id="e6x1-antes">2 pessoas</b><small id="e6x1-antes-h">R$ 19,21 por hora</small></div>
+            <div><span>Transição (42 h)</span><b id="e6x1-trans">2 pessoas</b><small id="e6x1-trans-h">R$ 20,12 por hora</small></div>
+            <div class="alerta"><span>Nova jornada (40 h)</span><b id="e6x1-depois">2 pessoas</b><small id="e6x1-depois-h">R$ 21,13 por hora</small></div>
+            <div class="ia"><span>Com o Colaborador de IA</span><b>1 pessoa + IA</b><small>IA cobre as 168 h da semana</small></div>
+          </div>
+        </div>
+        <p class="v-6x1-conclusao" id="e6x1-conclusao">Cada hora de atendimento humano fica cerca de 10% mais cara com a jornada de 40 h. A IA não tem jornada: cobre noite, sábado e domingo, e a sua equipe fica no horário de pico.</p>
+        <p class="v-6x1-fontes">Fontes: <a href="https://www12.senado.leg.br/noticias/materias/2026/10/16/congresso-promulga-o-fim-da-escala-6x1-e-aposentadoria-de-agentes-de-saude" target="_blank" rel="noopener">Agência Senado</a> · <a href="https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/senado-aprova-fim-da-escala-6x1-e-reducao-da-jornada-de-trabalho" target="_blank" rel="noopener">Agência Brasil</a> · <a href="https://www12.senado.leg.br/tv/programas/noticias-1/2026/10/fim-da-escala-6x1-emenda-e-promulgada-e-preve-jornada-de-40-horas-sem-reducao-salarial" target="_blank" rel="noopener">TV Senado</a>. Simulação com custo por pessoa = salário × 1,7 + R$ 600 e 4,33 semanas por mês; não é consultoria trabalhista.</p>
+      </div>
       <div class="v-27-motivos">
         <article class="revela"><b>Ninguém fica esperando</b><p>A IA responde em segundos, inclusive de madrugada, quando muitos clientes chamam e ninguém da equipe está online.</p></article>
         <article class="revela" style="--atraso:.05s"><b>Pico sem contratar</b><p>Campanha, promoção ou data especial: a IA atende 10 ou 500 conversas ao mesmo tempo, sem hora extra.</p></article>
@@ -502,7 +527,7 @@
           </div>
           <div class="v-calc-horas">
             <div><b>168 h</b><span>por semana a IA atende</span></div>
-            <div><b id="calc-horas-equipe">44 h</b><span id="calc-horas-rot">por semana de um atendente</span></div>
+            <div><b id="calc-horas-equipe">40 h</b><span id="calc-horas-rot">por semana de um atendente</span></div>
           </div>
           <p class="v-calc-nota">Estimativa. Considera que o plano cobre cerca de 1.500 conversas por mês e que cada recarga de R$ 99 cobre cerca de 190 conversas a mais. Custo do funcionário: salário × (1 + encargos) + benefícios.</p>
           <a class="botao botao-menta" href="#demonstracao" data-lead="Colaborador de IA">Quero ver a IA na minha empresa</a>
@@ -522,7 +547,7 @@
         <details><summary>Preciso trocar o meu número de WhatsApp?</summary><p>Não. Dá para conectar o seu número pela API oficial da Meta ou pela conexão não oficial, e manter o mesmo número que os seus clientes já conhecem.</p></details>
         <details><summary>Quanto custa?</summary><p>O plano Essencial (CRM completo, sem IA) é grátis no primeiro ano e depois custa R$ 497 por mês, com usuários, pipelines, leads e clientes ilimitados. O Colaborador de IA custa R$ 1.997 por mês, com limites de uso a cada 5 horas, por semana e por mês; se passar do limite, você compra créditos de IA a partir de R$ 99. Para operações maiores, o plano Empresarial é sob medida.</p></details>
         <details><summary>Como eu contrato?</summary><p>A contratação é feita depois de uma demonstração. Escolha o plano, preencha seus dados e marque o melhor horário: a gente mostra a Sintonia funcionando com a sua operação e libera o acesso.</p></details>
-        <details><summary>A IA faz ligações?</summary><p>Ainda não. A IA atende e conversa por mensagem no WhatsApp, no Instagram Direct e no Messenger: tira dúvidas, vende, agenda, recupera clientes sumidos com follow-up e organiza o CRM sozinha.</p></details><details><summary>Serve para a minha empresa?</summary><p>Serve para qualquer empresa que conversa com cliente pelo WhatsApp ou Instagram: vendas, atendimento, agendamento e pós-venda. Se você trabalha com horário marcado, a agenda se integra a sistemas como o Trinks.</p></details>
+        <details><summary>A IA faz ligações?</summary><p>Ainda não. A IA atende e conversa por mensagem no WhatsApp, no Instagram Direct e no Messenger: tira dúvidas, vende, agenda, recupera clientes sumidos com follow-up e organiza o CRM sozinha.</p></details><details><summary>O que muda com o fim da escala 6x1?</summary><p>Com a Emenda Constitucional 141/2026, a jornada máxima cai de 44 h para 42 h e depois para 40 h por semana, com dois dias de folga e o mesmo salário. Para manter o atendimento aberto o mesmo número de horas, a empresa precisa de mais gente ou de mais tecnologia. O Colaborador de IA cobre noite, fim de semana e picos, e a sua equipe fica no horário de maior movimento.</p></details><details><summary>Serve para a minha empresa?</summary><p>Serve para qualquer empresa que conversa com cliente pelo WhatsApp ou Instagram: vendas, atendimento, agendamento e pós-venda. Se você trabalha com horário marcado, a agenda se integra a sistemas como o Trinks.</p></details>
         <details><summary>E se a IA não souber responder?</summary><p>Ela responde com as regras e informações que você cadastrou. Quando não tem certeza, passa para a equipe e avisa quem atende.</p></details>
         <details><summary>A equipe consegue usar pelo celular?</summary><p>Sim, pelo navegador. A Sintonia funciona no navegador do computador e do celular, sem instalar nada, com avisos de cliente novo e de mensagem. O painel da sala comercial abre direto na Smart TV.</p></details>
         <details><summary>Quanto tempo leva para começar?</summary><p>Conectar o número e a agenda é rápido. Depois a gente ensina a IA com os seus serviços e regras e acompanha a equipe no modo Copiloto até ficar do seu jeito.</p></details>
@@ -620,10 +645,27 @@
       $('eq27-hoje-mes').textContent = brl(r.hoje.mes); $('eq27-depois-mes').textContent = brl(r.depois.mes);
       $('eq27-depois-det').textContent = 'por mês · ' + r.depois.pessoas + (r.depois.pessoas > 1 ? ' pessoas' : ' pessoa') + ' + IA' + (r.depois.recargas ? ' + ' + r.depois.recargas + ' recarga(s)' : '');
       $('eq27-hoje-sim').textContent = '~' + r.hoje.simultaneas;
+      $('eq27-hoje-horas').textContent = (r.hoje.pessoas * r.hoje.horasSemana) + ' h de gente/semana';
       $('eq27-hoje-conv').textContent = brl(r.hoje.porConversa); $('eq27-depois-conv').textContent = brl(r.depois.porConversa);
       $('eq27-eco-ano').textContent = brl(Math.max(0, r.economia.ano));
       $('eq27-eco-pct').textContent = r.economia.mes > 0 ? r.economia.percentual + '% a menos que hoje' : 'com equipe pequena, o ganho é o horário e a velocidade';
       $('eq27-horas').textContent = r.horasLivres + ' h';
+    }
+    f.addEventListener('input', desenhar); desenhar();
+  })();
+  (() => {
+    const f = document.getElementById('e6x1'); if (!f || !window.SintoniaCalculadora || !window.SintoniaCalculadora.escala6x1) return;
+    const brl = (n) => 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const $ = (id) => document.getElementById(id);
+    const p = (n) => n + (n > 1 ? ' pessoas' : ' pessoa');
+    function desenhar() {
+      const r = window.SintoniaCalculadora.escala6x1(Object.fromEntries(new FormData(f)));
+      $('e6x1-horas-v').textContent = r.horas + ' h';
+      $('e6x1-antes').textContent = p(r.antes.pessoas); $('e6x1-antes-h').textContent = brl(r.antes.hora) + ' por hora';
+      $('e6x1-trans').textContent = p(r.transicao.pessoas); $('e6x1-trans-h').textContent = brl(r.transicao.hora) + ' por hora';
+      $('e6x1-depois').textContent = p(r.depois.pessoas); $('e6x1-depois-h').textContent = brl(r.depois.hora) + ' por hora';
+      const mais = r.depois.pessoas - r.antes.pessoas;
+      $('e6x1-conclusao').textContent = (mais > 0 ? `Para atender ${r.horas} h por semana você passa a precisar de ${p(r.depois.pessoas)} (eram ${r.antes.pessoas}), e ` : `Com ${r.horas} h por semana, o número de pessoas não muda, mas `) + `cada hora de atendimento humano fica ${r.aumentoHora}% mais cara. A IA não tem jornada: cobre noite, sábado e domingo, e a sua equipe fica no horário de pico.`;
     }
     f.addEventListener('input', desenhar); desenhar();
   })();
