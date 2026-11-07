@@ -2211,6 +2211,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; })] : [])),
       el('div', { class: 'opcoes-conta' },
         botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', 'Notificações', () => window.SintoniaTelas?.notificacoes?.preferencias()),
+        (() => { const lig = window.Sintonia.acessoRapido?.ligada?.() ?? true; return botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="4"/></svg>', lig ? 'Bolinha de acesso rápido: ligada' : 'Bolinha de acesso rápido: desligada', () => { window.Sintonia.acessoRapido?.definir(!lig); desenharConfiguracoes(); }); })(),
         botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
         botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
     );
@@ -2284,5 +2285,28 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
+<script src="/acesso-rapido.js" defer></script>
+<script>
+// Bolinha de acesso rápido (AssistiveTouch): atalhos do dia a dia num toque. Liga/desliga em Mais.
+addEventListener('load', () => {
+  if (!window.AcessoRapido || !window.Sintonia?.ui) return;
+  const ui = window.Sintonia.ui; const $ = (id) => document.getElementById(id);
+  const aberta = () => ui.estado.vista === 'conversas' && !!ui.estado.aberta;
+  const ar = window.AcessoRapido.criar({ rotulo: 'Acesso rápido', itens: [
+    { rotulo: 'Nova conversa', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8.5v6M9 11.5h6"/></svg>', acao: () => { ui.mostrar('conversas'); $('nova-teste-cel')?.click(); } },
+    { rotulo: 'Não lidas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg>', ativo: () => ui.estado.filtro === 'esperando', acao: () => { ui.mostrar('conversas'); const alvo = ui.estado.filtro === 'esperando' ? 'todas' : 'esperando'; document.querySelector(`[data-f="${alvo}"]`)?.click(); } },
+    { rotulo: 'CRM', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>', acao: () => ui.mostrar('funil') },
+    { rotulo: () => (aberta() ? 'Agendar' : 'Agenda'), icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>', acao: () => (aberta() ? $('topo-agendar')?.click() : ui.mostrar('agenda')) },
+    { rotulo: 'Conversas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>', acao: () => { ui.mostrar('conversas'); if (innerWidth <= 760 && ui.estado.aberta) $('voltar')?.click(); } },
+    { rotulo: 'Notificações', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', acao: () => window.SintoniaTelas?.notificacoes?.abrir() },
+    { rotulo: () => (aberta() ? 'Ajuda da IA' : 'Inteligência'), icone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>', acao: () => (aberta() && window.SintoniaConversa?.abrirMenuIa ? window.SintoniaConversa.abrirMenuIa() : ui.mostrar('ia')) },
+    { rotulo: 'Respostas rápidas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/></svg>', acao: () => window.SintoniaConversa?.abrirRespostas?.() },
+    { rotulo: 'Modo noturno', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>', ativo: () => window.SintoniaTema?.escuro(), acao: () => window.SintoniaTema?.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro') },
+  ] });
+  const ligada = () => { try { return localStorage.getItem('sintonia.acessoRapido.ligada') !== '0'; } catch { return true; } };
+  ar.mostrar(ligada());
+  window.Sintonia.acessoRapido = { ligada, definir(sim) { try { localStorage.setItem('sintonia.acessoRapido.ligada', sim ? '1' : '0'); } catch {} ar.mostrar(sim); } };
+});
+</script>
 </body>
 </html>
