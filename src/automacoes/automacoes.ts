@@ -475,6 +475,22 @@ export interface OpcoesAutomacoes {
   transmissoes?: () => { adicionarConversa(transmissaoId: string, c: Conversa, origem: string): Promise<{ entrou: boolean; motivo?: string }> } | undefined;
   /** Quantas automações podem disparar em cadeia (uma disparando a outra). Padrão 3. */
   maxEncadeamento?: number;
+  /** E-mail marketing (passo "enviar e-mail"). Sem ele, o passo para com erro explicado. */
+  email?: EmailParaAutomacoes;
+  /** Gatilhos de calendário (aniversário, X dias após comparecer): quem casa hoje. */
+  calendario?: CalendarioAutomacoes;
+}
+
+/** O que o e-mail marketing oferece às automações (src/email). */
+export interface EmailParaAutomacoes {
+  modeloExiste(id: string): Promise<boolean>;
+  deAutomacao(p: { conversa: Conversa; modeloId: string; chave: string }): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }>;
+}
+
+/** Conversas que casam com os gatilhos de calendário agora. `chave` evita disparar duas vezes. */
+export interface CalendarioAutomacoes {
+  aniversariantes(agora: Date): Promise<Array<{ conversaId: string; chave: string }>>;
+  compareceramHa(dias: number, agora: Date): Promise<Array<{ conversaId: string; chave: string }>>;
 }
 
 /** Contexto da execução em andamento: quem dispara de dentro dela herda a profundidade. */
@@ -623,6 +639,7 @@ export class Automacoes {
         if (p.se === 'tem_tag' && !tag(p.valor)) throw erro(`${onde}: escolha a tag em "valor".`);
         if (p.se === 'modo' && !MODOS.includes(p.valor as (typeof MODOS)[number])) throw erro(`${onde}: "valor" deve ser ia, copiloto ou humano.`);
       }
+      if (p.tipo === 'enviar_email' && this.o.email && !(await this.o.email.modeloExiste(p.modeloId))) throw erro(`${onde}: modelo de e-mail não encontrado.`);
     }
   }
 
@@ -750,6 +767,16 @@ export class Automacoes {
   async tick(): Promise<void> {
     const agora = this.agora();
     for (const a of await this.o.armazem.listar(this.empresaId)) {
+      if (a.ligada && this.o.calendario && (a.gatilho.tipo === 'aniversario' || a.gatilho.tipo === 'dias_apos_compareceu')) {
+        try {
+          const g = a.gatilho;
+          const lista = g.tipo === 'aniversario' ? await this.o.calendario.aniversariantes(agora) : await this.o.calendario.compareceramHa(g.dias, agora);
+          for (const x of lista) if (await this.novaExecucao(a, x.conversaId, x.chave, 0, false)) this.rodarLogo(x.conversaId);
+        } catch (e) {
+          this.log('Falha nos gatilhos de calendário', { automacao: a.id, erro: String(e) });
+        }
+        continue;
+      }
       if (!a.ligada || a.gatilho.tipo !== 'parada_na_etapa') continue;
       const g = a.gatilho;
       try {
@@ -989,6 +1016,21 @@ export class Automacoes {
         const r = await t.adicionarConversa(p.transmissaoId, c, `automação: ${a.nome}`);
         await evento('transmissao', { transmissaoId: p.transmissaoId, entrou: r.entrou });
         this.anotar(e, p.tipo, r.entrou, r.entrou ? 'Entrou na fila da transmissão.' : `Não entrou na transmissão: ${r.motivo}`);
+        return { seguir: true };
+      }
+      case 'enviar_email': {
+        if (!this.o.email) return { parar: 'erro', motivo: 'E-mail marketing desligado neste servidor.' };
+        if (e.teste) {
+          this.anotar(e, p.tipo, true, 'Enviaria o e-mail do modelo (no teste não envia).');
+          return { seguir: true };
+        }
+        const r = await this.o.email.deAutomacao({ conversa: c, modeloId: p.modeloId, chave: `auto:${e.id}:${e.feitos}` });
+        if (!r.ok) {
+          this.anotar(e, p.tipo, false, r.motivo);
+          return { seguir: true };
+        }
+        await evento('email', { modeloId: p.modeloId });
+        this.anotar(e, p.tipo, true, r.detalhe);
         return { seguir: true };
       }
       case 'condicao': {

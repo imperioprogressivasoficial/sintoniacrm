@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
 <link rel="stylesheet" href="/ds.css">
+<script src="/telas/email-conexoes.js" defer></script>
 <style>
   :root { --erro: #c43a3a; --ok: #087a5c; --ok-fundo: rgba(15, 252, 190, .18); --raio: 22px; }
   @media (prefers-color-scheme: dark) { :root { --erro: #ff8a8a; --ok: #0ffcbe; --ok-fundo: rgba(15, 252, 190, .12); } }
@@ -161,6 +162,7 @@
     <a href="#transcricao">Transcrição</a>
     <a href="#relatorio">Relatório</a>
     <a href="#capi">Meta Ads</a>
+    <a href="#email">E-mail</a>
   </nav>
 </header>
 
@@ -277,6 +279,9 @@
     <h3>Últimos envios</h3>
     <div id="capi-registro" style="display:grid;gap:8px"><p>Nenhum evento enviado ainda.</p></div>
   </section>
+  <div class="grupo">E-mail marketing</div>
+  <!-- Contas remetentes (SMTP/IMAP ou API): /telas/email-conexoes.js -->
+  <section id="email" aria-labelledby="t-email"></section>
 </main>
 
 <dialog id="d-qr">
