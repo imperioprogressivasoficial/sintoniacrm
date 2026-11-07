@@ -48,6 +48,11 @@ export interface DependenciasSintonia {
   log?: (msg: string, extra?: unknown) => void;
   /** Funis e automações (src/funis, src/automacoes). Ausente = nada muda no atendimento. */
   ganchos?: GanchosSintonia;
+  /**
+   * "IA atende primeiro" (src/agentes-ia): modo em que a conversa nova nasce, por unidade e horário.
+   * undefined = vale o modo padrão da empresa (comportamento de sempre).
+   */
+  modoInicial?: (c: Conversa, agora: Date) => Promise<ModoAtendimento | undefined>;
 }
 
 /**
@@ -137,7 +142,11 @@ export class Sintonia {
     const pensar = await this.mutar(criada.conversa.id, async (conversa) => {
       const agora = this.agora();
       // Conversa nova nasce no modo padrão da empresa (configuração da IA).
-      if (criada.nova && config.modoPadrao) conversa.modo = config.modoPadrao;
+      if (criada.nova) {
+        const inicial = this.d.modoInicial ? await this.d.modoInicial(conversa, agora).catch(() => undefined) : undefined;
+        if (inicial) conversa.modo = inicial;
+        else if (config.modoPadrao) conversa.modo = config.modoPadrao;
+      }
       // A mensagem (com os dados da mídia) é gravada primeiro; o arquivo é baixado depois, fora daqui.
       const mensagemId = randomUUID();
       const anexo = msg.anexo ? anexoInicial(msg.anexo, numero.canal) : undefined;
@@ -607,6 +616,12 @@ export class Sintonia {
         return;
       }
 
+      if (!r.texto.trim()) {
+        // Agente que só organiza o CRM (sem "responder"): aplica as ações e não envia nada.
+        await this.aplicarAcoes(depois, r.acoes, 'ia');
+        await this.d.repo.salvarConversa(depois);
+        return;
+      }
       const enviadoEm = this.agora();
       const id = await this.enviar(depois, r.texto);
       const espera = this.tempoDeResposta(depois, enviadoEm);
@@ -647,6 +662,11 @@ export class Sintonia {
       tagsDisponiveis: await this.tagsParaIa(),
       objetivo: await this.objetivoDe(c),
     });
+    if (!r.texto.trim()) {
+      await this.aplicarAcoes(c, r.acoes, 'ia');
+      await this.d.repo.salvarConversa(c);
+      return;
+    }
     const enviadoEm = this.agora();
     const id = await this.enviar(c, r.texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });

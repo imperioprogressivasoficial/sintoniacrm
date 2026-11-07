@@ -43,6 +43,8 @@ import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './
 import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
 import { Notificador, observarEventos } from './notificacoes/notificador.js';
+import { montarAgentesIa } from './agentes-ia/montar.js';
+import { moverEtapaPara, tagsParaAgentes } from './agentes-ia/ligar.js';
 import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
 
 const cfg = lerConfig();
@@ -198,12 +200,34 @@ const ganchos = ligarFunis({ tags, funis, automacoes });
 // Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
 await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
 
+// Estúdio de agentes de IA e "IA atende primeiro" (src/agentes-ia). Desligado, tudo segue com o agente de sempre.
+const agentesIa = montarAgentesIa({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  pool,
+  repo,
+  cofre,
+  agenda: trinks,
+  baseGeral: () => base.texto(),
+  padrao: agente,
+  chaveGeral: (p) => (p === 'openai' ? conexoes.get('openaiApiKey') : conexoes.get('anthropicApiKey')) || undefined,
+  claudeGeral: claude,
+  claudeComChave: (chave) => new Anthropic({ apiKey: chave }),
+  sintonia: () => sintonia,
+  tags: tagsParaAgentes(tags, repo),
+  moverEtapa: moverEtapaPara({ funis, armazemTags, empresaId: cfg.SINTONIA_EMPRESA_ID, repo, comConversa: (id, fn) => sintonia.comConversa(id, fn) }),
+  modeloComandos: cfg.SINTONIA_MODELO,
+  log,
+});
+// Correções da equipe às sugestões viram aprendizados para a gestão aprovar.
+observarEventos(repo, (e) => void agentesIa.controle.aoEvento(e));
+
 const sintonia = new Sintonia({
   ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
   numeros,
-  agente,
+  agente: agentesIa.agente,
+  modoInicial: agentesIa.modoInicial,
   log,
   trava,
   midias,
@@ -278,7 +302,8 @@ const app = criarServidor({
     if (nova) {
       // A conversa foi criada aqui (para nascer no modo certo): registra a chegada da cliente como num número real.
       await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora });
-      await sintonia.mudarModo(conversa.id, iaLigada ? (await empresa.configIa()).modoPadrao : 'humano');
+      const inicial = await agentesIa.modoInicial(conversa, agora);
+      await sintonia.mudarModo(conversa.id, inicial ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
     }
     // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
     const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;
@@ -300,6 +325,10 @@ const app = criarServidor({
     );
   },
 });
+
+// Estúdio de agentes de IA (/api/agentes-ia) e "Peça para a IA" (/api/ia/comando).
+// O construtor de bot usa agentesIa.executarAgente(agenteIaId, conversa, objetivo).
+agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes });
@@ -343,6 +372,7 @@ registrarConversa(app, {
 let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
+  await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram
