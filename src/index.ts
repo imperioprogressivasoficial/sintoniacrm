@@ -61,6 +61,9 @@ import { EmailMarketing } from './email/email.js';
 import { registrarEmail } from './email/rotas.js';
 import { transporteArquivo, transporteReal } from './email/transporte.js';
 import { calendarioPostgres } from './automacoes/calendario.js';
+import { ArmazemComercialMemoria, ArmazemComercialPostgres } from './comercial/armazem.js';
+import { FonteComercialMemoria, FonteComercialPostgres } from './comercial/fonte.js';
+import { registrarComercial } from './comercial/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -444,6 +447,17 @@ const extras = montarExtras({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
 });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
+// Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
+registrarComercial(app, {
+  armazem: pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria(),
+  fonte: pool ? new FonteComercialPostgres(pool) : new FonteComercialMemoria(repo),
+  contas,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  agora: () => new Date(),
+  unidades: ['norte', 'sumare'],
+  metaMesAntiga: async () => (await empresa.meta()).agendamentosMes ?? null,
+  nomeEmpresa: async () => (await empresa.dados()).nome,
+});
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
 

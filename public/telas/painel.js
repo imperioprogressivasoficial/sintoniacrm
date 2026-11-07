@@ -779,6 +779,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           d.escopo === 'pessoal' ? 'Quando as clientes começarem a chamar e você responder, seus leads, tempo de resposta e agendamentos aparecem aqui.' : 'Os números aparecem aqui assim que as clientes começarem a chamar no WhatsApp: leads, tempo de resposta, agendamentos e o ranking da equipe.')));
       raiz.append(blocoCurva(ui, d));
       raiz.append(el('div', { class: 'pn-grade' }, blocoMeta(ui, d), blocoFunil(ui, d), blocoRanking(ui, d), blocoIaEquipe(ui, d), blocoHoje(ui, s.extra)));
+      // Comercial (/telas/comercial.js): minha meta, ranking por período, serviços, metas e comissão, Painel na TV.
+      const comercial = window.SintoniaComercial?.bloco(ui);
+      if (comercial) raiz.append(comercial);
     }
     caixa.replaceChildren(raiz);
     caixa.scrollTop = rolagem;
