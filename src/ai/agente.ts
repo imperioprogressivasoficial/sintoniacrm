@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Conversa, Mensagem } from '../domain.js';
-import { contextoDaConversa, historicoParaTurnos, INSTRUCAO_ATIVA, systemPrompt } from './prompt.js';
+import { contextoDaConversa, historicoParaTurnos, INSTRUCAO_ATIVA, instrucaoObjetivo, systemPrompt } from './prompt.js';
 import {
   type AcaoAgente,
   type Agenda,
@@ -31,6 +31,8 @@ export interface PedidoAgente {
   tagsDisponiveis?: string[];
   /** "Testar a IA": responde como responderia, sem instrução de copiloto e sem gravar nada no Trinks. */
   simulacao?: boolean;
+  /** Objetivo do "fluxo de IA" (automação) em vigor nesta conversa: instrução extra da loja. */
+  objetivo?: string;
 }
 
 export interface RespostaAgente {
@@ -144,6 +146,7 @@ export class Agente {
         `<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`,
       );
     }
+    if (p.objetivo?.trim()) extra.push(instrucaoObjetivo(p.objetivo));
     if (p.modo === 'sugerir' && !p.simulacao) {
       extra.push('Você está em modo copiloto: escreva a resposta que a atendente vai revisar e enviar.');
     }

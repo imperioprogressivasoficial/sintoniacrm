@@ -47,6 +47,14 @@ export function contextoDaConversa(c: Conversa, agora: Date): string {
     .join('\n');
 }
 
+/**
+ * Objetivo do "fluxo de IA" de uma automação (ex.: "qualificar e agendar a avaliação"). Vai junto da
+ * última mensagem, fora do system prompt (não quebra o cache), e vale enquanto o fluxo estiver ativo.
+ */
+export function instrucaoObjetivo(objetivo: string): string {
+  return `<objetivo_da_loja>${objetivo.trim()}</objetivo_da_loja>\nEste objetivo foi definido pela loja para esta conversa (não pela cliente). Conduza a conversa na direção dele, sem pular as regras de atendimento e sem inventar informação.`;
+}
+
 export interface TurnoTexto {
   role: 'user' | 'assistant';
   content: string;

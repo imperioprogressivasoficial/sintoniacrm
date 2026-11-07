@@ -30,6 +30,9 @@ import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig 
 import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, TagsDaIa } from './tags/tags.js';
 import { ArmazemBaseMemoria, ArmazemBasePostgres, BaseConhecimento } from './ai/base.js';
 import { simularResposta } from './ai/simulacao.js';
+import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis } from './funis/funis.js';
+import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, ligarFunis } from './automacoes/automacoes.js';
+import { registrarFunis } from './rotas/funis.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -63,7 +66,8 @@ if (cfg.DATABASE_URL) {
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
 const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
-const tags = new Tags(pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas()), cfg.SINTONIA_EMPRESA_ID);
+const armazemTags = pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas());
+const tags = new Tags(armazemTags, cfg.SINTONIA_EMPRESA_ID);
 const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
 const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
@@ -138,7 +142,32 @@ const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.
 // Fotos, áudios, vídeos e documentos recebidos: baixados à parte, sem segurar o texto.
 const midias = new Midias(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log);
 
+// Funis por tags e automações. A Sintonia nasce com os ganchos deles; eles usam a trava da Sintonia.
+const funis = new Funis({
+  armazem: pool ? new ArmazemFunisPostgres(pool) : new ArmazemFunisMemoria(repo, armazemTags),
+  armazemTags,
+  tags,
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  comConversa: (id, fn) => sintonia.comConversa(id, fn),
+  log,
+});
+const automacoes = new Automacoes({
+  armazem: pool ? new ArmazemAutomacoesPostgres(pool) : new ArmazemAutomacoesMemoria(armazemTags),
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  sintonia: () => sintonia,
+  funis,
+  tags,
+  contas,
+  log,
+});
+const ganchos = ligarFunis({ tags, funis, automacoes });
+// Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
+await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
+
 const sintonia = new Sintonia({
+  ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
   numeros,
@@ -220,10 +249,14 @@ const app = criarServidor({
   },
 });
 
+// Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
+registrarFunis(app, { repo, funis, automacoes });
+
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
+  await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
   midias.avisar(); // novas tentativas de download que já venceram
   const agora = new Date();
   const p = partesBahia(agora);

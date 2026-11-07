@@ -18,7 +18,12 @@ create table if not exists tags (
   criada_em   timestamptz not null default now()
 );
 -- Nome único por empresa, sem diferenciar maiúsculas.
-create unique index if not exists tags_nome on tags (empresa_id, lower(nome));
+-- (Depois da 010 o índice certo é tags_nome_funil: este só é criado se ele ainda não existe.)
+do $$ begin
+  if to_regclass('tags_nome_funil') is null then
+    create unique index if not exists tags_nome on tags (empresa_id, lower(nome));
+  end if;
+end $$;
 
 -- Tag marcada numa conversa. Tabela própria (e não o array conversas.etiquetas) para que marcar/desmarcar
 -- nunca seja sobrescrito por quem grava a conversa inteira ao mesmo tempo (IA, envio, funil).
