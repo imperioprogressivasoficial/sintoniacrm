@@ -194,6 +194,14 @@ export class ArmazemTagsMemoria implements ArmazemTags {
     }
     return r;
   }
+  /** Só na memória (demonstração): esquece as marcações das conversas apagadas. */
+  esquecerConversas(ids: string[]) {
+    for (const id of ids) this.marcadas.delete(id);
+  }
+  /** Só na memória (demonstração): conversas que têm esta tag. */
+  conversasCom(tagId: string): string[] {
+    return [...this.marcadas].filter(([, s]) => s.has(tagId)).map(([c]) => c);
+  }
   async moverTodas(deTagId: string, paraTagId: string, _por: string, em: Date) {
     let n = 0;
     for (const s of this.marcadas.values()) {

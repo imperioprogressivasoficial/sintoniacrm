@@ -44,6 +44,19 @@ export interface Contas {
   definirSenha(id: string, senhaHash: string): Promise<void>;
   /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
   encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
+
+  // ---- foto (rosto) ----
+  fotoDe(usuarioId: string): Promise<FotoUsuario | undefined>;
+  /** null apaga a foto. */
+  salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
+  /** Quem da empresa tem foto e quando ela mudou (para a tela montar o endereço com versão). */
+  fotosDaEmpresa(empresaId: string): Promise<Map<string, Date>>;
+}
+
+export interface FotoUsuario {
+  conteudo: Buffer;
+  tipo: string;
+  atualizadaEm: Date;
 }
 
 export const novoToken = () => randomBytes(32).toString('base64url');
@@ -123,6 +136,20 @@ export class ContasMemoria implements Contas {
   async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
     const manter = excetoToken ? resumoToken(excetoToken) : undefined;
     for (const [chave, s] of this.sessoes) if (s.usuarioId === usuarioId && chave !== manter) this.sessoes.delete(chave);
+  }
+
+  fotos = new Map<string, FotoUsuario>();
+  async fotoDe(usuarioId: string) {
+    const f = this.fotos.get(usuarioId);
+    return f ? { ...f } : undefined;
+  }
+  async salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    if (!foto) this.fotos.delete(usuarioId);
+    else if (this.usuarios.some((u) => u.id === usuarioId)) this.fotos.set(usuarioId, { ...foto, atualizadaEm: em });
+  }
+  async fotosDaEmpresa(empresaId: string) {
+    const ids = new Set(this.usuarios.filter((u) => u.empresaId === empresaId).map((u) => u.id));
+    return new Map([...this.fotos].filter(([id]) => ids.has(id)).map(([id, f]) => [id, f.atualizadaEm]));
   }
 }
 
@@ -233,5 +260,33 @@ export class ContasPostgres implements Contas {
       usuarioId,
       excetoToken ? resumoToken(excetoToken) : null,
     ]);
+  }
+
+  async fotoDe(usuarioId: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(usuarioId)) return undefined;
+    const { rows } = await this.pool.query<{ conteudo: Buffer; tipo: string; atualizada_em: Date }>(
+      'select conteudo, tipo, atualizada_em from sintonia.usuario_fotos where usuario_id = $1',
+      [usuarioId],
+    );
+    return rows[0] ? { conteudo: rows[0].conteudo, tipo: rows[0].tipo, atualizadaEm: rows[0].atualizada_em } : undefined;
+  }
+  async salvarFotoDe(usuarioId: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    if (!foto) {
+      await this.pool.query('delete from sintonia.usuario_fotos where usuario_id = $1', [usuarioId]);
+      return;
+    }
+    await this.pool.query(
+      `insert into sintonia.usuario_fotos (usuario_id, conteudo, tipo, atualizada_em) values ($1, $2, $3, $4)
+       on conflict (usuario_id) do update set conteudo = excluded.conteudo, tipo = excluded.tipo, atualizada_em = excluded.atualizada_em`,
+      [usuarioId, foto.conteudo, foto.tipo, em],
+    );
+  }
+  async fotosDaEmpresa(empresaId: string) {
+    const { rows } = await this.pool.query<{ id: string; em: Date }>(
+      `select f.usuario_id::text as id, f.atualizada_em as em from sintonia.usuario_fotos f
+         join sintonia.usuarios u on u.id = f.usuario_id where u.empresa_id = $1`,
+      [empresaId],
+    );
+    return new Map(rows.map((r) => [r.id, r.em]));
   }
 }

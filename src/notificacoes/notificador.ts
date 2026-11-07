@@ -1,6 +1,7 @@
 import type { Contas, Usuario } from '../auth/contas.js';
 import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
 import { descrever } from '../app/atualizacoes.js';
+import { ehEmailDemo } from '../demo/dados.js';
 import type { Conversa } from '../domain.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
 import { UNIDADES } from '../unidades.js';
@@ -84,7 +85,8 @@ export class Notificador {
   private equipe(): Promise<Usuario[]> {
     const t = Date.now();
     if (!this.equipeCache || t - this.equipeCache.em > 5000) {
-      this.equipeCache = { em: t, lista: this.o.contas.listarUsuarios(this.o.empresaId).then((l) => l.filter((u) => u.ativo)) };
+      // Atendentes da demonstração (nome.demo@exemplo.com) nunca recebem aviso nem tiram aviso de ninguém.
+      this.equipeCache = { em: t, lista: this.o.contas.listarUsuarios(this.o.empresaId).then((l) => l.filter((u) => u.ativo && !ehEmailDemo(u.email))) };
     }
     return this.equipeCache.lista;
   }

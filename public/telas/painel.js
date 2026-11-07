@@ -648,6 +648,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const av = opcoes.ia
       ? el('span', { class: 'pn-ini pn-robo', html: IC.brilho, 'aria-hidden': 'true' })
       : el('span', { class: 'pn-ini' + (primeiro ? ' pn-ouro' : ''), 'aria-hidden': 'true', text: iniciais(p.nome) });
+    if (!opcoes.ia) window.SintoniaFotos?.aplicar(av, p.usuarioId);
     if (!opcoes.ia && p.online) av.append(el('i', { class: 'pn-luz', title: 'online agora' }));
     const papel = opcoes.ia ? 'responde e agenda sozinha' : [primeiro ? '1º lugar' : null, eu ? 'você' : null, p.online ? 'online agora' : null].filter(Boolean).join(' · ') || (p.papel === 'recepcionista' ? 'Recepção' : 'Atendente');
     const m = (v, rot, txt) => el('span', { class: 'pn-m' + (!v ? ' pn-zero' : '') }, el('small', { text: rot }), txt ?? fmtN(v));

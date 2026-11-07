@@ -149,8 +149,14 @@ export class ArmazemAutomacoesMemoria implements ArmazemAutomacoes {
   private readonly objetivos = new Map<string, { objetivo: string; ate: Date; automacaoId: string | null }>();
   private readonly configs = new Map<string, ConfigAutomacoes>();
 
-  /** Precisa das marcações de etapa para achar quem está parado. */
-  constructor(private readonly tags: ArmazemTags) {}
+  /**
+   * Precisa das marcações de etapa para achar quem está parado.
+   * `ignorar`: conversas que "parada na etapa" nunca pega (as de demonstração, src/demo).
+   */
+  constructor(
+    private readonly tags: ArmazemTags,
+    private readonly ignorar: (conversaId: string) => boolean = () => false,
+  ) {}
 
   async listar(empresaId: string) {
     return [...this.automacoes.values()].filter((a) => a.empresaId === empresaId).map(copia);
@@ -208,7 +214,7 @@ export class ArmazemAutomacoesMemoria implements ArmazemAutomacoes {
   async paradas(automacaoId: string, funilId: string, tagId: string, ate: Date, limite: number) {
     const r: Array<{ conversaId: string; desde: Date }> = [];
     for (const m of await this.tags.etapasDoFunil(funilId)) {
-      if (m.tagId !== tagId || m.desde.getTime() > ate.getTime()) continue;
+      if (m.tagId !== tagId || m.desde.getTime() > ate.getTime() || this.ignorar(m.conversaId)) continue;
       const chave = chaveParada(tagId, m.desde);
       const ja = [...this.execs.values()].some(
         (e) => e.automacaoId === automacaoId && e.conversaId === m.conversaId && (e.chave === chave || (!e.teste && ATIVOS.includes(e.status))),
@@ -389,6 +395,8 @@ export class ArmazemAutomacoesPostgres implements ArmazemAutomacoes {
       `select ct.conversa_id::text, ct.marcada_em
          from sintonia.conversa_tags ct
         where ct.funil_id = $2 and ct.tag_id = $3 and ct.marcada_em <= $4
+          -- Conversas de demonstração (src/demo) nunca são "paradas": o motor não age sobre elas sozinho.
+          and not exists (select 1 from sintonia.demo_registros d where d.tipo = 'conversa' and d.chave = ct.conversa_id::text)
           and not exists (
             select 1 from sintonia.automacao_execucoes e
              where e.automacao_id = $1 and e.conversa_id = ct.conversa_id

@@ -44,6 +44,9 @@ import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
 import { Notificador, observarEventos } from './notificacoes/notificador.js';
 import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
+import { ArmazemDemoMemoria, ArmazemDemoPostgres, type ArmazemDemo } from './demo/armazem.js';
+import { Demo } from './demo/demo.js';
+import { registrarDemo } from './demo/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -174,6 +177,20 @@ const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.
 // Fotos, áudios, vídeos e documentos recebidos: baixados à parte, sem segurar o texto.
 const midias = new Midias(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log);
 
+// Fichas (contatos) e respostas rápidas (também usadas pela demonstração).
+const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
+const armazemRespostas = pool ? new RespostasPostgres(pool) : new RespostasMemoria();
+// Dados de demonstração (Mais › Dados de demonstração): registro do que foi criado, para apagar só isso.
+const armazemDemo: ArmazemDemo = pool
+  ? new ArmazemDemoPostgres(pool)
+  : new ArmazemDemoMemoria({
+      repo: repo as RepositorioMemoria,
+      tags: armazemTags as ArmazemTagsMemoria,
+      contatos: armazemContatos as ContatosMemoria,
+      contas: contas as ContasMemoria,
+      notificacoes: armazemNotificacoes as ArmazemNotificacoesMemoria,
+    });
+
 // Funis por tags e automações. A Sintonia nasce com os ganchos deles; eles usam a trava da Sintonia.
 const funis = new Funis({
   armazem: pool ? new ArmazemFunisPostgres(pool) : new ArmazemFunisMemoria(repo, armazemTags),
@@ -185,7 +202,9 @@ const funis = new Funis({
   log,
 });
 const automacoes = new Automacoes({
-  armazem: pool ? new ArmazemAutomacoesPostgres(pool) : new ArmazemAutomacoesMemoria(armazemTags),
+  armazem: pool
+    ? new ArmazemAutomacoesPostgres(pool)
+    : new ArmazemAutomacoesMemoria(armazemTags, (id) => (armazemDemo as ArmazemDemoMemoria).ehConversaDemo(id)),
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   sintonia: () => sintonia,
@@ -216,8 +235,6 @@ const sintonia = new Sintonia({
     for (const destino of destinosRelatorio()) await n.canal.enviarTexto(n.canalId, destino, texto);
   },
 });
-
-const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
 
 const trabalhador = new Trabalhador({ fila, processar: (m) => sintonia.receber(m), paralelo: cfg.SINTONIA_PARALELO, log });
 
@@ -323,7 +340,7 @@ registrarConversa(app, {
   repo,
   sintonia,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
-  respostas: pool ? new RespostasPostgres(pool) : new RespostasMemoria(),
+  respostas: armazemRespostas,
   transcricoes: pool ? new TranscricoesPostgres(pool) : new TranscricoesMemoria(),
   transcritor: new TranscritorOpenAI(() => conexoes.get('openaiApiKey')),
   transcricaoLigada: () => Boolean(conexoes.get('openaiApiKey')),
@@ -339,6 +356,23 @@ registrarConversa(app, {
   modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
 });
 
+// Dados de demonstração: só administração e direção (src/demo/rotas.ts).
+const demo = new Demo({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: armazemDemo,
+  contas,
+  tags,
+  armazemTags,
+  funis,
+  contatos: armazemContatos,
+  respostas: armazemRespostas,
+  automacoes,
+  notificacoes: armazemNotificacoes,
+  empresa,
+  log,
+});
+registrarDemo(app, demo);
+
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
@@ -351,7 +385,8 @@ const relogio = setInterval(async () => {
   const real = numeros.find(ehReal);
   if (p.hora === 20 && relatorioEnviadoEm !== dataISO(agora) && real) {
     relatorioEnviadoEm = dataISO(agora);
-    const texto = await sintonia.relatorioDoDia(agora);
+    // As conversas de demonstração não entram no relatório que sai pelo WhatsApp.
+    const texto = await sintonia.relatorioDoDia(agora, undefined, await demo.conversasDemo().catch(() => undefined));
     for (const destino of destinosRelatorio()) {
       await real.canal.enviarTexto(real.canalId, destino, texto).catch((e) => log('Falha no relatório', String(e)));
     }

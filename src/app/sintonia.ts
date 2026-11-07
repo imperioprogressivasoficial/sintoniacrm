@@ -518,13 +518,16 @@ export class Sintonia {
    * Eventos do dia. Com `visivel`, só os das conversas que a pessoa pode ver
    * (eventos sem conversa, como falhas gerais, ficam de fora).
    */
-  private async eventosDoDia(dia: Date, visivel?: (c: Conversa) => boolean): Promise<{ eventos: Evento[]; conversas: Conversa[] }> {
+  private async eventosDoDia(dia: Date, visivel?: (c: Conversa) => boolean, ocultar?: Set<string>): Promise<{ eventos: Evento[]; conversas: Conversa[] }> {
     const p = partesBahia(dia);
     const inicio = bahia(p.ano, p.mes, p.dia);
-    const [todos, conversas] = await Promise.all([
+    const [brutos, todas] = await Promise.all([
       this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)),
       this.d.repo.listarConversas(),
     ]);
+    // `ocultar`: conversas que não entram (as de demonstração, no relatório que sai pelo WhatsApp às 20h).
+    const todos = ocultar?.size ? brutos.filter((e) => !e.conversaId || !ocultar.has(e.conversaId)) : brutos;
+    const conversas = ocultar?.size ? todas.filter((c) => !ocultar.has(c.id)) : todas;
     if (!visivel) return { eventos: todos, conversas };
     const vistas = conversas.filter(visivel);
     const ids = new Set(vistas.map((c) => c.id));
@@ -537,8 +540,8 @@ export class Sintonia {
   }
 
   /** Texto do relatório do dia (o envio às 20h fica no index). */
-  async relatorioDoDia(dia: Date, visivel?: (c: Conversa) => boolean): Promise<string> {
-    const { eventos, conversas } = await this.eventosDoDia(dia, visivel);
+  async relatorioDoDia(dia: Date, visivel?: (c: Conversa) => boolean, ocultar?: Set<string>): Promise<string> {
+    const { eventos, conversas } = await this.eventosDoDia(dia, visivel, ocultar);
     const hoje = new Set(eventos.filter((e) => e.tipo === 'mensagem_cliente').map((e) => e.conversaId));
     const semAgendar = conversas.filter((c) => hoje.has(c.id) && c.etapa !== 'agendada' && c.etapa !== 'compareceu').length;
     return textoRelatorio(resumir(eventos), dia, semAgendar);

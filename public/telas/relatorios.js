@@ -329,7 +329,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const cols = [['respostas', 'Respostas', fmtN], ['primeiraRespostaSeg', '1ª resposta', fmtTempo], ['tempoMedioRespostaSeg', 'Tempo médio', fmtTempo], ['agendamentos', 'Agend.', fmtN], ['ligacoes', 'Ligações', fmtN], ['conversasDona', 'Conversas', fmtN]];
     const tab = el('table', { class: 'rl-tabela' },
       el('thead', {}, el('tr', {}, el('th', { text: 'Atendente' }), ...cols.map(([, t]) => el('th', { text: t })))),
-      el('tbody', {}, ...lista.map((a) => el('tr', {}, el('td', {}, el('span', { class: 'rl-pessoa' }, el('span', { class: 'rl-ini', text: iniciais(a.nome) }), a.nome)), ...cols.map(([k, t, f]) => el('td', { 'data-r': t, class: a[k] ? '' : 'rl-zero', text: f(a[k]) }))))));
+      el('tbody', {}, ...lista.map((a) => el('tr', {}, el('td', {}, el('span', { class: 'rl-pessoa' }, window.SintoniaFotos?.aplicar(el('span', { class: 'rl-ini', text: iniciais(a.nome) }), a.usuarioId) ?? el('span', { class: 'rl-ini', text: iniciais(a.nome) }), a.nome)), ...cols.map(([k, t, f]) => el('td', { 'data-r': t, class: a[k] ? '' : 'rl-zero', text: f(a[k]) }))))));
     return painel(ui, 'atendentes', 'Desempenho do time', '1ª resposta: quanto a cliente nova esperou até a primeira resposta dela', 'rl-g12', tab);
   }
 

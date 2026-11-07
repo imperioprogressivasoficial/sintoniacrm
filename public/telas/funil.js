@@ -347,7 +347,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function bolinha(dona, titulo) {
     const { el } = s.ui;
     if (!dona) return el('span', { class: 'fn-ini fn-sem', title: titulo || 'Sem dona', 'aria-label': titulo || 'Sem dona', html: SVG.pessoa });
-    return el('span', { class: 'fn-ini', style: `--ini:${tomPessoa(dona.id)}`, title: titulo || dona.nome, 'aria-label': titulo || dona.nome, text: iniciais(dona.nome) });
+    const b = el('span', { class: 'fn-ini', style: `--ini:${tomPessoa(dona.id)}`, title: titulo || dona.nome, 'aria-label': titulo || dona.nome, text: iniciais(dona.nome) });
+    return window.SintoniaFotos?.aplicar(b, dona.id) ?? b;
   }
   const haTexto = (d) => {
     if (!d) return '';
