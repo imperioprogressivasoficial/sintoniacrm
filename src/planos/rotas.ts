@@ -5,15 +5,16 @@ import type { ArmazemComercial } from '../comercial/armazem.js';
 import { calcularDesempenho } from '../desempenho/calculo.js';
 import type { FonteDesempenho } from '../desempenho/fonte.js';
 import { DIA } from '../util/tempo.js';
-import { catalogo, custoMensalClt, horasDaJanela, precoAdicionalFora, precoExpediente } from './catalogo.js';
+import { calcularCalculadora, catalogo, custoMensalClt, precoColaborador } from './catalogo.js';
 import { calcularComparativo, ladosDoDesempenho } from './comparativo.js';
 import type { PagamentoProvider } from './pagamento.js';
-import { fimDoMes, inicioDoMes, TEXTO_MOTIVO, type MotivoBloqueio, type Planos } from './porteiro.js';
+import { fimDoMes, inicioDoMes, TEXTO_MOTIVO, type Planos } from './porteiro.js';
 
 /**
  * Plano e uso da IA (só administração e direção):
- * GET  /api/planos               plano atual, janela, cota e uso do mês (por dia, dentro × fora), pedidos
- * POST /api/planos/pedidos       { tipo: mudar_plano | adicional_fora | recarga, plano?, recargaId? } → registra o pedido
+ * GET  /api/planos               plano atual, limites (5 h, semana, mês) com quando renovam, créditos, uso do mês,
+ *                                pedidos e o padrão da calculadora (conversas/mês e tokens por conversa reais)
+ * POST /api/planos/pedidos       { tipo: mudar_plano | recarga, plano?, recargaId? } → registra o pedido
  * PUT  /api/planos/custo-clt     { salario, encargosPct, beneficios, horasSemana } → custo do atendente da empresa
  * GET  /api/planos/comparativo   ?dias=30 → IA × atendente humano com os dados do Desempenho
  */
@@ -41,38 +42,61 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
     exigir(req);
     const emp = empresa(req);
     const agora = o.agora();
-    const [{ assinatura: a, uso, cota }, decisao, pedidos, bloqueios] = await Promise.all([
-      o.planos.cotaDoMes(emp, agora),
+    const [s, uso, ult30, decisao, pedidos, bloqueios] = await Promise.all([
+      o.planos.situacao(emp, agora),
+      o.planos.usoDoMes(emp, agora),
+      o.planos.armazem.resumo(emp, new Date(agora.getTime() - 30 * DIA), agora),
       o.planos.decidir(emp, agora),
       o.planos.armazem.pedidos(emp, 10),
       o.planos.armazem.bloqueios(emp, inicioDoMes(agora), fimDoMes(agora)),
     ]);
+    const a = s.assinatura;
     const cfg = o.planos.configDe(a);
-    const plano = o.planos.plano(a);
+    const plano = s.plano;
+    // Padrão da calculadora: uso real dos últimos 30 dias. Conversas com mensagem no período (Desempenho);
+    // sem essa fonte, as conversas em que a IA trabalhou (medidor). Tokens por conversa: média do medidor.
+    let conversas30 = ult30.conversas;
+    if (o.fonte) {
+      const dados = await o.fonte.carregar(new Date(agora.getTime() - 30 * DIA), agora, agora, { empresaId: emp }).catch(() => null);
+      if (dados) conversas30 = Math.max(conversas30, new Set(dados.mensagens.map((m) => m.conversaId)).size);
+    }
+    // Só calibra com amostra razoável (20+ conversas com IA) e média plausível (5 mil a 200 mil tokens); senão, referência.
+    const media = ult30.conversas > 0 ? Math.round(ult30.tokens / ult30.conversas) : 0;
+    const tokensPorConversa = ult30.conversas >= 20 && media >= 5_000 && media <= 200_000 ? media : null;
     return {
-      assinatura: { plano: a.plano, adicionalFora: a.adicionalFora, status: a.status },
+      assinatura: { plano: a.plano, status: a.status },
       plano,
-      catalogo: catalogo(cfg),
-      precos: { custoClt: custoMensalClt(cfg.clt), expediente: precoExpediente(cfg), adicionalFora: precoAdicionalFora(cfg), fatorPreco: cfg.fatorPreco, adicionalForaPct: cfg.adicionalForaPct, cambio: cfg.cambio },
+      catalogo: catalogo(cfg).filter((x) => x.id !== 'fundador'),
+      precos: { custoClt: custoMensalClt(cfg.clt), colaborador: precoColaborador(cfg), essencial: cfg.precoEssencial, cambio: cfg.cambio },
       clt: cfg.clt,
-      janela: cfg.janela,
-      horasJanela: horasDaJanela(cfg.janela),
-      feriados: cfg.feriados,
       recargas: cfg.recargas,
-      agora: decisao.pode ? { pode: true, dentro: decisao.dentro } : { pode: false, dentro: decisao.dentro, motivo: decisao.motivo, texto: decisao.texto },
-      cota,
+      agora: decisao.pode ? { pode: true, usandoCreditos: decisao.usandoCreditos } : { pode: false, motivo: decisao.motivo, texto: decisao.texto },
+      limites: s.limites,
+      creditos: s.creditos,
+      ilimitado: s.ilimitado,
+      estourou: s.estourou,
+      calculadora: {
+        conversasMes: conversas30 > 0 ? conversas30 : 1500,
+        conversasReais: conversas30 > 0,
+        tokensPorConversa,
+        conversasPlano: cfg.conversasPlano,
+        conversasPorRecarga: cfg.conversasPorRecarga,
+        precoRecarga: cfg.recargas[0]!.preco,
+        tokensRecarga: cfg.recargas[0]!.tokens,
+        limiteMes: cfg.limites.mes,
+        precoColaborador: precoColaborador(cfg),
+      },
       uso: { ...uso, custoReais: Math.round(uso.custoUsd * cfg.cambio * 100) / 100 },
       mes: { inicio: inicioDoMes(agora).toISOString(), fim: fimDoMes(agora).toISOString() },
       pedidos,
-      bloqueios: bloqueios.map((b) => ({ ...b, texto: TEXTO_MOTIVO[b.motivo as MotivoBloqueio] ?? b.motivo })),
+      bloqueios: bloqueios.map((b) => ({ ...b, texto: TEXTO_MOTIVO[b.motivo] ?? b.motivo })),
       pagamento: { provedor: o.pagamento.nome, ativo: o.pagamento.ativo },
       sugestao: true,
     };
   });
 
   const CorpoPedido = z.discriminatedUnion('tipo', [
-    z.object({ tipo: z.literal('mudar_plano'), plano: z.enum(['gratis', 'expediente']) }),
-    z.object({ tipo: z.literal('adicional_fora'), ligar: z.boolean().default(true) }),
+    z.object({ tipo: z.literal('mudar_plano'), plano: z.enum(['essencial', 'gratis', 'expediente', 'empresarial']).transform((p) => (p === 'gratis' ? 'essencial' : p)) }),
     z.object({ tipo: z.literal('recarga'), recargaId: z.string().min(1).max(40) }),
   ]);
 
@@ -90,15 +114,14 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
       if (!r) throw erro(400, 'Recarga não encontrada.');
       dados = { recargaId: r.id, tokens: r.tokens, valor: r.preco };
       valor = r.preco;
-      descricao = `Recarga ${r.nome}`;
-    } else if (corpo.tipo === 'mudar_plano') {
-      valor = corpo.plano === 'expediente' ? precoExpediente(cfg) : 0;
-      dados = { plano: corpo.plano, de: a.plano, valor };
-      descricao = `Plano ${corpo.plano === 'expediente' ? 'Funcionário de IA' : 'Grátis'}`;
+      descricao = `Créditos ${r.nome}`;
     } else {
-      valor = corpo.ligar ? precoAdicionalFora(cfg) : 0;
-      dados = { ligar: corpo.ligar, valor };
-      descricao = 'Adicional Fora do horário';
+      if (corpo.plano === a.plano) throw erro(400, 'A empresa já está neste plano.');
+      const destino = catalogo(cfg).find((x) => x.id === corpo.plano)!;
+      // Empresarial é sob medida: o pedido fica registrado e a equipe Sintonia entra em contato (sem valor).
+      valor = destino.preco ?? 0;
+      dados = { plano: corpo.plano, de: a.plano, valor, sobMedida: destino.preco === null };
+      descricao = `Plano ${destino.nome}`;
     }
     const pedido = await o.planos.armazem.criarPedido({ empresaId: emp, tipo: corpo.tipo, dados, status: 'pendente', criadoEm: o.agora(), pagoEm: null, por: u.nome });
     const r = await o.pagamento.iniciar(pedido, valor, descricao);
@@ -136,10 +159,10 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
     const cfg = o.planos.configDe(a);
     const clt = { ...cfg.clt, ...(f.salario !== undefined ? { salario: f.salario } : {}), ...(f.encargosPct !== undefined ? { encargosPct: f.encargosPct } : {}), ...(f.beneficios !== undefined ? { beneficios: f.beneficios } : {}) };
     const plano = o.planos.plano(a);
-    // Fundador não paga: compara com o preço que pagaria no IA Expediente (+ adicional, já que roda 24 h).
-    const cfgClt = { ...cfg, clt };
-    const precoIa = plano.ilimitado ? precoExpediente(cfgClt) + precoAdicionalFora(cfgClt) : (plano.preco ?? 0) + (a.adicionalFora ? precoAdicionalFora(cfgClt) : 0);
-    const horasIa = plano.ilimitado || a.adicionalFora ? 168 : plano.horasSemana;
+    // Fundador e Empresarial não têm preço de tabela: compara com o Colaborador de IA (R$ 1.997, IA 24 h).
+    const referencia = plano.preco === null || !plano.ia;
+    const precoIa = referencia ? precoColaborador(cfg) : plano.preco!;
+    const horasIa = 168;
     const uso = await o.planos.armazem.resumo(emp, inicio, agora);
     let lados = { ia: { conversas: 0, agendamentos: 0, respostaMs: null as number | null }, equipe: { conversas: 0, agendamentos: 0, respostaMs: null as number | null, atendentes: 0 } };
     if (o.fonte) {
@@ -154,6 +177,6 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
       lados = ladosDoDesempenho(d, dados, inicio, agora);
     }
     const c = calcularComparativo({ dias: f.dias, clt, precoIaMensal: precoIa, horasIaSemana: horasIa, custoApiPeriodo: uso.custoUsd * cfg.cambio, ...lados });
-    return { ...c, clt, plano: plano.id, precoReferencia: plano.ilimitado, periodo: { inicio: inicio.toISOString(), fim: agora.toISOString() } };
+    return { ...c, clt, plano: plano.id, precoReferencia: referencia, periodo: { inicio: inicio.toISOString(), fim: agora.toISOString() } };
   });
 }
