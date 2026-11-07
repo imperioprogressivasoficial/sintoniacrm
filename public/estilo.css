@@ -178,3 +178,70 @@ a { color: inherit; }
 .app-vazio { min-height: 100vh; min-height: 100dvh; background: var(--papel); }
 .app-vazio main { padding-top: 56px; padding-bottom: 56px; }
 .app-vazio .cartao { max-width: 640px; }
+
+/* ===================== vidro (o mesmo efeito do CRM) ===================== */
+:root {
+  --vidro-fundo: rgba(255, 255, 255, .58);
+  --vidro-forte: rgba(255, 255, 255, .78);
+  --vidro-borda: rgba(255, 255, 255, .9);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, .95), 0 14px 40px rgba(16, 110, 190, .12);
+  --vidro-escuro: rgba(255, 255, 255, .08);
+  --vidro-escuro-borda: rgba(255, 255, 255, .18);
+  --aurora-clara: radial-gradient(900px 620px at 0% 0%, rgba(16, 110, 190, .18), transparent 60%),
+                  radial-gradient(760px 560px at 100% 40%, rgba(15, 252, 190, .20), transparent 60%),
+                  radial-gradient(700px 520px at 20% 100%, rgba(26, 139, 224, .14), transparent 60%), #eef4fb;
+  --aurora-escura: radial-gradient(900px 640px at 0% 0%, rgba(26, 139, 224, .65), transparent 60%),
+                   radial-gradient(760px 560px at 100% 100%, rgba(15, 252, 190, .22), transparent 60%),
+                   radial-gradient(700px 520px at 80% 0%, rgba(10, 76, 134, .7), transparent 60%), #04172b;
+}
+.vidro-on, .topo .miolo, .modo-card, .recursos .recurso, .passos li, .integra span, .cartao, .prova, .celular, .heroi .selo, .botao-contorno {
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+}
+body { background: var(--aurora-clara); background-attachment: fixed; }
+
+/* topo: pílula de vidro flutuando sobre a luz */
+.topo { background: transparent; position: sticky; top: 0; padding: 12px 0 0; }
+.topo .miolo { max-width: 1180px; width: calc(100% - 24px); border-radius: 22px; padding-top: 12px; padding-bottom: 12px;
+  background: rgba(7, 29, 51, .45); border: 1px solid var(--vidro-escuro-borda); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 16px 40px rgba(0,0,0,.25); }
+.topo .link { opacity: .9; }
+
+/* herói e chamada final: noite azul com luz da marca */
+.heroi, .final { background: var(--aurora-escura); }
+.heroi { margin-top: -86px; padding-top: 86px; }
+.heroi .selo { display: inline-block; padding: 8px 16px; border-radius: 999px; background: var(--vidro-escuro); border: 1px solid var(--vidro-escuro-borda); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.botao-contorno { background: var(--vidro-escuro); box-shadow: inset 0 0 0 1px var(--vidro-escuro-borda), inset 0 1px 0 rgba(255,255,255,.15); }
+.botao-menta { box-shadow: 0 0 0 1px rgba(15,252,190,.4), 0 10px 30px rgba(15, 252, 190, .38); }
+.celular { background: rgba(238, 243, 248, .82); border-color: rgba(255,255,255,.22); box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 40px 90px rgba(0, 0, 0, .5), 0 0 80px rgba(15, 252, 190, .12); }
+
+/* faixa de provas: cartões de vidro sobre a noite */
+.provas { background: linear-gradient(180deg, #04172b, #062440); }
+.prova { background: var(--vidro-escuro); border: 1px solid var(--vidro-escuro-borda); border-radius: 20px; padding: 18px 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
+.prova b { text-shadow: 0 0 22px rgba(15, 252, 190, .45); }
+
+/* seções claras: superfícies foscas */
+.secao, .secao.papel { background: transparent; }
+.modo-card, .passos li, .integra span { background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
+.modo-card.destaque { background: linear-gradient(145deg, rgba(26,139,224,.92), rgba(10,76,134,.92)); border-color: rgba(255,255,255,.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 18px 46px rgba(16,110,190,.35), 0 0 0 1px rgba(15,252,190,.25); }
+.modo-card .etiqueta { background: rgba(16,110,190,.1); box-shadow: inset 0 0 0 1px rgba(16,110,190,.2); }
+.recursos { gap: 14px !important; }
+.recursos .recurso { background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); border-radius: 20px; padding: 20px; box-shadow: var(--vidro-brilho); }
+.recurso .icone { background: linear-gradient(145deg, #1a8be0, #0a4c86); box-shadow: 0 6px 18px rgba(16,110,190,.35); }
+.passos li::before { box-shadow: 0 0 16px rgba(15,252,190,.55); }
+
+/* formulário de vidro sobre a noite */
+.final .cartao, .lado-form .cartao { background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 30px 80px rgba(0,0,0,.35); }
+.campo input, .campo textarea { background: rgba(255,255,255,.7); }
+.rodape { background: #04172b; }
+
+/* login com o mesmo clima */
+.lado-azul { background: var(--aurora-escura); }
+.lado-form { background: var(--aurora-clara); }
+.lado-form .cartao { box-shadow: var(--vidro-brilho); }
+
+@media (max-width: 760px) {
+  .topo { padding-top: 8px; }
+  .topo .miolo { width: calc(100% - 16px); border-radius: 18px; }
+  .heroi { margin-top: -78px; padding-top: 78px; }
+}
+@media (max-width: 520px) { .menu .botao { white-space: nowrap; padding: 10px 14px; font-size: 12.5px; } .topo .logo span { font-size: 18px; } }
