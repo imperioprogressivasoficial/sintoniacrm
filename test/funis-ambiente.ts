@@ -63,7 +63,7 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number) {
   return { sintonia, funis, automacoes, tags, app };
 }
 
-export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number } = {}) {
+export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean } = {}) {
   const { repo, contas, pool } = await amb.criar();
   const relogio = { t: opcoes.inicio ?? quinta(14) };
   const armazemTags = new ArmazemTagsMemoria(() => repo.listarConversas());
@@ -73,7 +73,7 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     pool,
     relogio,
     enviados: [],
-    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags) },
+    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas) },
   };
   const agente = opcoes.agente ?? new AgenteFalso();
   let atual = instancia(b, agente, opcoes.maxEncadeamento);
@@ -137,6 +137,8 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     enviados: b.enviados,
     sistema,
     etapasSistema,
+    /** Armazém de tags em uso (o mesmo do banco de cada modo). */
+    armazemTags: (pool ? new ArmazemTagsPostgres(pool) : b.armazens.tags) as ArmazemTags,
     get app() {
       return atual.app;
     },

@@ -385,6 +385,27 @@ export class RepositorioMemoria implements Repositorio {
     this.digitandoAgora.get(conversaId)?.delete(usuarioId);
   }
 
+  /** Só na memória (dados de demonstração, src/demo): apaga as conversas e tudo o que é delas. Devolve quantas mensagens e eventos saíram. */
+  async apagarConversas(ids: string[]) {
+    const fora = new Set(ids);
+    const antes = { mensagens: this.msgs.length, eventos: this.eventos.length };
+    this.msgs = this.msgs.filter((m) => !fora.has(m.conversaId));
+    for (const [k, md] of this.midias) if (fora.has(md.conversaId)) this.midias.delete(k);
+    this.eventos = this.eventos.filter((e) => !e.conversaId || !fora.has(e.conversaId));
+    this.tarefas = this.tarefas.filter((t) => !fora.has(t.conversaId));
+    for (const id of fora) {
+      this.sugestoes.delete(id);
+      this.digitandoAgora.delete(id);
+      this.conversas.delete(id);
+    }
+    return { mensagens: antes.mensagens - this.msgs.length, eventos: antes.eventos - this.eventos.length };
+  }
+
+  /** Só na memória (demonstração): todas as tarefas, para conferir que nada ficou programado. */
+  todasAsTarefas(): Tarefa[] {
+    return this.tarefas.map((t) => ({ ...t }));
+  }
+
   /**
    * Só na memória (mesclar duplicatas, src/leads): passa mensagens, mídias, eventos e tarefas pendentes
    * (dos tipos que a outra ainda não tem) de `deId` para `paraId` e apaga `deId`. No Postgres é SQL (leads/armazem.ts).

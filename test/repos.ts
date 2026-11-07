@@ -25,7 +25,7 @@ export async function poolDeTeste(): Promise<pg.Pool> {
     migrado = true;
   }
   await pool.query(
-    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados, sintonia.digitando, sintonia.fotos, sintonia.conexoes, sintonia.midias, sintonia.tags, sintonia.conversa_tags, sintonia.base_secoes, sintonia.base_versoes, sintonia.base_faq, sintonia.funis, sintonia.automacoes, sintonia.automacao_execucoes, sintonia.automacao_envios, sintonia.conversa_objetivos, sintonia.automacoes_config, sintonia.contatos, sintonia.campos_contato, sintonia.nao_duplicatas, sintonia.push_config restart identity cascade',
+    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados, sintonia.digitando, sintonia.fotos, sintonia.conexoes, sintonia.midias, sintonia.tags, sintonia.conversa_tags, sintonia.base_secoes, sintonia.base_versoes, sintonia.base_faq, sintonia.funis, sintonia.automacoes, sintonia.automacao_execucoes, sintonia.automacao_envios, sintonia.conversa_objetivos, sintonia.automacoes_config, sintonia.contatos, sintonia.campos_contato, sintonia.nao_duplicatas, sintonia.push_config, sintonia.demo_registros restart identity cascade',
   );
   return pool;
 }

@@ -4,6 +4,16 @@ import { PAPEIS, type Contas, type Usuario } from './contas.js';
 import { apareceNaEquipe, ehGestor, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, UNIDADES_EQUIPE, unidadesQuePodeDar } from './acesso.js';
 import { gerarHash, senhaFraca } from './senha.js';
 
+/** Foto já reduzida pela tela (~256 px): bem abaixo disto. */
+export const LIMITE_FOTO = 300 * 1024;
+/** Confere os primeiros bytes (não confia só no tipo que veio no pedido). */
+export function assinaturaDeImagem(b: Buffer, tipo: string): boolean {
+  if (tipo === 'image/jpeg') return b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (tipo === 'image/png') return b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (tipo === 'image/webp') return b.length > 12 && b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP';
+  return false;
+}
+
 /** Gestão da equipe: listar, criar, editar papel/unidades, desativar/reativar e redefinir senha. */
 
 const erro = (statusCode: number, mensagem: string) => Object.assign(new Error(mensagem), { statusCode });
@@ -105,6 +115,50 @@ export function registrarEquipe(app: FastifyInstance, contas: Contas): void {
   };
   app.post('/api/equipe/:id/desativar', ativar(false));
   app.post('/api/equipe/:id/reativar', ativar(true));
+
+  // ---------------------------------------------------------------- foto (rosto)
+  // Todo mundo logado vê o rosto da equipe da própria empresa; trocar: a própria pessoa ou quem a gerencia.
+  const daEmpresa = async (req: FastifyRequest): Promise<Usuario> => {
+    const eu = req.usuario!;
+    const alvo = await contas.buscarPorId((req.params as { id: string }).id).catch(() => undefined);
+    if (!alvo || alvo.empresaId !== eu.empresaId) throw erro(404, 'Pessoa não encontrada.');
+    const { senhaHash: _, ...resto } = alvo;
+    return resto;
+  };
+  const podeTrocarFoto = (eu: Usuario, alvo: Usuario) => eu.id === alvo.id || (ehGestor(eu) && apareceNaEquipe(eu, alvo) && podeGerenciar(eu, alvo));
+
+  app.get('/api/equipe/fotos', async (req) => {
+    const mapa = await contas.fotosDaEmpresa(req.usuario!.empresaId);
+    return { fotos: Object.fromEntries([...mapa].map(([id, em]) => [id, em.getTime()])) };
+  });
+
+  app.get('/api/equipe/:id/foto', async (req, reply) => {
+    const alvo = await daEmpresa(req);
+    const f = await contas.fotoDe(alvo.id);
+    // Sem foto: a tela mostra as iniciais (nada fica guardado no navegador).
+    if (!f) return reply.header('cache-control', 'no-store').code(204).send();
+    return reply.header('cache-control', 'private, max-age=600').type(f.tipo).send(f.conteudo);
+  });
+
+  const FotoNova = z.object({ base64: z.string().min(10).max(600_000), mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']) });
+  app.put('/api/equipe/:id/foto', { bodyLimit: 1024 * 1024 }, async (req, reply) => {
+    const alvo = await daEmpresa(req);
+    if (!podeTrocarFoto(req.usuario!, alvo)) throw erro(403, 'Você não pode trocar a foto desta pessoa.');
+    const b = FotoNova.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ erro: 'Envie uma foto JPG, PNG ou WebP.' });
+    const conteudo = Buffer.from(b.data.base64.replace(/^data:[^,]*,/, ''), 'base64');
+    if (conteudo.length > LIMITE_FOTO) return reply.code(413).send({ erro: 'Foto grande demais (até 300 KB depois de reduzida).' });
+    if (!assinaturaDeImagem(conteudo, b.data.mimetype)) return reply.code(400).send({ erro: 'O arquivo não é uma imagem válida.' });
+    await contas.salvarFotoDe(alvo.id, { conteudo, tipo: b.data.mimetype }, new Date());
+    return { ok: true };
+  });
+
+  app.delete('/api/equipe/:id/foto', async (req) => {
+    const alvo = await daEmpresa(req);
+    if (!podeTrocarFoto(req.usuario!, alvo)) throw erro(403, 'Você não pode trocar a foto desta pessoa.');
+    await contas.salvarFotoDe(alvo.id, null, new Date());
+    return { ok: true };
+  });
 
   app.post('/api/equipe/:id/senha', async (req, reply) => {
     const g = gestor(req);

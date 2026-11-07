@@ -43,6 +43,9 @@
   .avatar.eu { width: 32px; height: 32px; font-size: 12px; background: var(--azul); }
   .avatar.foto { background: var(--boneco-fundo); color: var(--boneco); overflow: hidden; position: relative; }
   .avatar.foto svg { width: 100%; height: 100%; }
+  /* Rosto da pessoa da equipe por cima das iniciais (some se a foto falhar). */
+  .com-foto { position: relative; }
+  .com-foto > img.foto-pessoa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .avatar.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
   .area { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -357,6 +360,7 @@
   .perfil-conta { background: var(--fundo); border-radius: 10px; padding: 26px 20px 20px; text-align: center; display: grid; justify-items: center; gap: 4px; }
   .perfil-conta .avatar { width: 96px; height: 96px; font-size: 34px; margin-bottom: 8px; }
   .perfil-conta b { font-size: 20px; font-weight: 500; }
+  .perfil-conta .acoes-foto { display: flex; gap: 14px; margin-top: 6px; }
   .perfil-conta > span:not(.avatar) { color: var(--sub); font-size: 14.5px; }
   dialog input:disabled { color: var(--sub); }
   .opcoes-conta { background: var(--fundo); border-radius: 10px; overflow: hidden; }
@@ -635,6 +639,7 @@
     background: color-mix(in srgb, var(--marca-azul) 14%, transparent); color: var(--marca-azul); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, transparent); }
   .atende.atende-eu { background: var(--marca-azul); color: #fff; box-shadow: none; }
   .atende.atende-ia { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); color: #078a6a; box-shadow: inset 0 0 0 1px rgba(15,252,190,.6), 0 0 10px rgba(15,252,190,.35); }
+  .atende.com-foto { width: 22px; min-width: 22px; padding: 0; color: transparent; }
   [data-tema="escuro"] .atende { color: #8fd0ff; } [data-tema="escuro"] .atende.atende-eu { color: #fff; } [data-tema="escuro"] .atende.atende-ia { color: var(--marca-menta); }
   .item .l1 .nome { min-width: 0; flex: 0 1 auto; } .item .l1 .hora { margin-left: auto; }
   .lt-raio svg { color: #f5b800 !important; filter: drop-shadow(0 0 6px rgba(245,184,0,.55)); }
@@ -941,7 +946,7 @@
     <p class="info" id="p-papel-info" style="margin:-6px 0 0"></p>
     <div><span class="info">Unidades</span><div class="marcar" id="p-unidades" style="margin-top:6px"></div></div>
     <label id="p-senha-rotulo">Senha inicial <input name="senha" type="text" minlength="10" maxlength="200" autocomplete="new-password" placeholder="10+ caracteres, letras e números"></label>
-    <div class="acoes-extra" id="p-acoes" hidden><button type="button" class="link" id="p-redefinir">Redefinir senha</button><button type="button" class="link perigo" id="p-ativar"></button></div>
+    <div class="acoes-extra" id="p-acoes" hidden><button type="button" class="link" id="p-foto">Trocar foto</button><button type="button" class="link" id="p-redefinir">Redefinir senha</button><button type="button" class="link perigo" id="p-ativar"></button></div>
     <div id="p-erro" class="erro-txt"></div>
     <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" id="p-ok" value="ok">Salvar</button></div>
   </form>
@@ -1077,6 +1082,52 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
     return a;
   };
+  // Rosto da equipe (GET /api/equipe/fotos diz quem tem foto e a versão): por cima das iniciais, que ficam se não houver foto.
+  window.SintoniaFotos = (() => {
+    let mapa = {};
+    return {
+      url: (id) => (id && mapa[id] ? `/api/equipe/${id}/foto?v=${mapa[id]}` : null),
+      aplicar(caixa, id) {
+        const u = this.url(id);
+        if (!caixa || !u) return caixa;
+        const img = el('img', { class: 'foto-pessoa', alt: '', loading: 'lazy', src: u });
+        img.addEventListener('error', () => { img.remove(); caixa.classList.remove('com-foto'); });
+        caixa.classList.add('com-foto'); caixa.prepend(img);
+        return caixa;
+      },
+      async carregar() {
+        try { const r = await api('/api/equipe/fotos'); const novo = r.fotos || {}; const mudou = JSON.stringify(novo) !== JSON.stringify(mapa); mapa = novo; if (mudou) dispatchEvent(new Event('sintonia:fotos')); } catch {}
+      },
+    };
+  })();
+  const fotoPessoa = (caixa, id) => window.SintoniaFotos.aplicar(caixa, id);
+  /** Escolhe a imagem, corta no centro e reduz para 256 px (JPEG) antes de enviar. */
+  function escolherFoto(id) {
+    const entrada = el('input', { type: 'file', accept: 'image/*' });
+    entrada.addEventListener('change', async () => {
+      const arq = entrada.files?.[0]; if (!arq) return;
+      try {
+        const bmp = await createImageBitmap(arq);
+        const lado = Math.min(bmp.width, bmp.height), t = 256;
+        const tela = Object.assign(document.createElement('canvas'), { width: t, height: t });
+        tela.getContext('2d').drawImage(bmp, (bmp.width - lado) / 2, (bmp.height - lado) / 2, lado, lado, 0, 0, t, t);
+        const base64 = tela.toDataURL('image/jpeg', 0.85).split(',')[1];
+        await api(`/api/equipe/${id}/foto`, { method: 'PUT', body: JSON.stringify({ base64, mimetype: 'image/jpeg' }) });
+        toast('Foto salva ✓'); await window.SintoniaFotos.carregar(); redesenharFotos();
+      } catch (x) { toast(x.message || 'Não foi possível usar essa imagem.'); }
+    });
+    entrada.click();
+  }
+  async function tirarFoto(id) {
+    try { await api(`/api/equipe/${id}/foto`, { method: 'DELETE' }); toast('Foto removida.'); await window.SintoniaFotos.carregar(); redesenharFotos(); } catch (x) { toast(x.message); }
+  }
+  function redesenharFotos() {
+    preencherLateral();
+    if (estado.vista === 'configuracoes') desenharConfiguracoes();
+    if (estado.vista === 'equipe') carregarEquipe();
+    desenharLista?.();
+  }
+  addEventListener('sintonia:fotos', () => { try { redesenharFotos(); } catch {} });
   const avatares = new Map();
   const avatarDaLista = (c) => { let a = avatares.get(c.id); if (!a || (semFoto.has(c.id) && a.querySelector('img'))) { a = avatar(c); avatares.set(c.id, a); } return a; };
   const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
@@ -1124,7 +1175,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (c.modo === 'ia') return el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' });
     if (!c.responsavelId) return '';
     const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
-    return el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini });
+    return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);
   }
   function desenharLista() {
     const caixa = $('itens'); caixa.replaceChildren();
@@ -1945,7 +1996,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const ehGestor = (u) => ['gerente', 'direcao', 'admin'].includes(u?.papel);
   const nomesUnidades = (l) => (l && l.length ? l.map((u) => UNIDADE[u] || u).join(', ') : '');
   const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
-  const avatarPessoa = (nome, classe = 'p') => el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` });
+  const avatarPessoa = (nome, classe = 'p', id) => fotoPessoa(el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` }), id);
 
   function fecharConversa(aviso) {
     estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
@@ -1984,7 +2035,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     let pessoas; try { pessoas = await api(`/api/conversas/${estado.aberta}/transferir`); } catch (x) { toast(x.message); return; }
     const c = estado.detalhe.conversa;
     const opcao = (valor, rotulo, sub, av) => el('label', {}, Object.assign(el('input', { type: 'radio', name: 'para', value: valor }), { checked: false }), av, el('span', { style: 'display:grid' }, el('span', { text: rotulo }), sub ? el('span', { class: 'info', text: sub }) : null));
-    const lista = pessoas.filter((p) => !p.dona).map((p) => opcao(p.id, p.eu ? `${p.nome} (você)` : p.nome, PAPEL[p.papel], avatarPessoa(p.nome)));
+    const lista = pessoas.filter((p) => !p.dona).map((p) => opcao(p.id, p.eu ? `${p.nome} (você)` : p.nome, PAPEL[p.papel], avatarPessoa(p.nome, 'p', p.id)));
     if (c.responsavelId) lista.push(opcao('', 'Sem dona', 'Volta para todas da unidade', el('span', { class: 'avatar foto p', html: BONECO })));
     $('tr-lista').replaceChildren(...(lista.length ? lista : [el('p', { class: 'info', text: 'Ninguém mais atende esta unidade.' })]));
     $('d-transferir').showModal();
@@ -2015,7 +2066,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const l1 = el('div', { class: 'l1' }, el('b', { text: p.eu ? `${p.nome} (você)` : p.nome }));
       if (!p.ativo) l1.append(el('span', { class: 'tag', text: 'Desativada' }));
       return el('button', { class: 'pessoa' + (p.ativo ? '' : ' inativa'), onclick: () => abrirPessoa(p) },
-        avatarPessoa(p.nome, ''), el('div', { class: 't' }, l1, el('span', { text: sub }), el('span', { text: p.email })));
+        avatarPessoa(p.nome, '', p.id), el('div', { class: 't' }, l1, el('span', { text: sub }), el('span', { text: p.email })));
     });
     caixa.replaceChildren(
       el('div', { class: 'cab' }, el('h1', { text: 'Equipe' }), el('button', { class: 'botao', text: 'Adicionar pessoa', onclick: () => abrirPessoa(null) })),
@@ -2065,6 +2116,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       carregarEquipe();
     } catch (x) { $('p-erro').textContent = x.message; }
   });
+  $('p-foto').addEventListener('click', () => { const p = pessoaAberta; if (p) { $('d-pessoa').close(); escolherFoto(p.id); } });
   $('p-redefinir').addEventListener('click', () => {
     const p = pessoaAberta; if (!p) return;
     $('d-pessoa').close();
@@ -2095,7 +2147,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const botao = (icone, texto, acao, classe = '') => { const b = el('button', { class: classe, onclick: acao }); b.insertAdjacentHTML('beforeend', icone); b.append(texto); return b; };
     $('configuracoes').replaceChildren(
       el('div', { class: 'cab' }, el('h1', { class: 'titulo-grande', text: 'Mais' })),
-      el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, ''), el('b', { text: eu.nome }), el('span', { text: eu.email })),
+      el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, '', eu.id), el('b', { text: eu.nome }), el('span', { text: eu.email }),
+        el('span', { class: 'acoes-foto' }, el('button', { class: 'link', type: 'button', text: window.SintoniaFotos.url(eu.id) ? 'Trocar foto' : 'Pôr foto', onclick: () => escolherFoto(eu.id) }),
+          ...(window.SintoniaFotos.url(eu.id) ? [el('button', { class: 'link perigo', type: 'button', text: 'Tirar foto', onclick: () => tirarFoto(eu.id) })] : []))),
       el('div', { class: 'opcoes-conta' },
         linha('Papel', PAPEL[eu.papel] || eu.papel),
         linha('Unidades', nomesUnidades(eu.unidades) || (['admin', 'direcao'].includes(eu.papel) ? 'Todas' : 'Nenhuma ainda')),
@@ -2105,12 +2159,48 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         botao(ICONE_AGENDA, 'Agenda', () => mostrar('agenda')),
         botao(ICONE_IA, 'Inteligência Artificial', () => mostrar('ia')),
         ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
-        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; })] : [])),
+        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; }), botao(ICONE_CAMPOS, 'Dados de demonstração', abrirDemo)] : [])),
       el('div', { class: 'opcoes-conta' },
         botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', 'Notificações', () => window.SintoniaTelas?.notificacoes?.preferencias()),
         botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
         botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
     );
+  }
+  // Dados de demonstração (só administração e direção): preencher e apagar, com o estado atual.
+  async function abrirDemo() {
+    const d = $('d-demo') || document.body.appendChild(el('dialog', { id: 'd-demo' }));
+    const info = el('p', { class: 'info', style: 'margin:0', text: 'Carregando…' });
+    const erro = el('div', { class: 'erro-txt' });
+    const fechar = el('button', { class: 'botao leve', type: 'button', text: 'Fechar', onclick: () => d.close() });
+    const apagar = el('button', { class: 'botao leve perigo', type: 'button', text: 'Apagar demonstração', hidden: '' });
+    const preencher = el('button', { class: 'botao', type: 'button', text: 'Preencher' });
+    const ocupado = (sim, txt) => { preencher.disabled = apagar.disabled = sim; if (txt) info.textContent = txt; };
+    const ler = async () => {
+      try {
+        const s = await api('/api/demo');
+        info.textContent = s.existe
+          ? `Há uma demonstração na conta: ${s.porTipo.conversa || 0} conversas, ${s.porTipo.usuario || 0} atendentes de exemplo e o resto (tags, funil, respostas, automações desligadas).`
+          : 'Nenhuma demonstração na conta. "Preencher" cria ~140 conversas de exemplo (canal de teste: nada sai pelo WhatsApp), CRM, Dashboard, Relatórios e Agenda cheios.';
+        preencher.textContent = s.existe ? 'Preencher de novo' : 'Preencher';
+        apagar.hidden = !s.existe;
+      } catch (x) { info.textContent = ''; erro.textContent = x.message; }
+    };
+    preencher.onclick = async () => {
+      erro.textContent = ''; ocupado(true, 'Preenchendo… pode levar alguns segundos.');
+      try { const r = await post('/api/demo/popular'); toast(`Demonstração pronta: ${r.conversas} conversas ✓`); await atualizar(); }
+      catch (x) { erro.textContent = x.message; }
+      ocupado(false); ler();
+    };
+    apagar.onclick = async () => {
+      if (!confirm('Apagar a demonstração? Saem só as conversas, atendentes, tags, funil, respostas e automações de exemplo. Os dados reais ficam.')) return;
+      erro.textContent = ''; ocupado(true, 'Apagando…');
+      try { const r = await api('/api/demo', { method: 'DELETE' }); toast(`Demonstração apagada (${r.conversas} conversas).`); estado.aberta = null; await atualizar(); }
+      catch (x) { erro.textContent = x.message; }
+      ocupado(false); ler();
+    };
+    d.replaceChildren(el('form', { method: 'dialog' }, el('h2', { text: 'Dados de demonstração' }), info, erro, el('div', { class: 'rodape' }, fechar, apagar, preencher)));
+    d.showModal();
+    ler();
   }
   $('f-trocar-senha').addEventListener('submit', async (e) => {
     if (e.submitter?.value !== 'ok') return;
@@ -2143,7 +2233,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   addEventListener('tema', sincronizarNoite); sincronizarNoite();
   function preencherLateral() {
     const eu = estado.eu; if (!eu) return;
-    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
+    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-avatar').querySelector('img')?.remove(); fotoPessoa($('lt-avatar'), eu.id); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
     $('lt-gestao').hidden = !ehGestor(eu); $('lt-conexoes').hidden = !['admin', 'direcao'].includes(eu.papel);
     api('/api/empresa').then((emp) => { if (emp?.nome) $('lt-empresa').textContent = emp.nome; }).catch(() => {});
   }
@@ -2165,8 +2255,11 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
     estado.avisos = avisos;
     $('nova-teste').hidden = !estado.situacao.simulador; $('nova-teste-cel').hidden = false;
+    await window.SintoniaFotos.carregar();
+    preencherLateral();
     await atualizar();
     carregarTags();
+    setInterval(() => window.SintoniaFotos.carregar(), 60000);
     setInterval(atualizar, 4000);
     setInterval(carregarTags, 30000);
   })();
