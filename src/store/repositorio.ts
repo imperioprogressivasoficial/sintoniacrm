@@ -37,6 +37,10 @@ export type TipoEvento =
   | 'automacao'
   /** Lembrete de ligação criado por automação (dados: quando, texto, automacaoId): aparece em "Ligar hoje". */
   | 'lembrete_ligacao'
+  /** Lead que entrou por importação de planilha (dados: por). Não conta como conversa nova no painel. */
+  | 'lead_importado'
+  /** Contatos duplicados juntados num só (dados: principal, mesclados, por, porId...). */
+  | 'leads_mesclados'
   | 'falha';
 
 export interface Evento {
@@ -379,5 +383,25 @@ export class RepositorioMemoria implements Repositorio {
   }
   async pararDigitando(conversaId: string, usuarioId: string) {
     this.digitandoAgora.get(conversaId)?.delete(usuarioId);
+  }
+
+  /**
+   * Só na memória (mesclar duplicatas, src/leads): passa mensagens, mídias, eventos e tarefas pendentes
+   * (dos tipos que a outra ainda não tem) de `deId` para `paraId` e apaga `deId`. No Postgres é SQL (leads/armazem.ts).
+   */
+  async unirConversas(deId: string, paraId: string) {
+    for (const m of this.msgs) if (m.conversaId === deId) m.conversaId = paraId;
+    for (const md of this.midias.values()) if (md.conversaId === deId) md.conversaId = paraId;
+    for (const e of this.eventos) if (e.conversaId === deId) e.conversaId = paraId;
+    const jaTem = new Set(this.tarefas.filter((t) => t.conversaId === paraId && !t.feita).map((t) => t.tipo));
+    for (const t of this.tarefas) {
+      if (t.conversaId !== deId) continue;
+      if (!t.feita && !jaTem.has(t.tipo)) t.conversaId = paraId;
+      else t.feita = true;
+    }
+    if (!this.sugestoes.has(paraId) && this.sugestoes.has(deId)) this.sugestoes.set(paraId, this.sugestoes.get(deId)!);
+    this.sugestoes.delete(deId);
+    this.digitandoAgora.delete(deId);
+    this.conversas.delete(deId);
   }
 }
