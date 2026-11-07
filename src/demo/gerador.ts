@@ -23,6 +23,7 @@ import {
   PROFISSIONAIS,
   RESPOSTA_ESPERA,
   SERVICOS,
+  VALORES,
   SOBRENOMES,
   TAG_DA_ORIGEM,
   TIPOS_CABELO,
@@ -334,6 +335,7 @@ class Roteiro {
       inicio: inicio.toISOString(),
       profissional: prof,
       duracaoMin: SERVICOS[servico].duracaoMin,
+      valor: this.s.um(VALORES[servico]),
     });
     this.mudarEtapa('agendada', 'agendamento_criado');
     return { prof, inicio };
@@ -374,9 +376,9 @@ type Cenario = 'agendada' | 'retorno' | 'compareceu' | 'faltou' | 'interessada' 
 
 /** Quantas de cada, para 140 conversas (proporcional para outros totais). */
 const MISTURA: Array<[Cenario, number]> = [
-  ['agendada', 26],
+  ['agendada', 34],
   ['retorno', 4],
-  ['compareceu', 22],
+  ['compareceu', 30],
   ['faltou', 4],
   ['interessada', 22],
   ['em_conversa', 24],
@@ -391,12 +393,12 @@ const MISTURA: Array<[Cenario, number]> = [
 const IDADE: Record<Cenario, [number, number]> = {
   agendada: [0, 9],
   retorno: [0, 6],
-  compareceu: [9, 29],
+  compareceu: [6, 18],
   faltou: [3, 10],
-  interessada: [0, 29],
-  em_conversa: [0, 29],
+  interessada: [0, 18],
+  em_conversa: [0, 18],
   novo_lead: [0, 6],
-  perdida: [4, 29],
+  perdida: [3, 20],
   manutencao: [92, 118],
   agora_ia: [0, 0],
   agora_equipe: [0, 0],

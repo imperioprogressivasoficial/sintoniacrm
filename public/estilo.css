@@ -657,3 +657,22 @@ html { overflow-x: clip; }
   .v-tv-pe i { height: 26px; }
   .v-tv-pontos { grid-template-columns: 1fr; margin-top: 24px; }
 }
+
+/* ---------- herói: TV atrás do MacBook; sugestão da IA acima da tela do computador ---------- */
+.v-palco { aspect-ratio: 1200 / 790; }
+.v-palco .v-tv-palco { position: absolute; z-index: 0; right: 3%; top: 0; width: 48%; filter: saturate(.95); }
+.v-palco .v-tv-palco .v-tv-moldura { padding: 6px; border-radius: 10px; }
+.v-palco .v-tv-palco .v-tv-pe i { height: 18px; }
+.v-palco .v-mac { top: 13%; }
+.v-palco .v-iphone { bottom: -2%; }
+.v-palco .v-chip.c1 { left: 6%; top: 6%; bottom: auto; }
+.v-palco .v-chip.c2 { right: 0; top: 50%; }
+@media (max-width: 760px) {
+  .v-palco { aspect-ratio: 390 / 400; }
+  .v-palco .v-tv-palco { right: 0; top: 0; width: 66%; }
+  .v-palco .v-tv-palco .v-tv-moldura { padding: 3px; border-radius: 6px; }
+  .v-palco .v-tv-palco .v-tv-pe i { height: 10px; }
+  .v-palco .v-tv-palco .v-tv-pe b { height: 4px; }
+  .v-palco .v-mac { top: 20%; }
+  .v-palco .v-chip.c1 { left: 1%; right: auto; top: 9%; bottom: auto; }
+}

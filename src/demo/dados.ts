@@ -55,6 +55,14 @@ export const SERVICOS: Record<Servico, { nome: string; tag: string | null; durac
   hidratacao: { nome: 'Hidratação', tag: null, duracaoMin: 60 },
 };
 
+/** Valores fechados no agendamento (R$), para o comercial, a TV e os relatórios terem números de verdade. */
+export const VALORES: Record<Servico, number[]> = {
+  progressiva: [180, 220, 220, 260, 260, 290],
+  selagem: [150, 150, 180],
+  botox: [120, 120, 140],
+  hidratacao: [80, 80, 95],
+};
+
 export const PRECO: Record<Servico, string> = {
   progressiva: 'A progressiva sai a partir de R$ 180 (cabelo curto). No médio fica R$ 220 e no longo a partir de R$ 260 — o valor certinho a gente confirma vendo o volume 😊',
   selagem: 'A selagem está R$ 150 até a altura do ombro. Abaixo disso fica R$ 180 ✨',
