@@ -20,6 +20,11 @@ export interface MensagemRecebida {
   anexo?: AnexoRecebido;
   /** Anúncio de clique para WhatsApp que trouxe a cliente (referral / externalAdReply). */
   referencia?: ReferenciaAnuncio;
+  /**
+   * Rede social de onde veio (Messenger = facebook, Instagram Direct = instagram, TikTok = tiktok).
+   * Nesses canais `telefone` é o identificador da rede com prefixo (fb:<PSID>, ig:<IGSID>, tt:<open_id>).
+   */
+  rede?: 'facebook' | 'instagram' | 'tiktok';
 }
 
 export interface AnexoRecebido {
@@ -92,7 +97,7 @@ export interface ModeloAprovado {
 }
 
 export interface CanalWhatsApp {
-  readonly tipo: 'evolution' | 'meta' | 'teste';
+  readonly tipo: 'evolution' | 'meta' | 'teste' | 'messenger' | 'instagram' | 'tiktok';
   /** Converte o corpo do webhook em mensagens de texto. Ignora o que não é conversa (status, grupos etc.). */
   lerWebhook(corpo: unknown): MensagemRecebida[];
   /** Avisos de entrega e leitura que vieram no webhook. Opcional. */
@@ -113,6 +118,8 @@ export interface CanalWhatsApp {
   enviarMidia?(canalId: string, telefone: string, midia: MidiaEnvio): Promise<EnvioResultado>;
   /** Foto de perfil do WhatsApp da cliente (null quando ela não tem foto ou esconde). Opcional: a API oficial não oferece. */
   buscarFoto?(canalId: string, telefone: string): Promise<FotoPerfil | null>;
+  /** Nome (e foto) da cliente na rede social (Messenger/Instagram). Opcional. */
+  perfil?(canalId: string, telefone: string): Promise<{ nome?: string; usuario?: string; fotoUrl?: string }>;
 }
 
 export interface FotoPerfil {

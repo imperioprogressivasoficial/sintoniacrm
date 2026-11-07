@@ -19,6 +19,7 @@ import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarContatos } from './contatos/rotas.js';
 import type { ArmazemContatos } from './contatos/contatos.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
+import { registrarWebhooksSociais, type OpcoesWebhooksSociais } from './conexoes/sociais.js';
 import { registrarRotasMidia } from './web/midias.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
@@ -31,6 +32,8 @@ export interface DependenciasServidor {
   evolution?: { canal: CanalWhatsApp; token?: string };
   /** WhatsApp oficial (Meta). Lido a cada webhook: as unidades podem mudar pela tela de Conexões. */
   meta?: OpcoesWebhookMeta;
+  /** Facebook Messenger, Instagram Direct e leads do TikTok (lido a cada webhook). */
+  sociais?: OpcoesWebhooksSociais;
   revisar?: (conversaId: string, rascunho: string) => Promise<Revisao>;
   /** Fila persistente: o webhook só grava e responde; os trabalhadores processam. */
   fila?: { fila: FilaEntrada; avisar?: () => void };
@@ -168,6 +171,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.get('/webhooks/meta', verificarMeta);
   app.post('/webhook/meta', receberMeta);
   app.post('/webhooks/meta', receberMeta);
+
+  // ---------- Facebook Messenger, Instagram Direct e TikTok (leads) ----------
+  registrarWebhooksSociais(app, () => d.sociais, entregar, log);
 
   // ---------- Quem vê o quê ----------
   // Sem login configurado (testes antigos, uso local) tudo fica visível, como antes.

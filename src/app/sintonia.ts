@@ -1,3 +1,4 @@
+import { FORA_DA_JANELA_SOCIAL, TIPOS_COM_JANELA_24H } from '../channels/meta-social.js';
 import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Etapa, ModoAtendimento, UnidadeId } from '../domain.js';
 import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio, ModeloAprovado, ModeloEnvio, StatusRecebido } from '../channels/tipos.js';
@@ -360,10 +361,10 @@ export class Sintonia {
    */
   janelaDa(c: Conversa): { canal: CanalWhatsApp['tipo'] | null; aberta: boolean; fechaEm: Date | null } {
     const n = this.d.numeros.find((x) => x.canalId === c.canalId);
-    if (!n || n.canal.tipo !== 'meta') return { canal: n?.canal.tipo ?? null, aberta: true, fechaEm: null };
+    if (!n || !TIPOS_COM_JANELA_24H.includes(n.canal.tipo)) return { canal: n?.canal.tipo ?? null, aberta: true, fechaEm: null };
     const ult = c.ultimaMensagemCliente?.getTime();
     const fechaEm = ult ? new Date(ult + DIA) : null;
-    return { canal: 'meta', aberta: Boolean(fechaEm && fechaEm.getTime() > this.agora().getTime()), fechaEm };
+    return { canal: n.canal.tipo, aberta: Boolean(fechaEm && fechaEm.getTime() > this.agora().getTime()), fechaEm };
   }
 
   /** Marca a última mensagem da cliente como lida no WhatsApp (só onde o canal permite, ex.: API oficial). */
@@ -709,7 +710,7 @@ export class Sintonia {
     if (await this.botConduz(c)) return;
     const numero = this.numeroDa(c);
     // Na API oficial, mensagem ativa fora da janela de 24h exige modelo aprovado (Fase 3).
-    if (numero.canal.tipo === 'meta') {
+    if (TIPOS_COM_JANELA_24H.includes(numero.canal.tipo)) {
       const ult = c.ultimaMensagemCliente?.getTime() ?? 0;
       if (this.agora().getTime() - ult > DIA) {
         await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: c.id, em: this.agora(), dados: { tarefa: t.tipo, erro: 'requer modelo aprovado pela Meta' } });
@@ -858,8 +859,8 @@ export class Sintonia {
     opcoes: { modelo?: boolean } = {},
   ): Promise<string> {
     const n = this.numeroDa(c);
-    if (n.canal.tipo === 'meta' && !opcoes.modelo && !this.janelaDa(c).aberta) {
-      throw Object.assign(new Error(FORA_DA_JANELA), { statusCode: 422, codigo: 'fora_da_janela' });
+    if (TIPOS_COM_JANELA_24H.includes(n.canal.tipo) && !opcoes.modelo && !this.janelaDa(c).aberta) {
+      throw Object.assign(new Error(n.canal.tipo === 'meta' ? FORA_DA_JANELA : FORA_DA_JANELA_SOCIAL), { statusCode: 422, codigo: 'fora_da_janela' });
     }
     const chave = this.chaveEnvio(n.canalId, c.telefone, texto);
     this.enviando.set(chave, Date.now());

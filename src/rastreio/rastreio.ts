@@ -110,7 +110,13 @@ export class Rastreio {
     const clique = codigo ? await this.d.armazem.cliquePorRef(codigo) : undefined;
     const link = clique ? await this.d.armazem.link(this.d.empresaId, clique.linkId) : undefined;
     const ref = msg.referencia;
-    if (!ref && !clique) return undefined;
+    if (!ref && !clique) {
+      // Messenger / Instagram Direct / TikTok sem anúncio: a própria rede é a origem (orgânico), só no primeiro toque.
+      if (!msg.rede) return undefined;
+      const org: Origem = { canal: 'organico', fonte: msg.rede, origemPor: 'automatico', em: msg.em, primeiraMensagem: tirarCodigo(msg.texto).slice(0, 500) };
+      await this.d.armazem.gravarOrigem(c.id, 'primeiro', org, 'sobre_ia');
+      return org;
+    }
 
     const o: Origem = { canal: ref ? 'anuncio_meta' : 'link', origemPor: 'automatico', em: msg.em, primeiraMensagem: tirarCodigo(msg.texto).slice(0, 500) };
     if (clique && link) {
@@ -132,7 +138,7 @@ export class Rastreio {
     if (ref) {
       const daUrl = parametrosDaUrl(ref.url);
       Object.assign(o, {
-        fonte: redeDoAnuncio(ref.app, ref.url) ?? o.fonte ?? 'meta',
+        fonte: msg.rede ?? redeDoAnuncio(ref.app, ref.url) ?? o.fonte ?? 'meta',
         adId: ref.adId,
         anuncioTipo: ref.tipo,
         anuncioUrl: ref.url,

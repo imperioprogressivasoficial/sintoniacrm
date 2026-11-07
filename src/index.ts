@@ -17,6 +17,8 @@ import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { CanalMeta } from './channels/meta.js';
 import { numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
+import { numerosSociais } from './conexoes/sociais.js';
+import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
 import pg from 'pg';
@@ -166,7 +168,9 @@ const meta = cfg.META_TOKEN ? new CanalMeta(cfg.META_TOKEN) : undefined;
 const canaisMeta = new Map<string, { chave: string; canal: CanalWhatsApp }>();
 const canalTeste = new CanalTeste();
 const numeros: NumeroConectado[] = [];
-const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId);
+/** Número real de WhatsApp (nem o de teste, nem Messenger/Instagram/TikTok). */
+const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId) && !ehCanalSocial(n.canalId);
+const canaisSociais = new Map<string, { chave: string; canal: CanalWhatsApp }>();
 let iaLigada = false;
 let agendaLigada = false;
 const ESTABELECIMENTO_PADRAO = { norte: UNIDADES.norte.trinksEstabelecimentoId, sumare: UNIDADES.sumare.trinksEstabelecimentoId };
@@ -194,8 +198,11 @@ function aplicarConexoes() {
   });
   // WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
   for (const unidade of ['norte', 'sumare'] as const) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
+  // Facebook Messenger e Instagram Direct: entram depois (o número de WhatsApp de cada unidade continua sendo o primeiro).
+  const sociais = numerosSociais(conexoes, canaisSociais);
+  lista.push(...sociais);
   numeros.splice(0, numeros.length, ...lista);
-  log(`Conexões aplicadas: IA ${iaLigada ? 'ligada' : 'desligada'}, agenda ${agendaLigada ? 'ligada' : 'desligada'}, ${lista.filter(ehReal).length} número(s) de WhatsApp.`);
+  log(`Conexões aplicadas: IA ${iaLigada ? 'ligada' : 'desligada'}, agenda ${agendaLigada ? 'ligada' : 'desligada'}, ${lista.filter(ehReal).length} número(s) de WhatsApp${sociais.length ? `, ${sociais.map((n) => n.canal.tipo).join(' e ')}` : ''}.`);
 }
 conexoes.aoMudar(aplicarConexoes);
 await conexoes.carregar();
@@ -429,6 +436,14 @@ const app = criarServidor({
         return n;
       },
     );
+  },
+  sociais: {
+    conexoes,
+    canalDe: (canalId) => numeros.find((n) => n.canalId === canalId)?.canal,
+    // Esqueleto: o lead do TikTok fica no log até existir a tela de leads de formulário.
+    aoLeadTikTok: async (leads, unidade) => {
+      for (const l of leads) log(`Lead do TikTok recebido (${unidade})`, { leadId: l.leadId, adId: l.adId, temTelefone: Boolean(l.telefone), temEmail: Boolean(l.email) });
+    },
   },
   origens: (ids) => rastreio.selos(ids),
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
