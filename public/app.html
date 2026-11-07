@@ -641,11 +641,12 @@
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
     <div class="lt-secao">Principal</div>
     <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
-    <button class="nav lt-item" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">Funil</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
+    <button class="nav lt-item" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
     <button class="nav lt-item lt-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg><span class="lt-rot">Inteligência</span><span class="lt-luz"></span></button>
     <button class="nav lt-item" data-vista="painel" title="Painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg><span class="lt-rot">Painel</span></button>
     <div class="lt-gestao" id="lt-gestao" hidden>
       <div class="lt-secao">Gestão</div>
+      <button class="nav lt-item" data-vista="automacoes" title="Automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z"/></svg><span class="lt-rot">Automações</span></button>
       <button class="lt-item" id="lt-equipe" title="Atendentes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Atendentes</span></button>
       <button class="lt-item" id="lt-tags" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
       <button class="lt-item" id="lt-campos" title="Campos da ficha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="lt-rot">Campos da ficha</span></button>
@@ -658,7 +659,7 @@
   <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
     <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
-    <button class="nav" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">Funil</span></button>
+    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">CRM</span></button>
     <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg></span><span class="rotulo">IA</span></button>
     <button class="nav" data-vista="painel" title="Painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg><span class="rotulo">Painel</span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
@@ -790,11 +791,12 @@
     </section>
 
     <section class="vista coluna-vista" id="v-funil">
-      <div class="cabeca-vista"><h1 class="titulo-grande">Funil</h1>
+      <div class="cabeca-vista"><h1 class="titulo-grande">CRM</h1>
         <div class="filtros" id="funil-abas"><button class="chip" data-a="quadro" aria-pressed="true">Quadro</button><button class="chip" data-a="ligar" aria-pressed="false">📞 Ligar hoje <span class="qtd" id="qtd-ligar"></span></button></div></div>
       <div class="funil" id="funil"></div>
       <div class="ligar" id="ligar" hidden></div>
     </section>
+    <section class="vista" id="v-automacoes"><div class="painel" id="automacoes"></div></section>
     <section class="vista" id="v-ia"><div class="painel" id="ia"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
@@ -1058,6 +1060,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
     if (v === 'funil') { desenharFunil(); carregarLigacoes(); }
+    if (v === 'automacoes' && window.SintoniaTelas?.automacoes) window.SintoniaTelas.automacoes.desenhar($('automacoes'), window.Sintonia.ui);
     if (v === 'ia') carregarIA();
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
@@ -1711,6 +1714,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // funil
   function desenharFunil() {
+    if (window.SintoniaTelas?.funil) return window.SintoniaTelas.funil.desenhar($('funil'), window.Sintonia.ui);
     const caixa = $('funil'); caixa.replaceChildren();
     for (const [id, nome] of ETAPAS) {
       const cs = estado.conversas.filter((c) => c.etapa === id);
@@ -1728,7 +1732,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.abaFunil = b.dataset.a;
     document.querySelectorAll('#funil-abas .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
     $('funil').hidden = estado.abaFunil !== 'quadro'; $('ligar').hidden = estado.abaFunil !== 'ligar';
-    if (estado.abaFunil === 'ligar') carregarLigacoes();
+    if (estado.abaFunil === 'ligar') carregarLigacoes(); else desenharFunil();
   });
   const MOTIVO = { faltou: 'Faltou', interessada_sem_agendar: 'Interessada', nao_responde: 'Sumiu' };
   const RESULTADO = { atendeu: 'atendeu', agendou: 'agendou', nao_atendeu: 'não atendeu', caixa_postal: 'caixa postal' };
@@ -2059,5 +2063,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 </script>
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>
+<script src="/telas/funil.js" defer></script>
+<script src="/telas/automacoes.js" defer></script>
 </body>
 </html>
