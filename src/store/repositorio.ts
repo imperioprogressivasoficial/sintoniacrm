@@ -41,6 +41,8 @@ export type TipoEvento =
   | 'lead_importado'
   /** Contatos duplicados juntados num só (dados: principal, mesclados, por, porId...). */
   | 'leads_mesclados'
+  /** Transmissão (disparo em massa) enviada, respondida ou descadastro (dados: transmissaoId, nome, acao). */
+  | 'transmissao'
   | 'falha';
 
 export interface Evento {

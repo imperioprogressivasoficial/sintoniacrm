@@ -698,6 +698,7 @@
     <div class="lt-gestao" id="lt-gestao" hidden>
       <div class="lt-secao">Gestão</div>
       <button class="nav lt-item lt-raio" data-vista="automacoes" title="Automações"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span></button>
+      <button class="nav lt-item" data-vista="transmissoes" title="Transmissões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span class="lt-rot">Transmissões</span></button>
       <button class="nav lt-item" data-vista="relatorios" title="Relatórios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-2"/></svg><span class="lt-rot">Relatórios</span></button>
       <button class="nav lt-item" data-vista="leads" title="Importar e exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span class="lt-rot">Importar e exportar</span></button>
       <button class="lt-item" id="lt-tags" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
@@ -871,6 +872,7 @@
     <!-- Relatórios, Leads (importar/exportar/duplicatas) e Agenda: telas em /telas/*.js -->
     <section class="vista" id="v-relatorios"><div class="painel" id="relatorios"></div></section>
     <section class="vista" id="v-leads"><div class="painel" id="leads"></div></section>
+    <section class="vista" id="v-transmissoes"><div class="painel" id="transmissoes"></div></section>
     <section class="vista" id="v-agenda"><div class="painel" id="agenda"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
     <section class="vista" id="v-configuracoes"><div class="painel"><div class="gestao" id="configuracoes" style="display:grid;gap:14px"></div></div></section>
@@ -1151,7 +1153,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'relatorios' || v === 'leads' || v === 'agenda') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'relatorios' || v === 'leads' || v === 'agenda' || v === 'transmissoes') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
   }
 
   // lista
@@ -2207,7 +2209,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_EMPRESA, 'Empresa', abrirEmpresa)] : []),
         botao(ICONE_AGENDA, 'Agenda', () => mostrar('agenda')),
         botao(ICONE_IA, 'Inteligência Artificial', () => mostrar('ia')),
-        ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
+        ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>', 'Transmissões', () => mostrar('transmissoes')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; })] : [])),
       el('div', { class: 'opcoes-conta' },
         botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', 'Notificações', () => window.SintoniaTelas?.notificacoes?.preferencias()),
@@ -2283,6 +2285,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/automacoes.js" defer></script>
 <script src="/telas/relatorios.js" defer></script>
 <script src="/telas/leads.js" defer></script>
+<script src="/telas/transmissoes.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>

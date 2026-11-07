@@ -44,6 +44,8 @@ import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
 import { Notificador, observarEventos } from './notificacoes/notificador.js';
 import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
+import { Transmissoes } from './transmissoes/transmissoes.js';
+import { registrarTransmissoes } from './transmissoes/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -193,8 +195,24 @@ const automacoes = new Automacoes({
   tags,
   contas,
   log,
+  transmissoes: () => transmissoes,
 });
-const ganchos = ligarFunis({ tags, funis, automacoes });
+const ganchosBase = ligarFunis({ tags, funis, automacoes });
+// Transmissões (disparo em massa): só com Postgres. Criadas depois da Sintonia; os ganchos as chamam quando existirem.
+let transmissoes: Transmissoes | undefined;
+const ganchos: typeof ganchosBase = {
+  ...ganchosBase,
+  mensagemCliente: async (c, m) => {
+    await ganchosBase.mensagemCliente?.(c, m);
+    await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
+  },
+};
+funis.aoMover(async (m) => {
+  await transmissoes?.aoMover(m).catch((e) => log('Falha no gatilho das transmissões', String(e)));
+});
+tags.aoMarcar(async (c, tag) => {
+  await transmissoes?.aoMarcarTag(c, tag).catch((e) => log('Falha no gatilho das transmissões', String(e)));
+});
 // Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
 await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
 
@@ -254,7 +272,11 @@ const app = criarServidor({
     return opcoesWebhookMeta(
       conexoes,
       { verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET, temNumerosMeta: Boolean(meta) && cfg.numeros.some((n) => n.canal === 'meta') },
-      (lista) => sintonia.statusRecebidos(lista),
+      async (lista) => {
+        const n = await sintonia.statusRecebidos(lista);
+        await transmissoes?.statusRecebidos(lista).catch((e) => log('Falha nos avisos de entrega das transmissões', String(e)));
+        return n;
+      },
     );
   },
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
@@ -318,6 +340,29 @@ const extras = montarExtras({
 });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
 
+// Transmissões: campanhas, público, modelos da Meta e a fila de envio com ritmo por número.
+if (pool) {
+  transmissoes = new Transmissoes({
+    pool,
+    empresaId: cfg.SINTONIA_EMPRESA_ID,
+    repo,
+    sintonia: () => sintonia,
+    numeros: () => numeros,
+    tags,
+    contatos: armazemContatos,
+    leads: extras.leads,
+    contaMeta: (u) => conexoes.contaMeta(u),
+    modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+    log,
+  });
+  registrarTransmissoes(app, {
+    transmissoes,
+    simularResposta: async ({ unidade, telefone, nome, texto }) => {
+      await sintonia.receber({ canalId: canalTesteDa(unidade), telefone, nome, texto, deMim: false, idExterno: `teste-${randomUUID()}`, em: new Date() });
+    },
+  });
+}
+
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
 registrarConversa(app, {
   repo,
@@ -358,6 +403,11 @@ const relogio = setInterval(async () => {
   }
 }, 30_000);
 
+// Fila das transmissões: a cada 2 s (o ritmo de cada número decide quantas saem).
+const relogioTransmissoes = setInterval(() => {
+  transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
+}, 2_000);
+
 trabalhador.iniciar();
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
@@ -367,6 +417,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(sinal, async () => {
     log(`Recebido ${sinal}: encerrando`);
     clearInterval(relogio);
+    clearInterval(relogioTransmissoes);
     await app.close().catch(() => {});
     await trabalhador.parar();
     await notificador.ocioso().catch(() => {});

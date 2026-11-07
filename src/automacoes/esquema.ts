@@ -43,6 +43,7 @@ export type Passo =
   | { tipo: 'desmarcar_tag'; tagId: string }
   | { tipo: 'atribuir'; usuarioId: string | null; unidade?: (typeof UNIDADES_AUTOMACAO)[number] }
   | { tipo: 'lembrete_ligacao'; em_minutos: number; texto?: string }
+  | { tipo: 'enviar_transmissao'; transmissaoId: string }
   | {
       tipo: 'condicao';
       se: 'cliente_respondeu' | 'tem_tag' | 'modo' | 'horario_loja';
@@ -66,6 +67,8 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('atribuir'), usuarioId: id.nullable(), unidade: z.enum(UNIDADES_AUTOMACAO).optional() }),
     /** Aparece em "Ligar hoje" a partir do dia em que vence (até 6 dias à frente). */
     z.object({ tipo: z.literal('lembrete_ligacao'), em_minutos: z.number().int().min(0).max(6 * 24 * 60), texto: z.string().trim().min(1).max(200).optional() }),
+    /** Põe a conversa numa transmissão automática ligada (src/transmissoes): sai pela fila, com ritmo, modelo e opt-out. */
+    z.object({ tipo: z.literal('enviar_transmissao'), transmissaoId: id }),
     z.object({
       tipo: z.literal('condicao'),
       se: z.enum(['cliente_respondeu', 'tem_tag', 'modo', 'horario_loja']),
