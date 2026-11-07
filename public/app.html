@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#001A2B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
@@ -117,14 +117,14 @@
     --midia-caixa: rgba(11,20,26,.05); --midia-meta: #ffffff; --midia-degrade: rgba(11,20,26,.45);
     --visor-fundo: rgba(11,20,26,.94); --visor-txt: #ffffff;
     --doc-pdf: #e5252a; --doc-planilha: #1d8f4e; --doc-texto: #2b6bd6; --doc-outro: #8696a0;
-    --ic-doc: #001A2B; --ic-foto: #002941; --gravando: #ea0038; --video-fundo: #000000;
+    --ic-doc: #04709A; --ic-foto: #0593C6; --gravando: #ea0038; --video-fundo: #000000;
     --onda: rgba(84,101,111,.35); --onda-tocada: #54656f; --onda-cursor: var(--marca-azul);
     --encaminhar-fundo: rgba(11,20,26,.22); --encaminhar-icone: #ffffff;
     --mic-fundo: var(--marca-azul); --mic-icone: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root { --midia-caixa: rgba(255,255,255,.06); --midia-degrade: rgba(0,0,0,.5); --visor-fundo: rgba(11,20,26,.96); --doc-outro: #aebac1;
-      --onda: rgba(174,186,193,.35); --onda-tocada: #d1d7db; --encaminhar-fundo: rgba(255,255,255,.14); --mic-fundo: var(--marca-menta); --mic-icone: #ffffff; }
+      --onda: rgba(174,186,193,.35); --onda-tocada: #d1d7db; --encaminhar-fundo: rgba(255,255,255,.14); --mic-fundo: var(--marca-menta); --mic-icone: #071d33; }
   }
   .bal.midia { padding: 3px 3px 5px; }
   .bal.midia .autor { padding: 0 6px; }
@@ -395,14 +395,14 @@
   .chip .qtd { color: var(--sub); font-weight: 600; }
   .chip .qtd:empty { display: none; }
   .chip[aria-pressed="true"] .qtd { color: inherit; }
-  .luz { width: 10px; height: 10px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px rgba(253, 110, 110, .8); display: inline-block; }
-  .badge, .contador { background: var(--badge) !important; color: var(--badge-txt) !important; box-shadow: 0 0 10px rgba(253, 110, 110, .5); }
+  .luz { width: 10px; height: 10px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px rgba(216, 57, 149, .8); display: inline-block; }
+  .badge, .contador { background: var(--badge) !important; color: var(--badge-txt) !important; box-shadow: 0 0 10px rgba(216, 57, 149, .5); }
   .item .hora.nova { color: var(--verde); }
 
   /* aba IA no meio, com brilho */
-  .nav-ia .ia-bola { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: 0 0 0 1px rgba(253, 110, 110,.35), 0 0 18px rgba(253, 110, 110, .55); }
+  .nav-ia .ia-bola { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: 0 0 0 1px rgba(216, 57, 149,.35), 0 0 18px rgba(216, 57, 149, .55); }
   .nav-ia .ia-bola svg { width: 20px; height: 20px; }
-  .nav-ia[aria-current="page"] .ia-bola { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 24px rgba(253, 110, 110, .8); }
+  .nav-ia[aria-current="page"] .ia-bola { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 24px rgba(216, 57, 149, .8); }
 
   /* topo da conversa */
   .voltar { all: unset; cursor: pointer; display: none; align-items: center; gap: 2px; height: 40px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--painel); color: var(--texto); font-size: 16px; font-weight: 600; flex: none; }
@@ -421,7 +421,7 @@
   .linha-compor .icone { color: var(--texto); }
   .linha-compor .modo { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha); font-size: 14px; font-weight: 600; color: var(--texto); }
   .linha-compor .modo i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); }
-  .linha-compor .modo[data-m="ia"] i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(253, 110, 110, .9); }
+  .linha-compor .modo[data-m="ia"] i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(216, 57, 149, .9); }
   .linha-compor .modo[data-m="copiloto"] i { background: var(--marca-azul); }
   .falar { background: var(--texto) !important; color: var(--fundo) !important; width: 46px !important; height: 46px !important; margin: 0 0 0 4px !important; }
   #enviar:not(.mic-vazio) { background: var(--marca-gradiente) !important; color: #fff !important; box-shadow: var(--brilho-azul); }
@@ -442,7 +442,7 @@
   .folha-lista b { font-size: 17px; font-weight: 500; }
   .folha-lista small { font-size: 14px; color: var(--sub); }
   .folha-lista .marca-ok { width: 22px; height: 22px; border-radius: 50%; flex: none; }
-  .folha-lista button[aria-pressed="true"] .marca-ok { background: var(--marca-gradiente); box-shadow: 0 0 10px rgba(253, 110, 110,.5); }
+  .folha-lista button[aria-pressed="true"] .marca-ok { background: var(--marca-gradiente); box-shadow: 0 0 10px rgba(216, 57, 149,.5); }
   .folha-lista button[aria-pressed="true"] .marca-ok::after { content: "✓"; display: grid; place-items: center; height: 100%; color: #fff; font-size: 13px; font-weight: 800; }
 
   /* vistas com cabeçalho grande (Funil) */
@@ -466,7 +466,7 @@
 
   /* aba IA */
   #ia { padding-bottom: 110px; }
-  .ia-destaque { border-radius: 20px; padding: 18px; display: grid; gap: 4px; color: #fff; background: radial-gradient(240px 140px at 90% 0%, rgba(253, 110, 110,.45), transparent), linear-gradient(135deg, #0d3a63, #002941); box-shadow: var(--brilho-azul); }
+  .ia-destaque { border-radius: 20px; padding: 18px; display: grid; gap: 4px; color: #fff; background: radial-gradient(240px 140px at 90% 0%, rgba(216, 57, 149,.45), transparent), linear-gradient(135deg, #0d3a63, #0593C6); box-shadow: var(--brilho-azul); }
   .ia-destaque span { font-size: 13px; opacity: .85; }
   .ia-destaque b { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
   .ia-destaque small { font-size: 13.5px; opacity: .9; }
@@ -491,7 +491,7 @@
   .lista-topo h1.titulo-grande, .painel h1.titulo-grande, .gestao h1.titulo-grande, .cabeca-vista h1.titulo-grande { position: static; transform: none; font-size: 34px; font-weight: 800; letter-spacing: -.02em; margin: 2px 0 8px; }
   @media (max-width: 760px) { .voltar { display: inline-flex !important; } }
   .trilho .marca { display: block; width: 40px; height: 40px; margin-bottom: 8px; }
-  .trilho .marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(0, 41, 65,.35)); }
+  .trilho .marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(5, 147, 198,.35)); }
   .sem-conversa img { width: 220px; height: auto; }
 
   /* tags */
@@ -545,7 +545,7 @@
   .item .corpo { border-bottom-color: var(--vidro-linha); }
   .busca { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .chip { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
-  .chip[aria-pressed="true"] { box-shadow: 0 4px 14px rgba(0, 41, 65,.28); }
+  .chip[aria-pressed="true"] { box-shadow: 0 4px 14px rgba(5, 147, 198,.28); }
   .chat { background: transparent; }
   .chat::before { background-color: color-mix(in srgb, var(--chat) 55%, transparent); }
   .chat-topo { background: var(--vidro-forte); border-bottom: 1px solid var(--vidro-borda); border-left: 0; }
@@ -556,7 +556,7 @@
   .ficha .bloco, .ficha .topo { background: transparent; }
   .sem-conversa { background: transparent; border-bottom: 0; }
   dialog { background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 30px 80px rgba(0,0,0,.35); }
-  dialog::backdrop { background: rgba(0, 18, 31, .35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  dialog::backdrop { background: rgba(4, 18, 31, .35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .folha-lista { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .menu-mais { background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); }
   .funil, .painel, .ligar { background: transparent; }
@@ -573,7 +573,7 @@
     .lateral { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 12px 12px; padding: 14px 12px; border-radius: 26px; min-height: 0; overflow-y: auto; overflow-x: hidden;
       background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); scrollbar-width: none; }
     .lt-topo { display: flex; align-items: center; gap: 10px; padding: 2px 4px 10px; position: relative; }
-    .lt-marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(0, 41, 65,.35)); }
+    .lt-marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(5, 147, 198,.35)); }
     .lt-nome { display: grid; min-width: 0; line-height: 1.2; }
     .lt-nome b { font-size: 16px; font-weight: 800; }
     .lt-nome span { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -591,14 +591,14 @@
     .lt-item svg { width: 21px; height: 21px; flex: none; color: var(--icone); }
     .lt-item .lt-rot { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lt-item:hover { background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
-    .lt-item[aria-current="page"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 20px rgba(0, 41, 65,.18); }
+    .lt-item[aria-current="page"] { background: var(--vidro-ativo); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 20px rgba(5, 147, 198,.18); }
     .lt-item[aria-current="page"] svg { color: var(--marca-azul); }
     [data-tema="escuro"] .lt-item[aria-current="page"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 8px 24px rgba(0,0,0,.35); }
     [data-tema="escuro"] .lt-item[aria-current="page"] svg { color: var(--marca-menta); }
-    .lt-qtd { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 12px rgba(253, 110, 110,.55); }
-    .lt-luz { width: 8px; height: 8px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 10px rgba(253, 110, 110,.9); }
-    .lt-ia svg { color: var(--marca-menta) !important; filter: drop-shadow(0 0 6px rgba(253, 110, 110,.6)); }
-    [data-tema="claro"] .lt-ia svg { color: #C94545 !important; }
+    .lt-qtd { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 12px rgba(216, 57, 149,.55); }
+    .lt-luz { width: 8px; height: 8px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 10px rgba(216, 57, 149,.9); }
+    .lt-ia svg { color: var(--marca-menta) !important; filter: drop-shadow(0 0 6px rgba(216, 57, 149,.6)); }
+    [data-tema="claro"] .lt-ia svg { color: #B02A78 !important; }
     .lt-espaco { flex: 1; min-height: 12px; }
     .lt-noite input { position: absolute; opacity: 0; pointer-events: none; }
     .lt-chave { width: 40px; height: 24px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; flex: none; transition: background .2s ease; }
@@ -634,7 +634,7 @@
   .atende { flex: none; display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; margin: 0 6px 0 4px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: .02em;
     background: color-mix(in srgb, var(--marca-azul) 14%, transparent); color: var(--marca-azul); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, transparent); }
   .atende.atende-eu { background: var(--marca-azul); color: #fff; box-shadow: none; }
-  .atende.atende-ia { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); color: #C94545; box-shadow: inset 0 0 0 1px rgba(253, 110, 110,.6), 0 0 10px rgba(253, 110, 110,.35); }
+  .atende.atende-ia { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); color: #B02A78; box-shadow: inset 0 0 0 1px rgba(216, 57, 149,.6), 0 0 10px rgba(216, 57, 149,.35); }
   [data-tema="escuro"] .atende { color: #8fd0ff; } [data-tema="escuro"] .atende.atende-eu { color: #fff; } [data-tema="escuro"] .atende.atende-ia { color: var(--marca-menta); }
   .item .l1 .nome { min-width: 0; flex: 0 1 auto; } .item .l1 .hora { margin-left: auto; }
   .lt-raio svg { color: #f5b800 !important; filter: drop-shadow(0 0 6px rgba(245,184,0,.55)); }
@@ -753,12 +753,12 @@
             <div class="menu-mais" id="menu-mais" hidden>
               <button id="m-documento"><i style="background:var(--ic-doc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg></i>Documento</button>
               <button id="m-fotos"><i style="background:var(--ic-foto)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 18 5.5-5.5L13 16l3-3 4 4"/></svg></i>Fotos e vídeos</button>
-              <button id="m-agendar"><i style="background:#002941"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></i>Agendar no Trinks</button>
-              <button id="m-revisar"><i style="background:#C94545"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
-              <button id="m-sugestao"><i style="background:#001A2B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
-              <button id="m-ficha"><i style="background:#0A4A6E"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Dados da cliente</button>
+              <button id="m-agendar"><i style="background:#0593C6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></i>Agendar no Trinks</button>
+              <button id="m-revisar"><i style="background:#B02A78"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
+              <button id="m-sugestao"><i style="background:#04709A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
+              <button id="m-ficha"><i style="background:#23ABDD"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Dados da cliente</button>
               <button id="m-etiquetar"><i style="background:#0bb5a0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></i>Etiquetar</button>
-              <button id="m-transferir" hidden><i style="background:#002941"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
+              <button id="m-transferir" hidden><i style="background:#08243f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
             </div>
           </div>
           <div class="simular" id="simular" hidden>
