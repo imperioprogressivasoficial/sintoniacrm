@@ -961,8 +961,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const aoMudar = async () => { await carregarAutos(true); desenharQuadro(); };
     const f = funil();
     const autos = autosDaEtapa(col.etapa.id);
-    if (!autos.length) A.abrirEditor({ funilId: f && !f.sistema ? f.id : null, gatilho: { tipo: 'entrou_na_etapa', etapaId: col.etapa.id }, nome: `Ao entrar em ${col.etapa.nome}`, aoSalvar: aoMudar });
-    else A.abrirDaEtapa({ funilId: f && !f.sistema ? f.id : null, etapaId: col.etapa.id, etapaNome: col.etapa.nome, aoMudar });
+    const abrirAutomacao = () => {
+      if (!autos.length) A.abrirEditor({ funilId: f && !f.sistema ? f.id : null, gatilho: { tipo: 'entrou_na_etapa', etapaId: col.etapa.id }, nome: `Ao entrar em ${col.etapa.nome}`, aoSalvar: aoMudar });
+      else A.abrirDaEtapa({ funilId: f && !f.sistema ? f.id : null, etapaId: col.etapa.id, etapaNome: col.etapa.nome, aoMudar });
+    };
+    // O raio oferece "Automação simples" ou "Bot (fluxo)" (/telas/bot.js).
+    const B = window.SintoniaTelas.bot;
+    if (B) B.escolherDaEtapa({ etapaId: col.etapa.id, etapaNome: col.etapa.nome, automacoes: autos.length, abrirAutomacao });
+    else abrirAutomacao();
   }
 
   // ---------- ficha do cartão (janela de vidro; folha que sobe no celular) ----------

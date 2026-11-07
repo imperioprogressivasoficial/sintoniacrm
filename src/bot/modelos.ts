@@ -15,8 +15,9 @@ type NoBruto = Record<string, unknown> & { id: string; tipo: string; x: number; 
 const g = (nos: NoBruto[], ligs: Array<[string, string, string]>): Grafo =>
   ({ nos, ligacoes: ligs.map(([de, saida, para], i) => ({ id: `l${i + 1}`, de, saida, para })) }) as unknown as Grafo;
 
-const X = 380;
-const Y = 170;
+/** Fluxo da esquerda para a direita (saídas à direita, entrada à esquerda). */
+const X = 340;
+const Y = 230;
 
 export const MODELOS: ModeloBot[] = [
   {
@@ -26,12 +27,12 @@ export const MODELOS: ModeloBot[] = [
     grafo: g(
       [
         { id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'nova_conversa' } },
-        { id: 'oi', tipo: 'mensagem', x: 0, y: Y, texto: 'Oi, {primeiro_nome}! 💛 Que bom te ver por aqui. Aqui é da Império Progressivas – {unidade}.' },
+        { id: 'oi', tipo: 'mensagem', x: X, y: 0, texto: 'Oi, {primeiro_nome}! 💛 Que bom te ver por aqui. Aqui é da Império Progressivas – {unidade}.' },
         {
           id: 'menu',
           tipo: 'pergunta',
-          x: 0,
-          y: Y * 2,
+          x: X * 2,
+          y: 0,
           texto: 'Como posso te ajudar hoje?',
           variavel: 'interesse',
           opcoes: [
@@ -41,13 +42,13 @@ export const MODELOS: ModeloBot[] = [
             { id: 'atendente', texto: 'Falar com atendente' },
           ],
         },
-        { id: 'info_prog', tipo: 'mensagem', x: -X * 1.5, y: Y * 3.4, texto: 'A nossa progressiva deixa o cabelo liso, brilhoso e sem frizz, com fórmula sem formol. ✨' },
-        { id: 'info_sel', tipo: 'mensagem', x: -X * 0.5, y: Y * 3.4, texto: 'A selagem alinha os fios, tira o volume e dá muito brilho, com resultado natural. ✨' },
-        { id: 'info_preco', tipo: 'mensagem', x: X * 0.5, y: Y * 3.4, texto: 'Os valores mudam conforme o comprimento e o volume do cabelo. Me conta um pouquinho do seu cabelo que eu te passo certinho! 😊' },
-        { id: 'agente', tipo: 'agente_ia', x: -X * 0.5, y: Y * 4.8, objetivo: 'Tirar as dúvidas sobre {interesse} e agendar uma avaliação gratuita.', saida: { tipo: 'agendou' }, dias: 3 },
-        { id: 'agendado', tipo: 'mensagem', x: -X * 0.5, y: Y * 6.2, texto: 'Prontinho, {primeiro_nome}! Te esperamos. Qualquer coisa é só chamar por aqui. 💛' },
-        { id: 'fim', tipo: 'fim', x: -X * 0.5, y: Y * 7.4 },
-        { id: 'humano', tipo: 'transferir', x: X * 1.5, y: Y * 3.4, texto: 'Claro! Já chamei uma atendente, ela fala com você em instantes. 💛' },
+        { id: 'info_prog', tipo: 'mensagem', x: X * 3.2, y: -Y * 1.1, texto: 'A nossa progressiva deixa o cabelo liso, brilhoso e sem frizz, com fórmula sem formol. ✨' },
+        { id: 'info_sel', tipo: 'mensagem', x: X * 3.2, y: 0, texto: 'A selagem alinha os fios, tira o volume e dá muito brilho, com resultado natural. ✨' },
+        { id: 'info_preco', tipo: 'mensagem', x: X * 3.2, y: Y * 1.1, texto: 'Os valores mudam conforme o comprimento e o volume do cabelo. Me conta um pouquinho do seu cabelo que eu te passo certinho! 😊' },
+        { id: 'agente', tipo: 'agente_ia', x: X * 4.4, y: 0, objetivo: 'Tirar as dúvidas sobre {interesse} e agendar uma avaliação gratuita.', saida: { tipo: 'agendou' }, dias: 3 },
+        { id: 'agendado', tipo: 'mensagem', x: X * 5.6, y: 0, texto: 'Prontinho, {primeiro_nome}! Te esperamos. Qualquer coisa é só chamar por aqui. 💛' },
+        { id: 'fim', tipo: 'fim', x: X * 6.6, y: 0 },
+        { id: 'humano', tipo: 'transferir', x: X * 4.4, y: Y * 2.1, texto: 'Claro! Já chamei uma atendente, ela fala com você em instantes. 💛' },
       ],
       [
         ['inicio', 'proximo', 'oi'],
@@ -73,12 +74,12 @@ export const MODELOS: ModeloBot[] = [
     grafo: g(
       [
         { id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'fora_do_horario' } },
-        { id: 'aviso', tipo: 'mensagem', x: 0, y: Y, texto: 'Oi, {primeiro_nome}! 🌙 Agora a {unidade} está fechada, mas eu posso te ajudar por aqui.' },
+        { id: 'aviso', tipo: 'mensagem', x: X, y: 0, texto: 'Oi, {primeiro_nome}! 🌙 Agora a {unidade} está fechada, mas eu posso te ajudar por aqui.' },
         {
           id: 'menu',
           tipo: 'pergunta',
-          x: 0,
-          y: Y * 2,
+          x: X * 2,
+          y: 0,
           texto: 'O que você prefere?',
           opcoes: [
             { id: 'agendar', texto: 'Quero agendar' },
@@ -86,12 +87,12 @@ export const MODELOS: ModeloBot[] = [
             { id: 'amanha', texto: 'Falo amanhã' },
           ],
         },
-        { id: 'agente', tipo: 'agente_ia', x: -X, y: Y * 3.4, objetivo: 'Agendar um horário para a cliente (a loja está fechada agora).', saida: { tipo: 'agendou' }, dias: 1 },
-        { id: 'duvida', tipo: 'pergunta_aberta', x: 0, y: Y * 3.4, texto: 'Pode escrever a sua dúvida que a equipe te responde assim que abrir. ✍️', validacao: 'texto', variavel: 'duvida' },
-        { id: 'lembrete', tipo: 'lembrete', x: 0, y: Y * 4.6, em_minutos: 0, texto: 'Responder dúvida de {primeiro_nome}: {duvida}' },
-        { id: 'anotei', tipo: 'mensagem', x: 0, y: Y * 5.8, texto: 'Anotado! Amanhã cedinho a equipe fala com você. 💛' },
-        { id: 'tchau', tipo: 'mensagem', x: X, y: Y * 3.4, texto: 'Combinado! Até amanhã, {primeiro_nome}. 💛' },
-        { id: 'fim', tipo: 'fim', x: 0, y: Y * 7 },
+        { id: 'agente', tipo: 'agente_ia', x: X * 3.2, y: -Y * 1.1, objetivo: 'Agendar um horário para a cliente (a loja está fechada agora).', saida: { tipo: 'agendou' }, dias: 1 },
+        { id: 'duvida', tipo: 'pergunta_aberta', x: X * 3.2, y: 0, texto: 'Pode escrever a sua dúvida que a equipe te responde assim que abrir. ✍️', validacao: 'texto', variavel: 'duvida' },
+        { id: 'lembrete', tipo: 'lembrete', x: X * 4.4, y: 0, em_minutos: 0, texto: 'Responder dúvida de {primeiro_nome}: {duvida}' },
+        { id: 'anotei', tipo: 'mensagem', x: X * 5.6, y: 0, texto: 'Anotado! Amanhã cedinho a equipe fala com você. 💛' },
+        { id: 'tchau', tipo: 'mensagem', x: X * 3.2, y: Y * 1.1, texto: 'Combinado! Até amanhã, {primeiro_nome}. 💛' },
+        { id: 'fim', tipo: 'fim', x: X * 6.8, y: Y * 0.4 },
       ],
       [
         ['inicio', 'proximo', 'aviso'],
@@ -117,8 +118,8 @@ export const MODELOS: ModeloBot[] = [
         {
           id: 'servico',
           tipo: 'pergunta',
-          x: 0,
-          y: Y,
+          x: X,
+          y: 0,
           texto: 'Oba! Qual serviço você quer fazer?',
           variavel: 'servico',
           opcoes: [
@@ -131,8 +132,8 @@ export const MODELOS: ModeloBot[] = [
         {
           id: 'unidade',
           tipo: 'pergunta',
-          x: 0,
-          y: Y * 2.4,
+          x: X * 2.2,
+          y: 0,
           texto: 'Qual unidade fica melhor pra você?',
           variavel: 'unidade_escolhida',
           opcoes: [
@@ -140,11 +141,11 @@ export const MODELOS: ModeloBot[] = [
             { id: 'sumare', texto: 'Shopping Sumaré' },
           ],
         },
-        { id: 'dia', tipo: 'pergunta_aberta', x: 0, y: Y * 3.8, texto: 'E qual o melhor dia pra você? (ex.: 25/11)', validacao: 'data', variavel: 'melhor_dia' },
-        { id: 'resumo', tipo: 'mensagem', x: 0, y: Y * 5, texto: 'Perfeito! {servico} no {unidade_escolhida}. Vou ver os horários livres pra você. 😊' },
-        { id: 'agente', tipo: 'agente_ia', x: 0, y: Y * 6.2, objetivo: 'Agendar {servico} na unidade {unidade_escolhida}, de preferência no dia {melhor_dia}.', saida: { tipo: 'agendou' }, dias: 3 },
-        { id: 'fim', tipo: 'fim', x: 0, y: Y * 7.4 },
-        { id: 'humano', tipo: 'transferir', x: X, y: Y * 7.4, texto: 'Vou pedir para uma atendente continuar com você. 💛' },
+        { id: 'dia', tipo: 'pergunta_aberta', x: X * 3.4, y: 0, texto: 'E qual o melhor dia pra você? (ex.: 25/11)', validacao: 'data', variavel: 'melhor_dia' },
+        { id: 'resumo', tipo: 'mensagem', x: X * 4.6, y: 0, texto: 'Perfeito! {servico} no {unidade_escolhida}. Vou ver os horários livres pra você. 😊' },
+        { id: 'agente', tipo: 'agente_ia', x: X * 5.8, y: 0, objetivo: 'Agendar {servico} na unidade {unidade_escolhida}, de preferência no dia {melhor_dia}.', saida: { tipo: 'agendou' }, dias: 3 },
+        { id: 'fim', tipo: 'fim', x: X * 7, y: 0 },
+        { id: 'humano', tipo: 'transferir', x: X * 5.8, y: Y * 1.3, texto: 'Vou pedir para uma atendente continuar com você. 💛' },
       ],
       [
         ['inicio', 'proximo', 'servico'],
