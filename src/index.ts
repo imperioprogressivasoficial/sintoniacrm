@@ -64,6 +64,8 @@ import { calendarioPostgres } from './automacoes/calendario.js';
 import { ArmazemComercialMemoria, ArmazemComercialPostgres } from './comercial/armazem.js';
 import { FonteComercialMemoria, FonteComercialPostgres } from './comercial/fonte.js';
 import { registrarComercial } from './comercial/rotas.js';
+import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
+import { registrarDesempenho } from './desempenho/rotas.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
@@ -466,8 +468,9 @@ const extras = montarExtras({
 });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
+const armazemComercial = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
 registrarComercial(app, {
-  armazem: pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria(),
+  armazem: armazemComercial,
   fonte: pool ? new FonteComercialPostgres(pool) : new FonteComercialMemoria(repo),
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -475,6 +478,15 @@ registrarComercial(app, {
   unidades: ['norte', 'sumare'],
   metaMesAntiga: async () => (await empresa.meta()).agendamentosMes ?? null,
   nomeEmpresa: async () => (await empresa.dados()).nome,
+});
+// Desempenho do atendimento (visão do dono): tempos, expediente, o que ficou para trás e a fila de agora.
+registrarDesempenho(app, {
+  fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
+  armazem: armazemComercial,
+  contas,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  unidades: ['norte', 'sumare'],
+  agora: () => new Date(),
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
