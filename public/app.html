@@ -855,6 +855,7 @@
           <div class="erro-txt" id="f-erro"></div>
           <div class="rodape-ficha"><span class="info" id="f-salvo"></span><button class="botao ds-primario" id="f-salvar">Salvar</button></div>
         </form>
+        <div class="bloco ra-ficha" id="f-origem"></div>
         <div class="bloco">
           <h3>Etapa do funil (a IA move sozinha)</h3>
           <select id="f-etapa" disabled></select>
@@ -1213,7 +1214,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // lista
   $('busca').addEventListener('input', (e) => { estado.busca = e.target.value.toLowerCase(); desenharLista(); });
-  $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
+  $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b || !b.dataset.f) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !naoLida(c)) return false;
     if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
@@ -1221,6 +1222,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
+    if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
     return true;
   });
   // Ao lado do nome: quem está atendendo (IA, a inicial da atendente, ou ninguém).
@@ -1246,6 +1248,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       const l2 = el('div', { class: 'l2' }, previa);
+      const seloOrigem = window.SintoniaRastreio?.seloEl(c.id); if (seloOrigem) l2.append(seloOrigem);
       for (const t of (c.tags || []).slice(0, 2)) l2.append(pilulaTag(t));
       if (ehTeste(c) && !(c.tags || []).length) l2.append(el('span', { class: 'tag', text: 'teste' }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1' }));
@@ -1255,7 +1258,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
-          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), quemAtende(c), el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), window.SintoniaRastreio ? window.SintoniaRastreio.iconeEl(c.origem || c.id) : '', quemAtende(c), el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
           l2)));
     }
   }
@@ -1396,6 +1399,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
     $('c-avatar').replaceWith(Object.assign(avatar(c, 'p'), { id: 'c-avatar' }));
     $('c-nome').textContent = nomeDe(c);
+    if (window.SintoniaRastreio) $('c-nome').append(window.SintoniaRastreio.iconeEl(estado.conversas.find((x) => x.id === c.id)?.origem || c.id));
     $('c-sub').textContent = `${UNIDADE[c.unidade] || c.unidade} · toque para ver os dados da cliente`;
     $('topo-ligar').href = 'tel:+' + c.telefone;
     $('modo').dataset.m = c.modo; $('modo-txt').textContent = MODO[c.modo];
@@ -1459,6 +1463,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       return el('label', {}, document.createTextNode(d.nome), entrada);
     }));
     if (k.atualizadoEm) $('f-salvo').textContent = `Atualizado ${quando(k.atualizadoEm)}`;
+    window.SintoniaRastreio?.ficha(c, $('f-origem'));
   }
   $('f-contato').juridica.addEventListener('change', (e) => { $('f-empresa').hidden = !e.target.checked; });
   $('f-copiar').addEventListener('click', async () => { const c = estado.detalhe?.conversa; if (!c) return; try { await navigator.clipboard.writeText('+' + c.telefone); toast('Número copiado'); } catch { toast('+' + c.telefone); } });
@@ -2351,7 +2356,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
   window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
-  Object.assign(window.Sintonia.ui, { usarTexto, atualizar, abrirTeste: () => $('d-teste').showModal() });
+  Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal() });
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -2412,5 +2417,6 @@ addEventListener('load', () => {
 addEventListener('load', () => { const b = document.getElementById('tema-cel'); if (!b || !window.SintoniaTema) return; b.addEventListener('click', () => window.SintoniaTema.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro')); });
 </script>
 <script src="/telas/responsivo.js" defer></script>
+<script src="/telas/rastreio.js" defer></script>
 </body>
 </html>

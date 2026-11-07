@@ -405,10 +405,24 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return linha;
   }
 
+  /** Abas: visão geral | links rastreados (origem dos leads e anúncios). */
+  function abas(ui) {
+    const el = ui.el;
+    return el('div', { class: 'rl-trilho rl-vidro', role: 'tablist', 'aria-label': 'Seção dos relatórios' },
+      el('button', { type: 'button', role: 'tab', 'aria-pressed': String(s.aba !== 'links'), 'aria-selected': String(s.aba !== 'links'), text: 'Visão geral', onclick: () => { s.aba = 'geral'; carregar(); } }),
+      el('button', { type: 'button', role: 'tab', 'aria-pressed': String(s.aba === 'links'), 'aria-selected': String(s.aba === 'links'), text: '📣 Origem dos leads e links', onclick: () => { s.aba = 'links'; desenharTudo(); } }));
+  }
+
   function desenharTudo() {
     const { ui, caixa } = s;
     if (!caixa) return;
     const el = ui.el;
+    if (s.aba === 'links' && window.SintoniaTelas.links) {
+      const corpo = el('div');
+      caixa.replaceChildren(el('div', { class: 'rl' }, el('div', { class: 'rl-topo' }, el('h1', { class: 'titulo-grande', text: 'Relatórios' })), abas(ui), corpo));
+      window.SintoniaTelas.links.desenhar(corpo, ui);
+      return;
+    }
     const r = s.dados;
     let quando = 'Carregando…';
     if (r) {
@@ -419,7 +433,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       quando = [periodo, unidade, at].filter(Boolean).join(' · ');
     }
     const topo = el('div', { class: 'rl-topo' }, el('h1', { class: 'titulo-grande' }, 'Relatórios', el('span', { class: 'rl-quando', text: quando })), r ? numeros(ui, r) : null);
-    const raiz = el('div', { class: 'rl' }, topo, controles(ui));
+    const raiz = el('div', { class: 'rl' }, topo, abas(ui), controles(ui));
     if (s.erro && !r) raiz.append(el('div', { class: 'rl-erro rl-vidro', role: 'alert' }, el('b', { text: 'Não deu para carregar os relatórios' }), el('span', { text: s.erro }), el('button', { class: 'rl-botao', type: 'button', text: 'Tentar de novo', onclick: carregar })));
     else if (!r) raiz.append(el('div', { class: 'rl-esq' }), el('div', { class: 'rl-esq' }));
     else {
@@ -437,6 +451,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   async function carregar() {
     const { ui } = s;
+    if (s.aba === 'links') { if (!s.caixa?.querySelector('.ra-tela')) desenharTudo(); return; }
     const g = ++s.geracao;
     if (s.f.periodo === 'personalizado' && (!s.f.de || !s.f.ate)) { desenharTudo(); return; }
     desenharTudo();

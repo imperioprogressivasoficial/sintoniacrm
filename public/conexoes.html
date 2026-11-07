@@ -160,6 +160,7 @@
     <a href="#agenda">Agenda</a>
     <a href="#transcricao">Transcrição</a>
     <a href="#relatorio">Relatório</a>
+    <a href="#capi">Meta Ads</a>
   </nav>
 </header>
 
@@ -237,6 +238,44 @@
     <p>Telefones que recebem, às 20h, o resumo do dia pelo WhatsApp da loja. Separe por vírgula, com DDD.</p>
     <label>Telefones <input id="relatorioDestinos" type="text" inputmode="tel" placeholder="71 99999-9999, 71 98888-8888"></label>
     <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio" role="status"></span></div>
+  </section>
+
+  <div class="grupo">Anúncios</div>
+
+  <section id="capi" aria-labelledby="t-capi">
+    <h2 id="t-capi"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><span>Meta Ads — API de Conversões<small>Avisa a Meta quando o lead do anúncio agenda e comparece</small></span></h2>
+    <p>Quando uma cliente vem de um <b>anúncio de clique para WhatsApp</b> ou de um <b>link rastreado</b>, a Sintonia avisa a Meta a cada passo: virou lead, ficou interessada, agendou, compareceu. Assim o Gerenciador de Anúncios otimiza para quem <b>agenda</b>, não só para quem chama. Telefone e e-mail vão sempre em hash (SHA-256).</p>
+    <div class="linha"><span class="estado" id="capi-estado">Desligada</span><label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--texto)"><input type="checkbox" id="capi-ligado" style="width:20px;height:20px"> Enviar eventos para a Meta</label></div>
+    <div class="campos">
+      <label>Dataset ID (Pixel ID) <input id="capi-dataset" inputmode="numeric" autocomplete="off" placeholder="Ex.: 1234567890123456"></label>
+      <label>Token de acesso da API de Conversões <input id="capi-token" type="password" autocomplete="off"></label>
+      <label>Código de evento de teste <span class="dica">opcional — Gerenciador de Eventos › Eventos de teste</span><input id="capi-teste" autocomplete="off" placeholder="TEST12345"></label>
+      <label>WhatsApp Business Account ID <span class="dica">vazio = o da unidade na API oficial</span><input id="capi-waba" inputmode="numeric" autocomplete="off"></label>
+      <label>Page ID do Facebook <span class="dica">opcional</span><input id="capi-page" inputmode="numeric" autocomplete="off"></label>
+      <label>Valor padrão do Purchase (R$) <span class="dica">quando a ficha não tem o valor</span><input id="capi-valor" inputmode="decimal" autocomplete="off" placeholder="250,00"></label>
+      <label>Versão da Graph API <input id="capi-versao" autocomplete="off" placeholder="v27.0"></label>
+      <label>Token para ler nomes dos anúncios <span class="dica">ads_read; vazio = o token acima</span><input id="capi-ads" type="password" autocomplete="off"></label>
+    </div>
+    <h3>Eventos</h3>
+    <p>Nome do evento para <b>links e telefone</b> (website/sistema) e para <b>anúncio de clique para WhatsApp</b> (só os nomes aceitos pela Meta nesse caminho).</p>
+    <div class="cartoes" id="capi-eventos"></div>
+    <h3>Eventos personalizados por etapa do CRM</h3>
+    <p>Quando o cartão entrar na etapa, a Sintonia manda o evento com este nome (sem espaços nem acentos, ex.: <code>AvaliacaoMarcada</code>).</p>
+    <div id="capi-etapas" style="display:grid;gap:8px"></div>
+    <div class="linha"><button class="botao leve mini" id="capi-mais-etapa" type="button">+ Evento por etapa</button></div>
+    <div class="linha"><button class="botao" id="capi-salvar" type="button">Salvar</button><button class="botao leve" id="capi-testar" type="button">Enviar evento de teste</button><span class="res" id="res-capi" role="status"></span></div>
+    <details class="passos">
+      <summary>Passo a passo na Meta</summary>
+      <ol>
+        <li>No <b>Gerenciador de Eventos</b> (business.facebook.com/events_manager), crie ou abra o <b>conjunto de dados</b> (dataset/pixel) da Império e copie o <b>ID</b>.</li>
+        <li>Em <b>Configurações › API de Conversões › Gerar token de acesso</b>, gere o token e cole aqui.</li>
+        <li>Para anúncios de clique para WhatsApp: em <b>Configurações do negócio › Fontes de dados</b>, ligue o conjunto de dados à <b>conta do WhatsApp Business</b> (WABA) e à página do Facebook.</li>
+        <li>Na aba <b>Eventos de teste</b>, copie o código, cole aqui, salve e toque em <b>Enviar evento de teste</b>. O evento aparece lá em segundos. Depois apague o código de teste para os eventos contarem de verdade.</li>
+        <li>Nos anúncios, em <b>Parâmetros de URL</b>, use <code>utm_source=meta&amp;utm_medium=paid&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>.</li>
+      </ol>
+    </details>
+    <h3>Últimos envios</h3>
+    <div id="capi-registro" style="display:grid;gap:8px"><p>Nenhum evento enviado ainda.</p></div>
   </section>
 </main>
 
@@ -401,6 +440,85 @@
   }
 
   // ---------- oficial: dados de cada loja ----------
+  // ---------- Meta Ads: API de Conversões ----------
+  let capi = null; let funisCapi = [];
+  const ROTULO_EVENTO = { lead: 'Lead (conversa nova de anúncio/link)', qualificado: 'Contato qualificado (Interessada)', agendada: 'Agendou (Agendada)', compareceu: 'Compareceu (com valor)' };
+  const quandoBr = (d) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }).format(new Date(d));
+  async function carregarCapi() {
+    try { capi = await api('/api/rastreio/capi'); } catch (x) { $('res-capi').textContent = x.message; return; }
+    try { funisCapi = await api('/api/funis'); } catch { funisCapi = []; }
+    desenharCapi();
+  }
+  function linhaEtapa(x) {
+    const opcoes = [];
+    for (const f of funisCapi) for (const e of (f.etapas || [])) opcoes.push([e.id, `${f.nome} › ${e.nome}`]);
+    const sel = el('select', { className: 'capi-etapa-sel', ariaLabel: 'Etapa' }, ...opcoes.map(([v, t]) => el('option', { value: v, textContent: t })));
+    sel.style.cssText = 'font:inherit;padding:10px;border-radius:12px;background:var(--vidro-item);border:1px solid var(--vidro-borda);color:var(--texto);min-width:0';
+    if (x?.etapaId) sel.value = x.etapaId;
+    const nome = el('input', { className: 'capi-etapa-nome', value: x?.nome || '', placeholder: 'AvaliacaoMarcada', ariaLabel: 'Nome do evento' });
+    const ligado = el('input', { type: 'checkbox', className: 'capi-etapa-ligado', checked: x ? x.ligado : true, ariaLabel: 'Ligado' });
+    ligado.style.cssText = 'width:20px;height:20px';
+    const tirar = el('button', { className: 'botao perigo mini', type: 'button', textContent: 'Tirar', onclick: () => linha.remove() });
+    const linha = el('div', { className: 'linha capi-etapa' }, ligado, sel, nome, tirar);
+    nome.style.flex = '1 1 160px'; sel.style.flex = '1 1 200px';
+    return linha;
+  }
+  function desenharCapi() {
+    if (!capi) return;
+    $('capi-ligado').checked = capi.ligado;
+    const est = $('capi-estado'); est.textContent = capi.ligado ? 'Ligada' : 'Desligada'; est.className = 'estado' + (capi.ligado ? ' ok' : '');
+    $('capi-dataset').value = capi.datasetId; $('capi-teste').value = capi.testeCodigo; $('capi-waba').value = capi.wabaId; $('capi-page').value = capi.pageId;
+    $('capi-valor').value = capi.valorPadrao; $('capi-versao').value = capi.versao;
+    $('capi-token').value = ''; $('capi-token').placeholder = capi.token.definido ? `Salvo (termina em ${capi.token.final}). Cole outro para trocar.` : 'Cole o token';
+    $('capi-ads').value = ''; $('capi-ads').placeholder = capi.adsToken.definido ? `Salvo (termina em ${capi.adsToken.final}).` : 'Opcional';
+    $('capi-eventos').replaceChildren(...['lead', 'qualificado', 'agendada', 'compareceu'].map((k) => {
+      const r = capi.eventos[k];
+      const lig = el('input', { type: 'checkbox', checked: r.ligado, id: `capi-ev-${k}-lig` }); lig.style.cssText = 'width:20px;height:20px';
+      const site = el('input', { id: `capi-ev-${k}-site`, value: r.site, placeholder: capi.padrao[k].site });
+      const msg = el('select', { id: `capi-ev-${k}-msg` }, el('option', { value: '', textContent: '— usar o caminho do telefone —' }), ...capi.eventosMensagem.map((n) => el('option', { value: n, textContent: n })));
+      msg.style.cssText = 'font:inherit;padding:10px;border-radius:12px;background:var(--vidro-item);border:1px solid var(--vidro-borda);color:var(--texto)';
+      msg.value = r.mensagem;
+      return el('div', { className: 'cartao' }, el('div', { className: 'cab' }, el('b', { textContent: ROTULO_EVENTO[k] }), el('label', { style: 'display:flex;gap:6px;align-items:center' }, lig, 'Ligado')),
+        el('label', {}, 'Links / telefone', site), el('label', {}, 'Anúncio de clique para WhatsApp', msg));
+    }));
+    $('capi-etapas').replaceChildren(...capi.eventos.etapas.map(linhaEtapa));
+    const reg = capi.registro || [];
+    const COR = { enviado: 'ok', pendente: '', erro: 'aviso', desistiu: 'aviso' };
+    const NOME = { enviado: 'Enviado', pendente: 'Na fila', erro: 'Recusado', desistiu: 'Sem resposta' };
+    $('capi-registro').replaceChildren(...(reg.length ? reg.map((e) => {
+      const linha = el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: `${e.nome}${e.teste ? ' (teste)' : ''}` }), el('span', { className: 'estado ' + (COR[e.situacao] || ''), textContent: NOME[e.situacao] || e.situacao })),
+        el('p', { textContent: `${quandoBr(e.criadoEm)} · ${e.origem === 'business_messaging' ? 'anúncio de WhatsApp (ctwa_clid)' : 'telefone em hash'} · ${e.tentativas} tentativa(s)` }),
+        e.resposta ? el('p', { style: 'font-family:ui-monospace,Menlo,monospace;font-size:12px;overflow-wrap:anywhere', textContent: `Resposta da Meta: ${e.resposta.slice(0, 300)}` }) : null);
+      if (e.situacao === 'erro' || e.situacao === 'desistiu') linha.append(el('div', { className: 'linha' }, el('button', { className: 'botao leve mini', type: 'button', textContent: 'Reenviar', onclick: async () => { try { await api(`/api/rastreio/capi/eventos/${e.id}/reenviar`, { method: 'POST', body: '{}' }); carregarCapi(); } catch (x) { alert(x.message); } } })));
+      return linha;
+    }) : [el('p', { textContent: 'Nenhum evento enviado ainda.' })]));
+  }
+  $('capi-mais-etapa').addEventListener('click', () => { if (!funisCapi.some((f) => (f.etapas || []).length)) { mostrar($('res-capi'), false, 'Crie antes um funil com etapas no CRM.'); return; } $('capi-etapas').append(linhaEtapa(null)); });
+  function corpoCapi() {
+    const eventos = { etapas: [...document.querySelectorAll('.capi-etapa')].map((l) => ({ etapaId: l.querySelector('.capi-etapa-sel').value, nome: l.querySelector('.capi-etapa-nome').value.trim(), ligado: l.querySelector('.capi-etapa-ligado').checked })).filter((x) => x.etapaId && x.nome) };
+    for (const k of ['lead', 'qualificado', 'agendada', 'compareceu']) eventos[k] = { ligado: $(`capi-ev-${k}-lig`).checked, site: $(`capi-ev-${k}-site`).value.trim(), mensagem: $(`capi-ev-${k}-msg`).value };
+    const c = { ligado: $('capi-ligado').checked, datasetId: $('capi-dataset').value.trim(), testeCodigo: $('capi-teste').value.trim(), wabaId: $('capi-waba').value.trim(), pageId: $('capi-page').value.trim(), valorPadrao: $('capi-valor').value.trim(), versao: $('capi-versao').value.trim(), eventos };
+    if ($('capi-token').value.trim()) c.token = $('capi-token').value.trim();
+    if ($('capi-ads').value.trim()) c.adsToken = $('capi-ads').value.trim();
+    return c;
+  }
+  $('capi-salvar').addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.setAttribute('aria-busy', 'true');
+    try { capi = await api('/api/rastreio/capi', { method: 'PUT', body: JSON.stringify(corpoCapi()) }); desenharCapi(); mostrar($('res-capi'), true, 'Salvo ✓'); }
+    catch (x) { mostrar($('res-capi'), false, x.message); }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+  $('capi-testar').addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.setAttribute('aria-busy', 'true');
+    try {
+      const r = await api('/api/rastreio/capi/teste', { method: 'POST', body: '{}' });
+      mostrar($('res-capi'), r.ok, r.ok ? 'Evento de teste enviado ✓ Confira em Eventos de teste.' : `A Meta recusou: ${r.evento.resposta || ''}`.slice(0, 300));
+      carregarCapi();
+    } catch (x) { mostrar($('res-capi'), false, x.message); }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+
   function cartaoMeta(u, suf, nome) {
     const campo = (rotulo, parte, tipo, dica, extra = {}) => el('label', {}, rotulo, dica ? el('span', { className: 'dica', textContent: dica }) : null,
       el('input', { id: `meta${parte}${suf}`, type: tipo, autocomplete: 'off', ...extra }));
@@ -466,6 +584,7 @@
     document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
     ligarBotoes(document);
     resumo = await api('/api/conexoes'); preencher(); desenharEscolhas();
+    carregarCapi();
     carregarLojas(); carregarMeta();
   })();
 })();

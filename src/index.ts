@@ -47,6 +47,10 @@ import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
 import { ArmazemDemoMemoria, ArmazemDemoPostgres, type ArmazemDemo } from './demo/armazem.js';
 import { Demo } from './demo/demo.js';
 import { registrarDemo } from './demo/rotas.js';
+import { ArmazemRastreioMemoria, ArmazemRastreioPostgres } from './rastreio/armazem.js';
+import { Capi } from './rastreio/capi.js';
+import { Rastreio } from './rastreio/rastreio.js';
+import { configCapiDe, registrarRastreio } from './rastreio/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -217,7 +221,34 @@ const ganchos = ligarFunis({ tags, funis, automacoes });
 // Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
 await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
 
+// Rastreamento de leads (origem: anúncio, link rastreado) e API de Conversões da Meta.
+const armazemRastreio = pool ? new ArmazemRastreioPostgres(pool) : new ArmazemRastreioMemoria();
+const capi = new Capi({
+  armazem: armazemRastreio,
+  config: () => configCapiDe(conexoes),
+  buscarConversa: (id) => repo.buscarConversa(id),
+  wabaDaUnidade: (u) => conexoes.contaMeta(u)?.wabaId,
+  ficha: async (c) => {
+    const k = await armazemContatos.obter(cfg.SINTONIA_EMPRESA_ID, c.telefone);
+    if (!k) return {};
+    const campos = await armazemContatos.campos(cfg.SINTONIA_EMPRESA_ID);
+    const campoValor = campos.find((x) => x.tipo === 'numero' && /valor/i.test(x.nome));
+    const valor = campoValor ? Number(k.campos[campoValor.id]) : NaN;
+    return { email: k.email ?? undefined, ...(Number.isFinite(valor) && valor > 0 ? { valor } : {}) };
+  },
+  log,
+});
+observarEventos(repo, (e) => capi.aoEvento(e));
+const rastreio = new Rastreio({
+  armazem: armazemRastreio,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  capi,
+  graph: () => ({ token: conexoes.get('metaAdsToken') ?? conexoes.get('capiToken'), versao: configCapiDe(conexoes).versao }),
+  log,
+});
+
 const sintonia = new Sintonia({
+  rastreio,
   ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
@@ -274,6 +305,7 @@ const app = criarServidor({
       (lista) => sintonia.statusRecebidos(lista),
     );
   },
+  origens: (ids) => rastreio.selos(ids),
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
   midias,
@@ -287,7 +319,7 @@ const app = criarServidor({
     tagsDaIa: () => tagsDaIa.nomes(),
     simularIa: (p) => simularResposta(agente, cfg.SINTONIA_EMPRESA_ID, { ...p, agora: new Date() }),
   },
-  clienteTeste: async ({ unidade, nome, telefone, texto, midia }) => {
+  clienteTeste: async ({ unidade, nome, telefone, texto, midia, anuncio }) => {
     const canalId = canalTesteDa(unidade);
     const agora = new Date();
     // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
@@ -303,7 +335,9 @@ const app = criarServidor({
       ? { tipo, mimetype: midia.mimetype, nomeArquivo: tipo === 'documento' ? (midia.nomeArquivo ?? 'arquivo') : undefined, duracaoSeg: midia.duracaoSeg, legenda: texto, voz: tipo === 'audio' || undefined, base64: midia.base64 }
       : undefined;
     const conteudo = anexo ? textoDoAnexo(anexo.tipo, texto, anexo.nomeArquivo) : (texto ?? '');
-    await sintonia.receber({ canalId, telefone, nome, texto: conteudo, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora, ...(anexo ? { anexo } : {}) });
+    // Anúncio de teste: chega como um clique em anúncio de clique para WhatsApp.
+    const referencia = anuncio ? { via: 'meta' as const, tipo: 'ad', adId: anuncio.adId, titulo: anuncio.titulo, texto: anuncio.texto, url: anuncio.url, miniaturaUrl: anuncio.miniaturaUrl, ctwaClid: anuncio.ctwaClid ?? `teste-${randomUUID()}`, app: 'instagram' } : undefined;
+    await sintonia.receber({ canalId, telefone, nome, texto: conteudo, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora, ...(anexo ? { anexo } : {}), ...(referencia ? { referencia } : {}) });
   },
   revisar: async (conversaId, rascunho) => {
     const conversa = await repo.buscarConversa(conversaId);
@@ -319,7 +353,7 @@ const app = criarServidor({
 });
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
-registrarFunis(app, { repo, funis, automacoes });
+registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids) });
 // Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
 const extras = montarExtras({
   repo,
@@ -334,6 +368,8 @@ const extras = montarExtras({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
 });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
+// Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
+registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
 
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
 registrarConversa(app, {
@@ -380,6 +416,8 @@ const relogio = setInterval(async () => {
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram
+  await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões
+  await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);

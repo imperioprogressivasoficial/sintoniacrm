@@ -55,6 +55,8 @@ export interface DependenciasServidor {
     telefone: string;
     texto?: string;
     midia?: { base64: string; mimetype: string; nomeArquivo?: string; duracaoSeg?: number };
+    /** Simula a cliente chegando por um anúncio de clique para WhatsApp. */
+    anuncio?: { adId?: string; titulo?: string; texto?: string; url?: string; miniaturaUrl?: string; ctwaClid?: string };
   }) => Promise<void>;
   /** Baixador de mídias recebidas (fotos, áudios...): avisado para tentar de novo. */
   midias?: { avisar(): void };
@@ -63,6 +65,8 @@ export interface DependenciasServidor {
   notificacoes?: OpcoesNotificacoes;
   /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
   leituras?: Leituras;
+  /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
+  origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
 }
 
@@ -190,12 +194,13 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const lista = todas.filter(visivelPara(req));
     const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(lista.map((c) => c.id)) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
     const lidas = d.leituras && req.usuario ? await d.leituras.doUsuario(req.usuario.id) : new Map<string, Date>();
+    const origens = d.origens ? await d.origens(lista.map((c) => c.id)).catch(() => ({}) as Record<string, never>) : undefined;
     return lista
       .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], lidaAte: lidas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 
@@ -379,6 +384,16 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
           mimetype: z.string().regex(/^[\w.+-]+\/[\w.+-]+(\s*;.*)?$/),
           nomeArquivo: z.string().trim().min(1).max(200).optional(),
           duracaoSeg: z.number().min(0).max(4 * 3600).optional(),
+        })
+        .optional(),
+      anuncio: z
+        .object({
+          adId: z.string().regex(/^\d{5,25}$/).optional(),
+          titulo: z.string().trim().max(200).optional(),
+          texto: z.string().trim().max(500).optional(),
+          url: z.string().url().max(500).optional(),
+          miniaturaUrl: z.string().url().max(1000).optional(),
+          ctwaClid: z.string().max(300).optional(),
         })
         .optional(),
     })

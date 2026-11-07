@@ -1,4 +1,5 @@
 import type { TipoAnexo } from '../domain.js';
+import type { ReferenciaAnuncio } from '../rastreio/referencia.js';
 
 /**
  * Conector de canal. O resto do sistema não sabe se o WhatsApp é a Evolution (QR Code)
@@ -17,6 +18,8 @@ export interface MensagemRecebida {
   em: Date;
   /** Mídia que veio junto (o `texto` já traz o marcador para a IA, ex.: "[foto] legenda"). */
   anexo?: AnexoRecebido;
+  /** Anúncio de clique para WhatsApp que trouxe a cliente (referral / externalAdReply). */
+  referencia?: ReferenciaAnuncio;
 }
 
 export interface AnexoRecebido {

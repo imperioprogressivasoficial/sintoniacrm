@@ -450,7 +450,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.quadro = el('div', { class: 'fn-quadro' });
     s.caixa.replaceChildren(
       el('div', { class: 'fn-barra' },
-        el('div', { class: 'fn-linha fn-l1' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.pessoas),
+        el('div', { class: 'fn-linha fn-l1' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), window.SintoniaRastreio ? window.SintoniaRastreio.botaoFiltro(() => desenharQuadro()) : null, s.pessoas),
         el('div', { class: 'fn-linha fn-l2' }, s.barraFunis, s.botaoFunil, s.unidades, s.unidadeSel)),
       s.quadro,
     );
@@ -570,8 +570,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       c.col = col;
       pintar(c.raiz, col.etapa.cor || '#8B8D98');
       c.nome.textContent = col.etapa.nome;
-      const vis = s.dona ? col.cartoes.filter(passaDona) : col.cartoes;
-      c.total.textContent = String(s.dona ? vis.length : col.total);
+      const ra = window.SintoniaRastreio;
+      const vis = col.cartoes.filter((x) => passaDona(x) && (!ra || ra.passa(x.conversaId, x.origem)));
+      c.total.textContent = String(s.dona || vis.length !== col.cartoes.length ? vis.length : col.total);
       c.total.title = s.dona ? `${vis.length} desta dona entre as carregadas` : `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
       const paradasCol = vis.filter(parada).length;
       const aberta = colunasAbertas().includes(col);
@@ -653,7 +654,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const tagEl = (t) => s.ui.el('span', { class: 'fn-tag', style: `--cor:${t.cor}`, title: t.nome }, s.ui.el('i'), s.ui.el('span', { text: t.nome }));
 
   function cartaoEl(cartao, etapaId) {
-    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000)]);
+    const selo = window.SintoniaRastreio?.selo(cartao.conversaId);
+    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000), selo]);
     const cache = s.cartaoEls.get(cartao.conversaId);
     if (cache && cache.assinatura === assinatura) return cache.no;
     const { el, UNIDADE, nomeDe } = s.ui;
@@ -663,8 +665,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir ficha` },
       el('div', { class: 'fn-c0' }, desdeEl(cartao)),
       mais,
-      el('div', { class: 'fn-nome', text: nome }),
-      el('div', { class: 'fn-linha2' }, unidade ? el('span', { text: unidade }) : null, ...(cartao.tags || []).slice(0, 3).map(tagEl)),
+      el('div', { class: 'fn-nome' }, window.SintoniaRastreio ? window.SintoniaRastreio.iconeEl(cartao.origem || cartao.conversaId) : null, nome),
+      el('div', { class: 'fn-linha2' }, unidade ? el('span', { text: unidade }) : null, window.SintoniaRastreio?.seloEl(cartao.conversaId) || null, ...(cartao.tags || []).slice(0, 3).map(tagEl)),
       el('div', { class: 'fn-pe' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')));
     no.addEventListener('click', () => { if (s.semClique) return; abrirFicha(cartao.conversaId); });
     no.addEventListener('keydown', (e) => {
@@ -1222,5 +1224,5 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     await carregarQuadro();
   }
 
-  window.SintoniaTelas.funil = { desenhar, recarregar: () => s.ui && recarregarTudo() };
+  window.SintoniaTelas.funil = { desenhar, recarregar: () => s.ui && recarregarTudo(), redesenhar: () => { if (s.q && s.quadro) desenharQuadro(); } };
 })();
