@@ -2,43 +2,71 @@
 /**
  * Gera o docker-compose da Sintonia para o VPS (Hostinger, Docker + Traefik).
  *
- *   node scripts/gerar-deploy.mjs > /tmp/sintonia-compose.yaml
+ *   node scripts/gerar-deploy.mjs > sintonia-compose.yaml
  *
- * O código vai compactado dentro da própria receita (dockerfile_inline): o servidor monta a
- * imagem sozinho, sem precisar de acesso ao GitHub nem de terminal. Senhas e chaves NÃO entram
- * aqui: vão nas variáveis do projeto (POSTGRES_SENHA, ADMIN_*, ANTHROPIC_API_KEY...).
+ * O código vai dentro da própria receita (dockerfile_inline), em pedaços, com a soma SHA-256
+ * conferida antes de montar: o servidor monta a imagem sem acesso ao GitHub e, se o pacote chegar
+ * diferente, a montagem para (nada é instalado). Senhas e chaves NÃO entram aqui: vão nas variáveis
+ * do projeto (POSTGRES_SENHA, ADMIN_*, ANTHROPIC_API_KEY...).
+ *
+ * Pacote: o servidor em um arquivo só (esbuild, minificado), páginas, migrações, base de conhecimento
+ * e um package.json só com as dependências de execução, nas versões exatas do package-lock.
  *
  * Isolamento: projeto próprio, banco próprio com volume próprio, rede interna própria e nenhuma
  * porta publicada no servidor. O Traefik (rede do host) chega no app pelas etiquetas.
  */
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOMINIO = process.env.DOMINIO ?? 'sintonia.n8nimperio.tech';
-const itens = ['package.json', 'package-lock.json', 'tsconfig.json', 'src', 'public', 'db', 'knowledge'];
+const PEDACO = 6000;
 
-const pacote = execFileSync('tar', ['--sort=name', '--mtime=2026-01-01', '--owner=0', '--group=0', '-czf', '-', ...itens], {
-  cwd: raiz,
-  maxBuffer: 64 * 1024 * 1024,
-}).toString('base64');
+// ---- monta o pacote numa pasta temporária
+const pasta = mkdtempSync(path.join(tmpdir(), 'sintonia-deploy-'));
+try {
+  // O servidor fica em dist/app/ para que os caminhos relativos (../../public etc.) apontem para a raiz.
+  mkdirSync(path.join(pasta, 'dist/app'), { recursive: true });
+  execFileSync(
+    'npx',
+    ['--yes', 'esbuild@0.25.0', 'src/index.ts', '--bundle', '--platform=node', '--format=esm', '--packages=external', '--minify', '--legal-comments=none', `--outfile=${path.join(pasta, 'dist/app/sintonia.mjs')}`, '--log-level=warning'],
+    { cwd: raiz, stdio: ['ignore', 'ignore', 'inherit'] },
+  );
+  for (const p of ['public', 'db', 'knowledge']) cpSync(path.join(raiz, p), path.join(pasta, p), { recursive: true });
+  const pkg = JSON.parse(readFileSync(path.join(raiz, 'package.json'), 'utf8'));
+  const lock = JSON.parse(readFileSync(path.join(raiz, 'package-lock.json'), 'utf8'));
+  const deps = Object.fromEntries(Object.keys(pkg.dependencies).map((n) => [n, lock.packages[`node_modules/${n}`].version]));
+  writeFileSync(path.join(pasta, 'package.json'), JSON.stringify({ name: 'sintonia', private: true, type: 'module', dependencies: deps }));
 
-const dockerfile = [
-  'FROM node:22-alpine',
-  'WORKDIR /app',
-  `RUN echo ${pacote} | base64 -d | tar -xz`,
-  'RUN npm ci --no-audit --no-fund && npm cache clean --force',
-  'ENV NODE_ENV=production PORT=3333',
-  'EXPOSE 3333',
-  'USER node',
-  'HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3333/saude || exit 1',
-  'CMD ["node", "--import", "tsx", "src/index.ts"]',
-];
+  const tar = execFileSync('tar', ['--sort=name', '--mtime=2026-01-01', '--owner=0', '--group=0', '-cf', '-', '.'], { cwd: pasta, maxBuffer: 64 << 20 });
+  const xz = execFileSync('xz', ['-9e', '-c'], { input: tar, maxBuffer: 64 << 20 });
+  const soma = createHash('sha256').update(xz).digest('hex');
+  const b64 = xz.toString('base64');
+  const pedacos = b64.match(new RegExp(`.{1,${PEDACO}}`, 'g'));
 
-const recuo = (txt, n) => txt.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
+  const dockerfile = [
+    'FROM node:22-alpine',
+    'RUN apk add --no-cache xz',
+    'WORKDIR /app',
+    ...pedacos.map((p) => `RUN printf '%s' '${p}' >> /tmp/pacote.b64`),
+    `RUN base64 -d /tmp/pacote.b64 > /tmp/pacote.txz && echo '${soma}  /tmp/pacote.txz' | sha256sum -c - && xz -dc /tmp/pacote.txz | tar -x && rm /tmp/pacote.*`,
+    'RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force',
+    'ENV NODE_ENV=production PORT=3333',
+    'EXPOSE 3333',
+    'USER node',
+    'HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://127.0.0.1:3333/saude || exit 1',
+    'CMD ["node", "dist/app/sintonia.mjs"]',
+  ];
 
-const compose = `# Gerado por scripts/gerar-deploy.mjs. Não edite à mão: gere de novo.
+  const recuo = (txt, n) => txt.split('\n').map((l) => ' '.repeat(n) + l).join('\n');
+  // Dentro do compose, "$" vira "$$" (o compose interpreta variáveis); o Dockerfile não usa "$".
+  if (dockerfile.some((l) => l.includes('$'))) throw new Error('O Dockerfile não pode ter "$"');
+
+  process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
   app:
     build:
@@ -98,6 +126,7 @@ volumes:
 networks:
   interna:
     name: sintonia_interna
-`;
-
-process.stdout.write(compose);
+`);
+} finally {
+  rmSync(pasta, { recursive: true, force: true });
+}
