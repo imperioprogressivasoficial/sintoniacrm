@@ -57,6 +57,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/vendas/mac-conversas-1440.webp': { arquivo: 'vendas/mac-conversas-1440.webp', tipo: 'image/webp' },
   '/vendas/mac-crm-1440.webp': { arquivo: 'vendas/mac-crm-1440.webp', tipo: 'image/webp' },
   '/vendas/mac-dashboard-1440.webp': { arquivo: 'vendas/mac-dashboard-1440.webp', tipo: 'image/webp' },
+  '/vendas/tv-sala-1920.webp': { arquivo: 'vendas/tv-sala-1920.webp', tipo: 'image/webp' },
+  '/vendas/tv-sala-960.webp': { arquivo: 'vendas/tv-sala-960.webp', tipo: 'image/webp' },
   '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
