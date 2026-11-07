@@ -4,7 +4,7 @@ Referência de JEITO (não de cores): imagens em docs/referencias/. Pegamos a es
 (vidro escuro, números grandes, pílulas, cartões cheios de cor, curvas com brilho) e pintamos com a marca.
 
 ## Cores
-- Marca: azul #0593C6 (claro #23ABDD, escuro #04709A), menta #D83995 (destaque principal, no lugar do amarelo-limão da referência), azul-noite #04172B / #071D33 / #0B2A47, tinta #08243F.
+- Marca: azul #106EBE (claro #1A8BE0, escuro #0A4C86), menta #0FFCBE (destaque principal, no lugar do amarelo-limão da referência), azul-noite #04172B / #071D33 / #0B2A47, tinta #08243F.
 - Acentos de apoio (só para etapas/gráficos, nunca para botões de marca): céu #7CC4FF, lavanda-azulada #9DB8FF, turquesa #19C3A6, âmbar #F5B800 (raio ⚡ e avisos), coral #FF7A59 (perdido/atraso).
 - Botão principal: menta com texto azul-noite e brilho menta. Secundário: vidro com borda.
 - Claro e escuro: o escuro é o "palco" (como a referência); o claro usa o mesmo desenho com vidro branco sobre a aurora clara. Tokens em public/ds.css (--vidro-fundo, --vidro-forte, --vidro-borda, --vidro-item, --vidro-ativo, --vidro-brilho, --aurora).

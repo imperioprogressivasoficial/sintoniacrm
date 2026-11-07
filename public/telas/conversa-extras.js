@@ -32,11 +32,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CSS = `
   /* ---------- bolinha IA no topo ---------- */
   .pilula-topo .ia-topo { position: relative; width: 34px; height: 34px; margin: 0 4px; border-radius: 50%; color: #fff; font-size: 12.5px; font-weight: 800; letter-spacing: .02em;
-    background: var(--marca-gradiente); box-shadow: 0 0 0 1.5px rgba(216, 57, 149,.55), 0 0 14px rgba(216, 57, 149,.55); display: grid; place-items: center; font-family: var(--fonte); }
-  .pilula-topo .ia-topo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(216, 57, 149,.0); animation: iaPulso 2.8s ease-out infinite; pointer-events: none; }
+    background: var(--marca-gradiente); box-shadow: 0 0 0 1.5px rgba(15,252,190,.55), 0 0 14px rgba(15,252,190,.55); display: grid; place-items: center; font-family: var(--fonte); }
+  .pilula-topo .ia-topo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(15,252,190,.0); animation: iaPulso 2.8s ease-out infinite; pointer-events: none; }
   .pilula-topo .ia-topo:hover { background: var(--marca-gradiente); filter: brightness(1.08); }
   .pilula-topo .ia-topo[aria-busy="true"]::after { animation-duration: 1s; }
-  @keyframes iaPulso { 0% { box-shadow: 0 0 0 0 rgba(216, 57, 149,.55); } 70% { box-shadow: 0 0 0 7px rgba(216, 57, 149,0); } 100% { box-shadow: 0 0 0 0 rgba(216, 57, 149,0); } }
+  @keyframes iaPulso { 0% { box-shadow: 0 0 0 0 rgba(15,252,190,.55); } 70% { box-shadow: 0 0 0 7px rgba(15,252,190,0); } 100% { box-shadow: 0 0 0 0 rgba(15,252,190,0); } }
   @media (prefers-reduced-motion: reduce) { .pilula-topo .ia-topo::after { animation: none; } }
   @media (max-width: 760px) { .pilula-topo .icone { width: 38px; } .pilula-topo .ia-topo { width: 32px; height: 32px; margin: 0 3px; } }
 
@@ -45,7 +45,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   dialog.cx-folha .folha-lista button { min-height: 30px; }
   .cx-op i { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; color: #fff; background: var(--marca-gradiente); }
   .cx-op i svg { width: 21px; height: 21px; }
-  .cx-op.ia i { background: linear-gradient(135deg, #D83995 0%, #23ABDD 100%); color: #ffffff; box-shadow: 0 0 12px rgba(216, 57, 149,.35); }
+  .cx-op.ia i { background: linear-gradient(135deg, #0ffcbe 0%, #1a8be0 100%); color: #06263f; box-shadow: 0 0 12px rgba(15,252,190,.35); }
   .cx-op small, .cx-sub { color: var(--sub); font-size: 13px; line-height: 17px; }
   .cx-op b { font-size: 15.5px; font-weight: 700; }
   .cx-op[aria-disabled="true"] { opacity: .55; }
@@ -119,7 +119,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .audio-extras button svg { width: 15px; height: 15px; }
   .audio-extras .vel { min-width: 26px; justify-content: center; font-variant-numeric: tabular-nums; }
   .audio-extras .vel[data-v="1"] { opacity: .85; }
-  .audio-extras .vel:not([data-v="1"]) { background: var(--marca-menta); color: #ffffff; }
+  .audio-extras .vel:not([data-v="1"]) { background: var(--marca-menta); color: #06263f; }
   .audio-extras button[aria-busy="true"] { opacity: .7; pointer-events: none; }
   .transcricao { margin: 6px 2px 0 4px; padding: 8px 10px; border-radius: 10px; font-size: 13.8px; line-height: 19px; white-space: pre-wrap; color: var(--texto); background: color-mix(in srgb, var(--texto) 6%, transparent); max-width: min(300px, calc(100vw - 110px)); }
   .transcricao::before { content: "Transcrição"; display: block; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--sub); margin-bottom: 2px; }
@@ -129,7 +129,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .bal.aud .transcricao { margin-bottom: 14px; }
 
   /* ---------- balão de texto: Ouvir / Copiar ---------- */
-  .bal.lendo { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 16px rgba(216, 57, 149,.45); }
+  .bal.lendo { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 16px rgba(15,252,190,.45); }
   .bal-acoes { position: fixed; z-index: 40; display: flex; gap: 4px; padding: 5px; border-radius: 999px; background: var(--vidro-forte, var(--fundo)); border: 1px solid var(--vidro-borda, var(--linha));
     box-shadow: var(--vidro-brilho, none), 0 12px 34px rgba(4,18,31,.28); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
   .bal-acoes button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 16px; border-radius: 999px; font-weight: 700; font-size: 14.5px; color: var(--texto); }
