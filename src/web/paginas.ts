@@ -62,6 +62,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/automacoes.js': { arquivo: 'telas/automacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/relatorios.js': { arquivo: 'telas/relatorios.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/leads.js': { arquivo: 'telas/leads.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/transmissoes.js': { arquivo: 'telas/transmissoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agenda.js': { arquivo: 'telas/agenda.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/notificacoes.js': { arquivo: 'telas/notificacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/rastreio.js': { arquivo: 'telas/rastreio.js', tipo: 'text/javascript; charset=utf-8' },

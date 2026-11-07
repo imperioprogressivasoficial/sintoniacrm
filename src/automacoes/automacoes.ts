@@ -471,6 +471,8 @@ export interface OpcoesAutomacoes {
   contas?: Contas;
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
+  /** Transmissões (disparo em massa): passo "enviar_transmissao". Pode ser preenchida depois. */
+  transmissoes?: () => { adicionarConversa(transmissaoId: string, c: Conversa, origem: string): Promise<{ entrou: boolean; motivo?: string }> } | undefined;
   /** Quantas automações podem disparar em cadeia (uma disparando a outra). Padrão 3. */
   maxEncadeamento?: number;
 }
@@ -975,6 +977,18 @@ export class Automacoes {
           dados: { quando: quando.toISOString(), texto, automacaoId: a.id, automacaoNome: a.nome, teste: e.teste },
         });
         this.anotar(e, p.tipo, true, `Lembrete de ligação para ${dataISO(quando)} ${horaHHmm(quando)}.`);
+        return { seguir: true };
+      }
+      case 'enviar_transmissao': {
+        const t = this.o.transmissoes?.();
+        if (!t) return { parar: 'erro', motivo: 'As transmissões não estão ligadas neste servidor.' };
+        if (e.teste) {
+          this.anotar(e, p.tipo, true, 'Entraria na transmissão (no teste não entra).');
+          return { seguir: true };
+        }
+        const r = await t.adicionarConversa(p.transmissaoId, c, `automação: ${a.nome}`);
+        await evento('transmissao', { transmissaoId: p.transmissaoId, entrou: r.entrou });
+        this.anotar(e, p.tipo, r.entrou, r.entrou ? 'Entrou na fila da transmissão.' : `Não entrou na transmissão: ${r.motivo}`);
         return { seguir: true };
       }
       case 'condicao': {

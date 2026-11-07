@@ -360,14 +360,20 @@ export class CanalMeta implements CanalWhatsApp {
     return this.mensagem(phoneNumberId, { to: telefone, type: 'text', text: { body: texto, preview_url: /https?:\/\//.test(texto) } }, 'o envio');
   }
 
-  /** Sobe o arquivo em /media e manda a mensagem com o id dele. */
-  async enviarMidia(phoneNumberId: string, telefone: string, m: MidiaEnvio): Promise<EnvioResultado> {
+  /** Sobe o arquivo em /media e devolve o id (vale ~30 dias). */
+  async subirMidia(phoneNumberId: string, conteudo: Buffer, mimetype: string, nomeArquivo?: string): Promise<string> {
     const form = new FormData();
     form.append('messaging_product', 'whatsapp');
-    form.append('type', m.mimetype);
-    form.append('file', new Blob([new Uint8Array(m.conteudo)], { type: m.mimetype }), m.nomeArquivo ?? `arquivo.${m.mimetype.split('/')[1]?.split(';')[0] ?? 'bin'}`);
+    form.append('type', mimetype);
+    form.append('file', new Blob([new Uint8Array(conteudo)], { type: mimetype }), nomeArquivo ?? `arquivo.${mimetype.split('/')[1]?.split(';')[0] ?? 'bin'}`);
     const up = await this.graph.postForm<{ id?: string }>(`${encodeURIComponent(phoneNumberId)}/media`, form, 'o arquivo');
     if (!up.id) throw new ErroMeta('Meta não devolveu o id do arquivo enviado', 502);
+    return up.id;
+  }
+
+  /** Sobe o arquivo em /media e manda a mensagem com o id dele. */
+  async enviarMidia(phoneNumberId: string, telefone: string, m: MidiaEnvio): Promise<EnvioResultado> {
+    const up = { id: await this.subirMidia(phoneNumberId, m.conteudo, m.mimetype, m.nomeArquivo) };
     const tipo = m.tipo === 'imagem' ? 'image' : m.tipo === 'video' ? 'video' : m.tipo === 'audio' ? 'audio' : 'document';
     const midia: Record<string, unknown> = { id: up.id };
     if (tipo !== 'audio' && m.legenda?.trim()) midia.caption = m.legenda.trim();
@@ -377,7 +383,10 @@ export class CanalMeta implements CanalWhatsApp {
 
   async enviarModelo(phoneNumberId: string, telefone: string, m: ModeloEnvio): Promise<EnvioResultado> {
     const template: Record<string, unknown> = { name: m.nome, language: { code: m.idioma } };
-    if (m.parametros?.length) template.components = [{ type: 'body', parameters: m.parametros.map((text) => ({ type: 'text', text })) }];
+    const componentes: unknown[] = [];
+    if (m.cabecalhoImagemId) componentes.push({ type: 'header', parameters: [{ type: 'image', image: { id: m.cabecalhoImagemId } }] });
+    if (m.parametros?.length) componentes.push({ type: 'body', parameters: m.parametros.map((text) => ({ type: 'text', text })) });
+    if (componentes.length) template.components = componentes;
     return this.mensagem(phoneNumberId, { to: telefone, type: 'template', template }, 'o modelo');
   }
 

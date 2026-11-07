@@ -484,6 +484,20 @@ export class Sintonia {
     return id;
   }
 
+  /**
+   * Transmissão (src/transmissoes), já sob a trava da conversa: envia pelo canal da conversa (marcando o id como nosso,
+   * para o eco não parecer a atendente), grava como mensagem automática e marca a conversa como respondida.
+   * `modelo` = modelo aprovado da API oficial (passa fora da janela de 24 h). Quem chama grava a conversa.
+   */
+  async enviarTransmissao(c: Conversa, texto: string, envio: (n: NumeroConectado) => Promise<EnvioResultado>, autorNome: string, modelo: boolean): Promise<string> {
+    const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
+    const id = await this.enviarCom(c, texto, envio, { modelo });
+    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', autorNome, texto, em: agora, idExterno: id });
+    c.ultimaMensagemIa = agora;
+    c.atualizadaEm = agora;
+    return id;
+  }
+
   /** Troca a dona já sob a trava (automação). Quem chama grava a conversa. */
   async trocarDonaSobTrava(c: Conversa, para: { id: string; nome: string } | null, por: { id?: string; nome: string }, motivo: string): Promise<void> {
     if ((c.responsavelId ?? null) === (para?.id ?? null)) return;

@@ -77,6 +77,8 @@ export interface ModeloEnvio {
   idioma: string;
   /** Valores das variáveis {{1}}, {{2}}... do corpo, em ordem. */
   parametros?: string[];
+  /** Cabeçalho de imagem do modelo: id da mídia já enviada em /media (transmissões). */
+  cabecalhoImagemId?: string;
 }
 
 export interface ModeloAprovado {
