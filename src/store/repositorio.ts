@@ -31,6 +31,12 @@ export type TipoEvento =
   /** Tag marcada/desmarcada numa conversa (dados: tagId, nome, por). */
   | 'tag_marcada'
   | 'tag_desmarcada'
+  /** Cartão mudou de etapa num funil (dados: funilId, de, para, por, porId, automatico). */
+  | 'etapa_movida'
+  /** Uma automação agiu numa conversa (dados: automacaoId, execucaoId, acao, ...). */
+  | 'automacao'
+  /** Lembrete de ligação criado por automação (dados: quando, texto, automacaoId): aparece em "Ligar hoje". */
+  | 'lembrete_ligacao'
   | 'falha';
 
 export interface Evento {

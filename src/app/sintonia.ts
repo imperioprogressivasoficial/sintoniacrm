@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Anexo, Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
+import type { Anexo, Conversa, Etapa, ModoAtendimento, UnidadeId } from '../domain.js';
 import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio } from '../channels/tipos.js';
 import { LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
@@ -45,6 +45,24 @@ export interface DependenciasSintonia {
   /** Baixador de mídias: avisado quando chega foto/áudio/vídeo/documento para baixar (sem esperar o relógio). */
   midias?: { avisar(): void };
   log?: (msg: string, extra?: unknown) => void;
+  /** Funis e automações (src/funis, src/automacoes). Ausente = nada muda no atendimento. */
+  ganchos?: GanchosSintonia;
+}
+
+/**
+ * Ganchos para os funis por tags e as automações. São chamados SOB a trava da conversa (a conversa
+ * pode ainda não estar gravada): quem implementa não pode esperar pela trava dela, só registrar e
+ * agendar o trabalho para depois. Uma falha aqui é registrada e nunca derruba o atendimento.
+ */
+export interface GanchosSintonia {
+  /** O motor ou a IA mudou `conversa.etapa` (a tag do funil do sistema acompanha). */
+  etapaMudou?(c: Conversa, de: Etapa, para: Etapa, por: 'IA' | 'Sintonia'): Promise<void>;
+  /** Mensagem nova da cliente (já gravada). `primeira` = a primeira mensagem dela nesta conversa. */
+  mensagemCliente?(c: Conversa, m: { texto: string; idExterno: string; primeira: boolean }): Promise<void>;
+  /** Alguém da equipe respondeu (pelo CRM ou pelo celular da loja). */
+  equipeRespondeu?(c: Conversa): Promise<void>;
+  /** Objetivo do "fluxo de IA" em vigor para a conversa: vai como instrução extra para a IA. */
+  objetivoIa?(c: Conversa): Promise<string | undefined>;
 }
 
 const FOLLOWUPS: Tarefa['tipo'][] = ['followup_1h', 'followup_1d', 'followup_3d'];
@@ -142,6 +160,7 @@ export class Sintonia {
         await this.d.repo.cancelarTarefas(conversa.id, ['reavaliar', ...FOLLOWUPS]);
         await this.programarFollowups(conversa, agora);
         await this.evento('equipe_respondeu', conversa);
+        await this.gancho('equipeRespondeu', () => this.d.ganchos?.equipeRespondeu?.(conversa));
         return false;
       }
 
@@ -157,12 +176,14 @@ export class Sintonia {
       }
 
       if (criada.nova) await this.evento('conversa_nova', conversa);
+      const primeira = !conversa.ultimaMensagemCliente;
       conversa.ultimaMensagemCliente = vistaEm(msg.em, agora, conversa);
       conversa.atualizadaEm = agora;
       await this.moverFunil(conversa, { tipo: 'mensagem_cliente' });
       await this.d.repo.salvarConversa(conversa);
       await this.d.repo.cancelarTarefas(conversa.id, FOLLOWUPS);
       await this.evento('mensagem_cliente', conversa);
+      await this.gancho('mensagemCliente', () => this.d.ganchos?.mensagemCliente?.(conversa, { texto: msg.texto, idExterno: msg.idExterno, primeira }));
       return true;
     });
     if (baixar) this.d.midias?.avisar();
@@ -278,6 +299,7 @@ export class Sintonia {
     await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
     await this.programarFollowups(c, agora);
     await this.evento('equipe_respondeu', c, { atendente, atendenteId: quem?.id, tempoRespostaMs: espera });
+    await this.gancho('equipeRespondeu', () => this.d.ganchos?.equipeRespondeu?.(c));
   }
 
   /** Nome da cliente editado na ficha: vale para a lista, a busca e o que a IA vê. */
@@ -349,6 +371,61 @@ export class Sintonia {
       porNome: por.nome,
       motivo,
     });
+  }
+
+  // ---------- para os funis e as automações ----------
+
+  /** Roda `fn` com a conversa mais nova, sob a trava dela (undefined se não existe). Não chame de dentro de outra trava da mesma conversa. */
+  comConversa<T>(conversaId: string, fn: (c: Conversa) => Promise<T>): Promise<T | undefined> {
+    return this.mutar(conversaId, fn);
+  }
+
+  /** "Quem responde?" de novo para a conversa (ex.: uma automação ligou a IA). Fora da trava. */
+  async reavaliar(conversaId: string): Promise<void> {
+    await this.processar(conversaId);
+  }
+
+  /** Tipo do canal da conversa (a API oficial da Meta não aceita mensagem ativa fora da janela de 24 h). */
+  canalDa(c: Conversa): CanalWhatsApp['tipo'] {
+    return this.numeroDa(c).canal.tipo;
+  }
+
+  /**
+   * Mensagem automática (automação), já sob a trava da conversa: envia, grava como da IA (com `autorNome`)
+   * e marca a conversa como respondida. Quem chama grava a conversa.
+   */
+  async enviarAutomatico(c: Conversa, texto: string, autorNome: string): Promise<string> {
+    // Nunca antes da última mensagem da cliente: a resposta automática conta como resposta a ela.
+    const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
+    const id = await this.enviar(c, texto);
+    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', autorNome, texto, em: agora, idExterno: id });
+    c.ultimaMensagemIa = agora;
+    c.atualizadaEm = agora;
+    return id;
+  }
+
+  /** Troca a dona já sob a trava (automação). Quem chama grava a conversa. */
+  async trocarDonaSobTrava(c: Conversa, para: { id: string; nome: string } | null, por: { id?: string; nome: string }, motivo: string): Promise<void> {
+    if ((c.responsavelId ?? null) === (para?.id ?? null)) return;
+    await this.trocarDona(c, para, por, motivo);
+  }
+
+  private async gancho(nome: string, fn: () => Promise<unknown> | undefined): Promise<void> {
+    try {
+      await fn();
+    } catch (e) {
+      this.log(`Falha no gancho ${nome}`, String(e));
+    }
+  }
+
+  private async objetivoDe(c: Conversa): Promise<string | undefined> {
+    if (!this.d.ganchos?.objetivoIa) return undefined;
+    try {
+      return await this.d.ganchos.objetivoIa(c);
+    } catch (e) {
+      this.log('Falha ao ler o objetivo da IA', String(e));
+      return undefined;
+    }
   }
 
   // ---------- relógio: reavaliações, lembretes e follow-ups ----------
@@ -439,7 +516,7 @@ export class Sintonia {
       const marco = c.ultimaMensagemCliente?.getTime();
       const mensagens = await this.d.repo.mensagens(c.id);
       const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
-      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo, tagsDisponiveis: await this.tagsParaIa() });
+      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo, tagsDisponiveis: await this.tagsParaIa(), objetivo: await this.objetivoDe(c) });
 
       // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
       const depois = await this.d.repo.buscarConversa(c.id);
@@ -490,7 +567,15 @@ export class Sintonia {
       }
     }
     const mensagens = await this.d.repo.mensagens(c.id);
-    const r = await this.d.agente.executar({ conversa: c, mensagens, agora: this.agora(), modo: 'responder', tipoAtivo: t.tipo, tagsDisponiveis: await this.tagsParaIa() });
+    const r = await this.d.agente.executar({
+      conversa: c,
+      mensagens,
+      agora: this.agora(),
+      modo: 'responder',
+      tipoAtivo: t.tipo,
+      tagsDisponiveis: await this.tagsParaIa(),
+      objetivo: await this.objetivoDe(c),
+    });
     const enviadoEm = this.agora();
     const id = await this.enviar(c, r.texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
@@ -563,6 +648,7 @@ export class Sintonia {
     const de = c.etapa;
     c.etapa = nova;
     await this.evento('etapa_mudou', c, { de, para: nova, motivo: motivo ?? ev.tipo });
+    await this.gancho('etapaMudou', () => this.d.ganchos?.etapaMudou?.(c, de, nova, ev.tipo === 'ia_classificou' ? 'IA' : 'Sintonia'));
   }
 
   private async programarFollowups(c: Conversa, desde: Date): Promise<void> {

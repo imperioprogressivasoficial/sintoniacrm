@@ -34,6 +34,18 @@ export interface Tag {
   ordem: number;
   criadaPor: string | null;
   criadaEm: Date;
+  /** Funil de que esta tag é etapa (coluna). null = tag solta. */
+  funilId: string | null;
+  /** Etapa fixa que esta tag espelha (só no funil do sistema "Atendimento"). */
+  chaveSistema: string | null;
+}
+
+/** Marcação de uma etapa de funil numa conversa: desde quando ela está ali. */
+export interface MarcacaoEtapa {
+  conversaId: string;
+  tagId: string;
+  funilId: string;
+  desde: Date;
 }
 
 /** Erro de regra (nome repetido, cor fora da paleta...): vira 400/404/409 na API. */
@@ -63,11 +75,27 @@ export interface ArmazemTags {
   marcacoes(empresaId: string, conversaIds?: string[]): Promise<Map<string, string[]>>;
   /** Quantas conversas dentro do escopo têm cada tag. */
   contar(empresaId: string, escopo: EscopoVisao): Promise<Map<string, number>>;
+
+  // ---------- etapas de funil (tags exclusivas dentro do funil) ----------
+  /**
+   * Põe a conversa na etapa `tagId` do funil `funilId`, tirando da etapa anterior do mesmo funil
+   * numa operação só. `de` = etapa anterior (null se estava fora do funil).
+   */
+  marcarEtapa(conversaId: string, tagId: string, funilId: string, por: string, em: Date): Promise<{ de: string | null; mudou: boolean }>;
+  /** Tira a conversa do funil. Devolve a etapa em que estava (null se não estava). */
+  tirarDoFunil(conversaId: string, funilId: string): Promise<string | null>;
+  /** Etapas em que a conversa está (uma por funil). */
+  etapasDaConversa(conversaId: string): Promise<MarcacaoEtapa[]>;
+  /** Todas as marcações de um funil (memória e conferências; o quadro do Postgres usa SQL próprio). */
+  etapasDoFunil(funilId: string): Promise<MarcacaoEtapa[]>;
+  /** Passa todas as conversas de uma etapa para outra do mesmo funil. Devolve quantas. */
+  moverTodas(deTagId: string, paraTagId: string, por: string, em: Date): Promise<number>;
 }
 
 export class ArmazemTagsMemoria implements ArmazemTags {
   private readonly tags = new Map<string, Tag>();
-  private readonly marcadas = new Map<string, Set<string>>(); // conversaId → tagIds
+  /** conversaId → tagId → quando marcou. */
+  private readonly marcadas = new Map<string, Map<string, Date>>();
 
   /** Precisa das conversas para contar dentro do escopo. */
   constructor(private readonly conversas: () => Promise<Conversa[]>) {}
@@ -79,17 +107,22 @@ export class ArmazemTagsMemoria implements ArmazemTags {
     const t = this.tags.get(id);
     return t ? { ...t } : undefined;
   }
-  private repetida(empresaId: string, nome: string, exceto?: string) {
-    return [...this.tags.values()].some((t) => t.empresaId === empresaId && t.id !== exceto && t.nome.toLowerCase() === nome.toLowerCase());
+  /** Nome repetido entre as soltas ou dentro do mesmo funil. */
+  private repetida(empresaId: string, funilId: string | null, nome: string, exceto?: string) {
+    return [...this.tags.values()].some(
+      (t) => t.empresaId === empresaId && (t.funilId ?? null) === (funilId ?? null) && t.id !== exceto && t.nome.toLowerCase() === nome.toLowerCase(),
+    );
   }
   async criar(t: Tag) {
-    if (this.repetida(t.empresaId, t.nome)) throw new ErroTag(`Já existe a tag "${t.nome}".`, 409);
-    this.tags.set(t.id, { ...t });
+    if (this.repetida(t.empresaId, t.funilId, t.nome)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
+    this.tags.set(t.id, { ...t, funilId: t.funilId ?? null, chaveSistema: t.chaveSistema ?? null });
   }
   async atualizar(id: string, campos: Partial<Pick<Tag, 'nome' | 'cor' | 'ordem'>>) {
     const t = this.tags.get(id);
     if (!t) return;
-    if (campos.nome !== undefined && this.repetida(t.empresaId, campos.nome, id)) throw new ErroTag(`Já existe a tag "${campos.nome}".`, 409);
+    if (campos.nome !== undefined && this.repetida(t.empresaId, t.funilId, campos.nome, id)) {
+      throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${campos.nome}".`, 409);
+    }
     this.tags.set(id, { ...t, ...Object.fromEntries(Object.entries(campos).filter(([, v]) => v !== undefined)) });
   }
   async apagar(id: string) {
@@ -98,10 +131,10 @@ export class ArmazemTagsMemoria implements ArmazemTags {
     for (const s of this.marcadas.values()) if (s.delete(id)) n++;
     return n;
   }
-  async marcar(conversaId: string, tagId: string) {
-    const s = this.marcadas.get(conversaId) ?? new Set();
+  async marcar(conversaId: string, tagId: string, _por?: string, em: Date = new Date()) {
+    const s = this.marcadas.get(conversaId) ?? new Map<string, Date>();
     if (s.has(tagId)) return false;
-    s.add(tagId);
+    s.set(tagId, em);
     this.marcadas.set(conversaId, s);
     return true;
   }
@@ -114,7 +147,7 @@ export class ArmazemTagsMemoria implements ArmazemTags {
     const r = new Map<string, string[]>();
     for (const [c, s] of this.marcadas) {
       if (filtro && !filtro.has(c)) continue;
-      const ids = [...s].filter((x) => daEmpresa.has(x));
+      const ids = [...s.keys()].filter((x) => daEmpresa.has(x));
       if (ids.length) r.set(c, ids);
     }
     return r;
@@ -128,6 +161,48 @@ export class ArmazemTagsMemoria implements ArmazemTags {
     }
     return r;
   }
+  private etapaNoFunil(conversaId: string, funilId: string): string | null {
+    for (const id of this.marcadas.get(conversaId)?.keys() ?? []) if (this.tags.get(id)?.funilId === funilId) return id;
+    return null;
+  }
+  async marcarEtapa(conversaId: string, tagId: string, funilId: string, _por: string, em: Date) {
+    const de = this.etapaNoFunil(conversaId, funilId);
+    if (de === tagId) return { de, mudou: false };
+    const s = this.marcadas.get(conversaId) ?? new Map<string, Date>();
+    if (de) s.delete(de);
+    s.set(tagId, em);
+    this.marcadas.set(conversaId, s);
+    return { de, mudou: true };
+  }
+  async tirarDoFunil(conversaId: string, funilId: string) {
+    const de = this.etapaNoFunil(conversaId, funilId);
+    if (de) this.marcadas.get(conversaId)!.delete(de);
+    return de;
+  }
+  async etapasDaConversa(conversaId: string) {
+    const r: MarcacaoEtapa[] = [];
+    for (const [tagId, desde] of this.marcadas.get(conversaId) ?? []) {
+      const funilId = this.tags.get(tagId)?.funilId;
+      if (funilId) r.push({ conversaId, tagId, funilId, desde });
+    }
+    return r;
+  }
+  async etapasDoFunil(funilId: string) {
+    const r: MarcacaoEtapa[] = [];
+    for (const [conversaId, s] of this.marcadas) {
+      for (const [tagId, desde] of s) if (this.tags.get(tagId)?.funilId === funilId) r.push({ conversaId, tagId, funilId, desde });
+    }
+    return r;
+  }
+  async moverTodas(deTagId: string, paraTagId: string, _por: string, em: Date) {
+    let n = 0;
+    for (const s of this.marcadas.values()) {
+      if (!s.delete(deTagId)) continue;
+      n++;
+      if (!s.has(paraTagId)) s.set(paraTagId, em);
+    }
+    return n;
+  }
 }
 
 interface LinhaTag {
@@ -138,7 +213,10 @@ interface LinhaTag {
   ordem: number;
   criada_por: string | null;
   criada_em: Date;
+  funil_id: string | null;
+  chave_sistema: string | null;
 }
+const COLUNAS_TAG = 'id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema';
 const paraTag = (l: LinhaTag): Tag => ({
   id: l.id,
   empresaId: l.empresa_id,
@@ -147,6 +225,8 @@ const paraTag = (l: LinhaTag): Tag => ({
   ordem: l.ordem,
   criadaPor: l.criada_por,
   criadaEm: l.criada_em,
+  funilId: l.funil_id,
+  chaveSistema: l.chave_sistema,
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const nomeRepetido = (e: unknown) => (e as { code?: string }).code === '23505';
@@ -156,7 +236,7 @@ export class ArmazemTagsPostgres implements ArmazemTags {
 
   async listar(empresaId: string) {
     const { rows } = await this.pool.query<LinhaTag>(
-      'select id, empresa_id, nome, cor, ordem, criada_por, criada_em from sintonia.tags where empresa_id = $1',
+      `select ${COLUNAS_TAG} from sintonia.tags where empresa_id = $1`,
       [empresaId],
     );
     return rows.map(paraTag);
@@ -164,7 +244,7 @@ export class ArmazemTagsPostgres implements ArmazemTags {
   async buscar(id: string) {
     if (!UUID.test(id)) return undefined;
     const { rows } = await this.pool.query<LinhaTag>(
-      'select id, empresa_id, nome, cor, ordem, criada_por, criada_em from sintonia.tags where id = $1',
+      `select ${COLUNAS_TAG} from sintonia.tags where id = $1`,
       [id],
     );
     return rows[0] ? paraTag(rows[0]) : undefined;
@@ -172,11 +252,12 @@ export class ArmazemTagsPostgres implements ArmazemTags {
   async criar(t: Tag) {
     try {
       await this.pool.query(
-        'insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em) values ($1, $2, $3, $4, $5, $6, $7)',
-        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm],
+        `insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm, t.funilId ?? null, t.chaveSistema ?? null],
       );
     } catch (e) {
-      if (nomeRepetido(e)) throw new ErroTag(`Já existe a tag "${t.nome}".`, 409);
+      if (nomeRepetido(e)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
       throw e;
     }
   }
@@ -208,7 +289,8 @@ export class ArmazemTagsPostgres implements ArmazemTags {
   }
   async marcar(conversaId: string, tagId: string, por: string, em: Date) {
     const r = await this.pool.query(
-      `insert into sintonia.conversa_tags (conversa_id, tag_id, marcada_por, marcada_em) values ($1, $2, $3, $4)
+      `insert into sintonia.conversa_tags (conversa_id, tag_id, marcada_por, marcada_em, funil_id)
+       select $1, $2, $3, $4, (select funil_id from sintonia.tags where id = $2)
        on conflict do nothing`,
       [conversaId, tagId, por, em],
     );
@@ -242,11 +324,79 @@ export class ArmazemTagsPostgres implements ArmazemTags {
     );
     return new Map(rows.map((r) => [r.tag_id, r.n]));
   }
+  async marcarEtapa(conversaId: string, tagId: string, funilId: string, por: string, em: Date) {
+    // Trava curta por conversa+funil dentro da transação: duas mudanças ao mesmo tempo nunca deixam duas etapas.
+    const cliente = await this.pool.connect();
+    try {
+      await cliente.query('begin');
+      await cliente.query(`select pg_advisory_xact_lock(hashtextextended($1, 0))`, [`funil:${conversaId}:${funilId}`]);
+      const { rows } = await cliente.query<{ tag_id: string }>(
+        'select tag_id::text from sintonia.conversa_tags where conversa_id = $1 and funil_id = $2',
+        [conversaId, funilId],
+      );
+      const de = rows[0]?.tag_id ?? null;
+      if (de === tagId) {
+        await cliente.query('commit');
+        return { de, mudou: false };
+      }
+      if (de) await cliente.query('delete from sintonia.conversa_tags where conversa_id = $1 and funil_id = $2', [conversaId, funilId]);
+      await cliente.query(
+        'insert into sintonia.conversa_tags (conversa_id, tag_id, funil_id, marcada_por, marcada_em) values ($1, $2, $3, $4, $5)',
+        [conversaId, tagId, funilId, por, em],
+      );
+      await cliente.query('commit');
+      return { de, mudou: true };
+    } catch (e) {
+      await cliente.query('rollback').catch(() => {});
+      throw e;
+    } finally {
+      cliente.release();
+    }
+  }
+  async tirarDoFunil(conversaId: string, funilId: string) {
+    const { rows } = await this.pool.query<{ tag_id: string }>(
+      'delete from sintonia.conversa_tags where conversa_id = $1 and funil_id = $2 returning tag_id::text',
+      [conversaId, funilId],
+    );
+    return rows[0]?.tag_id ?? null;
+  }
+  async etapasDaConversa(conversaId: string) {
+    if (!UUID.test(conversaId)) return [];
+    const { rows } = await this.pool.query<{ tag_id: string; funil_id: string; marcada_em: Date }>(
+      'select tag_id::text, funil_id::text, marcada_em from sintonia.conversa_tags where conversa_id = $1 and funil_id is not null',
+      [conversaId],
+    );
+    return rows.map((r) => ({ conversaId, tagId: r.tag_id, funilId: r.funil_id, desde: r.marcada_em }));
+  }
+  async etapasDoFunil(funilId: string) {
+    const { rows } = await this.pool.query<{ conversa_id: string; tag_id: string; marcada_em: Date }>(
+      'select conversa_id::text, tag_id::text, marcada_em from sintonia.conversa_tags where funil_id = $1',
+      [funilId],
+    );
+    return rows.map((r) => ({ conversaId: r.conversa_id, tagId: r.tag_id, funilId, desde: r.marcada_em }));
+  }
+  async moverTodas(deTagId: string, paraTagId: string, por: string, em: Date) {
+    const r = await this.pool.query(
+      `update sintonia.conversa_tags set tag_id = $2, marcada_por = $3, marcada_em = $4
+        where tag_id = $1`,
+      [deTagId, paraTagId, por, em],
+    );
+    return r.rowCount ?? 0;
+  }
 }
 
-/** Tag como aparece na conversa (para a tela). */
-export type TagResumo = Pick<Tag, 'id' | 'nome' | 'cor'>;
-const resumo = (t: Tag): TagResumo => ({ id: t.id, nome: t.nome, cor: t.cor });
+/** Tag como aparece na conversa (para a tela). Etapa de funil da empresa vem com `funilId`. */
+export type TagResumo = Pick<Tag, 'id' | 'nome' | 'cor'> & { funilId?: string };
+const resumo = (t: Tag): TagResumo => (t.funilId ? { id: t.id, nome: t.nome, cor: t.cor, funilId: t.funilId } : { id: t.id, nome: t.nome, cor: t.cor });
+
+/**
+ * Quem cuida das etapas de funil (src/funis/funis.ts): marcar/desmarcar uma tag que é etapa passa por ele,
+ * para valer a exclusividade, a sincronia com a etapa do sistema e as automações.
+ */
+export interface DelegadoEtapas {
+  marcarEtapa(c: Conversa, tag: Tag, por: string): Promise<boolean>;
+  desmarcarEtapa(c: Conversa, tag: Tag, por: string): Promise<boolean>;
+}
 const ordenar = (l: Tag[]) => l.sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
 
 /** Regras das tags em cima do armazém. As permissões ficam nas rotas. */
@@ -257,12 +407,30 @@ export class Tags {
     private readonly agora: () => Date = () => new Date(),
   ) {}
 
+  private delegado?: DelegadoEtapas;
+  private readonly observadores: Array<(c: Conversa, tag: Tag, por: string) => Promise<void>> = [];
+
+  /** Liga os funis: marcar uma etapa passa a mover o cartão (e vice-versa). */
+  usarFunis(d: DelegadoEtapas): void {
+    this.delegado = d;
+  }
+  /** Avisado quando uma tag SOLTA é marcada de verdade (etapas avisam pelos funis). */
+  aoMarcar(fn: (c: Conversa, tag: Tag, por: string) => Promise<void>): void {
+    this.observadores.push(fn);
+  }
+
+  /** Todas as tags da empresa, soltas e etapas de funil. */
   async listar(): Promise<Tag[]> {
     return ordenar(await this.armazem.listar(this.empresaId));
   }
 
+  /** Só as tags soltas (as que aparecem em Conta › Tags e que a IA pode marcar). */
+  async soltas(): Promise<Tag[]> {
+    return (await this.listar()).filter((t) => !t.funilId);
+  }
+
   async listarComContagem(escopo: EscopoVisao) {
-    const [lista, n] = await Promise.all([this.listar(), this.armazem.contar(this.empresaId, escopo)]);
+    const [lista, n] = await Promise.all([this.soltas(), this.armazem.contar(this.empresaId, escopo)]);
     return lista.map((t) => ({ ...t, conversas: n.get(t.id) ?? 0 }));
   }
 
@@ -275,7 +443,7 @@ export class Tags {
 
   async criar(dados: { nome: string; cor?: string }, por: string): Promise<Tag> {
     const nome = validarNome(dados.nome);
-    const lista = await this.listar();
+    const lista = await this.soltas();
     const cor = dados.cor ? validarCor(dados.cor) : CORES_TAGS[lista.length % CORES_TAGS.length]!;
     const t: Tag = {
       id: randomUUID(),
@@ -285,6 +453,8 @@ export class Tags {
       ordem: lista.reduce((m, x) => Math.max(m, x.ordem), -1) + 1,
       criadaPor: por,
       criadaEm: this.agora(),
+      funilId: null,
+      chaveSistema: null,
     };
     await this.armazem.criar(t);
     return t;
@@ -301,7 +471,7 @@ export class Tags {
 
   /** Nova ordem: os ids na ordem desejada (os que faltarem vão para o fim, na ordem em que estavam). */
   async reordenar(ids: string[]): Promise<Tag[]> {
-    const lista = await this.listar();
+    const lista = await this.soltas();
     const conhecidas = new Set(lista.map((t) => t.id));
     const desconhecida = ids.find((x) => !conhecidas.has(x));
     if (desconhecida) throw new ErroTag('Tag não encontrada.', 404);
@@ -309,27 +479,42 @@ export class Tags {
     for (const [i, id] of final.entries()) {
       if (lista.find((t) => t.id === id)!.ordem !== i) await this.armazem.atualizar(id, { ordem: i });
     }
-    return this.listar();
+    return this.soltas();
   }
 
   async apagar(id: string): Promise<number> {
-    await this.exigir(id);
+    const t = await this.exigir(id);
+    if (t.funilId) throw new ErroTag('Esta tag é uma etapa de funil: apague pela tela do funil.', 409);
     return this.armazem.apagar(id);
   }
 
+  /** Marca a tag. Se for etapa de funil, a conversa sai da etapa anterior do mesmo funil. */
   async marcar(c: Conversa, tagId: string, por: string): Promise<{ tag: Tag; mudou: boolean }> {
     const tag = await this.exigir(tagId);
-    return { tag, mudou: await this.armazem.marcar(c.id, tag.id, por, this.agora()) };
+    if (tag.funilId) {
+      const mudou = this.delegado
+        ? await this.delegado.marcarEtapa(c, tag, por)
+        : (await this.armazem.marcarEtapa(c.id, tag.id, tag.funilId, por, this.agora())).mudou;
+      return { tag, mudou };
+    }
+    const mudou = await this.armazem.marcar(c.id, tag.id, por, this.agora());
+    if (mudou) for (const fn of this.observadores) await fn(c, tag, por);
+    return { tag, mudou };
   }
 
-  async desmarcar(c: Conversa, tagId: string): Promise<{ tag: Tag; mudou: boolean }> {
+  async desmarcar(c: Conversa, tagId: string, por = 'equipe'): Promise<{ tag: Tag; mudou: boolean }> {
     const tag = await this.exigir(tagId);
+    if (tag.funilId && this.delegado) return { tag, mudou: await this.delegado.desmarcarEtapa(c, tag, por) };
     return { tag, mudou: await this.armazem.desmarcar(c.id, tag.id) };
   }
 
-  /** Tags de cada conversa, prontas para a tela (id, nome, cor), na ordem da empresa. */
+  /**
+   * Tags de cada conversa, prontas para a tela (id, nome, cor), na ordem da empresa: as soltas e as etapas
+   * dos funis da empresa (com `funilId`). As etapas do funil do sistema ficam de fora: já estão em `conversa.etapa`.
+   */
   async dasConversas(conversaIds?: string[]): Promise<Map<string, TagResumo[]>> {
-    const [lista, marcas] = await Promise.all([this.listar(), this.armazem.marcacoes(this.empresaId, conversaIds)]);
+    const [todas, marcas] = await Promise.all([this.listar(), this.armazem.marcacoes(this.empresaId, conversaIds)]);
+    const lista = todas.filter((t) => !t.chaveSistema);
     const porId = new Map(lista.map((t, i) => [t.id, { t, i }]));
     const r = new Map<string, TagResumo[]>();
     for (const [c, ids] of marcas) {
@@ -345,6 +530,11 @@ export class Tags {
     return r;
   }
 
+  /** A conversa tem esta tag (solta ou etapa, inclusive do funil do sistema)? */
+  async temTag(conversaId: string, tagId: string): Promise<boolean> {
+    return ((await this.armazem.marcacoes(this.empresaId, [conversaId])).get(conversaId) ?? []).includes(tagId);
+  }
+
   async daConversa(conversaId: string): Promise<TagResumo[]> {
     return (await this.dasConversas([conversaId])).get(conversaId) ?? [];
   }
@@ -352,18 +542,18 @@ export class Tags {
   /** Tag existente com este nome (sem diferenciar maiúsculas e espaços), ou undefined. */
   async porNome(nome: string): Promise<Tag | undefined> {
     const alvo = limparNome(nome).toLowerCase();
-    return (await this.listar()).find((t) => t.nome.toLowerCase() === alvo);
+    return (await this.soltas()).find((t) => t.nome.toLowerCase() === alvo);
   }
 }
 
-function validarNome(bruto: string): string {
+export function validarNome(bruto: string): string {
   const nome = limparNome(bruto);
   if (nome.length < 1) throw new ErroTag('Dê um nome para a tag.', 400);
   if (nome.length > 30) throw new ErroTag('O nome da tag pode ter até 30 letras.', 400);
   return nome;
 }
 
-function validarCor(bruto: string): string {
+export function validarCor(bruto: string): string {
   const cor = CORES_TAGS.find((c) => c.toLowerCase() === bruto.trim().toLowerCase());
   if (!cor) throw new ErroTag('Escolha uma das cores da paleta.', 400);
   return cor;
@@ -382,7 +572,7 @@ export class TagsDaIa {
   /** Nomes que a IA pode usar agora (vazio = a IA não marca tags). */
   async nomes(): Promise<string[]> {
     if (!(await this.ligada())) return [];
-    return (await this.tags.listar()).map((t) => t.nome);
+    return (await this.tags.soltas()).map((t) => t.nome);
   }
 
   /** Marca a tag de nome `nome`, se existir e a opção estiver ligada. Devolve a tag marcada agora, ou undefined. */

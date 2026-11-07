@@ -36,3 +36,21 @@ export function ajustarParaJanelaAtiva(quando: Date): Date {
   const mesmoDia = bahia(p.ano, p.mes, p.dia, h!, mm!);
   return m < ini ? mesmoDia : new Date(mesmoDia.getTime() + DIA);
 }
+
+/**
+ * Próximo instante em que a unidade está aberta: agora mesmo, se já está; senão a próxima abertura
+ * (procura até 8 dias à frente). undefined se a unidade não tem horário (ex.: unidade em obras).
+ */
+export function proximaAbertura(unidade: Unidade, agora: Date): Date | undefined {
+  if (estaAberta(unidade, agora)) return agora;
+  const p = partesBahia(agora);
+  for (let d = 0; d <= 8; d++) {
+    const dia = partesBahia(new Date(bahia(p.ano, p.mes, p.dia, 12).getTime() + d * DIA));
+    const faixa = unidade.horario[dia.diaSemana];
+    if (!faixa) continue;
+    const m = minutosDoDia(faixa.abre);
+    const abre = bahia(dia.ano, dia.mes, dia.dia, Math.floor(m / 60), m % 60);
+    if (abre.getTime() > agora.getTime()) return abre;
+  }
+  return undefined;
+}
