@@ -878,3 +878,40 @@ html.modal-aberto { overflow: hidden; }
 .v-6x1-fontes a { color: rgba(255,255,255,.75); }
 @media (max-width: 900px) { .v-6x1-grade { grid-template-columns: minmax(0, 1fr); } .v-6x1-colunas { grid-template-columns: repeat(2, minmax(0, 1fr)); } .v-6x1 { padding: 20px; } }
 #e6x1-horas-v { white-space: nowrap; min-width: 64px; text-align: center; }
+
+/* ---------- animação: IA retoma a negociação perdida ---------- */
+.v-anim { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #eaf2fb; font-family: var(--fonte); color: #0b1b2e; }
+.va-topo { display: flex; align-items: center; gap: 2.4cqw; padding: 2.6cqw 3.4cqw; background: #fff; border-bottom: 1px solid #dbe6f2; }
+.va-av { width: 9.5cqw; height: 9.5cqw; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #e1306c, #f77737); color: #fff; font-size: 3.2cqw; font-weight: 700; flex: none; }
+.va-nome { display: grid; flex: 1; min-width: 0; line-height: 1.2; }
+.va-nome b { font-size: 3.9cqw; }
+.va-nome small { font-size: 2.8cqw; color: #5b6b7d; }
+.va-modo { flex: none; font-size: 2.6cqw; font-weight: 700; padding: 1.2cqw 2.4cqw; border-radius: 999px; background: #e4ecf5; color: #5b6b7d; transition: background .4s, color .4s; }
+.va-modo.ia { background: #106ebe; color: #fff; box-shadow: 0 0 0 .8cqw rgba(15,252,190,.35); }
+.va-corpo { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2.2cqw; padding: 3.4cqw; scroll-behavior: smooth; }
+.va-dia { align-self: center; font-size: 2.7cqw; color: #5b6b7d; background: #fff; padding: .8cqw 2.6cqw; border-radius: 999px; }
+.va-msg { max-width: 82%; padding: 2.2cqw 3cqw 1.6cqw; border-radius: 3.6cqw; font-size: 3.35cqw; line-height: 1.38; box-shadow: 0 .4cqw 1cqw rgba(4,18,31,.06); }
+.va-msg i { display: block; text-align: right; font-style: normal; font-size: 2.4cqw; color: #7d8b9a; margin-top: .6cqw; }
+.va-msg.cli { align-self: flex-start; background: #fff; border-top-left-radius: 1cqw; }
+.va-msg.eq { align-self: flex-end; background: #d6e8fb; border-top-right-radius: 1cqw; }
+.va-msg.ia { align-self: flex-end; background: linear-gradient(135deg, #106ebe, #0a4c86); color: #fff; border-top-right-radius: 1cqw; }
+.va-msg.ia i { color: rgba(255,255,255,.7); }
+.va-quem { display: block; font-size: 2.6cqw; font-weight: 700; color: #0ffcbe; margin-bottom: .6cqw; }
+.va-alerta { align-self: center; font-size: 2.8cqw; font-weight: 600; color: #b54708; background: #fff4e5; border: 1px solid #fedf89; padding: 1.2cqw 3cqw; border-radius: 999px; }
+.va-faixa { align-self: stretch; text-align: center; font-size: 2.9cqw; font-weight: 700; color: #04121f; background: #0ffcbe; padding: 1.6cqw; border-radius: 2.4cqw; }
+.va-digitando { align-self: flex-start; display: flex; gap: 1cqw; background: #fff; padding: 2.4cqw 3cqw; border-radius: 3.6cqw; }
+.va-digitando span { width: 1.6cqw; height: 1.6cqw; border-radius: 50%; background: #9aa8b6; animation: va-pula 1s infinite; }
+.va-digitando span:nth-child(2) { animation-delay: .15s; } .va-digitando span:nth-child(3) { animation-delay: .3s; }
+@keyframes va-pula { 50% { transform: translateY(-1cqw); opacity: .5; } }
+.va-cartao { align-self: stretch; display: grid; gap: .4cqw; padding: 2.6cqw 3.2cqw; border-radius: 3cqw; background: #04121f; color: #fff; border: 1px solid rgba(15,252,190,.6); box-shadow: 0 1.4cqw 3cqw rgba(15,252,190,.18); }
+.va-cartao b { font-size: 3.3cqw; color: #0ffcbe; }
+.va-cartao span { font-size: 2.7cqw; color: rgba(255,255,255,.8); }
+.va-pe { display: flex; align-items: center; gap: 2cqw; padding: 2.4cqw 3.4cqw 4cqw; background: #fff; border-top: 1px solid #dbe6f2; }
+.va-pe span { flex: 1; font-size: 3.2cqw; color: #9aa8b6; background: #f1f5fa; border-radius: 999px; padding: 2cqw 3cqw; }
+.va-pe i { width: 8cqw; height: 8cqw; border-radius: 50%; background: #106ebe; flex: none; }
+.v-anim [data-p] { display: none; }
+.v-anim [data-p].ver { display: block; animation: va-entra .45s cubic-bezier(.2,.7,.2,1); }
+.v-anim .va-digitando[data-p].ver { display: flex; }
+.v-anim .va-cartao[data-p].ver { display: grid; }
+@keyframes va-entra { from { opacity: 0; transform: translateY(2cqw) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .v-anim [data-p].ver { animation: none; } .va-digitando span { animation: none; } }
