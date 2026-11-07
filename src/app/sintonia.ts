@@ -1,6 +1,7 @@
 import type { Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
 import type { CanalWhatsApp, MensagemRecebida } from '../channels/tipos.js';
-import type { Repositorio, Tarefa } from '../store/repositorio.js';
+import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
+import { bloqueioPorDigitacao, viraDonaAoResponder, type Quem } from '../auth/acesso.js';
 import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
 import type { AcaoAgente } from '../ai/ferramentas.js';
 import { decidirQuemResponde, equipeAtuou, REGRAS_PADRAO, type RegrasAtendimento } from '../engine/atendimento.js';
@@ -145,27 +146,50 @@ export class Sintonia {
 
   // ---------- ações vindas da tela do CRM ----------
 
-  /** Atendente começou a digitar ou abriu a conversa para responder. */
-  async equipeDigitando(conversaId: string): Promise<void> {
+  /** Atendente começou a digitar ou abriu a conversa para responder. Com `quem`, fica registrado quem é. */
+  async equipeDigitando(conversaId: string, quem?: Pick<Quem, 'id' | 'nome'>): Promise<void> {
     await this.mutar(conversaId, async (c) => {
       Object.assign(c, equipeAtuou(c, this.agora(), this.regras));
       await this.d.repo.salvarConversa(c);
+      if (quem) await this.d.repo.registrarDigitando(c.id, { usuarioId: quem.id, nome: quem.nome }, this.agora());
     });
   }
 
-  /** Atendente enviou pelo CRM. */
-  async equipeEnviou(conversaId: string, texto: string, atendente: string): Promise<void> {
-    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente));
+  /** Quem está respondendo agora (sinal de digitação recente), de quem começou primeiro para quem começou depois. */
+  async quemEstaRespondendo(conversaId: string) {
+    return this.d.repo.digitando(conversaId, new Date(this.agora().getTime() - VALIDADE_DIGITANDO_MS));
+  }
+
+  /**
+   * Anti-duplicidade: recusa (409) se outra pessoa já está respondendo e `quem` não é a dona nem gestor.
+   * Use antes de ações demoradas (ex.: agendar no Trinks); o envio confere de novo sob a trava.
+   */
+  async conferirVez(conversaId: string, quem: Quem): Promise<void> {
+    const c = await this.d.repo.buscarConversa(conversaId);
+    if (c) await this.conferirVezEm(c, quem);
+  }
+
+  private async conferirVezEm(c: Conversa, quem: Quem): Promise<void> {
+    const recusa = bloqueioPorDigitacao(quem, c, await this.quemEstaRespondendo(c.id));
+    if (recusa) throw Object.assign(new Error(recusa), { statusCode: 409, codigo: 'outra_pessoa_respondendo' });
+  }
+
+  /** Atendente enviou pelo CRM. Com `quem` (usuária logada), vale a anti-duplicidade e ela pode virar a dona. */
+  async equipeEnviou(conversaId: string, texto: string, atendente: string, quem?: Quem): Promise<void> {
+    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente, quem));
     if (feito === undefined) throw new Error('Conversa não encontrada');
   }
 
-  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string): Promise<true> {
+  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string, quem?: Quem): Promise<true> {
+    if (quem) await this.conferirVezEm(c, quem);
     const agora = this.agora();
     const espera = this.tempoDeResposta(c, agora);
     const id = await this.enviar(c, texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
     Object.assign(c, equipeAtuou(c, agora, this.regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
+    if (quem) await this.donaPelaPrimeiraResposta(c, quem);
     await this.d.repo.salvarConversa(c);
+    if (quem) await this.d.repo.pararDigitando(c.id, quem.id);
     await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
     await this.programarFollowups(c, agora);
     await this.evento('equipe_respondeu', c, { atendente, tempoRespostaMs: espera });
@@ -183,10 +207,55 @@ export class Sintonia {
   }
 
   /** Agendamento feito pela atendente no botão "Agendar" do CRM (já gravado no Trinks). */
-  async equipeAgendou(conversaId: string, acao: Extract<AcaoAgente, { tipo: 'agendou' }>, atendente: string): Promise<void> {
+  async equipeAgendou(conversaId: string, acao: Extract<AcaoAgente, { tipo: 'agendou' }>, atendente: string, quem?: Quem): Promise<void> {
     await this.mutar(conversaId, async (c) => {
       await this.aplicarAcoes(c, [acao], 'equipe', atendente);
+      if (quem) await this.donaPelaPrimeiraResposta(c, quem);
       await this.d.repo.salvarConversa(c);
+    });
+  }
+
+  /**
+   * Muda a dona da conversa (assumir, transferir ou liberar com `para` = null) e registra o evento.
+   * As permissões são conferidas antes, no servidor (ver auth/acesso.ts).
+   */
+  async definirResponsavel(
+    conversaId: string,
+    para: { id: string; nome: string } | null,
+    por: { id?: string; nome: string },
+    motivo: 'assumiu' | 'transferiu' | 'liberou',
+  ): Promise<Conversa | undefined> {
+    return this.mutar(conversaId, async (c) => {
+      if ((c.responsavelId ?? null) === (para?.id ?? null)) return c;
+      await this.trocarDona(c, para, por, motivo);
+      await this.d.repo.salvarConversa(c);
+      return c;
+    });
+  }
+
+  /** Atendente/recepcionista que responde uma conversa sem dona vira a dona dela. */
+  private async donaPelaPrimeiraResposta(c: Conversa, quem: Quem): Promise<void> {
+    if (c.responsavelId || !viraDonaAoResponder(quem)) return;
+    await this.trocarDona(c, { id: quem.id, nome: quem.nome }, { id: quem.id, nome: quem.nome }, 'primeira_resposta');
+  }
+
+  private async trocarDona(
+    c: Conversa,
+    para: { id: string; nome: string } | null,
+    por: { id?: string; nome: string },
+    motivo: string,
+  ): Promise<void> {
+    const de = c.responsavelId ? { id: c.responsavelId, nome: c.responsavelNome } : null;
+    c.responsavelId = para?.id;
+    c.responsavelNome = para?.nome;
+    await this.evento('transferencia', c, {
+      deId: de?.id ?? null,
+      deNome: de?.nome ?? null,
+      paraId: para?.id ?? null,
+      paraNome: para?.nome ?? null,
+      porId: por.id ?? null,
+      porNome: por.nome,
+      motivo,
     });
   }
 
@@ -205,20 +274,32 @@ export class Sintonia {
     }
   }
 
-  /** Números do dia (painel do gestor). */
-  async resumoDoDia(dia: Date) {
+  /**
+   * Eventos do dia. Com `visivel`, só os das conversas que a pessoa pode ver
+   * (eventos sem conversa, como falhas gerais, ficam de fora).
+   */
+  private async eventosDoDia(dia: Date, visivel?: (c: Conversa) => boolean): Promise<{ eventos: Evento[]; conversas: Conversa[] }> {
     const p = partesBahia(dia);
     const inicio = bahia(p.ano, p.mes, p.dia);
-    return resumir(await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)));
+    const [todos, conversas] = await Promise.all([
+      this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)),
+      this.d.repo.listarConversas(),
+    ]);
+    if (!visivel) return { eventos: todos, conversas };
+    const vistas = conversas.filter(visivel);
+    const ids = new Set(vistas.map((c) => c.id));
+    return { eventos: todos.filter((e) => e.conversaId && ids.has(e.conversaId)), conversas: vistas };
+  }
+
+  /** Números do dia (painel do gestor). */
+  async resumoDoDia(dia: Date, visivel?: (c: Conversa) => boolean) {
+    return resumir((await this.eventosDoDia(dia, visivel)).eventos);
   }
 
   /** Texto do relatório do dia (o envio às 20h fica no index). */
-  async relatorioDoDia(dia: Date): Promise<string> {
-    const p = partesBahia(dia);
-    const inicio = bahia(p.ano, p.mes, p.dia);
-    const eventos = await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
+  async relatorioDoDia(dia: Date, visivel?: (c: Conversa) => boolean): Promise<string> {
+    const { eventos, conversas } = await this.eventosDoDia(dia, visivel);
     const hoje = new Set(eventos.filter((e) => e.tipo === 'mensagem_cliente').map((e) => e.conversaId));
-    const conversas = await this.d.repo.listarConversas();
     const semAgendar = conversas.filter((c) => hoje.has(c.id) && c.etapa !== 'agendada' && c.etapa !== 'compareceu').length;
     return textoRelatorio(resumir(eventos), dia, semAgendar);
   }

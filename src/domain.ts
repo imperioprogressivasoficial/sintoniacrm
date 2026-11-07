@@ -70,6 +70,10 @@ export interface Conversa {
   ultimaMensagemIa?: Date;
   etiquetas: string[];
   resumo?: string;
+  /** Dona da conversa: a pessoa da equipe responsável por ela (vazio = sem dona). */
+  responsavelId?: string;
+  /** Nome da dona, para exibir sem consultar a equipe. */
+  responsavelNome?: string;
   criadaEm: Date;
   atualizadaEm: Date;
 }

@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
@@ -9,6 +9,8 @@ import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
+import { podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
+import type { Conversa } from './domain.js';
 import { registrarPaginas } from './web/paginas.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
@@ -99,11 +101,27 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return { recebidas: await entregar('meta', mensagens) };
   });
 
+  // ---------- Quem vê o quê ----------
+  // Sem login configurado (testes antigos, uso local) tudo fica visível, como antes.
+  const visivelPara = (req: FastifyRequest) => (c: Conversa) => !req.usuario || podeVer(req.usuario, c);
+  /** Conversa que a pessoa logada pode ver; a de outra pessoa dá 404 (não revela que existe). */
+  async function conversaVisivel(req: FastifyRequest): Promise<Conversa> {
+    const c = await d.repo.buscarConversa((req.params as { id: string }).id).catch(() => undefined);
+    if (!c || !visivelPara(req)(c)) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    return c;
+  }
+  /** Nome de quem está agindo: o da sessão; sem login, o que veio no corpo. */
+  const nomeDe = (req: FastifyRequest, doCorpo?: string): string => {
+    const nome = req.usuario?.nome ?? doCorpo;
+    if (!nome) throw Object.assign(new Error('Informe quem está atendendo.'), { statusCode: 400 });
+    return nome;
+  };
+
   // ---------- API da tela do CRM ----------
-  // Atenção: antes de expor na internet, estas rotas precisam de login (Fase 1).
-  app.get('/api/conversas', async () => {
+  app.get('/api/conversas', async (req) => {
     const [lista, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
     return lista
+      .filter(visivelPara(req))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
@@ -111,15 +129,22 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       });
   });
 
-  app.get('/api/conversas/:id', async (req, reply) => {
-    const { id } = req.params as { id: string };
-    const conversa = await d.repo.buscarConversa(id);
-    if (!conversa) return reply.code(404).send();
-    return { conversa, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id) };
+  app.get('/api/conversas/:id', async (req) => {
+    const conversa = await conversaVisivel(req);
+    const id = conversa.id;
+    const u = req.usuario;
+    // Quem mais está respondendo agora (sem horário, para a tela só redesenhar quando muda).
+    const digitando = (await d.sintonia.quemEstaRespondendo(id))
+      .filter((x) => x.usuarioId !== u?.id)
+      .map((x) => ({ usuarioId: x.usuarioId, nome: x.nome }));
+    const permissoes = u
+      ? { assumir: podeAssumir(u, conversa) && conversa.responsavelId !== u.id, transferir: podeTransferir(u, conversa) }
+      : { assumir: !conversa.responsavelId, transferir: true };
+    return { conversa, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id), digitando, permissoes };
   });
 
   app.get('/api/conversas/:id/foto', async (req, reply) => {
-    const c = await d.repo.buscarConversa((req.params as { id: string }).id);
+    const c = await conversaVisivel(req).catch(() => undefined);
     const foto = c && d.fotos ? await d.fotos.da(c) : null;
     // "Sem foto" nunca fica guardado no navegador: assim que a foto existir, ela aparece.
     if (!foto) return reply.header('cache-control', 'no-store').code(204).send();
@@ -127,36 +152,86 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   app.post('/api/conversas/:id/digitando', async (req) => {
-    await d.sintonia.equipeDigitando((req.params as { id: string }).id);
+    const c = await conversaVisivel(req);
+    await d.sintonia.equipeDigitando(c.id, req.usuario);
     return { ok: true };
   });
 
-  const Envio = z.object({ texto: z.string().min(1), atendente: z.string().min(1) });
+  const Envio = z.object({ texto: z.string().min(1), atendente: z.string().min(1).optional() });
   app.post('/api/conversas/:id/enviar', async (req) => {
     const b = Envio.parse(req.body);
-    await d.sintonia.equipeEnviou((req.params as { id: string }).id, b.texto, b.atendente);
+    const c = await conversaVisivel(req);
+    await d.sintonia.equipeEnviou(c.id, b.texto, nomeDe(req, b.atendente), req.usuario);
     return { ok: true };
   });
 
   const Modo = z.object({ modo: z.enum(['ia', 'copiloto', 'humano']) });
   app.post('/api/conversas/:id/modo', async (req) => {
-    await d.sintonia.mudarModo((req.params as { id: string }).id, Modo.parse(req.body).modo);
+    const modo = Modo.parse(req.body).modo;
+    const c = await conversaVisivel(req);
+    await d.sintonia.mudarModo(c.id, modo);
     return { ok: true };
   });
 
   const Rascunho = z.object({ rascunho: z.string().min(1) });
   app.post('/api/conversas/:id/revisar', async (req, reply) => {
+    const rascunho = Rascunho.parse(req.body).rascunho;
+    const c = await conversaVisivel(req);
     if (!d.revisar) return reply.code(501).send({ erro: 'Revisão indisponível' });
-    return d.revisar((req.params as { id: string }).id, Rascunho.parse(req.body).rascunho);
+    return d.revisar(c.id, rascunho);
+  });
+
+  // ---------- Dona da conversa: assumir, transferir, liberar ----------
+  const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
+  const exigeLogin = (req: FastifyRequest) => {
+    if (!req.usuario || !d.auth) throw Object.assign(new Error('Faça login para continuar.'), { statusCode: 401 });
+    return { u: req.usuario, contas: d.auth.contas };
+  };
+  const resumoDona = (c: Conversa | undefined) => ({ ok: true, responsavelId: c?.responsavelId ?? null, responsavelNome: c?.responsavelNome ?? null });
+
+  app.post('/api/conversas/:id/assumir', async (req) => {
+    const { u } = exigeLogin(req);
+    const c = await conversaVisivel(req);
+    if (!podeAssumir(u, c)) throw proibido('Esta conversa já tem dona. Peça para a gerente transferir para você.');
+    return resumoDona(await d.sintonia.definirResponsavel(c.id, { id: u.id, nome: u.nome }, u, 'assumiu'));
+  });
+
+  /** Pessoas que podem receber esta conversa (para a janela "Transferir"). */
+  app.get('/api/conversas/:id/transferir', async (req) => {
+    const { u, contas } = exigeLogin(req);
+    const c = await conversaVisivel(req);
+    if (!podeTransferir(u, c)) throw proibido('Só a dona da conversa ou a gerência pode transferir.');
+    const pessoas = (await contas.listarUsuarios(u.empresaId)).filter((p) => podeReceber(p, c) && p.papel !== 'admin' && p.papel !== 'direcao');
+    return pessoas.map((p) => ({ id: p.id, nome: p.nome, papel: p.papel, eu: p.id === u.id, dona: p.id === c.responsavelId }));
+  });
+
+  const Transferir = z.object({ usuarioId: z.string().min(1).nullable() });
+  app.post('/api/conversas/:id/transferir', async (req) => {
+    const { u, contas } = exigeLogin(req);
+    const { usuarioId } = Transferir.parse(req.body);
+    const c = await conversaVisivel(req);
+    if (!podeTransferir(u, c)) throw proibido('Só a dona da conversa ou a gerência pode transferir.');
+    if (usuarioId === null) return resumoDona(await d.sintonia.definirResponsavel(c.id, null, u, 'liberou'));
+    const alvo = await contas.buscarPorId(usuarioId).catch(() => undefined);
+    if (!alvo || !podeReceber(alvo, c)) {
+      throw Object.assign(new Error('Essa pessoa não está ativa ou não atende esta unidade.'), { statusCode: 400 });
+    }
+    return resumoDona(await d.sintonia.definirResponsavel(c.id, { id: alvo.id, nome: alvo.nome }, u, alvo.id === u.id ? 'assumiu' : 'transferiu'));
   });
 
   const agora = d.agora ?? (() => new Date());
   // Lista de falhas da fila (mensagens que não conseguimos processar depois de várias tentativas).
-  app.get('/api/fila/falhas', async (_req, reply) => {
+  // Falhas mostram mensagens de qualquer conversa: só para quem vê tudo.
+  const soQuemVeTudo = (req: FastifyRequest) => {
+    if (req.usuario && !veTudo(req.usuario)) throw proibido('Só a direção e a administração veem as falhas da fila.');
+  };
+  app.get('/api/fila/falhas', async (req, reply) => {
+    soQuemVeTudo(req);
     if (!d.fila) return reply.code(404).send();
     return d.fila.fila.falhas();
   });
   app.post('/api/fila/falhas/:id/reprocessar', async (req, reply) => {
+    soQuemVeTudo(req);
     if (!d.fila) return reply.code(404).send();
     await d.fila.fila.reprocessar(Number((req.params as { id: string }).id), new Date());
     d.fila.avisar?.();
@@ -180,17 +255,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return { ok: true };
   });
 
-  app.get('/api/relatorio', async () => ({ texto: await d.sintonia.relatorioDoDia(agora()) }));
-  app.get('/api/painel', async () => d.sintonia.resumoDoDia(agora()));
+  // Painel e relatório só contam as conversas que a pessoa pode ver.
+  const filtroDe = (req: FastifyRequest) => (req.usuario && !veTudo(req.usuario) ? visivelPara(req) : undefined);
+  app.get('/api/relatorio', async (req) => ({ texto: await d.sintonia.relatorioDoDia(agora(), filtroDe(req)) }));
+  app.get('/api/painel', async (req) => d.sintonia.resumoDoDia(agora(), filtroDe(req)));
 
   // ---------- Botão "Agendar" dentro do CRM (sem abrir o Trinks) ----------
   const UnidadeQ = z.enum(['norte', 'sumare']);
 
-  async function conversaOu404(id: string) {
-    const c = await d.repo.buscarConversa(id);
-    if (!c) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
-    return c;
-  }
   function exigeAgenda(): Agenda {
     if (!d.agenda) throw Object.assign(new Error('Agenda (Trinks) não configurada'), { statusCode: 501 });
     return d.agenda;
@@ -229,24 +301,28 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     hora: z.string().regex(/^\d{1,2}:\d{2}$/),
     nomeCliente: z.string().min(3),
-    atendente: z.string().min(1),
+    /** Só sem login (teste local): com login vale o nome da sessão. */
+    atendente: z.string().min(1).optional(),
     /** Envia a confirmação padrão para a cliente pelo WhatsApp. */
     enviarConfirmacao: z.boolean().default(true),
   });
 
   app.post('/api/conversas/:id/agendar', async (req, reply) => {
     const b = Agendar.parse(req.body);
-    const conversa = await conversaOu404((req.params as { id: string }).id);
+    const conversa = await conversaVisivel(req);
+    const atendente = nomeDe(req, b.atendente);
+    // Anti-duplicidade antes de gravar no Trinks: se outra pessoa já está respondendo, nada é marcado.
+    if (req.usuario) await d.sintonia.conferirVez(conversa.id, req.usuario);
     try {
       const r = await agendarNoTrinks(
         exigeAgenda(),
         conversa,
-        { ...b, origem: `${b.atendente} pelo CRM` },
+        { ...b, origem: `${atendente} pelo CRM` },
         agora(),
       );
-      await d.sintonia.equipeAgendou(conversa.id, { tipo: 'agendou', agendamento: r.agendamento, clienteTrinksId: r.clienteTrinksId }, b.atendente);
+      await d.sintonia.equipeAgendou(conversa.id, { tipo: 'agendou', agendamento: r.agendamento, clienteTrinksId: r.clienteTrinksId }, atendente, req.usuario);
       const confirmacao = textoConfirmacao(conversa.nome ?? b.nomeCliente, r);
-      if (b.enviarConfirmacao) await d.sintonia.equipeEnviou(conversa.id, confirmacao, b.atendente);
+      if (b.enviarConfirmacao) await d.sintonia.equipeEnviou(conversa.id, confirmacao, atendente, req.usuario);
       return { ok: true, agendamentoId: r.agendamento.trinksId, valor: r.valor, confirmacao };
     } catch (e) {
       if (e instanceof ErroAgendamento) {

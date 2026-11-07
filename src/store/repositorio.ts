@@ -24,6 +24,8 @@ export type TipoEvento =
   | 'passou_para_humano'
   | 'etapa_mudou'
   | 'envio_ativo'
+  /** A conversa mudou de dona (assumiu, transferiu, liberou ou primeira resposta). */
+  | 'transferencia'
   | 'falha';
 
 export interface Evento {
@@ -33,6 +35,19 @@ export interface Evento {
   em: Date;
   dados?: Record<string, unknown>;
 }
+
+/** Alguém da equipe digitando numa conversa (anti-duplicidade). */
+export interface Digitando {
+  usuarioId: string;
+  nome: string;
+  /** Início da sequência de digitação: quem começou primeiro tem a vez. */
+  desde: Date;
+  /** Último sinal de digitação. */
+  em: Date;
+}
+
+/** Depois de quanto tempo sem sinal a pessoa deixa de contar como "respondendo". */
+export const VALIDADE_DIGITANDO_MS = 60_000;
 
 export interface Repositorio {
   buscarConversa(id: string): Promise<Conversa | undefined>;
@@ -75,6 +90,12 @@ export interface Repositorio {
 
   guardarSugestao(conversaId: string, texto: string): Promise<void>;
   sugestao(conversaId: string): Promise<string | undefined>;
+
+  /** Registra o sinal de "digitando" de alguém da equipe. */
+  registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date): Promise<void>;
+  /** Quem deu sinal de digitação a partir de `desde`, de quem começou primeiro para quem começou depois. */
+  digitando(conversaId: string, desde: Date): Promise<Digitando[]>;
+  pararDigitando(conversaId: string, usuarioId: string): Promise<void>;
 }
 
 /** Implementação em memória: usada nos testes e para rodar local sem banco. */
@@ -206,5 +227,23 @@ export class RepositorioMemoria implements Repositorio {
 
   async sugestao(conversaId: string) {
     return this.sugestoes.get(conversaId);
+  }
+
+  private digitandoAgora = new Map<string, Map<string, Digitando>>();
+  async registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date) {
+    const m = this.digitandoAgora.get(conversaId) ?? new Map<string, Digitando>();
+    const antes = m.get(quem.usuarioId);
+    const continua = antes && em.getTime() - antes.em.getTime() <= VALIDADE_DIGITANDO_MS;
+    m.set(quem.usuarioId, { usuarioId: quem.usuarioId, nome: quem.nome, desde: continua ? antes.desde : em, em });
+    this.digitandoAgora.set(conversaId, m);
+  }
+  async digitando(conversaId: string, desde: Date) {
+    return [...(this.digitandoAgora.get(conversaId)?.values() ?? [])]
+      .filter((d) => d.em.getTime() >= desde.getTime())
+      .sort((a, b) => a.desde.getTime() - b.desde.getTime())
+      .map((d) => ({ ...d }));
+  }
+  async pararDigitando(conversaId: string, usuarioId: string) {
+    this.digitandoAgora.get(conversaId)?.delete(usuarioId);
   }
 }

@@ -35,6 +35,15 @@ export interface Contas {
   usuarioDaSessao(token: string, agora: Date): Promise<Usuario | undefined>;
   encerrarSessao(token: string): Promise<void>;
   registrarInteressado(i: Interessado): Promise<void>;
+
+  // ---- equipe ----
+  listarUsuarios(empresaId: string): Promise<Usuario[]>;
+  buscarPorId(id: string): Promise<UsuarioComSenha | undefined>;
+  /** Muda papel, unidades e/ou se está ativa. Devolve a usuária atualizada (undefined se não existe). */
+  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>): Promise<Usuario | undefined>;
+  definirSenha(id: string, senhaHash: string): Promise<void>;
+  /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
+  encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
 }
 
 export const novoToken = () => randomBytes(32).toString('base64url');
@@ -82,6 +91,38 @@ export class ContasMemoria implements Contas {
 
   async registrarInteressado(i: Interessado) {
     this.interessados.push(i);
+  }
+
+  async listarUsuarios(empresaId: string) {
+    return this.usuarios
+      .filter((u) => u.empresaId === empresaId)
+      .map(({ senhaHash: _, ...publico }) => publico)
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
+
+  async buscarPorId(id: string) {
+    const u = this.usuarios.find((x) => x.id === id);
+    return u ? { ...u } : undefined;
+  }
+
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+    const u = this.usuarios.find((x) => x.id === id);
+    if (!u) return undefined;
+    if (campos.papel !== undefined) u.papel = campos.papel;
+    if (campos.unidades !== undefined) u.unidades = [...campos.unidades];
+    if (campos.ativo !== undefined) u.ativo = campos.ativo;
+    const { senhaHash: _, ...publico } = u;
+    return { ...publico, unidades: [...publico.unidades] };
+  }
+
+  async definirSenha(id: string, senhaHash: string) {
+    const u = this.usuarios.find((x) => x.id === id);
+    if (u) u.senhaHash = senhaHash;
+  }
+
+  async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
+    const manter = excetoToken ? resumoToken(excetoToken) : undefined;
+    for (const [chave, s] of this.sessoes) if (s.usuarioId === usuarioId && chave !== manter) this.sessoes.delete(chave);
   }
 }
 
@@ -158,5 +199,39 @@ export class ContasPostgres implements Contas {
       'insert into sintonia.interessados (nome, empresa, whatsapp, mensagem, origem) values ($1, $2, $3, $4, $5)',
       [i.nome, i.empresa ?? null, i.whatsapp, i.mensagem ?? null, i.origem ?? null],
     );
+  }
+
+  async listarUsuarios(empresaId: string) {
+    const { rows } = await this.pool.query<LinhaUsuario>(
+      'select * from sintonia.usuarios where empresa_id = $1 order by nome',
+      [empresaId],
+    );
+    return rows.map(paraUsuario);
+  }
+
+  async buscarPorId(id: string) {
+    const { rows } = await this.pool.query<LinhaUsuario>('select * from sintonia.usuarios where id = $1', [id]);
+    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
+  }
+
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+    const { rows } = await this.pool.query<LinhaUsuario>(
+      `update sintonia.usuarios set
+         papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo)
+       where id = $1 returning *`,
+      [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null],
+    );
+    return rows[0] ? paraUsuario(rows[0]) : undefined;
+  }
+
+  async definirSenha(id: string, senhaHash: string) {
+    await this.pool.query('update sintonia.usuarios set senha_hash = $2 where id = $1', [id, senhaHash]);
+  }
+
+  async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
+    await this.pool.query('delete from sintonia.sessoes where usuario_id = $1 and token_hash is distinct from $2', [
+      usuarioId,
+      excetoToken ? resumoToken(excetoToken) : null,
+    ]);
   }
 }

@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Contas, Usuario } from './contas.js';
-import { conferirSenha, gerarHash } from './senha.js';
+import { registrarEquipe } from './equipe.js';
+import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
 
 export const COOKIE = 'sintonia_sessao';
 
@@ -111,8 +112,33 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
 
   app.get('/api/auth/eu', async (req) => {
     const u = req.usuario!;
-    return { nome: u.nome, email: u.email, papel: u.papel, unidades: u.unidades };
+    return { id: u.id, nome: u.nome, email: u.email, papel: u.papel, unidades: u.unidades };
   });
+
+  // Trocar a própria senha: pede a atual; as outras sessões dela são encerradas (esta continua).
+  const TrocaSenha = z.object({ atual: z.string().min(1).max(200), nova: z.string().max(200) });
+  app.post('/api/auth/senha', async (req, reply) => {
+    const b = TrocaSenha.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ erro: 'Informe a senha atual e a nova.' });
+    const u = await o.contas.buscarPorId(req.usuario!.id);
+    if (!u) return reply.code(401).send({ erro: 'Faça login para continuar.' });
+    const chave = `senha|${u.id}`;
+    const t = agora().getTime();
+    if (errosLogin.excedeu(chave, t)) return reply.code(429).send({ erro: 'Muitas tentativas. Espere 15 minutos e tente de novo.' });
+    if (!(await conferirSenha(b.data.atual, u.senhaHash))) {
+      errosLogin.registrar(chave, t);
+      return reply.code(400).send({ erro: 'A senha atual não confere.' });
+    }
+    errosLogin.limpar(chave);
+    const fraca = senhaFraca(b.data.nova);
+    if (fraca) return reply.code(400).send({ erro: fraca });
+    if (b.data.nova === b.data.atual) return reply.code(400).send({ erro: 'A nova senha precisa ser diferente da atual.' });
+    await o.contas.definirSenha(u.id, await gerarHash(b.data.nova));
+    await o.contas.encerrarSessoesDe(u.id, lerCookie(req, COOKIE));
+    return { ok: true };
+  });
+
+  registrarEquipe(app, o.contas);
 
   const Contato = z.object({
     nome: z.string().trim().min(2).max(120),
