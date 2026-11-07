@@ -3,6 +3,7 @@ import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, Mensagem
 import type { TipoAnexo } from '../domain.js';
 import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, tamanhoBase64, textoDoAnexo } from '../midia.js';
 import { telefoneDoJid } from '../util/telefone.js';
+import { referenciaDaEvolution } from '../rastreio/referencia.js';
 
 /**
  * Evolution API (v2), a que já roda no VPS da Império (fluxo "Assia" no n8n).
@@ -21,6 +22,8 @@ const MensagemEvolution = z.object({
   // O conteúdo vem no formato do WhatsApp (Baileys); os tipos de mídia são lidos à mão em `lerConteudo`.
   message: z.record(z.string(), z.unknown()).nullish(),
   messageTimestamp: z.union([z.number(), z.string()]).nullish(),
+  // Evolution v2 repete aqui o contextInfo da mensagem (anúncio de clique para WhatsApp).
+  contextInfo: z.record(z.string(), z.unknown()).nullish(),
 });
 
 const WebhookEvolution = z.object({
@@ -102,6 +105,7 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
     const conteudo = lerConteudo(m.message);
     if (!telefone || !conteudo) continue;
     const ts = Number(m.messageTimestamp ?? 0);
+    const referencia = m.key.fromMe ? undefined : referenciaDaEvolution(m);
     saida.push({
       canalId: r.data.instance,
       telefone,
@@ -111,6 +115,7 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
       idExterno: m.key.id,
       em: ts ? new Date(ts * 1000) : new Date(),
       ...(conteudo.anexo ? { anexo: conteudo.anexo } : {}),
+      ...(referencia ? { referencia } : {}),
     });
   }
   return saida;

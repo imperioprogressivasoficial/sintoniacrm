@@ -15,6 +15,7 @@ import type {
 import type { TipoAnexo } from '../domain.js';
 import { normalizarCelular } from '../util/telefone.js';
 import { ErroMidiaGrande, LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
+import { referenciaDaMeta } from '../rastreio/referencia.js';
 
 /**
  * WhatsApp Cloud API (API oficial da Meta).
@@ -58,6 +59,8 @@ const WebhookMeta = z.object({
                     sticker: Midia.nullish(),
                     document: Midia.extend({ filename: z.string().nullish() }).nullish(),
                     button: z.object({ text: z.string() }).nullish(),
+                    /** Anúncio de clique para WhatsApp. */
+                    referral: z.record(z.string(), z.unknown()).nullish(),
                     interactive: z
                       .object({
                         button_reply: z.object({ title: z.string() }).nullish(),
@@ -129,6 +132,7 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
         const texto = textoSimples ?? midia?.texto;
         if (!texto) continue;
         const contato = v.contacts?.find((c) => c.wa_id === m.from);
+        const referencia = referenciaDaMeta(m.referral);
         saida.push({
           canalId: v.metadata.phone_number_id,
           telefone,
@@ -138,6 +142,7 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
           idExterno: m.id,
           em: new Date(Number(m.timestamp) * 1000),
           ...(midia ? { anexo: midia.anexo } : {}),
+          ...(referencia ? { referencia } : {}),
         });
       }
     }

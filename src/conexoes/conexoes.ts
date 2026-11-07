@@ -35,6 +35,26 @@ export const CAMPOS = {
   metaTokenSumare: { segredo: true },
   metaAppSecretSumare: { segredo: true },
   metaVerifyTokenSumare: { segredo: false },
+
+  // ---------- Meta Ads: API de Conversões (CAPI) e nomes dos anúncios ----------
+  /** "1" = envia os eventos. */
+  capiLigado: { segredo: false },
+  /** Dataset ID (o antigo Pixel ID) do Gerenciador de Eventos. */
+  capiDatasetId: { segredo: false },
+  capiToken: { segredo: true },
+  /** Código de evento de teste (Gerenciador de Eventos › Eventos de teste). Opcional. */
+  capiTesteCodigo: { segredo: false },
+  /** Versão da Graph API, ex.: v27.0. */
+  capiVersao: { segredo: false },
+  /** WABA usada nos eventos de anúncio de clique para WhatsApp (vazio = a da unidade na API oficial). */
+  capiWabaId: { segredo: false },
+  capiPageId: { segredo: false },
+  /** Valor (R$) do Purchase quando a ficha não tem o valor do serviço. */
+  capiValorPadrao: { segredo: false },
+  /** JSON com o mapeamento de eventos (ver src/rastreio/capi.ts). */
+  capiEventos: { segredo: false },
+  /** Token com ads_read para ler os nomes de campanha/conjunto/anúncio (vazio = o token da CAPI). */
+  metaAdsToken: { segredo: true },
 } as const;
 export type Campo = keyof typeof CAMPOS;
 export type ValoresConexao = Partial<Record<Campo, string>>;

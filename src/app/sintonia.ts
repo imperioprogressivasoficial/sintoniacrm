@@ -46,6 +46,14 @@ export interface DependenciasSintonia {
   /** Baixador de mídias: avisado quando chega foto/áudio/vídeo/documento para baixar (sem esperar o relógio). */
   midias?: { avisar(): void };
   log?: (msg: string, extra?: unknown) => void;
+  /**
+   * Rastreamento de leads (src/rastreio): tira o "(ref: ...)" do texto guardado e grava a origem
+   * (anúncio de clique para WhatsApp, link rastreado). Ausente = nada muda. Falha nunca derruba o atendimento.
+   */
+  rastreio?: {
+    textoParaGuardar(msg: MensagemRecebida): string;
+    aoMensagem(c: Conversa, msg: MensagemRecebida): Promise<unknown>;
+  };
   /** Funis e automações (src/funis, src/automacoes). Ausente = nada muda no atendimento. */
   ganchos?: GanchosSintonia;
 }
@@ -146,7 +154,7 @@ export class Sintonia {
         conversaId: conversa.id,
         autor: msg.deMim ? 'equipe' : 'cliente',
         autorNome: msg.deMim ? 'celular da loja' : undefined,
-        texto: msg.texto,
+        texto: this.d.rastreio ? this.d.rastreio.textoParaGuardar(msg) : msg.texto,
         em: msg.em,
         idExterno: msg.idExterno,
         ...(anexo ? { anexo } : {}),
@@ -178,6 +186,7 @@ export class Sintonia {
       }
 
       if (criada.nova) await this.evento('conversa_nova', conversa);
+      await this.gancho('rastreio', () => this.d.rastreio?.aoMensagem(conversa, msg));
       const primeira = !conversa.ultimaMensagemCliente;
       conversa.ultimaMensagemCliente = vistaEm(msg.em, agora, conversa);
       conversa.atualizadaEm = agora;

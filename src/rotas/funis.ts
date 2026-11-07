@@ -19,6 +19,8 @@ export interface OpcoesRotasFunis {
   repo: Repositorio;
   funis: Funis;
   automacoes?: Automacoes;
+  /** Origem do lead (ícone e selo) de cada cartão. */
+  origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
@@ -110,7 +112,10 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
   });
   app.get('/api/funis/:id/quadro', async (req) => {
     const q = QuadroQ.parse(req.query);
-    return funis.quadro(param(req, 'id'), { ...q, busca: q.busca || undefined, escopo: escopoDe(req.usuario) });
+    const r = await funis.quadro(param(req, 'id'), { ...q, busca: q.busca || undefined, escopo: escopoDe(req.usuario) });
+    if (!o.origens) return r;
+    const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
+    return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
   });
 
   // ------------------------------------------------------------ cartões
