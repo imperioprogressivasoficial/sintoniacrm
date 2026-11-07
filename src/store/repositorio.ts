@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Conversa, Mensagem, UnidadeId } from '../domain.js';
+import type { Anexo, Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { TipoEnvio } from '../engine/followups.js';
 
 /** Envio ativo programado, ou uma reavaliação de "quem responde". */
@@ -34,6 +34,23 @@ export interface Evento {
   dados?: Record<string, unknown>;
 }
 
+/** Mídia esperando download (fila própria, na tabela de mídias). */
+export interface MidiaPendente {
+  mensagemId: string;
+  conversaId: string;
+  canalId: string;
+  idExterno: string;
+  /** Contando com esta. */
+  tentativas: number;
+}
+
+/** Arquivo guardado de uma mensagem. */
+export interface MidiaGuardada {
+  conversaId: string;
+  anexo: Anexo;
+  conteudo: Buffer | null;
+}
+
 export interface Repositorio {
   buscarConversa(id: string): Promise<Conversa | undefined>;
   buscarOuCriarConversa(dados: {
@@ -47,8 +64,28 @@ export interface Repositorio {
   salvarConversa(c: Conversa): Promise<void>;
   listarConversas(): Promise<Conversa[]>;
 
-  /** Retorna false se a mensagem (pelo idExterno) já foi registrada. */
-  adicionarMensagem(m: Omit<Mensagem, 'id'>): Promise<boolean>;
+  /**
+   * Retorna false se a mensagem (pelo idExterno) já foi registrada.
+   * Com `anexo`, grava junto os dados da mídia (o arquivo vem depois, em `guardarMidia`).
+   * `id` opcional: quem grava pode escolher o id para guardar a mídia logo em seguida.
+   */
+  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }): Promise<boolean>;
+
+  // ---------- mídias (fotos, áudios, vídeos, documentos) ----------
+  midia(mensagemId: string): Promise<MidiaGuardada | undefined>;
+  /** Arquivo baixado: situação "pronta". */
+  guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }): Promise<void>;
+  /** Passou do limite: ficam só os dados. */
+  midiaGrande(mensagemId: string, tamanho?: number): Promise<void>;
+  /** Falha ao baixar: com `proxima`, tenta de novo nessa hora; sem, desiste (situação "falhou"). */
+  falhaMidia(mensagemId: string, erro: string, proxima?: Date): Promise<void>;
+  /**
+   * Pega as mídias pendentes vencidas e as reserva por `reservaMs` (se o processo cair, outro retoma).
+   * Com vários processos, cada mídia sai para um só.
+   */
+  reivindicarMidias(agora: Date, limite?: number, reservaMs?: number): Promise<MidiaPendente[]>;
+  /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
+  rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
   /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
   foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
@@ -130,14 +167,84 @@ export class RepositorioMemoria implements Repositorio {
     return [...this.conversas.values()].map((c) => ({ ...c }));
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'>) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
-    this.msgs.push({ ...m, id: randomUUID() });
+    const { anexo, ...resto } = m;
+    const id = m.id ?? randomUUID();
+    this.msgs.push({ ...resto, id });
+    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: 0 });
     return true;
   }
 
+  /** A mensagem com os dados atuais da mídia (a situação muda depois do download). */
+  private comAnexo(m: Mensagem): Mensagem {
+    const md = this.midias.get(m.id);
+    return md ? { ...m, anexo: { ...md.anexo } } : { ...m };
+  }
+
   async mensagens(conversaId: string, limite = 40) {
-    return this.msgs.filter((m) => m.conversaId === conversaId).slice(-limite);
+    return this.msgs
+      .filter((m) => m.conversaId === conversaId)
+      .slice(-limite)
+      .map((m) => this.comAnexo(m));
+  }
+
+  private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string }>();
+
+  async midia(mensagemId: string) {
+    const md = this.midias.get(mensagemId);
+    return md ? { conversaId: md.conversaId, anexo: { ...md.anexo }, conteudo: md.conteudo } : undefined;
+  }
+
+  async guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.conteudo = r.conteudo;
+    md.erro = undefined;
+    md.anexo = {
+      ...md.anexo,
+      situacao: 'pronta',
+      tamanho: r.conteudo.length,
+      mimetype: md.anexo.mimetype ?? r.mimetype,
+      nomeArquivo: md.anexo.nomeArquivo ?? r.nomeArquivo,
+    };
+  }
+
+  async midiaGrande(mensagemId: string, tamanho?: number) {
+    const md = this.midias.get(mensagemId);
+    if (md) md.anexo = { ...md.anexo, situacao: 'grande', tamanho: tamanho ?? md.anexo.tamanho };
+  }
+
+  async falhaMidia(mensagemId: string, erro: string, proxima?: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.erro = erro;
+    if (proxima) md.proxima = proxima.getTime();
+    else md.anexo = { ...md.anexo, situacao: 'falhou' };
+  }
+
+  async reivindicarMidias(agora: Date, limite = 10, reservaMs = 5 * 60_000) {
+    const t = agora.getTime();
+    const saida: MidiaPendente[] = [];
+    for (const [mensagemId, md] of this.midias) {
+      if (saida.length >= limite) break;
+      if (md.anexo.situacao !== 'pendente' || md.proxima > t) continue;
+      const m = this.msgs.find((x) => x.id === mensagemId);
+      const c = this.conversas.get(md.conversaId);
+      if (!m?.idExterno || !c) continue;
+      md.tentativas++;
+      md.proxima = t + reservaMs;
+      saida.push({ mensagemId, conversaId: md.conversaId, canalId: c.canalId, idExterno: m.idExterno, tentativas: md.tentativas });
+    }
+    return saida;
+  }
+
+  async rebaixarMidia(mensagemId: string, agora: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md || md.anexo.situacao !== 'falhou') return false;
+    Object.assign(md, { tentativas: 0, proxima: agora.getTime(), erro: undefined });
+    md.anexo = { ...md.anexo, situacao: 'pendente' };
+    return true;
   }
 
   private fotos = new Map<string, { conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date }>();
@@ -154,6 +261,7 @@ export class RepositorioMemoria implements Repositorio {
       const atual = r.get(m.conversaId);
       if (!atual || atual.em.getTime() <= m.em.getTime()) r.set(m.conversaId, m);
     }
+    for (const [k, m] of r) r.set(k, this.comAnexo(m));
     return r;
   }
 

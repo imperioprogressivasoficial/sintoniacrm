@@ -13,6 +13,10 @@ export class CanalTeste implements CanalWhatsApp {
   async enviarTexto(): Promise<EnvioResultado> {
     return { idExterno: `teste-${randomUUID()}` };
   }
+  /** Aceita foto, vídeo, documento e áudio sem mandar nada para fora (a Sintonia guarda o arquivo). */
+  async enviarMidia(): Promise<EnvioResultado> {
+    return { idExterno: `teste-${randomUUID()}` };
+  }
 }
 
 /** Canal de teste de cada unidade. */

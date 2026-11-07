@@ -4,6 +4,8 @@ import { ClienteTrinks } from './agenda/trinks.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
+import { Midias } from './app/midias.js';
+import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
@@ -90,6 +92,9 @@ const canalTeste = new CanalTeste();
 for (const unidade of ['norte', 'sumare'] as const) numeros.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
 const iaLigada = Boolean(process.env.ANTHROPIC_API_KEY);
 
+// Fotos, áudios, vídeos e documentos recebidos: baixados à parte, sem segurar o texto.
+const midias = new Midias(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log);
+
 const sintonia = new Sintonia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
@@ -97,6 +102,7 @@ const sintonia = new Sintonia({
   agente,
   log,
   trava,
+  midias,
   avisarEquipe: async (texto) => {
     // Aviso vai para os mesmos números do relatório, pelo primeiro número conectado.
     const n = numeros[0];
@@ -113,18 +119,25 @@ const app = criarServidor({
   log,
   auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
   fila: { fila, avisar: () => trabalhador.avisar() },
+  midias,
   agenda: cfg.TRINKS_API_KEY ? trinks : undefined,
   evolution: evolution ? { canal: evolution, token: cfg.EVOLUTION_WEBHOOK_TOKEN } : undefined,
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada: Boolean(cfg.TRINKS_API_KEY), numerosReais: numeros.filter((n) => !ehCanalTeste(n.canalId)).length }),
-  clienteTeste: async ({ unidade, nome, telefone, texto }) => {
+  clienteTeste: async ({ unidade, nome, telefone, texto, midia }) => {
     const canalId = canalTesteDa(unidade);
     const agora = new Date();
     // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
     const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
     if (nova && !iaLigada) await sintonia.mudarModo(conversa.id, 'humano');
-    await sintonia.receber({ canalId, telefone, nome, texto, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora });
+    // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
+    const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;
+    const anexo = midia && tipo
+      ? { tipo, mimetype: midia.mimetype, nomeArquivo: tipo === 'documento' ? (midia.nomeArquivo ?? 'arquivo') : undefined, duracaoSeg: midia.duracaoSeg, legenda: texto, voz: tipo === 'audio' || undefined, base64: midia.base64 }
+      : undefined;
+    const conteudo = anexo ? textoDoAnexo(anexo.tipo, texto, anexo.nomeArquivo) : (texto ?? '');
+    await sintonia.receber({ canalId, telefone, nome, texto: conteudo, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora, ...(anexo ? { anexo } : {}) });
   },
   revisar: async (conversaId, rascunho) => {
     const conversa = await repo.buscarConversa(conversaId);
@@ -143,6 +156,7 @@ const app = criarServidor({
 let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
+  midias.avisar(); // novas tentativas de download que já venceram
   const agora = new Date();
   const p = partesBahia(agora);
   if (p.hora === 20 && relatorioEnviadoEm !== dataISO(agora) && numeros[0]) {

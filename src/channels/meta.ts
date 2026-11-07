@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { CanalWhatsApp, EnvioResultado, MensagemRecebida } from './tipos.js';
 import { normalizarCelular } from '../util/telefone.js';
+import { textoDoAnexo } from '../midia.js';
 
 /**
  * WhatsApp Cloud API (oficial da Meta). Pronto para a Fase 3.
@@ -28,6 +29,9 @@ const WebhookMeta = z.object({
                   timestamp: z.string(),
                   type: z.string(),
                   text: z.object({ body: z.string() }).nullish(),
+                  image: z.object({ caption: z.string().nullish() }).passthrough().nullish(),
+                  video: z.object({ caption: z.string().nullish() }).passthrough().nullish(),
+                  document: z.object({ caption: z.string().nullish(), filename: z.string().nullish() }).passthrough().nullish(),
                   button: z.object({ text: z.string() }).nullish(),
                   interactive: z
                     .object({
@@ -45,6 +49,25 @@ const WebhookMeta = z.object({
   ),
 });
 
+/**
+ * Mídia da API oficial: por enquanto vira só o marcador de texto (a IA e a equipe sabem que chegou algo).
+ * TODO(Fase 3): baixar pelo id da mídia (GET /{media-id} → url → download com o token) e preencher `anexo`,
+ * como na Evolution; e implementar `enviarMidia` (upload em /{phone-number-id}/media).
+ */
+function midiaComoTexto(m: {
+  type: string;
+  image?: { caption?: string | null } | null;
+  video?: { caption?: string | null } | null;
+  document?: { caption?: string | null; filename?: string | null } | null;
+}): string | null {
+  if (m.type === 'audio') return textoDoAnexo('audio');
+  if (m.type === 'image') return textoDoAnexo('imagem', m.image?.caption ?? undefined);
+  if (m.type === 'video') return textoDoAnexo('video', m.video?.caption ?? undefined);
+  if (m.type === 'document') return textoDoAnexo('documento', m.document?.caption ?? undefined, m.document?.filename ?? undefined);
+  if (m.type === 'sticker') return textoDoAnexo('figurinha');
+  return null;
+}
+
 export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
   const r = WebhookMeta.safeParse(corpo);
   if (!r.success) return [];
@@ -58,7 +81,7 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
           m.button?.text ??
           m.interactive?.button_reply?.title ??
           m.interactive?.list_reply?.title ??
-          (m.type === 'audio' ? '[áudio]' : m.type === 'image' ? '[foto]' : null);
+          midiaComoTexto(m);
         const telefone = normalizarCelular(m.from);
         if (!texto || !telefone) continue;
         const contato = v.contacts?.find((c) => c.wa_id === m.from);
