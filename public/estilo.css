@@ -964,3 +964,70 @@ html.modal-aberto { overflow: hidden; }
 }
 .v-progresso { position: fixed; left: 0; top: 0; z-index: 60; width: 100%; height: 3px; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, #106ebe, #0ffcbe); box-shadow: 0 0 12px rgba(15,252,190,.6); pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .anima .revela { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; } .v-progresso { display: none; } }
+
+/* ---------- topo: ícones dos canais girando (centro em destaque) ---------- */
+.v-giro { position: relative; height: 64px; width: 300px; max-width: 100%; margin: 0 auto 18px; }
+.v-giro-ic { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; display: grid; place-items: center; border-radius: 16px; background: rgba(255,255,255,.95); box-shadow: 0 10px 28px rgba(0,0,0,.3);
+  transition: transform .7s cubic-bezier(.16,1,.3,1), opacity .7s, filter .7s; }
+.v-giro-ic svg { width: 30px; height: 30px; }
+.v-giro-ic[data-pos="0"] { transform: translateX(0) scale(1.28); z-index: 3; opacity: 1; }
+.v-giro-ic[data-pos="1"] { transform: translateX(66px) scale(.9); z-index: 2; opacity: .9; }
+.v-giro-ic[data-pos="-1"] { transform: translateX(-66px) scale(.9); z-index: 2; opacity: .9; }
+.v-giro-ic[data-pos="2"] { transform: translateX(120px) scale(.62); z-index: 1; opacity: .45; filter: blur(.5px); }
+.v-giro-ic[data-pos="-2"] { transform: translateX(-120px) scale(.62); z-index: 1; opacity: .45; filter: blur(.5px); }
+
+/* ---------- selos oficiais: só o necessário ---------- */
+.v-selos-oficiais .v-selo-of b { font-size: 16px; }
+
+/* ---------- pessoas em formas 3D (planos) ---------- */
+#planos .v-miolo { position: relative; }
+.v-pessoa-3d { position: absolute; top: 10px; width: 150px; aspect-ratio: 1; margin: 0; z-index: 0; animation: v-boia 7s ease-in-out infinite; }
+.v-pessoa-3d::before { content: ""; position: absolute; inset: -14px -18px -8px -10px; border-radius: 58% 42% 55% 45% / 48% 58% 42% 52%; background: linear-gradient(140deg, rgba(15,252,190,.55), rgba(16,110,190,.55)); filter: blur(1px); transform: rotate(-8deg); box-shadow: 0 30px 60px rgba(0,0,0,.35); }
+.v-pessoa-3d img { position: relative; width: 100%; height: 100%; object-fit: cover; border-radius: 46% 54% 50% 50% / 55% 45% 55% 45%; box-shadow: inset 0 0 0 3px rgba(255,255,255,.25), 0 18px 40px rgba(0,0,0,.35); }
+.v-pessoa-3d.esq { left: 0; }
+.v-pessoa-3d.dir { right: 0; top: 70px; animation-delay: -3.5s; }
+.v-pessoa-3d.dir::before { border-radius: 45% 55% 42% 58% / 55% 45% 55% 45%; transform: rotate(10deg); }
+@keyframes v-boia { 50% { transform: translateY(-12px) rotate(-1.5deg); } }
+@media (max-width: 1100px) { .v-pessoa-3d { display: none; } }
+
+/* ---------- seções em cartão com borda lateral (computador) ---------- */
+@media (min-width: 900px) {
+  .v-final, #planos { margin: 0 24px; border-radius: 40px; overflow: hidden; }
+  #planos { margin-bottom: 24px; }
+  .v-final { margin-bottom: 24px; }
+}
+
+/* ---------- botão flutuante ---------- */
+.v-flutuante { position: fixed; right: 22px; bottom: 22px; z-index: 55; width: 64px; height: 64px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; display: grid; place-items: center;
+  background: radial-gradient(circle at 30% 25%, #1a8be0, #04121f 75%); box-shadow: 0 14px 34px rgba(4,18,31,.45), 0 0 0 1px rgba(255,255,255,.12) inset; animation: v-flut-entra .8s cubic-bezier(.16,1,.3,1) 1.2s both; }
+.v-flutuante img { width: 38px; height: 38px; transition: transform .3s; }
+.v-flutuante:hover img { transform: scale(1.1) rotate(-6deg); }
+.v-flut-anel { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 rgba(15,252,190,.55); animation: v-pulso 2.4s infinite; }
+.v-flut-dica { position: absolute; right: 76px; top: 50%; transform: translateY(-50%); white-space: nowrap; padding: 10px 14px; border-radius: 14px 14px 4px 14px; background: #fff; color: #0b2238; font: 600 13.5px var(--fonte); box-shadow: 0 12px 30px rgba(4,18,31,.25); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.v-flutuante:hover .v-flut-dica { opacity: 1; }
+@media (min-width: 761px) { .v-flutuante .v-flut-dica { animation: v-dica 6s ease 3s 1 both; } }
+@keyframes v-pulso { 0% { box-shadow: 0 0 0 0 rgba(15,252,190,.55); } 70%, 100% { box-shadow: 0 0 0 16px rgba(15,252,190,0); } }
+@keyframes v-flut-entra { from { opacity: 0; transform: translateY(20px) scale(.7); } }
+@keyframes v-dica { 0%, 100% { opacity: 0; } 10%, 85% { opacity: 1; } }
+html.modal-aberto .v-flutuante { display: none; }
+@media (max-width: 760px) { .v-flutuante { right: 14px; bottom: 14px; width: 56px; height: 56px; } .v-flutuante img { width: 32px; height: 32px; } }
+@media (prefers-reduced-motion: reduce) { .v-flut-anel, .v-pessoa-3d { animation: none; } .v-giro-ic { transition: none; } }
+
+/* ---------- rodapé grande ---------- */
+.v-rodape-grande { padding: 64px 0 28px; }
+.v-rodape-grande .v-miolo { display: block; }
+.v-rod-topo { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr) 1.3fr; gap: 32px; }
+.v-rod-marca p { margin: 14px 0 18px; color: rgba(255,255,255,.65); font-size: 14px; line-height: 1.6; max-width: 320px; }
+.v-rod-canais { display: flex; gap: 10px; flex-wrap: wrap; }
+.v-rod-canais span { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.95); }
+.v-rod-canais svg { width: 22px; height: 22px; }
+.v-rod-col { display: flex; flex-direction: column; gap: 2px; }
+.v-rod-col b { color: #fff; font-family: var(--fonte-titulo); font-size: 15px; margin-bottom: 8px; }
+.v-rodape-grande .v-rod-col a { min-height: 36px; color: rgba(255,255,255,.72); font-size: 14px; }
+.v-rodape-grande .v-rod-col a:hover { color: var(--menta); }
+.v-rod-cta p { margin: 0 0 12px; font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.5; }
+.v-rodape-grande .v-rod-cta .botao { color: #04121f; justify-content: center; }
+.v-rodape-grande .v-rod-entrar { margin-top: 6px; }
+.v-rod-base { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 44px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.1); font-size: 13px; }
+@media (max-width: 900px) { .v-rod-topo { grid-template-columns: 1fr 1fr; } .v-rod-marca, .v-rod-cta { grid-column: 1 / -1; } .v-rodape-grande { padding-bottom: 96px; } }
+.v-pessoa-3d { width: 128px; top: 150px; } .v-pessoa-3d.esq { left: -30px; } .v-pessoa-3d.dir { right: -30px; top: 200px; }
