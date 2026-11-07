@@ -47,7 +47,7 @@ describe('Login', () => {
     const cookie = cookieDe(ok);
 
     expect((await app.inject({ url: '/api/conversas', headers: { cookie } })).statusCode).toBe(200);
-    expect((await app.inject({ url: '/api/auth/eu', headers: { cookie } })).json()).toEqual({ id: expect.any(String), nome: 'Carla Lima', email: 'carla@imperio.com', papel: 'atendente', unidades: ['norte'] });
+    expect((await app.inject({ url: '/api/auth/eu', headers: { cookie } })).json()).toEqual({ id: expect.any(String), nome: 'Carla Lima', email: 'carla@imperio.com', papel: 'atendente', unidades: ['norte'], permissoes: expect.objectContaining({ conversas: 'minhas', responder: true, equipe: false }), trocarSenha: false });
 
     await app.inject({ method: 'POST', url: '/api/auth/sair', headers: { cookie }, payload: {} });
     expect((await app.inject({ url: '/api/conversas', headers: { cookie } })).statusCode).toBe(401);

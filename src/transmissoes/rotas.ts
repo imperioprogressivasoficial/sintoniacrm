@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ehGestor, escopoDe } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import { ErroTag } from '../tags/tags.js';
 import { ErroLeads } from '../leads/leads.js';
 import { ErroTransmissao, type Transmissoes } from './transmissoes.js';
@@ -23,7 +24,7 @@ const MSG = 'Só a gerência, a direção e a administração fazem transmissõe
 export function registrarTransmissoes(app: FastifyInstance, o: OpcoesRotasTransmissoes): void {
   const t = o.transmissoes;
   const exigeGestao = (req: FastifyRequest) => {
-    if (req.usuario && !ehGestor(req.usuario)) throw proibido(MSG);
+    if (!pode(req, 'transmissoes')) throw proibido(MSG);
   };
   const unidadesDe = (req: FastifyRequest) => escopoDe(req.usuario).unidades;
   const exigeUnidade = (req: FastifyRequest, u: string) => {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { ehGestor, escopoDe, podeVer } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import { ehCanalTeste } from '../channels/teste.js';
 import type { Funis } from '../funis/funis.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
@@ -30,7 +31,7 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
   const { funis } = o;
   const quem = (req: FastifyRequest) => req.usuario?.nome ?? 'teste';
   const exigeGestao = (req: FastifyRequest, msg = 'Só a gerência, a direção e a administração mexem nos funis e nas automações.') => {
-    if (req.usuario && !ehGestor(req.usuario)) throw proibido(msg);
+    if (!pode(req, req.url.startsWith('/api/automacoes') ? 'automacoes' : 'funis_editar')) throw proibido(msg);
   };
   const visivel = (req: FastifyRequest, c: Conversa) => !req.usuario || podeVer(req.usuario, c);
   async function conversaVisivel(req: FastifyRequest, id: string): Promise<Conversa> {

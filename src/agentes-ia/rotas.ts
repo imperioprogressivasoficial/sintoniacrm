@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ehGestor, podeVer } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
 import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Comandos } from './comandos.js';
@@ -28,7 +29,7 @@ const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 40
 export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa): void {
   const quem = (req: FastifyRequest) => req.usuario?.nome ?? 'teste';
   const gestao = (req: FastifyRequest, msg = 'Só a gerência, a direção e a administração mudam os agentes de IA.') => {
-    if (req.usuario && !ehGestor(req.usuario)) throw proibido(msg);
+    if (!pode(req, 'agentes_ia')) throw proibido(msg);
   };
   const visivel = (req: FastifyRequest) => (c: Conversa) => !req.usuario || podeVer(req.usuario, c);
   const conversa = async (req: FastifyRequest, id: string) => {

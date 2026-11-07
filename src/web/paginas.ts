@@ -9,6 +9,7 @@ const PASTA = new URL('../../public/', import.meta.url);
 const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/': { arquivo: 'index.html', tipo: 'text/html; charset=utf-8' },
   '/entrar': { arquivo: 'entrar.html', tipo: 'text/html; charset=utf-8' },
+  '/convite': { arquivo: 'convite.html', tipo: 'text/html; charset=utf-8' },
   '/app': { arquivo: 'app.html', tipo: 'text/html; charset=utf-8' },
   '/conexoes': { arquivo: 'conexoes.html', tipo: 'text/html; charset=utf-8' },
   '/estilo.css': { arquivo: 'estilo.css', tipo: 'text/css; charset=utf-8' },
@@ -55,6 +56,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/vendas/mac-conversas-1440.webp': { arquivo: 'vendas/mac-conversas-1440.webp', tipo: 'image/webp' },
   '/vendas/mac-crm-1440.webp': { arquivo: 'vendas/mac-crm-1440.webp', tipo: 'image/webp' },
   '/vendas/mac-dashboard-1440.webp': { arquivo: 'vendas/mac-dashboard-1440.webp', tipo: 'image/webp' },
+  '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agentes-ia.js': { arquivo: 'telas/agentes-ia.js', tipo: 'text/javascript; charset=utf-8' },
