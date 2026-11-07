@@ -4,20 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Conexões · Sintonia</title>
-<meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111b21" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/icone-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/icone-180.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sintonia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap">
 <style>
-  :root { --fundo: #ffffff; --painel: #f0f2f5; --linha: #e9edef; --texto: #111b21; --sub: #667781; --verde: #008069; --verde-claro: #d9fdd3; --entrada: #ffffff; --erro: #ea0038; --aviso: #fff3c4; --aviso-txt: #5e4b00; }
-  @media (prefers-color-scheme: dark) { :root { --fundo: #111b21; --painel: #0b141a; --linha: #222d34; --texto: #e9edef; --sub: #8696a0; --verde: #00a884; --verde-claro: #0a332c; --entrada: #2a3942; --erro: #f15c6d; --aviso: #3a2f05; --aviso-txt: #ffd279; } }
+  :root { --fundo: #ffffff; --painel: #f4f8fc; --linha: #dbe6f1; --texto: #08243f; --sub: #5a6b7d; --verde: #106ebe; --verde-claro: #e3effa; --entrada: #ffffff; --erro: #c43a3a; --aviso: #fff6db; --aviso-txt: #5e4b00; }
+  @media (prefers-color-scheme: dark) { :root { --fundo: #071d33; --painel: #05172a; --linha: #143a5e; --texto: #eaf3fc; --sub: #8fb1d1; --verde: #0ffcbe; --verde-claro: #0f3a63; --entrada: #0d3050; --erro: #ff8a8a; --aviso: #2a2410; --aviso-txt: #ffd47a; } }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--painel); color: var(--texto); -webkit-font-smoothing: antialiased; }
+  body { margin: 0; font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--painel); color: var(--texto); -webkit-font-smoothing: antialiased; }
   header { position: sticky; top: 0; z-index: 2; background: var(--fundo); border-bottom: 1px solid var(--linha); height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 12px; }
   header a { color: var(--texto); text-decoration: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
   header a:hover { background: var(--painel); }
@@ -31,8 +34,8 @@
   label { display: grid; gap: 5px; font-size: 13.5px; color: var(--sub); }
   input { background: var(--entrada); border: 1px solid var(--linha); border-radius: 8px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; }
   .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .botao { all: unset; cursor: pointer; background: var(--verde); color: #fff; border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 500; }
-  @media (prefers-color-scheme: dark) { .botao { color: #111b21; } }
+  .botao { all: unset; cursor: pointer; background: var(--verde); color: #fff; border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 700; }
+  @media (prefers-color-scheme: dark) { .botao { color: #071d33; } }
   .botao.leve { background: var(--painel); color: var(--texto); }
   .botao.perigo { background: transparent; color: var(--erro); border: 1px solid var(--linha); }
   .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
@@ -58,7 +61,7 @@
 </header>
 <main>
   <section>
-    <h2><span class="ic" style="background:#25d366"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span>WhatsApp das lojas</h2>
+    <h2><span class="ic" style="background:#106ebe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span>WhatsApp das lojas</h2>
     <p>Cada loja conecta o seu número lendo um QR Code, igual ao WhatsApp Web. As mensagens passam a chegar na Sintonia.</p>
     <div class="aviso">Atenção: se o número já está ligado na Assia (n8n), as duas vão receber as mesmas mensagens e podem responder em dobro. Antes de conectar aqui, decida qual das duas atende esse número.</div>
     <p id="wa-sem-evolution">Preencha a Evolution logo abaixo para conectar os números.</p>
@@ -66,21 +69,21 @@
   </section>
 
   <section>
-    <h2><span class="ic" style="background:#7f66ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span>Inteligência artificial</h2>
+    <h2><span class="ic" style="background:#0a4c86"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span>Inteligência artificial</h2>
     <p>Chave da API da Anthropic (Claude). Com ela, a IA responde, sugere e revisa mensagens.</p>
     <label>Chave da IA <input id="anthropicApiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
     <div class="linha"><button class="botao" data-salvar="anthropicApiKey">Salvar</button><button class="botao leve" data-testar="ia">Testar</button><span class="res" id="res-ia"></span></div>
   </section>
 
   <section>
-    <h2><span class="ic" style="background:#ff2e74"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>Agenda (Trinks)</h2>
+    <h2><span class="ic" style="background:#1a8be0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>Agenda (Trinks)</h2>
     <p>Chave da API da Trinks. Com ela, o botão Agendar e a IA marcam horário sem abrir o Trinks.</p>
     <label>Chave da Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
     <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks"></span></div>
   </section>
 
   <section>
-    <h2><span class="ic" style="background:#007bfc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Evolution API</h2>
+    <h2><span class="ic" style="background:#0a4c86"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Evolution API</h2>
     <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
     <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com"></label>
     <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
@@ -88,7 +91,7 @@
   </section>
 
   <section>
-    <h2><span class="ic" style="background:#02a698"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span>Relatório do dia</h2>
+    <h2><span class="ic" style="background:#0a8f7a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span>Relatório do dia</h2>
     <p>Telefones que recebem, às 20h, o resumo do dia pelo WhatsApp da loja. Separe por vírgula, com DDD.</p>
     <label>Telefones <input id="relatorioDestinos" type="text" inputmode="tel" placeholder="71 99999-9999, 71 98888-8888"></label>
     <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio"></span></div>

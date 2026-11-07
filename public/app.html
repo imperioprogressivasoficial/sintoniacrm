@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111b21" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/icone-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/icone-180.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sintonia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="/ds.css">
 <style>
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { height: 100%; margin: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--fundo); color: var(--texto); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  body { font-family: var(--fonte); background: var(--fundo); color: var(--texto); overflow: hidden; -webkit-font-smoothing: antialiased; }
   button { font: inherit; color: inherit; }
   .icone { all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--icone); flex: none; }
   .icone:hover { background: var(--hover); }
@@ -57,8 +60,7 @@
   .busca input::placeholder { color: var(--sub); }
   .filtros { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
   .chip { all: unset; cursor: pointer; white-space: nowrap; background: var(--painel); color: var(--sub); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
-  .chip[aria-pressed="true"] { background: #d9fdd3; color: #008069; font-weight: 500; }
-  @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { background: #0a332c; color: #e7fce3; } }
+  .chip[aria-pressed="true"] { background: var(--chip-ativo); color: var(--chip-ativo-txt); font-weight: 700; }
   .itens { overflow-y: auto; flex: 1; }
   .item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 0 0 0 13px; width: 100%; height: 72px; }
   .item:hover { background: var(--hover); }
@@ -74,7 +76,6 @@
   .tag { font-size: 11px; border-radius: 4px; padding: 1px 5px; background: var(--painel); color: var(--sub); white-space: nowrap; }
   .vazio { padding: 40px 24px; text-align: center; color: var(--sub); font-size: 14px; display: grid; gap: 14px; justify-items: center; }
   .botao { all: unset; cursor: pointer; background: var(--verde-forte); color: #fff; border-radius: 999px; padding: 10px 20px; font-size: 14px; font-weight: 500; text-align: center; }
-  @media (prefers-color-scheme: dark) { .botao { color: #111b21; } }
   .botao.leve { background: var(--painel); color: var(--texto); }
 
   /* conversa */
@@ -90,8 +91,8 @@
   .voltar { display: none !important; }
   .modo { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 500; background: var(--fundo); color: var(--texto); border: 1px solid var(--linha); white-space: nowrap; }
   .modo i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); }
-  .modo[data-m="ia"] i { background: #06cf9c; }
-  .modo[data-m="copiloto"] i { background: #ffbc2c; }
+  .modo[data-m="ia"] i { background: var(--marca-menta); }
+  .modo[data-m="copiloto"] i { background: var(--marca-azul); }
   .msgs { flex: 1; overflow-y: auto; padding: 12px 6% 8px; display: flex; flex-direction: column; }
   .dia { align-self: center; background: var(--data); color: var(--sub); font-size: 12.5px; padding: 5px 12px; border-radius: 7.5px; box-shadow: var(--sombra); margin: 10px 0; }
   .sistema { align-self: center; background: var(--aviso); color: var(--aviso-txt); font-size: 12.5px; padding: 5px 12px; border-radius: 7.5px; box-shadow: var(--sombra); margin: 6px 0; text-align: center; max-width: 85%; }
@@ -105,8 +106,7 @@
   .bal.env.primeira::before { content: ""; position: absolute; top: 0; right: -8px; border-left: 8px solid var(--enviada); border-bottom: 13px solid transparent; }
   .bal .autor { display: block; font-size: 12.8px; font-weight: 500; line-height: 22px; margin-top: -2px; white-space: normal; }
   .bal .autor.ia { color: var(--ia); }
-  .bal .autor.eq { color: #027eb5; }
-  @media (prefers-color-scheme: dark) { .bal .autor.eq { color: #53bdeb; } }
+  .bal .autor.eq { color: var(--equipe); }
   .bal .meta { float: right; margin: 6px 0 -5px 10px; font-size: 11px; color: var(--sub); display: inline-flex; align-items: center; gap: 3px; line-height: 15px; white-space: nowrap; }
   .bal.env .meta { color: color-mix(in srgb, var(--texto) 60%, transparent); }
   .bal .meta svg { width: 16px; height: 11px; color: var(--check); }
@@ -116,14 +116,14 @@
     --midia-caixa: rgba(11,20,26,.05); --midia-meta: #ffffff; --midia-degrade: rgba(11,20,26,.45);
     --visor-fundo: rgba(11,20,26,.94); --visor-txt: #ffffff;
     --doc-pdf: #e5252a; --doc-planilha: #1d8f4e; --doc-texto: #2b6bd6; --doc-outro: #8696a0;
-    --ic-doc: #7f66ff; --ic-foto: #007bfc; --gravando: #ea0038; --video-fundo: #000000;
-    --onda: rgba(84,101,111,.35); --onda-tocada: #54656f; --onda-cursor: #53bdeb;
+    --ic-doc: #0a4c86; --ic-foto: #106ebe; --gravando: #ea0038; --video-fundo: #000000;
+    --onda: rgba(84,101,111,.35); --onda-tocada: #54656f; --onda-cursor: var(--marca-azul);
     --encaminhar-fundo: rgba(11,20,26,.22); --encaminhar-icone: #ffffff;
-    --mic-fundo: #111b21; --mic-icone: #ffffff;
+    --mic-fundo: var(--marca-azul); --mic-icone: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root { --midia-caixa: rgba(255,255,255,.06); --midia-degrade: rgba(0,0,0,.5); --visor-fundo: rgba(11,20,26,.96); --doc-outro: #aebac1;
-      --onda: rgba(174,186,193,.35); --onda-tocada: #d1d7db; --encaminhar-fundo: rgba(255,255,255,.14); --mic-fundo: #ffffff; --mic-icone: #111b21; }
+      --onda: rgba(174,186,193,.35); --onda-tocada: #d1d7db; --encaminhar-fundo: rgba(255,255,255,.14); --mic-fundo: var(--marca-menta); --mic-icone: #071d33; }
   }
   .bal.midia { padding: 3px 3px 5px; }
   .bal.midia .autor { padding: 0 6px; }
@@ -204,7 +204,7 @@
   #d-midia .previa-midia .doc { width: auto; max-width: 100%; margin: 18px; background: var(--fundo); }
 
   .sugestao, .revisao { background: var(--painel); padding: 6px 10px 0; flex: none; }
-  .citacao { background: var(--citacao); border-radius: 7.5px; border-left: 4px solid #06cf9c; padding: 7px 10px; display: flex; gap: 10px; align-items: flex-start; }
+  .citacao { background: var(--citacao); border-radius: 7.5px; border-left: 4px solid var(--marca-menta); padding: 7px 10px; display: flex; gap: 10px; align-items: flex-start; }
   @media (prefers-color-scheme: light) { .citacao { background: #e6e9ec; } }
   .citacao .t { flex: 1; min-width: 0; }
   .citacao b { display: block; color: var(--ia); font-size: 13px; font-weight: 500; }
@@ -212,7 +212,7 @@
   .citacao button { all: unset; cursor: pointer; font-size: 13px; color: var(--verde-forte); font-weight: 600; padding: 2px 4px; white-space: nowrap; }
   .revisao .citacao { border-left-color: #ffbc2c; }
   .revisao .citacao b { color: #c28a00; }
-  .revisao.ok .citacao { border-left-color: #06cf9c; }
+  .revisao.ok .citacao { border-left-color: var(--marca-menta); }
   .revisao.ok .citacao b { color: var(--ia); }
 
   .compor { background: var(--painel); padding: 5px 10px calc(5px + env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 4px; flex: none; min-height: 62px; position: relative; }
@@ -222,7 +222,6 @@
   .compor > .icone { margin-bottom: 7px; }
   .compor .caixa .icone { width: 36px; height: 40px; }
   .falar { background: var(--verde-forte) !important; color: #fff !important; width: 44px !important; height: 44px !important; margin-bottom: 5px !important; }
-  @media (prefers-color-scheme: dark) { .falar { color: #111b21 !important; } }
   #enviar.mic-vazio { background: var(--mic-fundo) !important; color: var(--mic-icone) !important; }
   .menu-mais { position: absolute; left: 10px; bottom: 66px; background: var(--fundo); border-radius: 16px; box-shadow: 0 6px 30px rgba(11,20,26,.3); padding: 8px; display: grid; gap: 2px; min-width: 240px; z-index: 5; }
   .menu-mais button { all: unset; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; font-size: 15px; }
@@ -422,7 +421,7 @@
   .linha-compor .modo { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linha); font-size: 14px; font-weight: 600; color: var(--texto); }
   .linha-compor .modo i { width: 8px; height: 8px; border-radius: 50%; background: var(--sub); }
   .linha-compor .modo[data-m="ia"] i { background: var(--marca-menta); box-shadow: 0 0 8px rgba(15, 252, 190, .9); }
-  .linha-compor .modo[data-m="copiloto"] i { background: #5ec4ff; }
+  .linha-compor .modo[data-m="copiloto"] i { background: var(--marca-azul); }
   .falar { background: var(--texto) !important; color: var(--fundo) !important; width: 46px !important; height: 46px !important; margin: 0 0 0 4px !important; }
   #enviar:not(.mic-vazio) { background: var(--marca-gradiente) !important; color: #fff !important; box-shadow: var(--brilho-azul); }
   .compor.gravando > .caixa, .compor.gravando > .linha-compor { display: none !important; }
@@ -525,6 +524,14 @@
   #f-campos { display: grid; gap: 10px; }
   .rodape-ficha { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: sticky; bottom: 0; padding: 10px 0 4px; background: var(--fundo); }
   .ficha { padding-bottom: 20px; }
+  /* paleta da página de vendas */
+  .falar { background: var(--mic-fundo, var(--marca-azul)) !important; color: var(--mic-icone, #fff) !important; }
+  .botao { color: var(--botao-txt) !important; font-weight: 700; }
+  .botao.leve { color: var(--texto) !important; }
+  .item .hora.nova { color: var(--verde); font-weight: 700; }
+  .lista-topo h1.titulo-grande, .painel h1.titulo-grande, .gestao h1.titulo-grande, .cabeca-vista h1.titulo-grande { color: var(--texto); }
+  .sugestao .citacao b, .citacao b { color: var(--ia); }
+  .citacao { background: var(--ia-fundo); }
 </style>
 </head>
 <body>
@@ -609,12 +616,12 @@
             <div class="menu-mais" id="menu-mais" hidden>
               <button id="m-documento"><i style="background:var(--ic-doc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg></i>Documento</button>
               <button id="m-fotos"><i style="background:var(--ic-foto)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 18 5.5-5.5L13 16l3-3 4 4"/></svg></i>Fotos e vídeos</button>
-              <button id="m-agendar"><i style="background:#007bfc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></i>Agendar no Trinks</button>
-              <button id="m-revisar"><i style="background:#02a698"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
-              <button id="m-sugestao"><i style="background:#7f66ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
-              <button id="m-ficha"><i style="background:#ff2e74"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Dados da cliente</button>
-              <button id="m-etiquetar"><i style="background:#ff6b9a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></i>Etiquetar</button>
-              <button id="m-transferir" hidden><i style="background:#e26b2c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
+              <button id="m-agendar"><i style="background:#106ebe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></i>Agendar no Trinks</button>
+              <button id="m-revisar"><i style="background:#0a8f7a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
+              <button id="m-sugestao"><i style="background:#0a4c86"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
+              <button id="m-ficha"><i style="background:#1a8be0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Dados da cliente</button>
+              <button id="m-etiquetar"><i style="background:#0bb5a0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></i>Etiquetar</button>
+              <button id="m-transferir" hidden><i style="background:#08243f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
             </div>
           </div>
           <div class="simular" id="simular" hidden>

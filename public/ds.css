@@ -5,84 +5,93 @@
  * Claro e escuro seguem o aparelho.
  */
 :root {
-  /* marca */
+  /* marca (iguais à página de vendas) */
   --marca-azul: #106ebe;
   --marca-azul-escuro: #0a4c86;
   --marca-menta: #0ffcbe;
-  --marca-gradiente: linear-gradient(135deg, #1a8be0 0%, #106ebe 45%, #0bc7a8 100%);
-  --brilho-menta: 0 0 0 1px rgba(15, 252, 190, .25), 0 6px 22px rgba(15, 252, 190, .38);
-  --brilho-azul: 0 6px 22px rgba(16, 110, 190, .38);
+  --marca-menta-suave: #b8ffeb;
+  --marca-tinta: #08243f;
+  --marca-gradiente: linear-gradient(135deg, #1a8be0 0%, #106ebe 50%, #0a4c86 100%);
+  --brilho-menta: 0 0 0 1px rgba(15, 252, 190, .3), 0 6px 22px rgba(15, 252, 190, .35);
+  --brilho-azul: 0 8px 24px rgba(16, 110, 190, .32);
+  --fonte: "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  /* superfícies (medidas e papéis iguais ao WhatsApp) */
+  /* superfícies: branco e "papel" azulado da página de vendas */
   --fundo: #ffffff;
-  --painel: #f1f4f8;
-  --chat: #eaf0f6;
-  --linha: #e4eaf0;
-  --hover: #f4f7fa;
-  --sel: #e9f1f9;
-  --texto: #0d1b2a;
-  --sub: #5f7183;
-  --icone: #4f6476;
+  --painel: #f4f8fc;
+  --chat: #eef3f8;
+  --linha: #dbe6f1;
+  --hover: #edf4fb;
+  --sel: #e3effa;
+  --texto: #08243f;
+  --sub: #5a6b7d;
+  --icone: #0a4c86;
   --entrada: #ffffff;
 
-  /* conversa */
+  /* conversa (como o celular de exemplo da página) */
   --recebida: #ffffff;
-  --enviada: #d4f8ee;
-  --check: #2f9ae8;
+  --enviada: #d9ecfb;
+  --check: #106ebe;
   --data: #ffffff;
-  --sombra: 0 1px .5px rgba(13, 27, 42, .13);
+  --sombra: 0 1px 1px rgba(8, 36, 63, .08);
   --textura: rgba(16, 110, 190, .05);
-  --aviso: #fff3d1;
+  --aviso: #fff6db;
   --aviso-txt: #5e4b00;
 
-  /* acentos: onde o WhatsApp usa verde, a Sintonia usa azul/menta */
-  --verde: #0bb89a;          /* hora de não lida, destaques de texto */
-  --verde-forte: #106ebe;     /* botões principais, enviar */
-  --badge: #0ffcbe;           /* bolinha de não lidas */
-  --badge-txt: #063a4d;
-  --chip-ativo: #d5f9ef;
-  --chip-ativo-txt: #0a6b5b;
-  --ia: #0a8f7a;
-  --citacao: #e6edf3;
+  /* acentos: azul para ação, menta para IA e novidades */
+  --verde: #106ebe;
+  --verde-forte: #106ebe;
+  --badge: #0ffcbe;
+  --badge-txt: #08243f;
+  --chip-ativo: #106ebe;
+  --chip-ativo-txt: #ffffff;
+  --ia: #087a5c;
+  --ia-fundo: #effff9;
+  --citacao: #effff9;
   --azul: #106ebe;
-  --boneco-fundo: #dbe4ec;
+  --equipe: #0a4c86;
+  --boneco-fundo: #cfe2f6;
   --boneco: #ffffff;
-  --vidro: rgba(255, 255, 255, .78);
+  --vidro: rgba(255, 255, 255, .82);
+  --botao-txt: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fundo: #0e1824;
-    --painel: #172434;
-    --chat: #08111b;
-    --linha: #1f2d3d;
-    --hover: #172434;
-    --sel: #1f3046;
-    --texto: #e8eef4;
-    --sub: #8b9cad;
-    --icone: #a9b8c6;
-    --entrada: #1f3046;
+    /* escuro nos azuis da marca (rodapé e faixa escura da página de vendas) */
+    --fundo: #071d33;
+    --painel: #0b2a47;
+    --chat: #05172a;
+    --linha: #143a5e;
+    --hover: #0d3050;
+    --sel: #0f3a63;
+    --texto: #eaf3fc;
+    --sub: #8fb1d1;
+    --icone: #b9d4ee;
+    --entrada: #0d3050;
 
-    --recebida: #182636;
-    --enviada: #0b4f63;
-    --check: #5ec4ff;
-    --data: #142131;
-    --sombra: 0 1px .5px rgba(0, 0, 0, .45);
-    --textura: rgba(15, 252, 190, .03);
+    --recebida: #0f3150;
+    --enviada: #106ebe;
+    --check: #0ffcbe;
+    --data: #0b2a47;
+    --sombra: 0 1px 1px rgba(0, 0, 0, .35);
+    --textura: rgba(15, 252, 190, .035);
     --aviso: #2a2410;
     --aviso-txt: #ffd47a;
 
     --verde: #0ffcbe;
     --verde-forte: #1a8be0;
     --badge: #0ffcbe;
-    --badge-txt: #04263a;
-    --chip-ativo: #0d3a40;
-    --chip-ativo-txt: #b9ffee;
+    --badge-txt: #071d33;
+    --chip-ativo: #0ffcbe;
+    --chip-ativo-txt: #071d33;
     --ia: #0ffcbe;
-    --citacao: #13202e;
-    --boneco-fundo: #34485c;
-    --boneco: #a9bacb;
-    --vidro: rgba(14, 24, 36, .78);
+    --ia-fundo: #0b3a3f;
+    --citacao: #0b2a47;
+    --equipe: #8fd0ff;
+    --boneco-fundo: #1b4a74;
+    --boneco: #a9c8e6;
+    --vidro: rgba(7, 29, 51, .82);
   }
 }
 
