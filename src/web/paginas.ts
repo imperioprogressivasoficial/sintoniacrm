@@ -110,7 +110,12 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
         const a = porRota.get(rota);
         return a ? `${attr}="${rota}?v=${versao(a)}"` : m;
       });
-      h = Buffer.from(texto, 'utf8');
+      // imagens (src e srcset): também ganham ?v=, para foto/print novo aparecer na hora no celular
+      const comImagens = texto.replace(/(\/[^"\s?#,]+\.(?:webp|png|jpe?g|svg))(?=[\s",])/g, (m, rota: string) => {
+        const a = porRota.get(rota);
+        return a ? `${rota}?v=${versao(a)}` : m;
+      });
+      h = Buffer.from(comImagens, 'utf8');
       htmlPronto.set(arquivo, h);
     }
     return h;

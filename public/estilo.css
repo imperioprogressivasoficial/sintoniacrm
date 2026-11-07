@@ -606,3 +606,15 @@ html { overflow-x: clip; }
 .v-marca-txt > span { white-space: nowrap; }
 .v-by { font-size: 10.5px; font-weight: 500; letter-spacing: .02em; opacity: .7; margin-top: 3px; white-space: nowrap; color: inherit; }
 @media (max-width: 520px) { .v-by { font-size: 9.5px; } }
+
+/* ---------- celular: palco do herói em fluxo (sem sobreposições estranhas) ---------- */
+@media (max-width: 760px) {
+  .v-palco { aspect-ratio: auto; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; align-items: end; padding: 0 2px; }
+  .v-palco .v-mac { position: relative; grid-column: 1 / -1; grid-row: 1; left: auto; top: auto; width: 100%; margin: 0; }
+  .v-palco .v-foto-heroi { position: relative; grid-column: 1; grid-row: 2; left: auto; bottom: auto; width: 100%; margin: 0 0 6px; }
+  .v-palco .v-iphone { position: relative; grid-column: 2; grid-row: 2; right: auto; bottom: auto; width: 84%; justify-self: center; margin-top: 22px; }
+  .v-palco .v-chip.c1 { position: relative; grid-column: 1; grid-row: 2; align-self: start; justify-self: stretch; left: auto; right: auto; top: auto; margin-top: 22px; white-space: normal; }
+  .v-palco .v-chip.c1 b { font-size: 12.5px; }
+  .v-foto figcaption { font-size: 11px; left: 12px; right: 12px; bottom: 10px; line-height: 1.3; }
+  .v-foto figcaption b { font-size: 13px; }
+}
