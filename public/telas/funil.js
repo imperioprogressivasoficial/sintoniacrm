@@ -24,6 +24,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2.5h6"/></svg>',
     pessoa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19.5a6.5 6.5 0 0 1 13 0"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    filtro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>',
     sair: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M15 16l4-4-4-4M19 12H9"/></svg>',
   };
 
@@ -61,6 +62,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   #funil-abas .chip .qtd:empty { display: none; }
 
   #funil.fn-caixa { display: flex; flex-direction: column; padding: 0; gap: 0; overflow: hidden; align-items: stretch; }
+  .fn-topo { display: flex; align-items: center; gap: 10px; padding: 6px 20px 12px; flex: none; min-width: 0; }
+  .fn-topo .fn-busca { flex: 0 1 300px; }
+  .fn-topo .fn-funis { margin-left: auto; }
+  .fn-filtros-bt { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 42px; padding: 0 15px; border-radius: 999px; font-size: 14px; font-weight: 650; color: var(--texto);
+    background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); }
+  .fn-filtros-bt svg { width: 18px; height: 18px; }
+  .fn-filtros-bt b { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-azul); color: #fff; }
+  .fn-filtros-bt b:empty { display: none; }
+  .fn-filtros-bt:hover { background: var(--vidro-ativo); }
+  .fn-filtros-bt:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+  #rs-filtros-crm { display: none !important; }
+  #v-funil .fn-numeros { display: none !important; }
+  dialog.fn-filtros .fn-fil-corpo { display: grid; gap: 14px; padding: 4px 18px 6px; }
+  dialog.fn-filtros .fn-fil-rodape { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 18px calc(16px + env(safe-area-inset-bottom)); }
   .fn-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 8px 20px 12px; flex: none; }
   .fn-linha { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .fn-linha.fn-l1 { flex: 1 1 420px; }
@@ -129,37 +144,45 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-carregar { all: unset; cursor: pointer; margin: 0 10px 12px; padding: 11px; border-radius: 999px; text-align: center; font-size: 13.5px; font-weight: 750; color: var(--marca-azul); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   html[data-tema="escuro"] .fn-carregar { color: var(--marca-menta); }
 
-  /* ---------- cartão preenchido com a cor da etapa ---------- */
-  .fn-cartao, .fn-resumo { --fill: var(--f-cla, #e8eef5); --tx: #106ebe; --tx2: rgba(16, 110, 190,.74); --vd: rgba(255,255,255,.55); --vd-b: rgba(16, 110, 190,.12); }
-  html[data-tema="escuro"] .fn-cartao, html[data-tema="escuro"] .fn-resumo { --fill: var(--f-esc, #2a3a4c); --tx: #ffffff; --tx2: rgba(255,255,255,.80); --vd: rgba(255,255,255,.16); --vd-b: rgba(255,255,255,.22); }
-  .fn-cartao { position: relative; display: grid; gap: 4px; padding: 12px 12px 12px 14px; border-radius: 18px; cursor: pointer; color: var(--tx);
-    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 55%), var(--fill);
-    box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.28), 0 6px 18px rgba(7, 29, 51,.16);
+  /* ---------- cartão: vidro neutro, igual em todas as etapas (a cor fica só na bolinha da coluna) ---------- */
+  .fn-resumo { --fill: var(--f-cla, #e8eef5); --tx: #106ebe; --tx2: rgba(16, 110, 190,.74); --vd: rgba(255,255,255,.55); --vd-b: rgba(16, 110, 190,.12); }
+  html[data-tema="escuro"] .fn-resumo { --fill: var(--f-esc, #2a3a4c); --tx: #ffffff; --tx2: rgba(255,255,255,.80); --vd: rgba(255,255,255,.16); --vd-b: rgba(255,255,255,.22); }
+  .fn-cartao { --tx: var(--texto); --tx2: var(--sub); --vd: var(--vidro-ativo); --vd-b: var(--vidro-borda);
+    position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; gap: 0 10px; padding: 12px 12px 11px; border-radius: 16px; cursor: pointer; color: var(--tx);
+    background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 1px 2px rgba(7, 29, 51,.06);
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-x pan-y; transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease, filter .15s ease; flex: none; }
-  .fn-cartao:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: inset 0 0 0 1px var(--vd-b), inset 0 1px 0 rgba(255,255,255,.3), 0 12px 26px rgba(7, 29, 51,.24); }
+  .fn-cartao:hover { transform: translateY(-1px); background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 6px 16px rgba(7, 29, 51,.12); }
+  .fn-cartao > .avatar { width: 40px; height: 40px; font-size: 15px; margin: 0; }
+  .fn-corpo { min-width: 0; display: grid; gap: 3px; padding-right: 26px; }
+  .fn-cartao .fn-nome { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .fn-cartao .fn-nome > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fn-tags { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: hidden; }
+  .fn-tags .fn-tag { flex: 0 1 auto; min-width: 0; }
+  .fn-ia { flex: none; display: inline-grid; place-items: center; height: 22px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .02em; color: var(--texto); background: color-mix(in srgb, var(--marca-menta) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-menta) 55%, transparent); }
   .fn-cartao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .fn-cartao.fn-saindo { opacity: .3; transform: scale(.98); }
   .fn-cartao.fn-segurando { transform: scale(.97); }
   .fn-cartao.fn-novo-aqui { animation: fn-chegou .7s ease; }
-  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px color-mix(in srgb, var(--marca-menta) 35%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--vd-b), 0 6px 18px rgba(7, 29, 51,.16); } }
+  @keyframes fn-chegou { 0% { box-shadow: inset 0 0 0 2px var(--marca-menta), 0 0 0 6px color-mix(in srgb, var(--marca-menta) 35%, transparent); } 100% { box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 1px 2px rgba(7, 29, 51,.06); } }
   .fn-c0 { display: flex; align-items: center; gap: 6px; min-height: 24px; padding-right: 30px; }
   .fn-desde { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--tx2); white-space: nowrap; }
   .fn-desde svg { width: 12.5px; height: 12.5px; }
-  .fn-desde.fn-velho { color: #2b1d00; background: #f5b800; padding: 2px 8px 2px 6px; border-radius: 999px; font-weight: 800; box-shadow: 0 0 10px rgba(245,184,0,.4); }
-  .fn-cartao .fn-nome { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-desde.fn-velho { color: #9a6700; font-weight: 700; }
+  html[data-tema="escuro"] .fn-desde.fn-velho { color: #ffd34d; }
+  .fn-cartao .fn-nome { font-size: 15px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; }
   .fn-linha2 { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; font-size: 12.5px; color: var(--tx2); line-height: 1.3; }
-  .fn-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 750; border-radius: 999px; padding: 1px 7px 1px 5px; background: var(--vd); color: var(--tx); box-shadow: inset 0 0 0 1px var(--vd-b); white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
-  .fn-tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--cor); flex: none; box-shadow: 0 0 0 1.5px rgba(255,255,255,.7); }
-  .fn-pe { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; min-width: 0; }
-  .fn-previa { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--tx); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
-  .fn-previa i { font-style: normal; font-weight: 800; opacity: .78; }
+  .fn-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 7px 1px 5px; background: transparent; color: var(--sub); box-shadow: inset 0 0 0 1px var(--vidro-borda); white-space: nowrap; max-width: 96px; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+  .fn-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--cor); flex: none; }
+  .fn-pe { display: flex; align-items: center; gap: 6px; margin-top: 5px; min-width: 0; }
+  .fn-previa { min-width: 0; font-size: 13px; font-weight: 400; color: var(--sub); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+  .fn-previa i { font-style: normal; font-weight: 600; }
   .fn-previa.fn-nada { font-weight: 500; color: var(--tx2); font-style: italic; }
-  .fn-cartao .fn-ini { width: 30px; height: 30px; }
+  .fn-cartao .fn-ini { width: 24px; height: 24px; font-size: 9.5px; }
+  .fn-cartao .fn-ini svg { width: 13px; height: 13px; }
   .fn-cartao .fn-ini.fn-sem { color: var(--tx2); }
-  .fn-mais { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 9px; right: 9px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--tx);
-    background: var(--vd); box-shadow: inset 0 0 0 1px var(--vd-b); transition: background .15s ease; }
-  .fn-mais:hover { background: rgba(255,255,255,.32); }
-  .fn-mais svg { width: 15px; height: 15px; }
+  .fn-mais { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 8px; right: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); transition: background .15s ease; }
+  .fn-mais:hover { background: var(--vidro-ativo); color: var(--texto); }
+  .fn-mais svg { width: 18px; height: 18px; }
 
   .fn-fantasma { position: fixed; z-index: 1000; pointer-events: none; margin: 0; transform: rotate(2.5deg) scale(1.03); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.4), 0 26px 54px rgba(7, 29, 51,.42) !important; opacity: .97; }
   .fn-arrastando, .fn-arrastando * { cursor: grabbing !important; }
@@ -261,6 +284,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     .fn-num b { font-size: 18px; }
     .fn-num small { font-size: 11.5px; }
     .fn-barra { padding: 4px 14px 8px; gap: 8px; }
+    .fn-topo { flex-wrap: wrap; padding: 4px 14px 10px; gap: 8px; }
+    .fn-topo .fn-busca { order: 1; flex: 1 1 0; min-width: 0; height: 44px; }
+    .fn-filtros-bt { order: 2; height: 44px; }
+    .fn-topo .fn-funis { order: 3; margin-left: 0; flex: 1 1 calc(100% - 60px); min-width: 0; }
+    .fn-topo > .fn-redondo { order: 4; }
     .fn-linha.fn-l1, .fn-linha.fn-l2 { display: contents; }
     .fn-busca { order: 1; flex: 1 1 50%; min-width: 0; height: 44px; }
     .fn-unidade-sel { order: 2; }
@@ -305,6 +333,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     q: null, carregados: {}, geracao: 0, buscando: false, erro: null,
     colEls: new Map(), cartaoEls: new Map(), autos: [], autosEm: 0, cores: [],
     arrasto: null, aperto: null, abertos: 0, assinaturaFunis: '', dona: lerLocal('sintonia.crm.dona') || '', assinaturaPessoas: '',
+    origem: lerLocal('sintonia.crm.origem') || '', etiqueta: '', periodo: '',
   };
   const PAGINA = 50;
   const DIA = 86400000;
@@ -442,16 +471,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const busca = el('input', { type: 'search', placeholder: 'Buscar cliente', 'aria-label': 'Buscar no quadro por nome ou telefone', value: s.busca });
     let t = null;
     busca.addEventListener('input', () => { s.busca = busca.value; clearTimeout(t); t = setTimeout(() => { s.carregados = {}; carregarQuadro(); }, 300); });
-    s.unidades = el('div', { class: 'fn-unidades fn-trilho', role: 'group', 'aria-label': 'Unidade' });
-    s.pessoas = el('div', { class: 'fn-pessoas', role: 'group', 'aria-label': 'Filtrar por dona da conversa' });
     s.assinaturaPessoas = '';
-    s.unidadeSel = el('select', { class: 'fn-unidade-sel', 'aria-label': 'Unidade' });
-    s.unidadeSel.addEventListener('change', () => escolherUnidade(s.unidadeSel.value));
+    s.qtdFiltros = el('b');
+    s.botaoFiltros = el('button', { class: 'fn-filtros-bt', type: 'button', title: 'Filtrar por origem, atendente, unidade, etiqueta ou período', onclick: abrirFiltros },
+      el('span', { html: SVG.filtro, style: 'display:grid' }), el('span', { text: 'Filtros' }), s.qtdFiltros);
     s.quadro = el('div', { class: 'fn-quadro' });
     s.caixa.replaceChildren(
-      el('div', { class: 'fn-barra' },
-        el('div', { class: 'fn-linha fn-l1' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), window.SintoniaRastreio ? window.SintoniaRastreio.botaoFiltro(() => desenharQuadro()) : null, s.pessoas),
-        el('div', { class: 'fn-linha fn-l2' }, s.barraFunis, s.botaoFunil, s.unidades, s.unidadeSel)),
+      el('div', { class: 'fn-topo' },
+        el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca),
+        s.botaoFiltros, s.barraFunis, s.botaoFunil),
       s.quadro,
     );
     s.colEls.clear(); s.cartaoEls.clear();
@@ -476,14 +504,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const eu = s.ui.estado.eu || {};
     const unidades = (eu.unidades && eu.unidades.length ? eu.unidades : Object.keys(UNIDADE).filter((u) => u !== 'feira'));
     if (s.unidade && !unidades.includes(s.unidade)) s.unidade = '';
-    s.unidades.hidden = unidades.length < 2;
-    s.unidadeSel.hidden = unidades.length < 2;
-    const ops = [['', 'Todas'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
-    s.unidades.replaceChildren(...ops.map(([v, n]) => el('button', {
-      class: 'fn-pilula', type: 'button', 'aria-pressed': String(s.unidade === v), onclick: () => escolherUnidade(v),
-    }, el('span', { text: n }))));
-    s.unidadeSel.replaceChildren(...ops.map(([v, n]) => el('option', { value: v, text: n })));
-    s.unidadeSel.value = s.unidade;
+    s.unidadesOps = unidades.length < 2 ? [] : [['', 'Todas as unidades'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
+    contarFiltros();
   }
   function escolherUnidade(v) {
     s.unidade = v; gravarLocal('sintonia.crm.unidade', v); s.assinaturaFunis = ''; desenharBarra(); s.carregados = {}; carregarQuadro();
@@ -506,45 +528,74 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (funil()?.sistema) return cols.filter((c) => !FECHADAS.has(c.etapa.chaveSistema));
     return cols.length > 1 ? cols.slice(0, -1) : cols;
   }
-  function desenharNumeros() {
-    if (!s.numeros) return;
-    const { el } = s.ui;
-    if (!s.q) { s.numeros.replaceChildren(); return; }
-    const cols = s.q.colunas;
-    const soma = (l) => l.reduce((n, c) => n + c.total, 0);
-    const todas = soma(cols);
-    const abertas = colunasAbertas();
-    const sistema = funil()?.sistema;
-    const chave = (k) => cols.find((c) => c.etapa.chaveSistema === k);
-    const ultima = cols[cols.length - 1];
-    const ganhas = sistema ? ['agendada', 'compareceu', 'manutencao'].reduce((n, k) => n + (chave(k)?.total || 0), 0) : (cols.length > 1 ? ultima.total : 0);
-    const conv = todas ? Math.round((ganhas / todas) * 100) : 0;
-    const paradas = abertas.reduce((n, c) => n + c.cartoes.filter(parada).length, 0);
-    const maisParadas = abertas.some((c) => c.mais);
-    const num = (icone, valor, rotulo, extra = {}) => el('div', { class: 'fn-num' + (extra.alerta ? ' alerta' : ''), title: extra.dica || rotulo },
-      el('span', { class: 'fn-num-ic', html: icone }),
-      el('div', {}, el('b', {}, el('span', { text: valor }), extra.selo || null), el('small', { text: rotulo })));
-    const itens = [num(SVG.caixa, String(soma(abertas)), 'Em aberto', { dica: 'Clientes nas etapas em andamento' })];
-    if (sistema) itens.push(num(SVG.calendario, String(chave('agendada')?.total || 0), 'Agendadas', { dica: 'Clientes na etapa Agendada agora' }));
-    else if (ultima && cols.length > 1) itens.push(num(SVG.calendario, String(ultima.total), `Em ${ultima.etapa.nome}`));
-    itens.push(num(SVG.tendencia, `${conv}%`, 'Conversão', { dica: sistema ? 'Agendadas, compareceram ou em manutenção, sobre todas do funil' : `Na última etapa (${ultima?.etapa.nome || ''}) sobre todas do funil` }));
-    itens.push(num(SVG.alerta, `${paradas}${maisParadas && paradas ? '+' : ''}`, 'Paradas há +3 dias', { alerta: paradas > 0, dica: 'Clientes que não saem da etapa há mais de 3 dias' }));
-    s.numeros.replaceChildren(...itens);
-  }
+  // O topo do quadro ficou limpo: os números grandes saíram (estão no Dashboard).
+  function desenharNumeros() { s.numeros?.replaceChildren(); }
   function desenharPessoas() {
-    const { el } = s.ui;
     const donas = new Map();
     let semDona = 0;
     for (const col of s.q?.colunas || []) for (const c of col.cartoes) { if (c.dona) donas.set(c.dona.id, c.dona); else semDona++; }
     if (s.dona && s.dona !== 'sem' && !donas.has(s.dona)) s.dona = '';
     const lista = [...donas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    const assinatura = JSON.stringify([s.dona, lista.map((d) => [d.id, d.nome]), semDona > 0]);
-    if (assinatura === s.assinaturaPessoas) return;
-    s.assinaturaPessoas = assinatura;
-    if (!lista.length) { s.pessoas.replaceChildren(); return; }
-    const pilula = (v, rotulo, ini) => el('button', { class: 'fn-pessoa' + (ini ? '' : ' fn-todas'), type: 'button', 'aria-pressed': String(s.dona === v), title: v ? `Só as conversas de ${rotulo}` : 'Todas as donas',
-      onclick: () => { s.dona = s.dona === v ? '' : v; gravarLocal('sintonia.crm.dona', s.dona); desenharQuadro(); } }, ini || null, el('span', { text: rotulo }));
-    s.pessoas.replaceChildren(pilula('', 'Todas'), ...lista.map((d) => pilula(d.id, primeiroNome(d.nome), bolinha(d))), ...(semDona ? [pilula('sem', 'Sem dona', bolinha(null))] : []));
+    // Opções do filtro "Atendente" (janela Filtros).
+    s.donasOps = [['', 'Todas as atendentes'], ...lista.map((d) => [d.id, d.nome || 'Sem nome']), ...(semDona ? [['sem', 'Sem atendente']] : [])];
+    const tags = new Map();
+    for (const col of s.q?.colunas || []) for (const c of col.cartoes) for (const t of c.tags || []) tags.set(t.id, t);
+    if (s.etiqueta && !tags.has(s.etiqueta)) s.etiqueta = '';
+    s.etiquetasOps = [['', 'Todas as etiquetas'], ...[...tags.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((t) => [t.id, t.nome])];
+    contarFiltros();
+  }
+
+  // ---------- filtros (janela) ----------
+  const PERIODOS = [['', 'Qualquer data'], ['1', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias']];
+  const passaEtiqueta = (c) => !s.etiqueta || (c.tags || []).some((t) => t.id === s.etiqueta);
+  const passaPeriodo = (c) => {
+    if (!s.periodo) return true;
+    const d = Number(s.periodo);
+    const desde = d === 1 ? new Date(new Date().setHours(0, 0, 0, 0)).getTime() : Date.now() - d * DIA;
+    return new Date(c.ultima?.em || c.atualizadaEm || 0).getTime() >= desde;
+  };
+  function contarFiltros() {
+    if (!s.qtdFiltros) return;
+    const n = [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo].filter(Boolean).length;
+    s.qtdFiltros.textContent = n ? String(n) : '';
+    s.botaoFiltros.setAttribute('aria-label', n ? `Filtros (${n} ligado${n === 1 ? '' : 's'})` : 'Filtros');
+  }
+  function abrirFiltros() {
+    const { el } = s.ui;
+    const ra = window.SintoniaRastreio;
+    const d = el('dialog', { class: 'folha fn-folha fn-filtros', 'aria-label': 'Filtros do CRM' });
+    const fechar = () => d.close();
+    const campo = (rotulo, ops, valor, mudar) => {
+      const sel = el('select', { 'aria-label': rotulo }, ...ops.map(([v, n]) => el('option', { value: v, text: n })));
+      sel.value = valor;
+      sel.addEventListener('change', () => { mudar(sel.value); contarFiltros(); });
+      return el('label', { class: 'fn-campo' }, el('span', { text: rotulo }), sel);
+    };
+    const corpo = el('div', { class: 'fn-fil-corpo' });
+    const montarCorpo = () => corpo.replaceChildren(
+      campo('Origem', (ra?.opcoesFiltro() || [{ nome: 'Todas as origens', valor: '' }]).map((o) => [o.valor, o.nome.trim()]), s.origem, (v) => { s.origem = v; gravarLocal('sintonia.crm.origem', v); desenharQuadro(); }),
+      campo('Atendente', s.donasOps || [['', 'Todas as atendentes']], s.dona, (v) => { s.dona = v; gravarLocal('sintonia.crm.dona', v); desenharQuadro(); }),
+      (s.unidadesOps || []).length ? campo('Unidade', s.unidadesOps, s.unidade, (v) => escolherUnidade(v)) : null,
+      campo('Etiqueta', s.etiquetasOps || [['', 'Todas as etiquetas']], s.etiqueta, (v) => { s.etiqueta = v; desenharQuadro(); }),
+      campo('Última mensagem', PERIODOS, s.periodo, (v) => { s.periodo = v; desenharQuadro(); }),
+    );
+    montarCorpo();
+    d.append(
+      el('div', { class: 'folha-topo' }, el('span'), el('h2', { text: 'Filtros' }), el('button', { class: 'icone fechar-folha', type: 'button', 'aria-label': 'Fechar', html: SVG.fechar, onclick: fechar })),
+      corpo,
+      el('div', { class: 'fn-fil-rodape' },
+        el('button', { class: 'fn-bt', type: 'button', text: 'Limpar', onclick: () => {
+          s.origem = ''; s.dona = ''; s.etiqueta = ''; s.periodo = ''; gravarLocal('sintonia.crm.origem', ''); gravarLocal('sintonia.crm.dona', '');
+          if (s.unidade) escolherUnidade(''); else desenharQuadro();
+          contarFiltros(); montarCorpo();
+        } }),
+        el('button', { class: 'fn-bt fn-menta', type: 'button', text: 'Pronto', onclick: fechar })));
+    d.addEventListener('close', () => { d.remove(); s.abertos--; });
+    d.addEventListener('click', (e) => { if (e.target === d) fechar(); });
+    document.body.append(d);
+    s.abertos++;
+    ra?.carregarSelos(true).then(() => { if (d.open) montarCorpo(); });
+    d.showModal();
   }
 
   // ---------- quadro ----------
@@ -571,7 +622,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       pintar(c.raiz, col.etapa.cor || '#8B8D98');
       c.nome.textContent = col.etapa.nome;
       const ra = window.SintoniaRastreio;
-      const vis = col.cartoes.filter((x) => passaDona(x) && (!ra || ra.passa(x.conversaId, x.origem)));
+      const vis = col.cartoes.filter((x) => passaDona(x) && passaEtiqueta(x) && passaPeriodo(x) && (!ra || ra.passa(x.conversaId, x.origem, s.origem)));
       c.total.textContent = String(s.dona || vis.length !== col.cartoes.length ? vis.length : col.total);
       c.total.title = s.dona ? `${vis.length} desta dona entre as carregadas` : `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
       const paradasCol = vis.filter(parada).length;
@@ -590,7 +641,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       // cartões: reaproveita os elementos que não mudaram (não pisca nem recarrega a foto)
       const nos = vis.map((cartao) => cartaoEl(cartao, id));
       const topo = c.lista.scrollTop;
-      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: s.dona && col.cartoes.length ? 'Ninguém desta dona aqui.' : s.busca.trim() ? 'Ninguém com essa busca aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
+      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: (s.dona || s.origem || s.etiqueta || s.periodo) && col.cartoes.length ? 'Ninguém com esses filtros aqui.' : s.busca.trim() ? 'Ninguém com essa busca aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
       const atuais = [...c.lista.children];
       if (atuais.length !== nos.length || atuais.some((n, i) => n !== nos[i])) { c.lista.replaceChildren(...nos); c.lista.scrollTop = topo; }
       const faltam = col.total - col.cartoes.length;
@@ -653,25 +704,33 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   const tagEl = (t) => s.ui.el('span', { class: 'fn-tag', style: `--cor:${t.cor}`, title: t.nome }, s.ui.el('i'), s.ui.el('span', { text: t.nome }));
 
+  // Ícone de origem só quando é conhecida (sem "?" em todo cartão).
+  const origemConhecida = (c) => !!window.SintoniaRastreio && ((c.origem?.icone && c.origem.icone !== 'desconhecido') || !!window.SintoniaRastreio.selo(c.conversaId));
   function cartaoEl(cartao, etapaId) {
     const selo = window.SintoniaRastreio?.selo(cartao.conversaId);
     const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000), selo]);
     const cache = s.cartaoEls.get(cartao.conversaId);
     if (cache && cache.assinatura === assinatura) return cache.no;
-    const { el, UNIDADE, nomeDe } = s.ui;
+    const { el, nomeDe } = s.ui;
     const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
-    const unidade = UNIDADE[cartao.unidade] || cartao.unidade;
-    const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mover para…', 'aria-label': `Mover ${nome} para…`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
-    const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir ficha` },
-      el('div', { class: 'fn-c0' }, desdeEl(cartao)),
-      mais,
-      el('div', { class: 'fn-nome' }, window.SintoniaRastreio ? window.SintoniaRastreio.iconeEl(cartao.origem || cartao.conversaId) : null, nome),
-      el('div', { class: 'fn-linha2' }, unidade ? el('span', { text: unidade }) : null, window.SintoniaRastreio?.seloEl(cartao.conversaId) || null, ...(cartao.tags || []).slice(0, 3).map(tagEl)),
-      el('div', { class: 'fn-pe' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')));
-    no.addEventListener('click', () => { if (s.semClique) return; abrirFicha(cartao.conversaId); });
+    const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
+    // Quem atende: selo "IA" quando a IA responde sozinha; senão, a foto ou as iniciais da atendente.
+    const atende = cartao.modo === 'ia'
+      ? el('span', { class: 'fn-ia', title: 'A IA está atendendo', text: 'IA' })
+      : bolinha(cartao.dona, cartao.dona ? `Atendida por ${cartao.dona.nome}` : 'Sem atendente');
+    const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir conversa` },
+      s.ui.avatar({ id: cartao.conversaId, nome: cartao.nome, telefone: cartao.telefone }),
+      el('div', { class: 'fn-corpo' },
+        el('div', { class: 'fn-nome' }, origemConhecida(cartao) ? window.SintoniaRastreio.iconeEl(cartao.origem?.icone && cartao.origem.icone !== 'desconhecido' ? cartao.origem : cartao.conversaId) : null, el('span', { text: nome })),
+        previaEl(cartao.ultima),
+        // Rodapé discreto: até 2 etiquetas, o relógio só quando está parada há +3 dias, e quem atende.
+        el('div', { class: 'fn-pe' }, el('span', { class: 'fn-tags' }, ...(cartao.tags || []).slice(0, 2).map(tagEl)), parada(cartao) ? desdeEl(cartao) : null, atende)),
+      mais);
+    // Clicar no cartão abre a conversa; a ficha (observações, etapa, tags) fica no ⋯.
+    no.addEventListener('click', () => { if (s.semClique) return; s.ui.abrir(cartao.conversaId); });
     no.addEventListener('keydown', (e) => {
       if (e.target !== no) return;
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirFicha(cartao.conversaId); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.ui.abrir(cartao.conversaId); }
       if (e.key === 'm' || e.key === 'M' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); menuCartao(cartao.conversaId); }
     });
     no.addEventListener('contextmenu', (e) => { e.preventDefault(); if (!s.arrasto && !s.aperto) menuCartao(cartao.conversaId); });
@@ -927,7 +986,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       nome: c.etapa.nome, cor: c.etapa.cor, atual: c.etapa.id === col.etapa.id, info: c.etapa.id === col.etapa.id ? 'Está aqui agora' : `${c.total} cliente${c.total === 1 ? '' : 's'}`,
       acao: () => { if (c.etapa.id !== col.etapa.id) mover(conversaId, c.etapa.id); },
     }));
-    const outros = [{ nome: 'Abrir ficha', icone: SVG.lapis, acao: () => abrirFicha(conversaId) }, { nome: 'Abrir conversa', icone: SVG.conversa, acao: () => s.ui.abrir(conversaId) }];
+    const outros = [{ nome: 'Abrir conversa', icone: SVG.conversa, acao: () => s.ui.abrir(conversaId) }, { nome: 'Ficha e observações', info: 'Etapa, responsável, observações e tags', icone: SVG.lapis, acao: () => abrirFicha(conversaId) }];
     if (f && !f.sistema) outros.push({ nome: `Tirar do funil ${f.nome}`, info: 'A cliente continua nas Conversas', icone: SVG.sair, perigo: true, acao: () => mover(conversaId, null) });
     folha('Mover para…', cartao.nome || s.ui.formatarTel(cartao.telefone), [etapas, outros]);
   }

@@ -236,8 +236,6 @@
   .menu-mais button:hover { background: var(--hover); }
   .menu-mais i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
   .menu-mais svg { width: 18px; height: 18px; }
-  .simular { background: var(--aviso); color: var(--aviso-txt); padding: 6px 12px; display: flex; gap: 8px; align-items: center; font-size: 12.5px; flex: none; }
-  .simular input { all: unset; flex: 1; min-width: 0; background: var(--entrada); color: var(--texto); border-radius: 18px; padding: 7px 12px; font-size: 14px; }
   .sem-conversa { flex: 1; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--sub); background: var(--painel); border-bottom: 6px solid var(--verde); }
   .sem-conversa h2 { font-weight: 300; font-size: 32px; color: var(--texto); margin: 18px 0 10px; }
   .sem-conversa p { max-width: 460px; font-size: 14px; line-height: 20px; margin: 0 auto; }
@@ -508,9 +506,50 @@
   .trilho .marca img { width: 40px; height: 40px; display: block; filter: drop-shadow(0 4px 12px rgba(16,110,190,.35)); }
   .sem-conversa img { width: 220px; height: auto; }
 
+  /* filtros da lista: 3 pílulas + "Filtros" (o resto fica num painel que abre por cima) */
+  .lista-topo { position: relative; }
+  .linha-busca { display: flex; align-items: center; gap: 8px; }
+  .linha-busca .busca { flex: 1; min-width: 0; }
+  .bt-filtros { all: unset; box-sizing: border-box; cursor: pointer; flex: none; position: relative; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--sub); background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); }
+  .bt-filtros:hover { color: var(--texto); }
+  .bt-filtros:focus-visible { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
+  .bt-filtros svg { width: 18px; height: 18px; }
+  .bt-filtros.ligado, .bt-filtros[aria-expanded="true"] { color: var(--texto); box-shadow: inset 0 0 0 1.5px var(--marca-azul); }
+  .bt-filtros .qtd-filtros { position: absolute; top: -5px; right: -5px; }
+  @media (max-width: 760px) { .bt-filtros { width: 44px; height: 44px; } }
+  #filtros { gap: 6px; }
+  #filtros .chip { padding: 0 10px; font-size: 13.5px; }
+  #filtros .chip .luz { margin-right: -1px; }
+  .qtd-filtros { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-azul); color: #fff; }
+  .qtd-filtros:empty { display: none; }
+  .painel-filtros { position: absolute; z-index: 35; right: 12px; left: 12px; top: calc(100% - 4px); max-width: 380px; margin-left: auto; padding: 14px; border-radius: 20px; display: grid; gap: 14px;
+    background: var(--painel); border: 1px solid var(--vidro-borda, var(--linha)); box-shadow: 0 18px 44px rgba(7, 29, 51, .22); max-height: 70dvh; overflow-y: auto; }
+  .painel-filtros[hidden] { display: none; }
+  .painel-filtros h4 { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--sub); }
+  .painel-filtros .grupo { display: flex; flex-wrap: wrap; gap: 6px; }
+  .painel-filtros .chip { box-shadow: inset 0 0 0 1px var(--linha); }
+  .painel-filtros .sel-origem { width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 12px; border-radius: 12px; font: inherit; font-size: 14px; color: var(--texto); background: var(--vidro-item, var(--entrada)); border: 1px solid var(--vidro-borda, var(--linha)); }
+  html[data-tema="escuro"] .painel-filtros .sel-origem option { background: #0d3050; }
+  .painel-filtros .rodape-filtros { display: flex; justify-content: space-between; align-items: center; }
+  .painel-filtros .rodape-filtros button { all: unset; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--marca-azul); padding: 6px 4px; }
+  html[data-tema="escuro"] .painel-filtros .rodape-filtros button { color: var(--marca-menta); }
+  /* ficha: relatório do cliente */
+  .ficha .perfil .f-chegou { display: block; margin-top: 4px; font-size: 13px; color: var(--sub); }
+  .ficha .perfil .f-chegou:empty { display: none; }
+  .relatorio .rl-numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .relatorio .rl-num { display: grid; gap: 1px; padding: 9px 10px; border-radius: 12px; background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); min-width: 0; }
+  .relatorio .rl-num b { font-size: 16px; font-weight: 700; color: var(--texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .relatorio .rl-num span { font-size: 11.5px; color: var(--sub); }
+  .relatorio .linha { font-size: 14px; padding: 6px 0; border-top: 1px solid var(--linha); }
+  .relatorio .rl-etapas { margin-top: 6px; font-size: 14px; }
+  .relatorio .rl-etapas summary { cursor: pointer; color: var(--sub); padding: 6px 0; }
+  .relatorio .rl-etapas ol { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .relatorio .rl-etapas li { display: flex; justify-content: space-between; gap: 8px; padding-left: 14px; position: relative; }
+  .relatorio .rl-etapas li::before { content: ''; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--marca-azul); }
+  .relatorio .rl-etapas li span { color: var(--sub); }
+  /* quem atende, ao lado da prévia */
+  .item .l2 .atende { flex: none; margin-top: 1px; }
   /* tags */
-  .filtros-tags { margin-top: -2px; }
-  .filtros-tags:empty { display: none; }
   .chip-tag .ponto-tag, .ponto-tag { width: 10px; height: 10px; border-radius: 3px; background: var(--cor); display: inline-block; flex: none; }
   .ponto-tag.grande { width: 22px; height: 22px; border-radius: 7px; box-shadow: 0 0 10px color-mix(in srgb, var(--cor) 45%, transparent); }
   .chip-tag[aria-pressed="true"] { background: color-mix(in srgb, var(--cor) 22%, var(--painel)); color: var(--texto); box-shadow: inset 0 0 0 1px var(--cor); }
@@ -850,7 +889,7 @@
             <span class="espaco"></span>
             <button class="icone redondo" id="tema-cel" title="Modo claro/escuro" aria-label="Alternar modo claro e escuro"><svg class="ic-lua" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg><svg class="ic-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button><button class="icone redondo" id="sino-cel" title="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="nt-bolinha" id="sino-cel-qtd" hidden></span></button>
             <button class="icone redondo branco" id="nova-teste-cel" title="Nova conversa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-            <button class="icone so-nunca" id="nova-teste" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
+            <button class="icone so-nunca" id="nova-teste" title="Nova conversa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
           </div>
           <div class="menu-lista" id="menu-lista" hidden role="menu">
             <button role="menuitem" data-acao="selecionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Selecionar conversas</span></button>
@@ -862,16 +901,16 @@
           </div>
           <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
           <h1 class="titulo-grande">Conversas</h1>
+          <div class="linha-busca">
           <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Pesquisar" aria-label="Pesquisar"></label>
+            <button aria-label="Filtros" class="bt-filtros" id="bt-filtros" type="button" aria-expanded="false" aria-controls="painel-filtros" title="Filtrar por atendente, unidade, etiqueta ou origem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="qtd-filtros" id="qtd-filtros"></span></button>
+          </div>
           <div class="filtros" id="filtros">
             <button class="chip" data-f="todas" aria-pressed="true">Todas</button>
             <button class="chip" data-f="esperando" aria-pressed="false">Não lidas <span class="qtd" id="qtd-nao-lidas"></span></button>
-            <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA respondendo</button>
-            <button class="chip" data-f="minhas" aria-pressed="false">Minhas</button>
-            <button class="chip" data-f="norte" aria-pressed="false">Norte</button>
-            <button class="chip" data-f="sumare" aria-pressed="false">Sumaré</button>
+            <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA atendendo</button>
           </div>
-          <div class="filtros filtros-tags" id="filtros-tags"></div>
+          <div class="painel-filtros" id="painel-filtros" hidden role="dialog" aria-label="Filtros da lista"></div>
         </div>
         <div class="itens" id="itens"></div>
       </div>
@@ -889,7 +928,7 @@
             <div class="pilula-topo">
               <button class="icone" id="topo-ficha" title="Dados da cliente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="14" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0M7 3.5h10"/></svg></button>
               <button class="icone" id="topo-crm" title="CRM e tags" aria-label="Mover no CRM e marcar tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></button><button class="icone" id="topo-agendar" title="Agendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></button>
-              <a class="icone" id="topo-ligar" title="Ligar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg></a>
+              <a class="icone" id="topo-ligar" title="Ligar pelo WhatsApp" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg></a>
             </div>
           </header>
           <div class="dono" id="dono" hidden><span id="dono-txt"></span><button id="dono-assumir" hidden>Assumir</button><span class="digitando" id="dono-dig" hidden></span></div>
@@ -927,19 +966,15 @@
               <button id="m-transferir" hidden><i style="background:#08243f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
             </div>
           </div>
-          <div class="simular" id="simular" hidden>
-            <span>Teste · escrever como a cliente:</span>
-            <input id="simular-texto" placeholder="Mensagem da cliente">
-            <button class="botao leve" id="simular-enviar" style="padding:6px 14px">Enviar</button>
-          </div>
         </div>
       </div>
 
       <aside class="ficha" id="ficha" hidden>
         <div class="topo"><button class="icone" id="fechar-ficha" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>Dados da cliente</div>
-        <div class="bloco perfil"><span class="avatar" id="f-avatar"></span><b id="f-nome"></b><span id="f-tel"></span>
-          <div class="acoes-perfil"><a class="acao-perfil" id="f-ligar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>Ligar</a><button class="acao-perfil" id="f-copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar número</button></div>
+        <div class="bloco perfil"><span class="avatar" id="f-avatar"></span><b id="f-nome"></b><span id="f-tel"></span><small class="f-chegou" id="f-chegou"></small>
+          <div class="acoes-perfil"><a class="acao-perfil" id="f-ligar" target="_blank" rel="noopener" title="Abre a conversa no WhatsApp; toque em ligar lá"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>Ligar pelo WhatsApp</a><button class="acao-perfil" id="f-copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar número</button></div>
         </div>
+        <section class="bloco relatorio" id="f-relatorio" aria-label="Relatório do cliente" hidden></section>
         <form class="bloco ficha-form" id="f-contato" autocomplete="off">
           <h3>Dados da cliente</h3>
           <label>Nome <input name="nome" maxlength="120" placeholder="Nome da cliente"></label>
@@ -966,7 +1001,6 @@
           <div class="linha"><span>Unidade</span><span id="f-unidade"></span></div>
           <div class="linha"><span>Quem responde</span><span id="f-modo"></span></div>
           <div class="linha"><span>Atendida por</span><span id="f-dono"></span></div>
-          <div class="linha"><span>Cliente desde</span><span id="f-desde"></span></div>
           <div class="linha"><span>Última mensagem</span><span id="f-ultima"></span></div>
           <div class="linha"><span>Cadastro no Trinks</span><span id="f-trinks"></span></div>
         </div>
@@ -1297,7 +1331,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const avatarDaLista = (c) => { let a = avatares.get(c.id); if (!a || (semFoto.has(c.id) && a.querySelector('img'))) { a = avatar(c); avatares.set(c.id, a); } return a; };
   const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
   const nomeDe = (c) => c.nome || formatarTel(c.telefone);
-  const ehTeste = (c) => String(c.canalId || '').startsWith('teste-');
   const hm = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const diaChave = (d) => new Date(d).toDateString();
   const rotuloDia = (d) => { const x = new Date(d), h = new Date(); const ontem = new Date(h); ontem.setDate(h.getDate() - 1);
@@ -1334,13 +1367,16 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !naoLida(c)) return false;
     if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
-    if (estado.filtro === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
-    if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
+    if (estado.quem === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
+    if (estado.quem === 'sem' && c.responsavelId) return false;
+    if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
     return true;
   });
+  // Ícone de origem ao lado do nome só quando a origem é conhecida (sem "?" repetido em toda linha).
+  const origemConhecida = (c) => !!window.SintoniaRastreio && ((c.origem?.icone && c.origem.icone !== 'desconhecido') || !!window.SintoniaRastreio.selo(c.id));
   // Ao lado do nome: quem está atendendo (IA, a inicial da atendente, ou ninguém).
   function quemAtende(c) {
     if (c.modo === 'ia') return el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' });
@@ -1353,8 +1389,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const lista = filtradas();
     if (!lista.length) {
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
-      if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'O WhatsApp da loja ainda não foi conectado. Crie uma conversa de teste para ver como funciona.' }));
-      if (!estado.conversas.length && estado.situacao.simulador) v.append(el('button', { class: 'botao', text: 'Nova conversa de teste', onclick: () => $('d-teste').showModal() }));
+      if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Mais › Conexões. Para mostrar o sistema, use Mais › Dados de demonstração.' }));
+      else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
     }
     for (const c of lista) {
@@ -1363,18 +1399,16 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (u && u.autor !== 'cliente') previa.insertAdjacentHTML('beforeend', CHECK);
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
-      const l2 = el('div', { class: 'l2' }, previa);
-      const seloOrigem = window.SintoniaRastreio?.seloEl(c.id); if (seloOrigem) l2.append(seloOrigem);
-      for (const t of (c.tags || []).slice(0, 2)) l2.append(pilulaTag(t));
-      if (ehTeste(c) && !(c.tags || []).length) l2.append(el('span', { class: 'tag', text: 'teste' }));
-      if (nova) l2.append(el('span', { class: 'badge', text: '1' }));
+      // Item limpo: foto, nome + ícone de origem, prévia, hora, não lidas e quem atende (sem etiquetas escritas).
+      const l2 = el('div', { class: 'l2' }, previa, quemAtende(c));
+      if (nova) l2.append(el('span', { class: 'badge', text: '1', 'aria-label': 'Não lida' }));
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
         onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
-          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), window.SintoniaRastreio ? window.SintoniaRastreio.iconeEl(c.origem || c.id) : '', quemAtende(c), el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : '', el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
           l2)));
     }
   }
@@ -1385,15 +1419,57 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function carregarTags() {
     try { estado.tags = await api('/api/tags'); } catch { return; }
     if (estado.tagFiltro && !estado.tags.some((t) => t.id === estado.tagFiltro)) estado.tagFiltro = null;
-    const caixa = $('filtros-tags'); caixa.replaceChildren();
-    for (const t of estado.tags) {
-      const b = el('button', { class: 'chip chip-tag', 'aria-pressed': String(estado.tagFiltro === t.id), onclick: () => { estado.tagFiltro = estado.tagFiltro === t.id ? null : t.id; carregarTags(); desenharLista(); } },
-        el('i', { class: 'ponto-tag' }), document.createTextNode(t.nome), el('span', { class: 'qtd', text: t.conversas ? String(t.conversas) : '' }));
-      b.style.setProperty('--cor', t.cor); caixa.append(b);
-    }
-    if (ehGestor(estado.eu)) caixa.append(el('button', { class: 'chip chip-nova', text: '+ Tag', onclick: abrirTags }));
-    caixa.hidden = !caixa.children.length;
+    if (!$('painel-filtros').hidden) desenharPainelFiltros();
+    contarFiltros();
   }
+
+  // ---------- botão "Filtros" da lista: atendente, unidade, etiqueta e origem ----------
+  estado.quem = ''; estado.unidadeFiltro = '';
+  const filtrosLigados = () => [estado.quem, estado.unidadeFiltro, estado.tagFiltro, window.SintoniaRastreio?.filtro?.()].filter(Boolean).length;
+  function contarFiltros() {
+    const n = filtrosLigados();
+    $('qtd-filtros').textContent = n ? String(n) : '';
+    $('bt-filtros').classList.toggle('ligado', n > 0);
+  }
+  function limparFiltros() {
+    estado.quem = ''; estado.unidadeFiltro = ''; estado.tagFiltro = null; window.SintoniaRastreio?.definirFiltro?.('');
+    contarFiltros(); if (!$('painel-filtros').hidden) desenharPainelFiltros(); desenharLista();
+  }
+  function desenharPainelFiltros() {
+    const p = $('painel-filtros');
+    const mudar = (fn) => () => { fn(); contarFiltros(); desenharPainelFiltros(); desenharLista(); };
+    const chip = (rotulo, ligado, fn, extra) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(ligado), onclick: mudar(fn) }, ...(extra ? [extra] : []), document.createTextNode(rotulo));
+    const grupo = (titulo, ...filhos) => el('div', {}, el('h4', { text: titulo }), el('div', { class: 'grupo' }, ...filhos));
+    const partes = [grupo('Quem atende',
+      chip('Todas', !estado.quem, () => { estado.quem = ''; }),
+      chip('Minhas', estado.quem === 'minhas', () => { estado.quem = estado.quem === 'minhas' ? '' : 'minhas'; }),
+      chip('Sem atendente', estado.quem === 'sem', () => { estado.quem = estado.quem === 'sem' ? '' : 'sem'; }))];
+    const unidades = [...new Set(estado.conversas.map((c) => c.unidade))];
+    if (unidades.length > 1) partes.push(grupo('Unidade', chip('Todas', !estado.unidadeFiltro, () => { estado.unidadeFiltro = ''; }),
+      ...unidades.map((u) => chip(UNIDADE[u] || u, estado.unidadeFiltro === u, () => { estado.unidadeFiltro = estado.unidadeFiltro === u ? '' : u; }))));
+    if (estado.tags.length || ehGestor(estado.eu)) partes.push(grupo('Etiqueta',
+      ...estado.tags.map((t) => { const i = el('i', { class: 'ponto-tag' }); i.style.setProperty('--cor', t.cor); const b = chip(t.nome, estado.tagFiltro === t.id, () => { estado.tagFiltro = estado.tagFiltro === t.id ? null : t.id; }, i); b.classList.add('chip-tag'); b.style.setProperty('--cor', t.cor); return b; }),
+      ...(ehGestor(estado.eu) ? [el('button', { class: 'chip chip-nova', type: 'button', text: '+ Etiqueta', onclick: () => { fecharPainelFiltros(); abrirTags(); } })] : [])));
+    const ra = window.SintoniaRastreio;
+    if (ra?.opcoesFiltro) {
+      const sel = el('select', { class: 'sel-origem', 'aria-label': 'Origem' }, ...ra.opcoesFiltro().map((o) => el('option', { value: o.valor, text: o.nome.trim() })));
+      sel.value = ra.filtro();
+      sel.addEventListener('change', () => { ra.definirFiltro(sel.value); contarFiltros(); desenharLista(); });
+      partes.push(el('div', {}, el('h4', { text: 'Origem' }), sel));
+    }
+    partes.push(el('div', { class: 'rodape-filtros' }, el('button', { type: 'button', text: 'Limpar filtros', onclick: limparFiltros }), el('button', { type: 'button', text: 'Pronto', onclick: fecharPainelFiltros })));
+    p.replaceChildren(...partes);
+  }
+  function fecharPainelFiltros() { $('painel-filtros').hidden = true; $('bt-filtros').setAttribute('aria-expanded', 'false'); }
+  $('bt-filtros').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const p = $('painel-filtros');
+    if (!p.hidden) return fecharPainelFiltros();
+    desenharPainelFiltros(); p.hidden = false; $('bt-filtros').setAttribute('aria-expanded', 'true');
+    await window.SintoniaRastreio?.carregarSelos?.(true); if (!p.hidden) desenharPainelFiltros();
+  });
+  document.addEventListener('click', (e) => { const p = $('painel-filtros'); if (!p.hidden && !p.contains(e.target) && !e.target.closest?.('#bt-filtros')) fecharPainelFiltros(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('painel-filtros').hidden) { fecharPainelFiltros(); $('bt-filtros').focus(); } });
   document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
   document.querySelectorAll('dialog.folha').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
 
@@ -1516,14 +1592,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
     $('c-avatar').replaceWith(Object.assign(avatar(c, 'p'), { id: 'c-avatar' }));
     $('c-nome').textContent = nomeDe(c);
-    if (window.SintoniaRastreio) $('c-nome').append(window.SintoniaRastreio.iconeEl(estado.conversas.find((x) => x.id === c.id)?.origem || c.id));
+    { const da = estado.conversas.find((x) => x.id === c.id) || c; if (origemConhecida(da)) $('c-nome').append(window.SintoniaRastreio.iconeEl(da.origem?.icone && da.origem.icone !== 'desconhecido' ? da.origem : c.id)); }
     $('c-sub').textContent = `${UNIDADE[c.unidade] || c.unidade} · toque para ver os dados da cliente`;
-    $('topo-ligar').href = 'tel:+' + c.telefone;
+    $('topo-ligar').href = linkLigacao(c.telefone);
     $('modo').dataset.m = c.modo; $('modo-txt').textContent = MODO[c.modo];
     const caixa = $('msgs'); const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
     caixa.replaceChildren();
     if (caixa.dataset.conversa !== c.id) nosMidia.clear();
-    if (ehTeste(c)) caixa.append(el('div', { class: 'sistema', text: '🔒 Conversa de teste: nada é enviado para fora da Sintonia.' }));
     let dia = '', anterior = '';
     for (const m of mensagens) {
       if (diaChave(m.em) !== dia) { dia = diaChave(m.em); anterior = ''; caixa.append(el('div', { class: 'dia', text: rotuloDia(m.em) })); }
@@ -1543,7 +1618,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     caixa.dataset.conversa = c.id;
     const mostrarSug = Boolean(sugestao) && c.modo !== 'humano';
     $('sugestao').hidden = !mostrarSug; if (mostrarSug) $('sugestao-txt').textContent = sugestao;
-    $('simular').hidden = !(ehTeste(c) && estado.situacao.simulador);
     desenharFicha(c);
   }
   function desenharFicha(c) {
@@ -1551,10 +1625,51 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('f-nome').textContent = nomeDe(c); $('f-tel').textContent = formatarTel(c.telefone);
     $('f-etapa').replaceChildren(...ETAPAS.map(([id, n]) => el('option', { value: id, text: n }))); $('f-etapa').value = c.etapa;
     $('f-unidade').textContent = UNIDADE[c.unidade] || c.unidade; $('f-modo').textContent = MODO[c.modo];
-    $('f-desde').textContent = quando(c.criadaEm); $('f-ultima').textContent = quando(c.ultimaMensagemCliente);
+    $('f-ultima').textContent = quando(c.ultimaMensagemCliente);
     $('f-trinks').textContent = c.trinksClienteId ? '#' + c.trinksClienteId : 'ainda não';
     $('f-resumo-bloco').hidden = !c.resumo; $('f-resumo').textContent = c.resumo || '';
     $('f-etiquetas-bloco').hidden = !(c.tags || []).length; $('f-etiquetas').replaceChildren(...(c.tags || []).map(pilulaTag));
+  }
+  /** Link de ligação pelo WhatsApp. O WhatsApp não tem um link oficial que já comece a chamada:
+   * wa.me/<número> abre a conversa da cliente (app no celular, WhatsApp Web ou Desktop no computador) e a ligação sai pelo botão do telefone de lá. */
+  const linkLigacao = (tel) => `https://wa.me/${String(tel || '').replace(/\D/g, '')}`;
+  const dinheiro = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const dataCurta = (d) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const tempoTxt = (min) => min == null ? '—' : min < 1 ? 'menos de 1 min' : min < 60 ? `${Math.round(min)} min` : `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} min`;
+  let pedidoRelatorio = 0;
+  async function carregarRelatorio(c) {
+    const caixa = $('f-relatorio'); const meu = ++pedidoRelatorio;
+    let r; try { r = await api(`/api/conversas/${c.id}/relatorio`); } catch { if (meu === pedidoRelatorio) caixa.hidden = true; return; }
+    if (meu !== pedidoRelatorio || estado.detalhe?.conversa.id !== c.id) return;
+    $('f-chegou').textContent = `Chegou em ${dataCurta(r.chegouEm)}`;
+    const ag = r.agendamentos;
+    const num = (valor, rotulo) => el('div', { class: 'rl-num' }, el('b', { text: valor }), el('span', { text: rotulo }));
+    const linha = (rotulo, valor) => valor ? el('div', { class: 'linha' }, el('span', { text: rotulo }), el('span', { text: valor })) : null;
+    const agTxt = (a) => a ? `${dataCurta(a.inicio)}${a.servico ? ' · ' + a.servico : ''}${a.valor != null ? ' · ' + dinheiro(a.valor) : ''}` : '';
+    const selo = window.SintoniaRastreio?.selo?.(c.id);
+    const origem = selo ? [selo.rotulo, selo.campanha && selo.campanha !== selo.rotulo ? 'campanha ' + selo.campanha : ''].filter(Boolean).join(' · ') : 'Não identificada';
+    const quem = [...r.atendentes.map((a) => a.nome), ...(r.iaMensagens ? ['IA'] : [])].join(', ');
+    const etapas = r.etapas.slice(-6).reverse();
+    caixa.replaceChildren(...[
+      el('h3', { text: 'Relatório do cliente' }),
+      el('div', { class: 'rl-numeros' },
+        num(String(r.conversas), r.conversas === 1 ? 'conversa' : 'conversas'),
+        num(String(r.mensagens.total), 'mensagens'),
+        num(String(ag.total), ag.total === 1 ? 'agendamento' : 'agendamentos'),
+        num(ag.valorTotal != null ? dinheiro(ag.valorTotal) : '—', 'valor agendado'),
+        num(String(r.comparecimentos), r.comparecimentos === 1 ? 'comparecimento' : 'comparecimentos'),
+        num(String(r.faltas), r.faltas === 1 ? 'falta' : 'faltas')),
+      linha('Origem', origem),
+      linha('Serviços', ag.servicos.join(', ')),
+      linha('Último agendamento', agTxt(ag.ultimo)),
+      linha('Próximo agendamento', agTxt(ag.proximo)),
+      linha('Quem atendeu', quem || 'Ninguém ainda'),
+      linha('Resposta média da equipe', tempoTxt(r.tempoMedioRespostaMin)),
+      linha('Ligações', r.ligacoes ? String(r.ligacoes) : ''),
+      linha('Etapa atual', r.etapaAtual.nome),
+      etapas.length ? el('details', { class: 'rl-etapas' }, el('summary', { text: `Histórico de etapas (${r.etapas.length})` }),
+        el('ol', {}, ...etapas.map((e) => el('li', {}, el('b', { text: e.nome }), el('span', { text: dataCurta(e.em) }))))) : null].filter(Boolean));
+    caixa.hidden = false;
   }
   const abrirFicha = () => { $('ficha').hidden = false; $('menu-mais').hidden = true; carregarContato(); };
   const TIPO_CAMPO = { texto: 'Texto', lista: 'Lista', sim_nao: 'Sim ou não', numero: 'Número', data: 'Data' };
@@ -1562,7 +1677,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function carregarContato() {
     const c = estado.detalhe?.conversa; if (!c) return;
     $('f-erro').textContent = ''; $('f-salvo').textContent = '';
-    $('f-ligar').href = 'tel:+' + c.telefone;
+    $('f-ligar').href = linkLigacao(c.telefone);
+    carregarRelatorio(c);
     let r; try { r = await api(`/api/conversas/${c.id}/contato`); } catch (x) { $('f-erro').textContent = x.message; return; }
     estado.ficha = r;
     $('f-editar-campos').hidden = !ehGestor(estado.eu);
@@ -1621,7 +1737,11 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   $('topo-ficha').addEventListener('click', abrirFicha);
   $('figurinha').addEventListener('click', () => toast('Figurinhas chegam numa próxima versão.'));
   // Ligar: abre a ligação no celular e, na volta, pede o resultado (aba Ligações do Funil).
-  $('topo-ligar').addEventListener('click', () => { const c = estado.detalhe?.conversa; if (c) setTimeout(() => abrirRegistroLigacao(c.id, nomeDe(c)), 600); });
+  // A ligação é pelo WhatsApp (wa.me abre o app no celular e o WhatsApp Web/Desktop no computador; lá é só tocar em ligar).
+  // Na volta, pede o resultado e registra o evento "ligacao" (aba Ligar hoje do CRM).
+  const registrarAoLigar = () => { const c = estado.detalhe?.conversa; if (c) setTimeout(() => abrirRegistroLigacao(c.id, nomeDe(c)), 600); };
+  $('topo-ligar').addEventListener('click', registrarAoLigar);
+  $('f-ligar').addEventListener('click', registrarAoLigar);
   $('abrir-ficha').addEventListener('click', abrirFicha);
   $('abrir-ficha').addEventListener('keydown', (e) => { if (e.key === 'Enter') abrirFicha(); });
   $('m-ficha').addEventListener('click', abrirFicha);
@@ -1990,7 +2110,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       return;
     }
     if (a === 'so-nao-lidas') { const alvo = estado.filtro === 'esperando' ? 'todas' : 'esperando'; document.querySelector(`[data-f="${alvo}"]`).click(); return; }
-    if (a === 'listas') { if (ehGestor(estado.eu)) return abrirTags(); document.getElementById('filtros-tags')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); toast('Toque numa tag acima da lista para filtrar.'); return; }
+    if (a === 'listas') { if (ehGestor(estado.eu)) return abrirTags(); setTimeout(() => $('bt-filtros').click(), 0); return; }
     if (a === 'crm') return mostrar('funil');
     if (a === 'nova') return $('nova-teste-cel').click();
   });
@@ -2044,13 +2164,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const c = estado.conversas.find((x) => x.telefone === telefone); if (c) abrir(c.id);
     } catch (x) { toast(x.message); }
   });
-  async function simular() {
-    const c = estado.detalhe?.conversa; const t = $('simular-texto').value.trim(); if (!c || !t) return;
-    try { await post('/api/teste/cliente', { unidade: c.unidade, nome: c.nome || 'Cliente Teste', telefone: c.telefone, texto: t }); $('simular-texto').value = ''; await atualizar(); }
-    catch (x) { toast(x.message); }
-  }
-  $('simular-enviar').addEventListener('click', simular);
-  $('simular-texto').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); simular(); } });
 
   // agendar
   const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
@@ -2641,7 +2754,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
     if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
     estado.avisos = avisos;
-    $('nova-teste').hidden = !estado.situacao.simulador; $('nova-teste-cel').hidden = false;
+    $('nova-teste-cel').hidden = false;
     await window.SintoniaFotos.carregar();
     preencherLateral();
     await atualizar();

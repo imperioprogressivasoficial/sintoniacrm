@@ -117,11 +117,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   /** Filtro: '' (todas), 'canal:anuncio_meta', 'campanha:<nome>', 'sem'. */
-  function passa(id) {
-    if (!s.filtro) return true;
+  function passa(id, _origem, filtro = s.filtro) {
+    if (!filtro) return true;
     const x = s.selos[id];
-    if (s.filtro === 'sem') return !x;
-    const [tipo, ...resto] = s.filtro.split(':');
+    if (filtro === 'sem') return !x;
+    const [tipo, ...resto] = filtro.split(':');
     const v = resto.join(':');
     if (tipo === 'icone') return (x?.icone || 'desconhecido') === v;
     if (!x) return false;
@@ -274,12 +274,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   window.SintoniaTelas.links = {
     async desenhar(caixa) { estilo(); t.caixa = caixa; desenharLinks(); await carregarLinks(); },
   };
-  window.SintoniaRastreio = { iconeEl, seloEl, passa, botaoFiltro, ficha, carregarSelos, selo: (id) => s.selos[id] };
+  window.SintoniaRastreio = {
+    iconeEl, seloEl, passa, botaoFiltro, ficha, carregarSelos, opcoesFiltro, selo: (id) => s.selos[id],
+    /** Filtro de origem da lista de Conversas (o CRM guarda o seu e passa para passa()). */
+    filtro: () => s.filtro, definirFiltro: (v) => { s.filtro = v || ''; },
+  };
   estilo();
   const iniciar = () => {
     if (!ui()) return setTimeout(iniciar, 300);
-    const filtros = document.getElementById('filtros');
-    if (filtros && !filtros.querySelector('.ra-filtro')) filtros.append(botaoFiltro(() => ui().desenharLista?.()));
+    // O filtro de origem da lista fica no botão "Filtros" (app.html), não numa pílula solta.
     carregarSelos(true);
     setInterval(() => carregarSelos(false), 20000);
   };

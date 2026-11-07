@@ -283,6 +283,38 @@ describe('Nova conversa por número', () => {
   });
 });
 
+describe('Relatório do cliente', () => {
+  it('conta conversas, mensagens, agendamentos, faltas, atendentes, tempo de resposta e etapas', async () => {
+    const { app, repo, norte, admin, duda } = await montar();
+    const base = Date.now() - 20 * 24 * 3600_000;
+    const em = (h: number) => new Date(base + h * 3600_000);
+    const msg = (autor: 'cliente' | 'equipe' | 'ia', h: number, autorNome?: string) => repo.adicionarMensagem({ conversaId: norte.id, autor, autorNome, texto: 'oi', em: em(h) });
+    await msg('cliente', 0); await msg('equipe', 0.5, 'Carla Souza'); await msg('cliente', 1); await msg('ia', 1.1);
+    await msg('cliente', 48); await msg('equipe', 48.2, 'Duda');
+    const ev = (tipo: Parameters<Repositorio['registrarEvento']>[0]['tipo'], h: number, dados: Record<string, unknown>) => repo.registrarEvento({ tipo, conversaId: norte.id, unidade: 'norte', em: em(h), dados });
+    await ev('agendamento_equipe', 1.2, { servico: 'Progressiva', inicio: em(72).toISOString(), valor: 180, atendente: 'Carla Souza' });
+    await ev('agendamento_ia', 48.3, { servico: 'Hidratação', inicio: new Date(Date.now() + 5 * 24 * 3600_000).toISOString(), valor: '90' });
+    await ev('etapa_mudou', 1.2, { de: 'em_conversa', para: 'agendada', motivo: 'agendamento_criado' });
+    await ev('etapa_mudou', 73, { de: 'agendada', para: 'compareceu', motivo: 'atendimento_finalizado' });
+    await ev('ligacao', 50, { resultado: 'atendeu' });
+
+    const r = await app.inject({ method: 'GET', url: `/api/conversas/${norte.id}/relatorio`, headers: { cookie: admin } });
+    expect(r.statusCode).toBe(200);
+    const j = r.json();
+    expect(new Date(j.chegouEm).getTime()).toBeLessThanOrEqual(em(0).getTime());
+    expect(j).toMatchObject({ conversas: 2, mensagens: { total: 6, cliente: 3, equipe: 2, ia: 1 }, comparecimentos: 1, faltas: 0, ligacoes: 1, iaMensagens: 1 });
+    expect(j.agendamentos).toMatchObject({ total: 2, servicos: ['Progressiva', 'Hidratação'], valorTotal: 270, ultimo: { servico: 'Progressiva', por: 'Carla Souza' }, proximo: { servico: 'Hidratação', por: 'IA' } });
+    expect(j.atendentes.map((a: { nome: string }) => a.nome).sort()).toEqual(['Carla Souza', 'Duda']);
+    // (30 + 6 + 12) / 3 = 16 minutos
+    expect(j.tempoMedioRespostaMin).toBe(16);
+    expect(j.etapas.map((e: { para: string }) => e.para)).toEqual(['agendada', 'compareceu']);
+
+    // Conversa de outra unidade: 404.
+    const outra = (await repo.listarConversas()).find((c) => c.unidade === 'sumare')!;
+    expect((await app.inject({ method: 'GET', url: `/api/conversas/${outra.id}/relatorio`, headers: { cookie: duda } })).statusCode).toBe(404);
+  });
+});
+
 describe.runIf(temPostgres)('Conversa no Postgres', () => {
   it('respostas rápidas e transcrições gravam e relêem', async () => {
     const pool = await poolDeTeste();
@@ -304,5 +336,10 @@ describe.runIf(temPostgres)('Conversa no Postgres', () => {
     await transcricoes.guardar(norte.id, { mensagemId: id, texto: 'primeira', modelo: 'falso', criadaPor: 'Carla' });
     await transcricoes.guardar(norte.id, { mensagemId: id, texto: 'segunda', modelo: 'falso', criadaPor: 'Duda' });
     expect((await transcricoes.daConversa(norte.id)).map((t) => t.texto)).toEqual(['primeira']);
+
+    // Relatório lê os eventos da conversa direto do banco.
+    await repo.registrarEvento({ tipo: 'agendamento_equipe', conversaId: norte.id, unidade: 'norte', em: new Date(), dados: { servico: 'Progressiva', inicio: new Date(Date.now() + 86400_000).toISOString(), valor: 180 } });
+    const rel = (await app.inject({ method: 'GET', url: `/api/conversas/${norte.id}/relatorio`, headers: { cookie: admin } })).json();
+    expect(rel.agendamentos).toMatchObject({ total: 1, valorTotal: 180, proximo: { servico: 'Progressiva' } });
   });
 });
