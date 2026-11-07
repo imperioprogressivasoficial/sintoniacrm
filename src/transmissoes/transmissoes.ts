@@ -1,3 +1,4 @@
+import { ehCanalSocial } from '../channels/meta-social.js';
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { NumeroConectado } from '../app/sintonia.js';
@@ -186,7 +187,9 @@ export class Transmissoes {
   /** Número de envio da unidade: o real (se houver), senão o de teste. */
   numeroDaUnidade(unidade: string): NumeroConectado | undefined {
     const lista = this.o.numeros();
-    return lista.find((n) => n.unidade === unidade && !ehCanalTeste(n.canalId)) ?? lista.find((n) => n.unidade === unidade);
+    // Transmissão é só por WhatsApp: Messenger/Instagram/TikTok não aceitam envio em massa fora da janela.
+    const whats = lista.filter((n) => !ehCanalSocial(n.canalId));
+    return whats.find((n) => n.unidade === unidade && !ehCanalTeste(n.canalId)) ?? whats.find((n) => n.unidade === unidade);
   }
 
   /** Para a tela: por qual número e API cada unidade envia, e os limites recomendados. */

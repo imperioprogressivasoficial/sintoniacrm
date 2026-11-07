@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { usuarioDaRequisicao, type OpcoesAuth } from '../auth/rotas.js';
 import { EvolutionAdmin, PREFIXO_INSTANCIA } from '../channels/evolution-admin.js';
 import { GraphMeta } from '../channels/meta.js';
+import { CamposSociais, registrarRotasSociais } from './sociais.js';
 import { campoCanal, campoMeta, novoVerifyToken, UNIDADES_WHATSAPP, type Conexoes, type NumeroCfg, type UnidadeWhatsApp } from './conexoes.js';
 
 export interface OpcoesConexoes {
@@ -46,6 +47,7 @@ const Salvar = z.object({
   metaWabaIdSumare: IdMeta,
   metaTokenSumare: Segredo,
   metaAppSecretSumare: Segredo,
+  ...CamposSociais,
 });
 const NOMES: Record<UnidadeWhatsApp, string> = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré' };
 
@@ -171,6 +173,9 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     await c.salvar({ [campoMeta('VerifyToken', u)]: novoVerifyToken() }, autor);
     return { verifyToken: c.get(campoMeta('VerifyToken', u)) };
   });
+
+  // ---------- Facebook Messenger, Instagram Direct e TikTok ----------
+  registrarRotasSociais(app, { conexoes: c, quem, baseDe, fetchFn: o.fetchFn });
 
   app.post('/api/conexoes/testar', async (req, reply) => {
     await quem(req);

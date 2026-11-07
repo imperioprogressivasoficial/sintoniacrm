@@ -58,6 +58,30 @@ export const CAMPOS = {
   capiEventos: { segredo: false },
   /** Token com ads_read para ler os nomes de campanha/conjunto/anúncio (vazio = o token da CAPI). */
   metaAdsToken: { segredo: true },
+
+  // ---------- Redes sociais (src/conexoes/sociais.ts). "Ligado" = "1"; unidade = quem recebe as conversas. ----------
+  messengerLigado: { segredo: false },
+  messengerUnidade: { segredo: false },
+  messengerPageId: { segredo: false },
+  /** Page Access Token (de usuário do sistema, sem validade, de preferência). */
+  messengerToken: { segredo: true },
+  messengerAppSecret: { segredo: true },
+  messengerVerifyToken: { segredo: false },
+  instagramLigado: { segredo: false },
+  instagramUnidade: { segredo: false },
+  /** Instagram Business Account ID (IG_ID). */
+  instagramAccountId: { segredo: false },
+  /** Página ligada (só no caminho "login do Facebook"; vazio no "login do Instagram"). */
+  instagramPageId: { segredo: false },
+  instagramToken: { segredo: true },
+  instagramAppSecret: { segredo: true },
+  instagramVerifyToken: { segredo: false },
+  tiktokLigado: { segredo: false },
+  tiktokUnidade: { segredo: false },
+  tiktokClientKey: { segredo: false },
+  tiktokClientSecret: { segredo: true },
+  /** Vai na URL do webhook de leads (?token=...). */
+  tiktokVerifyToken: { segredo: false },
 } as const;
 export type Campo = keyof typeof CAMPOS;
 export type ValoresConexao = Partial<Record<Campo, string>>;
@@ -155,6 +179,7 @@ export class Conexoes {
     const gerar: ValoresConexao = {};
     if (!this.valores.webhookToken) gerar.webhookToken = randomBytes(24).toString('hex');
     for (const u of UNIDADES_WHATSAPP) if (!this.valores[campoMeta('VerifyToken', u)]) gerar[campoMeta('VerifyToken', u)] = novoVerifyToken();
+    for (const c of ['messengerVerifyToken', 'instagramVerifyToken', 'tiktokVerifyToken'] as const) if (!this.valores[c]) gerar[c] = novoVerifyToken();
     if (Object.keys(gerar).length) await this.salvar(gerar, 'sistema');
     else this.avisar();
   }
