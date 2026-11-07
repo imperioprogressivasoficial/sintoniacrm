@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Conversa, Etapa, Mensagem, ModoAtendimento, UnidadeId } from '../domain.js';
-import type { Evento, Repositorio, Tarefa, TipoEvento } from './repositorio.js';
+import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
 
@@ -21,6 +21,8 @@ interface LinhaConversa {
   ultima_mensagem_ia: Date | null;
   etiquetas: string[];
   resumo: string | null;
+  responsavel_id: string | null;
+  responsavel_nome: string | null;
   criada_em: Date;
   atualizada_em: Date;
 }
@@ -44,13 +46,15 @@ function paraConversa(l: LinhaConversa): Conversa {
     ultimaMensagemIa: ou(l.ultima_mensagem_ia),
     etiquetas: l.etiquetas ?? [],
     resumo: ou(l.resumo),
+    responsavelId: ou(l.responsavel_id),
+    responsavelNome: ou(l.responsavel_nome),
     criadaEm: l.criada_em,
     atualizadaEm: l.atualizada_em,
   };
 }
 
 const COLUNAS_CONVERSA = `id, empresa_id, unidade, canal_id, telefone, nome, modo, etapa, trinks_cliente_id, pausa_ia_ate,
-  ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, criada_em, atualizada_em`;
+  ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, responsavel_id, responsavel_nome, criada_em, atualizada_em`;
 
 export class RepositorioPostgres implements Repositorio {
   constructor(private readonly pool: pg.Pool) {}
@@ -89,7 +93,8 @@ export class RepositorioPostgres implements Repositorio {
       `update sintonia.conversas set
          nome = $2, modo = $3, etapa = $4, trinks_cliente_id = $5, pausa_ia_ate = $6,
          ultima_mensagem_cliente = $7, ultima_mensagem_equipe = $8, ultima_mensagem_ia = $9,
-         etiquetas = $10, resumo = $11, atualizada_em = $12, canal_id = $13
+         etiquetas = $10, resumo = $11, atualizada_em = $12, canal_id = $13,
+         responsavel_id = $14, responsavel_nome = $15
        where id = $1`,
       [
         c.id,
@@ -105,6 +110,8 @@ export class RepositorioPostgres implements Repositorio {
         c.resumo ?? null,
         c.atualizadaEm,
         c.canalId,
+        c.responsavelId ?? null,
+        c.responsavelNome ?? null,
       ],
     );
   }
@@ -274,5 +281,29 @@ export class RepositorioPostgres implements Repositorio {
       [conversaId],
     );
     return rows.map((r) => ({ id: r.id, conversaId: r.conversa_id, tipo: r.tipo, quando: r.quando, feita: false }));
+  }
+
+  async registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date) {
+    // A sequência continua se o último sinal foi há pouco; senão recomeça agora.
+    await this.pool.query(
+      `insert into sintonia.digitando (conversa_id, usuario_id, nome, desde, em) values ($1, $2, $3, $4, $4)
+       on conflict (conversa_id, usuario_id) do update set
+         nome = excluded.nome,
+         desde = case when sintonia.digitando.em >= excluded.em - make_interval(secs => $5) then sintonia.digitando.desde else excluded.em end,
+         em = excluded.em`,
+      [conversaId, quem.usuarioId, quem.nome, em, VALIDADE_DIGITANDO_MS / 1000],
+    );
+  }
+
+  async digitando(conversaId: string, desde: Date) {
+    const { rows } = await this.pool.query<{ usuario_id: string; nome: string; desde: Date; em: Date }>(
+      'select usuario_id, nome, desde, em from sintonia.digitando where conversa_id = $1 and em >= $2 order by desde, usuario_id',
+      [conversaId, desde],
+    );
+    return rows.map((r) => ({ usuarioId: r.usuario_id, nome: r.nome, desde: r.desde, em: r.em }));
+  }
+
+  async pararDigitando(conversaId: string, usuarioId: string) {
+    await this.pool.query('delete from sintonia.digitando where conversa_id = $1 and usuario_id = $2', [conversaId, usuarioId]);
   }
 }

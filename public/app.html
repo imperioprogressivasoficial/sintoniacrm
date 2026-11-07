@@ -257,6 +257,56 @@
     .aviso-topo span:not(:first-child) { display: none; }
     .modo { padding: 5px 9px; font-size: 12px; }
   }
+
+  /* equipe, configurações e dona da conversa */
+  .dono { background: var(--painel); border-top: 1px solid var(--linha); padding: 4px 12px 5px 16px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--sub); flex: none; min-height: 30px; flex-wrap: wrap; }
+  .dono b { font-weight: 500; color: var(--texto); }
+  .dono .digitando { color: var(--verde-forte); font-weight: 500; margin-left: auto; }
+  @media (prefers-color-scheme: dark) { .dono .digitando { color: var(--verde); } }
+  .dono button, .link { all: unset; cursor: pointer; color: var(--verde-forte); font-weight: 600; font-size: 13px; padding: 2px 4px; border-radius: 6px; }
+  .dono button:hover, .link:hover { background: var(--hover); }
+  .link.perigo { color: #ea0038; }
+  .gestao { max-width: 760px; width: 100%; margin: 0 auto; }
+  .gestao .cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cartoes { background: var(--fundo); border-radius: 10px; overflow: hidden; }
+  .pessoa { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; padding: 0 0 0 14px; min-height: 68px; }
+  .pessoa:hover { background: var(--hover); }
+  .pessoa .t { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--linha); min-height: 68px; align-content: center; }
+  .pessoa:last-child .t { border-bottom: 0; }
+  .pessoa .t b { font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pessoa .t span { font-size: 13.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pessoa .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .pessoa.inativa .avatar { background: var(--boneco-fundo) !important; color: var(--boneco); }
+  .pessoa.inativa .t b { color: var(--sub); }
+  .perfil-conta { background: var(--fundo); border-radius: 10px; padding: 26px 20px 20px; text-align: center; display: grid; justify-items: center; gap: 4px; }
+  .perfil-conta .avatar { width: 96px; height: 96px; font-size: 34px; margin-bottom: 8px; }
+  .perfil-conta b { font-size: 20px; font-weight: 500; }
+  .perfil-conta > span:not(.avatar) { color: var(--sub); font-size: 14.5px; }
+  dialog input:disabled { color: var(--sub); }
+  .opcoes-conta { background: var(--fundo); border-radius: 10px; overflow: hidden; }
+  .opcoes-conta .linha { display: flex; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--linha); font-size: 15px; }
+  .opcoes-conta .linha span:first-child { color: var(--sub); }
+  .opcoes-conta .linha span:last-child { text-align: right; }
+  .opcoes-conta button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 18px; font-size: 15.5px; border-bottom: 1px solid var(--linha); }
+  .opcoes-conta button:last-child { border-bottom: 0; }
+  .opcoes-conta button:hover { background: var(--hover); }
+  .opcoes-conta button svg { width: 22px; height: 22px; color: var(--icone); flex: none; }
+  .opcoes-conta button.perigo, .opcoes-conta button.perigo svg { color: #ea0038; }
+  .marcar { display: flex; flex-wrap: wrap; gap: 8px; }
+  .marcar label { display: inline-flex; flex-direction: row; align-items: center; gap: 7px; border: 1px solid var(--linha); border-radius: 999px; padding: 6px 12px; color: var(--texto); font-size: 14px; cursor: pointer; }
+  .marcar input { margin: 0; padding: 0; accent-color: var(--verde-forte); }
+  dialog .acoes-extra { display: flex; flex-wrap: wrap; gap: 6px 14px; border-top: 1px solid var(--linha); padding-top: 12px; }
+  .escolha { display: grid; gap: 2px; max-height: 300px; overflow: auto; }
+  .escolha label { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 8px 6px; border-radius: 8px; color: var(--texto); font-size: 15px; cursor: pointer; }
+  .escolha label:hover { background: var(--hover); }
+  .escolha input { margin: 0; accent-color: var(--verde-forte); }
+  .escolha .avatar.p { width: 36px; height: 36px; font-size: 13px; }
+  @media (max-width: 760px) {
+    #v-equipe .painel, #v-configuracoes .painel { padding: 16px 14px 110px; }
+    .gestao .cab h1 { font-size: 20px; }
+    .nav .rotulo { font-size: 11px; }
+    .dono .dica { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -266,8 +316,9 @@
     <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
     <button class="nav" data-vista="funil" title="Funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">Funil</span></button>
     <button class="nav" data-vista="painel" title="Painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg><span class="rotulo">Painel</span></button>
+    <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
-    <button class="nav" id="sair" title="Sair"><span class="avatar eu" id="eu-avatar">··</span><span class="rotulo">Conta</span></button>
+    <button class="nav" data-vista="configuracoes" id="nav-config" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span class="rotulo">Configurações</span></button>
   </nav>
 
   <div class="area">
@@ -286,6 +337,7 @@
           <div class="filtros" id="filtros">
             <button class="chip" data-f="todas" aria-pressed="true">Tudo</button>
             <button class="chip" data-f="esperando" aria-pressed="false">Não respondidas</button>
+            <button class="chip" data-f="minhas" aria-pressed="false">Minhas</button>
             <button class="chip" data-f="norte" aria-pressed="false">Norte</button>
             <button class="chip" data-f="sumare" aria-pressed="false">Sumaré</button>
           </div>
@@ -307,6 +359,7 @@
             <button class="modo" id="modo" title="Quem responde esta conversa"><i></i><span id="modo-txt"></span></button>
             <button class="icone" id="topo-agendar" title="Agendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></button>
           </header>
+          <div class="dono" id="dono" hidden><span id="dono-txt"></span><button id="dono-assumir" hidden>Assumir</button><span class="digitando" id="dono-dig" hidden></span></div>
           <div class="msgs" id="msgs"></div>
           <div class="sugestao" id="sugestao" hidden><div class="citacao"><div class="t"><b>Sugestão da IA</b><span id="sugestao-txt"></span></div><button id="usar-sugestao">Usar</button></div></div>
           <div class="revisao" id="revisao" hidden><div class="citacao"><div class="t"><b id="revisao-tit"></b><span id="revisao-txt"></span></div><button id="revisao-usar" hidden>Usar</button></div></div>
@@ -322,6 +375,7 @@
               <button id="m-revisar"><i style="background:#02a698"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
               <button id="m-sugestao"><i style="background:#7f66ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
               <button id="m-ficha"><i style="background:#ff2e74"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i>Dados da cliente</button>
+              <button id="m-transferir" hidden><i style="background:#e26b2c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></i>Transferir conversa</button>
             </div>
           </div>
           <div class="simular" id="simular" hidden>
@@ -340,6 +394,7 @@
           <select id="f-etapa" disabled></select>
           <div class="linha"><span>Unidade</span><span id="f-unidade"></span></div>
           <div class="linha"><span>Quem responde</span><span id="f-modo"></span></div>
+          <div class="linha"><span>Atendida por</span><span id="f-dono"></span></div>
           <div class="linha"><span>Cliente desde</span><span id="f-desde"></span></div>
           <div class="linha"><span>Última mensagem</span><span id="f-ultima"></span></div>
           <div class="linha"><span>Cadastro no Trinks</span><span id="f-trinks"></span></div>
@@ -351,6 +406,8 @@
 
     <section class="vista" id="v-funil"><div class="funil" id="funil"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
+    <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
+    <section class="vista" id="v-configuracoes"><div class="painel"><div class="gestao" id="configuracoes" style="display:grid;gap:14px"></div></div></section>
   </div>
 </div>
 
@@ -389,6 +446,53 @@
     </div>
     <div id="ag-erro" class="erro-txt"></div>
     <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Fechar</button><button class="botao" id="ag-ok" value="ok">Confirmar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-pessoa">
+  <form method="dialog" id="f-pessoa">
+    <h2 id="p-titulo">Adicionar pessoa</h2>
+    <label>Nome <input name="nome" required minlength="2" maxlength="120" autocomplete="off"></label>
+    <label>E-mail <input name="email" type="email" required maxlength="200" autocomplete="off"></label>
+    <label>Papel <select name="papel" id="p-papel"></select></label>
+    <p class="info" id="p-papel-info" style="margin:-6px 0 0"></p>
+    <div><span class="info">Unidades</span><div class="marcar" id="p-unidades" style="margin-top:6px"></div></div>
+    <label id="p-senha-rotulo">Senha inicial <input name="senha" type="text" minlength="10" maxlength="200" autocomplete="new-password" placeholder="10+ caracteres, letras e números"></label>
+    <div class="acoes-extra" id="p-acoes" hidden><button type="button" class="link" id="p-redefinir">Redefinir senha</button><button type="button" class="link perigo" id="p-ativar"></button></div>
+    <div id="p-erro" class="erro-txt"></div>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" id="p-ok" value="ok">Salvar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-redefinir">
+  <form method="dialog" id="f-redefinir">
+    <h2 id="r-titulo">Redefinir senha</h2>
+    <p class="info" style="margin:0">A pessoa sai de todos os aparelhos e entra de novo com a senha nova. Combine com ela pessoalmente.</p>
+    <label>Senha nova <input name="senha" type="text" required minlength="10" maxlength="200" autocomplete="new-password" placeholder="10+ caracteres, letras e números"></label>
+    <div id="r-erro" class="erro-txt"></div>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Redefinir</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-trocar-senha">
+  <form method="dialog" id="f-trocar-senha">
+    <h2>Trocar senha</h2>
+    <label>Senha atual <input name="atual" type="password" required autocomplete="current-password"></label>
+    <label>Senha nova <input name="nova" type="password" required minlength="10" maxlength="200" autocomplete="new-password"></label>
+    <label>Repita a senha nova <input name="repita" type="password" required autocomplete="new-password"></label>
+    <p class="info" style="margin:0">Pelo menos 10 caracteres, com letras e números. Os outros aparelhos em que você entrou vão sair.</p>
+    <div id="t-erro" class="erro-txt"></div>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Trocar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-transferir">
+  <form method="dialog" id="f-transferir">
+    <h2>Transferir conversa</h2>
+    <p class="info" style="margin:0">Quem recebe passa a ser a dona da conversa.</p>
+    <div class="escolha" id="tr-lista"></div>
+    <div id="tr-erro" class="erro-txt"></div>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Transferir</button></div>
   </form>
 </dialog>
 
@@ -451,6 +555,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
     if (v === 'funil') desenharFunil();
     if (v === 'painel') carregarPainel();
+    if (v === 'equipe') carregarEquipe();
+    if (v === 'configuracoes') desenharConfiguracoes();
   }
 
   // lista
@@ -458,6 +564,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !esperando(c)) return false;
+    if (estado.filtro === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
     return true;
@@ -499,12 +606,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   async function carregarConversa() {
     if (!estado.aberta) return;
-    const d = await api('/api/conversas/' + estado.aberta).catch(() => null);
+    // 404: a conversa passou para outra pessoa (ou sumiu) e esta pessoa não a vê mais.
+    const d = await api('/api/conversas/' + estado.aberta).catch((x) => { if (x.status === 404) fecharConversa('Esta conversa passou para outra pessoa.'); return null; });
     if (!d) return;
     const assinatura = JSON.stringify(d);
     if (assinatura === estado.assinatura) return;
     estado.assinatura = assinatura; estado.detalhe = d;
     desenharConversa();
+    desenharDono();
   }
   function desenharConversa() {
     const { conversa: c, mensagens, sugestao } = estado.detalhe;
@@ -727,11 +836,186 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.aberta) await carregarConversa();
     if (estado.vista === 'funil') desenharFunil();
   }
-  $('sair').addEventListener('click', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; });
+  // ---------- equipe, configurações e dona da conversa ----------
+  const PAPEL = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
+  const SOBRE_PAPEL = {
+    atendente: 'Vê as conversas dela e as sem dona das unidades dela.',
+    recepcionista: 'Vê as conversas dela e as sem dona das unidades dela.',
+    gerente: 'Vê todas as conversas das unidades dele e cuida da equipe dessas unidades.',
+    direcao: 'Vê tudo e cuida de toda a equipe (menos a administração).',
+    admin: 'Vê tudo e cuida de toda a equipe.',
+  };
+  const ehGestor = (u) => ['gerente', 'direcao', 'admin'].includes(u?.papel);
+  const nomesUnidades = (l) => (l && l.length ? l.map((u) => UNIDADE[u] || u).join(', ') : '');
+  const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
+  const avatarPessoa = (nome, classe = 'p') => el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` });
+
+  function fecharConversa(aviso) {
+    estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
+    $('chat-aberto').style.display = 'none'; $('sem-conversa').hidden = false; $('ficha').hidden = true;
+    $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa');
+    desenharLista();
+    if (aviso) toast(aviso);
+  }
+
+  // Dona no topo da conversa e na ficha; "Fulana está respondendo".
+  function desenharDono() {
+    const d = estado.detalhe; if (!d) return;
+    const c = d.conversa, eu = estado.eu || {};
+    const txt = $('dono-txt'); txt.replaceChildren();
+    if (c.responsavelId && c.responsavelId === eu.id) txt.append('Você atende esta conversa');
+    else if (c.responsavelId) txt.append('Atendida por ', el('b', { text: c.responsavelNome || 'outra pessoa' }));
+    else txt.append(el('b', { text: 'Sem dona' }), el('span', { class: 'dica', text: ' · quem responder primeiro fica com ela' }));
+    $('dono-assumir').hidden = !d.permissoes?.assumir;
+    const dig = d.digitando || [];
+    $('dono-dig').hidden = !dig.length;
+    $('dono-dig').textContent = dig.length === 1 ? `${primeiroNome(dig[0].nome)} está respondendo…` : dig.length ? `${dig.map((x) => primeiroNome(x.nome)).join(' e ')} estão respondendo…` : '';
+    $('dono').hidden = false;
+    $('m-transferir').hidden = !d.permissoes?.transferir;
+    $('f-dono').textContent = c.responsavelId ? (c.responsavelId === eu.id ? 'Você' : c.responsavelNome) : 'Sem dona';
+  }
+  $('dono-assumir').addEventListener('click', async () => {
+    try { await post(`/api/conversas/${estado.aberta}/assumir`); toast('A conversa agora é sua.'); await atualizar(); }
+    catch (x) { toast(x.message); }
+  });
+
+  // transferir
+  async function abrirTransferir() {
+    $('menu-mais').hidden = true;
+    if (!estado.aberta) return;
+    $('tr-erro').textContent = '';
+    let pessoas; try { pessoas = await api(`/api/conversas/${estado.aberta}/transferir`); } catch (x) { toast(x.message); return; }
+    const c = estado.detalhe.conversa;
+    const opcao = (valor, rotulo, sub, av) => el('label', {}, Object.assign(el('input', { type: 'radio', name: 'para', value: valor }), { checked: false }), av, el('span', { style: 'display:grid' }, el('span', { text: rotulo }), sub ? el('span', { class: 'info', text: sub }) : null));
+    const lista = pessoas.filter((p) => !p.dona).map((p) => opcao(p.id, p.eu ? `${p.nome} (você)` : p.nome, PAPEL[p.papel], avatarPessoa(p.nome)));
+    if (c.responsavelId) lista.push(opcao('', 'Sem dona', 'Volta para todas da unidade', el('span', { class: 'avatar foto p', html: BONECO })));
+    $('tr-lista').replaceChildren(...(lista.length ? lista : [el('p', { class: 'info', text: 'Ninguém mais atende esta unidade.' })]));
+    $('d-transferir').showModal();
+  }
+  $('m-transferir').addEventListener('click', abrirTransferir);
+  $('f-transferir').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    e.preventDefault();
+    const marcada = e.target.querySelector('input[name="para"]:checked');
+    if (!marcada) { $('tr-erro').textContent = 'Escolha para quem passar.'; return; }
+    const usuarioId = marcada.value || null;
+    try {
+      const r = await post(`/api/conversas/${estado.aberta}/transferir`, { usuarioId });
+      $('d-transferir').close();
+      toast(r.responsavelNome ? `Conversa passada para ${r.responsavelNome}.` : 'A conversa ficou sem dona.');
+      if (!ehGestor(estado.eu) && usuarioId !== estado.eu.id && usuarioId !== null) fecharConversa();
+      await atualizar();
+    } catch (x) { $('tr-erro').textContent = x.message; }
+  });
+
+  // equipe
+  async function carregarEquipe() {
+    const caixa = $('equipe');
+    let r; try { r = await api('/api/equipe'); } catch (x) { caixa.replaceChildren(el('p', { class: 'erro-txt', text: x.message })); return; }
+    estado.equipe = r;
+    const linhas = r.pessoas.map((p) => {
+      const sub = [PAPEL[p.papel], nomesUnidades(p.unidades) || (['admin', 'direcao'].includes(p.papel) ? 'Todas as unidades' : 'Sem unidade')].join(' · ');
+      const l1 = el('div', { class: 'l1' }, el('b', { text: p.eu ? `${p.nome} (você)` : p.nome }));
+      if (!p.ativo) l1.append(el('span', { class: 'tag', text: 'Desativada' }));
+      return el('button', { class: 'pessoa' + (p.ativo ? '' : ' inativa'), onclick: () => abrirPessoa(p) },
+        avatarPessoa(p.nome, ''), el('div', { class: 't' }, l1, el('span', { text: sub }), el('span', { text: p.email })));
+    });
+    caixa.replaceChildren(
+      el('div', { class: 'cab' }, el('h1', { text: 'Equipe' }), el('button', { class: 'botao', text: 'Adicionar pessoa', onclick: () => abrirPessoa(null) })),
+      el('p', { class: 'info', style: 'margin:0', text: estado.eu.papel === 'gerente' ? `Quem trabalha em ${nomesUnidades(estado.eu.unidades) || 'suas unidades'}. Você cadastra atendentes e recepcionistas.` : 'Quem entra no Sintonia e o que cada pessoa vê.' }),
+      el('div', { class: 'cartoes' }, ...linhas),
+    );
+  }
+  let pessoaAberta = null;
+  function abrirPessoa(p) {
+    if (p && !p.podeGerenciar) { toast(p.eu ? 'Seus dados ficam em Configurações.' : 'Você não pode mudar o acesso desta pessoa.'); return; }
+    pessoaAberta = p;
+    const f = $('f-pessoa'), r = estado.equipe;
+    f.reset(); $('p-erro').textContent = '';
+    $('p-titulo').textContent = p ? p.nome : 'Adicionar pessoa';
+    f.nome.value = p?.nome || ''; f.email.value = p?.email || '';
+    f.nome.disabled = Boolean(p); f.email.disabled = Boolean(p);
+    $('p-papel').replaceChildren(...r.papeis.map((x) => el('option', { value: x, text: PAPEL[x] })));
+    $('p-papel').value = p?.papel || 'atendente';
+    $('p-papel-info').textContent = SOBRE_PAPEL[$('p-papel').value] || '';
+    $('p-unidades').replaceChildren(...r.unidades.map((u) => el('label', {}, Object.assign(el('input', { type: 'checkbox', name: 'unidades', value: u }), { checked: p ? p.unidades.includes(u) : r.unidades.length === 1 }), UNIDADE[u] || u)));
+    $('p-senha-rotulo').hidden = Boolean(p); f.senha.required = !p;
+    $('p-acoes').hidden = !p;
+    if (p) { $('p-ativar').textContent = p.ativo ? 'Desativar acesso' : 'Reativar acesso'; $('p-ativar').classList.toggle('perigo', p.ativo); delete $('p-ativar').dataset.confirmar; }
+    $('p-ok').textContent = p ? 'Salvar' : 'Adicionar';
+    $('d-pessoa').showModal();
+  }
+  $('p-papel').addEventListener('change', () => { $('p-papel-info').textContent = SOBRE_PAPEL[$('p-papel').value] || ''; });
+  $('f-pessoa').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    e.preventDefault();
+    const f = e.target;
+    const unidades = [...f.querySelectorAll('input[name="unidades"]:checked')].map((i) => i.value);
+    try {
+      if (pessoaAberta) await api(`/api/equipe/${pessoaAberta.id}`, { method: 'PATCH', body: JSON.stringify({ papel: f.papel.value, unidades }) });
+      else await post('/api/equipe', { nome: f.nome.value.trim(), email: f.email.value.trim(), papel: f.papel.value, unidades, senha: f.senha.value });
+      $('d-pessoa').close(); toast(pessoaAberta ? 'Acesso atualizado.' : 'Pessoa adicionada. Passe a senha inicial para ela.');
+      carregarEquipe();
+    } catch (x) { $('p-erro').textContent = x.message; }
+  });
+  $('p-ativar').addEventListener('click', async (e) => {
+    const b = e.currentTarget, p = pessoaAberta; if (!p) return;
+    // Desativar pede um segundo toque para confirmar.
+    if (p.ativo && !b.dataset.confirmar) { b.dataset.confirmar = '1'; b.textContent = `Confirmar: desativar ${primeiroNome(p.nome)}`; return; }
+    try {
+      await post(`/api/equipe/${p.id}/${p.ativo ? 'desativar' : 'reativar'}`);
+      $('d-pessoa').close(); toast(p.ativo ? `${primeiroNome(p.nome)} não entra mais no Sintonia.` : `${primeiroNome(p.nome)} pode entrar de novo.`);
+      carregarEquipe();
+    } catch (x) { $('p-erro').textContent = x.message; }
+  });
+  $('p-redefinir').addEventListener('click', () => {
+    const p = pessoaAberta; if (!p) return;
+    $('d-pessoa').close();
+    $('f-redefinir').reset(); $('r-erro').textContent = ''; $('r-titulo').textContent = `Nova senha para ${primeiroNome(p.nome)}`;
+    $('d-redefinir').showModal();
+  });
+  $('f-redefinir').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    e.preventDefault();
+    try { await post(`/api/equipe/${pessoaAberta.id}/senha`, { senha: e.target.senha.value }); $('d-redefinir').close(); toast('Senha redefinida.'); }
+    catch (x) { $('r-erro').textContent = x.message; }
+  });
+
+  // configurações
+  function desenharConfiguracoes() {
+    const eu = estado.eu; if (!eu) return;
+    const ICONE_CHAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg>';
+    const ICONE_SAIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>';
+    const linha = (a, b) => el('div', { class: 'linha' }, el('span', { text: a }), el('span', { text: b }));
+    const botao = (icone, texto, acao, classe = '') => { const b = el('button', { class: classe, onclick: acao }); b.insertAdjacentHTML('beforeend', icone); b.append(texto); return b; };
+    $('configuracoes').replaceChildren(
+      el('div', { class: 'cab' }, el('h1', { text: 'Configurações' })),
+      el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, ''), el('b', { text: eu.nome }), el('span', { text: eu.email })),
+      el('div', { class: 'opcoes-conta' },
+        linha('Papel', PAPEL[eu.papel] || eu.papel),
+        linha('Unidades', nomesUnidades(eu.unidades) || (['admin', 'direcao'].includes(eu.papel) ? 'Todas' : 'Nenhuma ainda')),
+        el('div', { class: 'linha' }, el('span', { class: 'info', style: 'color:var(--sub)', text: SOBRE_PAPEL[eu.papel] || '' }))),
+      el('div', { class: 'opcoes-conta' },
+        botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
+        botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
+    );
+  }
+  $('f-trocar-senha').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    e.preventDefault();
+    const f = e.target;
+    if (f.nova.value !== f.repita.value) { $('t-erro').textContent = 'As duas senhas novas não são iguais.'; return; }
+    try { await post('/api/auth/senha', { atual: f.atual.value, nova: f.nova.value }); $('d-trocar-senha').close(); toast('Senha trocada ✓'); }
+    catch (x) { $('t-erro').textContent = x.message; }
+  });
+
+  // Para a navegação de fora (ex.: botão flutuante de acesso rápido) abrir as telas pelo nome.
+  window.Sintonia = { mostrar, abrirEquipe: () => mostrar('equipe'), abrirConfiguracoes: () => mostrar('configuracoes') };
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
-    $('eu-avatar').textContent = iniciais(estado.eu.nome); $('sair').title = `${estado.eu.nome} · sair`;
+    $('nav-config').title = `Configurações · ${estado.eu.nome}`;
+    $('nav-equipe').hidden = !ehGestor(estado.eu);
     estado.situacao = await api('/api/situacao').catch(() => ({}));
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
