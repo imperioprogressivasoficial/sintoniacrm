@@ -43,6 +43,10 @@ export type TipoEvento =
   | 'leads_mesclados'
   /** Transmissão (disparo em massa) enviada, respondida ou descadastro (dados: transmissaoId, nome, acao). */
   | 'transmissao'
+  /** Follow-up ou confirmação de agenda enviados (src/followup; dados: situacao, passo, total, agendamento). */
+  | 'followup'
+  /** A cliente respondeu à confirmação de agenda (dados: status confirmado|remarcar, agendamento, inicio, servico). */
+  | 'confirmacao'
   | 'falha';
 
 export interface Evento {

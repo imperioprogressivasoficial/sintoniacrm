@@ -793,6 +793,7 @@
             </div>
           </header>
           <div class="dono" id="dono" hidden><span id="dono-txt"></span><button id="dono-assumir" hidden>Assumir</button><span class="digitando" id="dono-dig" hidden></span></div>
+          <div class="fu-faixa" id="fu-selo" hidden></div>
           <div class="msgs" id="msgs"></div>
           <div class="sugestao" id="sugestao" hidden><div class="citacao"><div class="t"><b>Sugestão da IA</b><span id="sugestao-txt"></span></div><button id="usar-sugestao">Usar</button></div></div>
           <div class="revisao" id="revisao" hidden><div class="citacao"><div class="t"><b id="revisao-tit"></b><span id="revisao-txt"></span></div><button id="revisao-usar" hidden>Usar</button></div></div>
@@ -1400,6 +1401,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.assinatura = assinatura; estado.detalhe = d;
     desenharConversa();
     desenharDono();
+    window.SintoniaTelas?.followup?.seloConversa($('fu-selo'), estado.aberta, window.Sintonia.ui);
   }
   function desenharConversa() {
     const { conversa: c, mensagens, sugestao } = estado.detalhe;
@@ -2399,6 +2401,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/transmissoes.js" defer></script>
 <script src="/telas/email.js" defer></script>
+<script src="/telas/followup.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>

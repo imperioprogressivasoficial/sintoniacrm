@@ -590,7 +590,7 @@ export class EmailMarketing {
   // ============================================================ automações
 
   /** Passo "enviar e-mail" das automações: entra na fila (idempotente pela chave da execução). */
-  async deAutomacao(p: { conversa: Conversa; modeloId: string; chave: string }): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }> {
+  async deAutomacao(p: { conversa: Conversa; modeloId: string; chave: string; variaveis?: Record<string, string> }): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }> {
     const { rows: ms } = await this.q('select * from sintonia.email_modelos where id = $1 and empresa_id = $2', [p.modeloId, this.o.empresaId]);
     const modelo = ms[0];
     if (!modelo) return { ok: false, motivo: 'Modelo de e-mail não encontrado.' };
@@ -602,9 +602,9 @@ export class EmailMarketing {
     const { rows: sup } = await this.q<{ motivo: string }>('select motivo from sintonia.email_supressoes where empresa_id = $1 and email = $2', [this.o.empresaId, destino]);
     if (sup[0]) return { ok: false, motivo: sup[0].motivo === 'descadastro' ? 'A cliente se descadastrou dos e-mails.' : 'Este e-mail deu erro permanente antes (bounce).' };
     const r = await this.q(
-      `insert into sintonia.email_envios (empresa_id, token, modelo_id, conta_id, chave, email, nome, telefone, conversa_id, unidade, proxima_em, criado_em)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11) on conflict do nothing`,
-      [this.o.empresaId, novoToken(), modelo.id, conta.id, p.chave, destino, rows[0]?.nome || p.conversa.nome || null, p.conversa.telefone, p.conversa.id, p.conversa.unidade, this.agora()],
+      `insert into sintonia.email_envios (empresa_id, token, modelo_id, conta_id, chave, email, nome, telefone, conversa_id, unidade, proxima_em, criado_em, variaveis)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11,$12) on conflict do nothing`,
+      [this.o.empresaId, novoToken(), modelo.id, conta.id, p.chave, destino, rows[0]?.nome || p.conversa.nome || null, p.conversa.telefone, p.conversa.id, p.conversa.unidade, this.agora(), p.variaveis ? JSON.stringify(p.variaveis) : null],
     );
     return { ok: true, detalhe: r.rowCount ? `E-mail "${modelo.nome}" na fila para ${destino}.` : `E-mail "${modelo.nome}" já estava na fila para ${destino}.` };
   }
@@ -666,7 +666,7 @@ export class EmailMarketing {
           select e.id from sintonia.email_envios e left join sintonia.email_campanhas c on c.id = e.campanha_id
            where e.conta_id = $1 and e.estado = 'pendente' and e.proxima_em <= $2 and (e.campanha_id is null or c.estado = 'enviando')
            order by e.id limit $4 for update of e skip locked)
-        returning id, token, campanha_id, modelo_id, conta_id, email, nome, telefone, conversa_id, unidade, estado, tentativas`,
+        returning id, token, campanha_id, modelo_id, conta_id, email, nome, telefone, conversa_id, unidade, estado, tentativas, variaveis`,
       [conta.id, agora, new Date(agora.getTime() + RESERVA_MS), folga],
     );
     if (!rows.length) return 0;
@@ -693,7 +693,7 @@ export class EmailMarketing {
         fonte = { assunto: x[0].assunto, preheader: x[0].preheader, conteudo: Conteudo.parse(x[0].conteudo), base: (x[0].base_url || this.baseUrl()).replace(/\/+$/, '') };
         conteudos.set(chave, fonte);
       }
-      const v: Variaveis = { nome: e.nome, email: e.email, unidade: nomeUnidade(e.unidade) };
+      const v: Variaveis = { nome: e.nome, email: e.email, unidade: nomeUnidade(e.unidade), extras: (e as { variaveis?: Record<string, string> | null }).variaveis ?? null };
       const base = fonte.base;
       const descadastro = `${base}/e/d/${e.token}`;
       const m = montarEmail(fonte.conteudo, {

@@ -366,6 +366,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (window.SintoniaTelas.bot?.abasAutomacoes) tela.append(window.SintoniaTelas.bot.abasAutomacoes('automacoes'));
     tela.append(el('p', { class: 'au-sub', text: 'O que a Sintonia faz sozinha. Ex.: quando a cliente entrar em “Proposta” → esperar 1 dia → mandar uma mensagem. O jeito mais rápido de criar é pelo raio ⚡ em cada etapa do CRM.' }));
     if (!ehGestao()) { tela.append(el('div', { class: 'au-vazio' }, el('b', { text: 'Só a gestão mexe nas automações.' }), el('span', { text: 'Peça para a gerência criar ou mudar uma automação.' }))); return; }
+    // Aba "Follow-up" (cadências e confirmação de agenda: /telas/followup.js).
+    const fu = window.SintoniaTelas.followup;
+    if (fu) {
+      s.aba = s.aba || 'automacoes';
+      tela.insertBefore(fu.abas(ui, s.aba, (v) => { s.aba = v; desenhar(caixa, ui); }), tela.querySelector('.au-sub'));
+      if (s.aba === 'followup') {
+        tela.querySelector('.au-cab .au-botao')?.remove();
+        tela.querySelector('.au-sub')?.remove();
+        const area = el('div', {});
+        tela.append(area);
+        await fu.desenhar(area, ui);
+        return;
+      }
+    }
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));
     const filtros = el('div', { class: 'au-filtros', role: 'group', 'aria-label': 'Filtrar por funil' });
     const config = el('div', { class: 'au-config' });
