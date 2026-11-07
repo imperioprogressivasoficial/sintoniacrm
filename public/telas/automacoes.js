@@ -26,6 +26,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['nova_conversa', 'Cliente nova', 'Primeira mensagem de uma cliente'],
     ['palavra_chave', 'Palavra-chave', 'A cliente escreve uma palavra (o “bot”)'],
     ['tag_marcada', 'Tag marcada', 'Alguém (ou a IA) marca uma tag'],
+    ['aniversario', 'Aniversário', 'No dia do aniversário da cliente (ficha)'],
+    ['dias_apos_compareceu', 'Depois de comparecer', 'X dias depois de entrar em “Compareceu”'],
   ];
   const PASSOS = [
     ['enviar_mensagem', '💬', 'Enviar mensagem', 'Manda uma mensagem no WhatsApp'],
@@ -37,6 +39,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['fluxo_ia', '✨', 'IA conduz com um objetivo', 'A IA assume com uma missão'],
     ['mudar_modo', '🔁', 'Mudar quem responde', 'IA, Sugestões ou Minha resposta'],
     ['lembrete_ligacao', '📞', 'Lembrete de ligação', 'Aparece em “Ligar hoje”'],
+    ['enviar_email', '✉️', 'Enviar e-mail', 'Manda um modelo do E-mail marketing'],
     ['condicao', '🔀', 'Se… senão…', 'Faz uma coisa ou outra'],
   ];
   const NOME_PASSO = Object.fromEntries(PASSOS.map(([t, i, n]) => [t, [i, n]]));
@@ -229,11 +232,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function base(forcar) {
     if (!forcar && s.base && Date.now() - s.baseEm < 30000) return s.base;
     const ui = UI();
-    const [funis, tags, equipe] = await Promise.all([ui.api('/api/funis').catch(() => []), ui.api('/api/tags').catch(() => []), ui.api('/api/equipe').catch(() => ({ pessoas: [] }))]);
+    const [funis, tags, equipe, modelosEmail] = await Promise.all([ui.api('/api/funis').catch(() => []), ui.api('/api/tags').catch(() => []), ui.api('/api/equipe').catch(() => ({ pessoas: [] })), ui.api('/api/email/modelos').catch(() => [])]);
     const etapas = new Map(), tagsMap = new Map();
     for (const f of funis) for (const e of f.etapas || []) etapas.set(e.id, { ...e, funilNome: f.nome, sistema: f.sistema });
     for (const t of tags) tagsMap.set(t.id, t);
-    s.base = { funis, tags, pessoas: (equipe.pessoas || []).filter((p) => p.ativo !== false), etapas, tagsMap };
+    s.base = { funis, tags, pessoas: (equipe.pessoas || []).filter((p) => p.ativo !== false), etapas, tagsMap, modelosEmail: Array.isArray(modelosEmail) ? modelosEmail : [] };
     s.baseEm = Date.now();
     return s.base;
   }
@@ -265,6 +268,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         return g.modo === 'exata' ? `Quando a cliente mandar só ${p.join(' ou ')}` : `Quando a cliente escrever ${p.join(', ')}`;
       }
       case 'tag_marcada': return `Quando marcarem a tag ${aspas(tagNome(g.tagId))}`;
+      case 'aniversario': return 'No dia do aniversário da cliente';
+      case 'dias_apos_compareceu': return `${g.dias || 0} dia(s) depois de a cliente comparecer`;
       default: return 'Quando…';
     }
   }
@@ -279,6 +284,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'desmarcar_tag': return `tirar ${aspas(tagNome(p.tagId))}`;
       case 'atribuir': return `passar para ${pessoaNome(p.usuarioId)}${p.unidade ? ` (só ${UNIDADES[p.unidade]})` : ''}`;
       case 'lembrete_ligacao': return `lembrete de ligação ${p.em_minutos ? `em ${duracao(p.em_minutos)}` : 'na hora'}`;
+      case 'enviar_email': return `enviar o e-mail ${aspas(s.base?.modelosEmail?.find((m) => m.id === p.modeloId)?.nome || 'modelo')}`;
       case 'condicao': {
         const c = CONDICOES.find(([k]) => k === p.se)?.[1] || '';
         const v = p.se === 'tem_tag' ? ` ${aspas(tagNome(p.valor))}` : p.se === 'modo' ? ` ${MODOS[p.valor] || ''}` : '';
@@ -465,6 +471,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     desmarcar_tag: () => ({ tipo: 'desmarcar_tag', tagId: primeiraOpcao(opcoesTags({ semSistema: true })) }),
     atribuir: () => ({ tipo: 'atribuir', usuarioId: null }),
     lembrete_ligacao: () => ({ tipo: 'lembrete_ligacao', em_minutos: 0, texto: '' }),
+    enviar_email: () => ({ tipo: 'enviar_email', modeloId: s.base?.modelosEmail?.[0]?.id || '' }),
     condicao: () => ({ tipo: 'condicao', se: 'cliente_respondeu', entao: [], senao: [] }),
   };
   const NOVO_GATILHO = {
@@ -473,6 +480,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     nova_conversa: () => ({ tipo: 'nova_conversa' }),
     palavra_chave: () => ({ tipo: 'palavra_chave', palavras: [], modo: 'contem' }),
     tag_marcada: () => ({ tipo: 'tag_marcada', tagId: primeiraOpcao(opcoesTags()) }),
+    aniversario: () => ({ tipo: 'aniversario' }),
+    dias_apos_compareceu: () => ({ tipo: 'dias_apos_compareceu', dias: 30 }),
   };
 
   /** Deixa o passo no formato exato da API (sem campos vazios). */
@@ -486,6 +495,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'marcar_tag': case 'desmarcar_tag': return { tipo: p.tipo, tagId: p.tagId };
       case 'atribuir': { const r = { tipo: p.tipo, usuarioId: p.usuarioId || null }; if (p.unidade) r.unidade = p.unidade; return r; }
       case 'lembrete_ligacao': { const r = { tipo: p.tipo, em_minutos: Math.max(0, Math.round(Number(p.em_minutos) || 0)) }; if (String(p.texto || '').trim()) r.texto = String(p.texto).trim(); return r; }
+      case 'enviar_email': return { tipo: p.tipo, modeloId: p.modeloId };
       case 'condicao': { const r = { tipo: p.tipo, se: p.se, entao: (p.entao || []).map(limparPasso), senao: (p.senao || []).map(limparPasso) }; if (p.se === 'tem_tag' || p.se === 'modo') r.valor = p.valor; return r; }
       default: return p;
     }
@@ -497,6 +507,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'nova_conversa': return g.unidade ? { tipo: g.tipo, unidade: g.unidade } : { tipo: g.tipo };
       case 'palavra_chave': return { tipo: g.tipo, palavras: (g.palavras || []).map((p) => String(p).trim()).filter(Boolean), modo: g.modo === 'exata' ? 'exata' : 'contem' };
       case 'tag_marcada': return { tipo: g.tipo, tagId: g.tagId };
+      case 'dias_apos_compareceu': return { tipo: g.tipo, dias: Math.min(365, Math.max(0, Math.round(Number(g.dias) || 0))) };
       default: return g;
     }
   }
@@ -516,6 +527,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (p.tipo === 'enviar_mensagem' && !String(p.texto || '').trim()) erro = `${qual}: escreva a mensagem.`;
       else if (p.tipo === 'fluxo_ia' && String(p.objetivo || '').trim().length < 3) erro = `${qual}: escreva o objetivo da IA.`;
       else if (p.tipo === 'mover_etapa' && !p.etapaId) erro = `${qual}: escolha a etapa.`;
+      else if (p.tipo === 'enviar_email' && !p.modeloId) erro = `${qual}: escolha o modelo de e-mail (crie em E-mail marketing › Modelos).`;
       else if ((p.tipo === 'marcar_tag' || p.tipo === 'desmarcar_tag') && !p.tagId) erro = `${qual}: escolha a tag.`;
       else if (p.tipo === 'condicao') { if ((p.se === 'tem_tag' || p.se === 'modo') && !p.valor) erro = `${qual}: complete a condição.`; ver(p.entao || [], `${pre}${i + 1}.sim.`); ver(p.senao || [], `${pre}${i + 1}.não.`); }
     });
@@ -586,6 +598,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       } else if (g.tipo === 'tag_marcada') {
         if (!g.tagId) g.tagId = primeiraOpcao(opcoesTags());
         campos.append(rotulo('Tag', selecao(opcoesTags(), g.tagId, (v) => { g.tagId = v; marcarSujo(); })));
+      } else if (g.tipo === 'aniversario') {
+        campos.append(el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Usa a data de nascimento da ficha da cliente. Dispara uma vez por ano, a partir das 9h.' }));
+      } else if (g.tipo === 'dias_apos_compareceu') {
+        const dias = el('input', { type: 'number', min: '0', max: '365', value: String(g.dias ?? 30), inputmode: 'numeric' });
+        dias.addEventListener('input', () => { g.dias = Number(dias.value) || 0; marcarSujo(); });
+        campos.append(rotulo('Quantos dias depois', dias), el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Conta a partir do dia em que a conversa entrou em “Compareceu”. Bom para pós-atendimento e manutenção.' }));
       }
       gatilhoCaixa.replaceChildren(ops, campos);
     }
@@ -677,6 +695,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           t.addEventListener('input', () => { p.texto = t.value; marcarSujo(); });
           campos.append(rotulo('Quando ligar (0 = hoje)', duracaoCampo(p.em_minutos || 0, (m) => { p.em_minutos = Math.min(8640, m); marcarSujo(); }, { minimo: 0 })), rotulo('Recado (opcional)', t),
             larga(el('p', { class: 'au-info', text: 'Aparece em CRM › Ligar hoje no dia certo e sai quando alguém registra a ligação. Até 6 dias à frente.' })));
+          break;
+        }
+        case 'enviar_email': {
+          const mods = s.base.modelosEmail || [];
+          if (!p.modeloId && mods[0]) p.modeloId = mods[0].id;
+          campos.append(rotulo('Modelo de e-mail', selecao(mods.length ? mods.map((m) => [m.id, m.nome]) : [['', 'Nenhum modelo salvo']], p.modeloId || '', (v) => { p.modeloId = v; marcarSujo(); })),
+            larga(el('p', { class: 'au-info', text: 'Vai para o e-mail da ficha, no ritmo da conta, com descadastro. Quem não tem e-mail ou se descadastrou é pulada. Crie modelos em E-mail marketing › Modelos.' })));
           break;
         }
         case 'condicao': {
