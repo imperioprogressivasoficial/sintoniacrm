@@ -76,6 +76,13 @@
   </section>
 
   <section>
+    <h2><span class="ic" style="background:#0a8f7a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"/><path d="M18 11a6 6 0 0 1-12 0M12 17v4"/></svg></span>Transcrição de áudio</h2>
+    <p>Chave da API da OpenAI (Whisper). Com ela, o botão Transcrever dos áudios da conversa escreve o que a cliente falou. Cada áudio é transcrito uma vez só.</p>
+    <label>Chave da OpenAI <input id="openaiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+    <div class="linha"><button class="botao" data-salvar="openaiApiKey">Salvar</button><button class="botao leve" data-testar="openai">Testar</button><span class="res" id="res-openai"></span></div>
+  </section>
+
+  <section>
     <h2><span class="ic" style="background:#1a8be0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>Agenda (Trinks)</h2>
     <p>Chave da API da Trinks. Com ela, o botão Agendar e a IA marcam horário sem abrir o Trinks.</p>
     <label>Chave da Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>

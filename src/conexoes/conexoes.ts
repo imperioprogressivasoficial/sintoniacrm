@@ -8,6 +8,8 @@ import { Cofre } from './cofre.js';
 export const CAMPOS = {
   anthropicApiKey: { segredo: true },
   trinksApiKey: { segredo: true },
+  /** OpenAI (Whisper): transcrição dos áudios na conversa. */
+  openaiApiKey: { segredo: true },
   evolutionUrl: { segredo: false },
   evolutionApiKey: { segredo: true },
   /** Gerado pela Sintonia; vai no cabeçalho do webhook das instâncias que ela cria. */
