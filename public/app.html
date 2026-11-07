@@ -652,6 +652,31 @@
   .et-etapa[aria-pressed="true"] { background: color-mix(in srgb, var(--cor) 24%, transparent); box-shadow: inset 0 0 0 1.5px var(--cor), 0 4px 14px color-mix(in srgb, var(--cor) 30%, transparent); }
   .et-etapa:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   [data-tema="escuro"] #dono-assumir { color: var(--marca-menta); }
+
+  /* menu ⋯ da lista e seleção de várias conversas */
+  .lista-topo { position: relative; }
+  .menu-lista { position: absolute; top: 58px; left: 12px; z-index: 30; min-width: 260px; padding: 8px; border-radius: 22px; display: grid; gap: 2px;
+    background: color-mix(in srgb, var(--fundo) 90%, transparent); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 24px 60px rgba(0,0,0,.35); -webkit-backdrop-filter: blur(30px) saturate(1.6); backdrop-filter: blur(30px) saturate(1.6); }
+  .menu-lista button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 14px; border-radius: 14px; font-size: 16px; font-weight: 600; color: var(--texto); }
+  .menu-lista button:hover, .menu-lista button:focus-visible { background: var(--vidro-item); }
+  .menu-lista svg { width: 22px; height: 22px; flex: none; color: var(--icone); }
+  .barra-selecao { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+  .barra-selecao b { font-size: 16px; }
+  .barra-selecao .link { all: unset; cursor: pointer; font-weight: 700; color: var(--marca-azul); padding: 8px 4px; }
+  [data-tema="escuro"] .barra-selecao .link { color: var(--marca-menta); }
+  .em-selecao .lista-topo > .titulo, .em-selecao .lista-topo > .titulo-grande { display: none; }
+  .item.selecionando { padding-left: 10px; }
+  .marca-sel { flex: none; align-self: center; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--sub); margin-right: 2px; position: relative; }
+  .marca-sel.on { background: var(--marca-azul); box-shadow: none; }
+  .marca-sel.on::after { content: ""; position: absolute; left: 8px; top: 4px; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+  [data-tema="escuro"] .marca-sel.on { background: var(--marca-menta); } [data-tema="escuro"] .marca-sel.on::after { border-color: #071d33; }
+  .acoes-selecao { position: sticky; bottom: 0; order: 99; z-index: 6; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 10px; padding: 6px; border-radius: 22px;
+    background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5); }
+  .acoes-selecao button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 3px; padding: 8px 4px; border-radius: 14px; font-size: 12px; font-weight: 700; color: var(--texto); }
+  .acoes-selecao button svg { width: 22px; height: 22px; color: var(--icone); }
+  .acoes-selecao button:disabled { opacity: .4; cursor: default; }
+  .acoes-selecao button:not(:disabled):hover { background: var(--vidro-item); }
+  @media (max-width: 760px) { .acoes-selecao { position: fixed; left: 0; right: 0; bottom: calc(86px + env(safe-area-inset-bottom)); } }
 </style>
 </head>
 <body>
@@ -699,6 +724,12 @@
 
     <section class="vista ativa" id="v-conversas">
       <div class="lista">
+      <div class="acoes-selecao" id="acoes-selecao" hidden>
+        <button data-sel="lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><path d="m8.5 12.5 2.3 2.3 4.7-4.8"/></svg><span>Lidas</span></button>
+        <button data-sel="nao-lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg><span>Não lidas</span></button>
+        <button data-sel="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Mover</span></button>
+        <button data-sel="tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Tag</span></button>
+      </div>
         <div class="lista-topo">
           <div class="titulo">
             <button class="icone redondo" id="mais-lista" title="Mais opções"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
@@ -707,6 +738,15 @@
             <button class="icone redondo branco" id="nova-teste-cel" title="Nova conversa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
             <button class="icone so-nunca" id="nova-teste" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
           </div>
+          <div class="menu-lista" id="menu-lista" hidden role="menu">
+            <button role="menuitem" data-acao="selecionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Selecionar conversas</span></button>
+            <button role="menuitem" data-acao="lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><path d="m8.5 12.5 2.3 2.3 4.7-4.8"/></svg><span>Marcar tudo como lido</span></button>
+            <button role="menuitem" data-acao="so-nao-lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg><span id="ml-so-txt">Mostrar só não lidas</span></button>
+            <button role="menuitem" data-acao="listas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Listas (tags)</span></button>
+            <button role="menuitem" data-acao="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Abrir CRM</span></button>
+            <button role="menuitem" data-acao="nova"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Nova conversa</span></button>
+          </div>
+          <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
           <h1 class="titulo-grande">Conversas</h1>
           <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Pesquisar" aria-label="Pesquisar"></label>
           <div class="filtros" id="filtros">
@@ -837,6 +877,11 @@
   </div>
 </div>
 
+<dialog id="d-escolha" class="folha">
+  <div class="folha-topo"><span></span><h2 id="esc-titulo">Escolha</h2><button class="icone fechar-folha" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <p class="info" id="esc-sub" style="margin:0 4px 10px"></p>
+  <div class="et-etapas" id="esc-lista"></div>
+</dialog>
 <dialog id="d-etiquetar" class="folha">
   <div class="folha-topo"><span></span><h2>CRM e tags</h2><button class="icone fechar-folha" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div id="et-crm" class="et-crm"></div>
@@ -1089,6 +1134,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     return (h - x) < 6 * 864e5 ? x.toLocaleDateString('pt-BR', { weekday: 'long' }) : x.toLocaleDateString('pt-BR'); };
   const horaLista = (d) => { if (!d) return ''; const r = rotuloDia(d); return r === 'Hoje' ? hm(d) : r; };
   const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  // Não lida = a cliente escreveu depois da última vez que ESTA pessoa abriu (e ainda espera resposta).
+  const naoLida = (c) => esperando(c) && (!c.lidaAte || new Date(c.ultimaMensagemCliente) > new Date(c.lidaAte));
   const esperando = (c) => { const cl = c.ultimaMensagemCliente && new Date(c.ultimaMensagemCliente).getTime(); if (!cl) return false; const resp = Math.max(new Date(c.ultimaMensagemEquipe || 0).getTime(), new Date(c.ultimaMensagemIa || 0).getTime()); return cl > resp; };
 
   // navegação
@@ -1111,7 +1158,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   $('busca').addEventListener('input', (e) => { estado.busca = e.target.value.toLowerCase(); desenharLista(); });
   $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
   const filtradas = () => estado.conversas.filter((c) => {
-    if (estado.filtro === 'esperando' && !esperando(c)) return false;
+    if (estado.filtro === 'esperando' && !naoLida(c)) return false;
     if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
     if (estado.filtro === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
@@ -1136,7 +1183,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       caixa.append(v); return;
     }
     for (const c of lista) {
-      const u = c.ultima; const nova = esperando(c);
+      const u = c.ultima; const nova = naoLida(c);
       const previa = el('span', { class: 'previa' });
       if (u && u.autor !== 'cliente') previa.insertAdjacentHTML('beforeend', CHECK);
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
@@ -1145,7 +1192,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       for (const t of (c.tags || []).slice(0, 2)) l2.append(pilulaTag(t));
       if (ehTeste(c) && !(c.tags || []).length) l2.append(el('span', { class: 'tag', text: 'teste' }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1' }));
-      caixa.append(el('button', { class: 'item', 'aria-current': String(c.id === estado.aberta), onclick: () => abrir(c.id) },
+      const sel = estado.selecao; const marcada = !!sel?.has(c.id);
+      caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
+        onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
+        ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
           el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), quemAtende(c), el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
@@ -1263,6 +1313,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // conversa
   async function abrir(id) {
+    { const c = estado.conversas.find((x) => x.id === id); if (c) c.lidaAte = new Date().toISOString(); }
     if (grav.rec) pararGravacao(true);
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
@@ -1747,10 +1798,62 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // simulador
   $('nova-teste').addEventListener('click', () => $('d-teste').showModal());
   $('nova-teste-cel').addEventListener('click', () => (window.SintoniaConversa?.novaConversa ? window.SintoniaConversa.novaConversa() : $('d-teste').showModal()));
-  $('mais-lista').addEventListener('click', () => {
-    const alvo = estado.filtro === 'esperando' ? 'todas' : 'esperando';
-    document.querySelector(`[data-f="${alvo}"]`).click();
-    toast(alvo === 'esperando' ? 'Mostrando só as não respondidas.' : 'Mostrando todas as conversas.');
+  // Menu ⋯ da lista (como o do WhatsApp): selecionar, marcar tudo como lido, só não lidas, listas…
+  const menuLista = $('menu-lista');
+  $('mais-lista').addEventListener('click', (e) => { e.stopPropagation(); $('ml-so-txt').textContent = estado.filtro === 'esperando' ? 'Mostrar todas' : 'Mostrar só não lidas'; menuLista.hidden = !menuLista.hidden; });
+  document.addEventListener('click', (e) => { if (!menuLista.hidden && !menuLista.contains(e.target)) menuLista.hidden = true; });
+  menuLista.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-acao]'); if (!b) return; menuLista.hidden = true;
+    const a = b.dataset.acao;
+    if (a === 'selecionar') return entrarSelecao();
+    if (a === 'lidas') {
+      try { const r = await post('/api/conversas/lidas', { todas: true }); await atualizar(); toast(r.marcadas ? 'Tudo marcado como lido ✓' : 'Nada para marcar.'); } catch (x) { toast(x.message); }
+      return;
+    }
+    if (a === 'so-nao-lidas') { const alvo = estado.filtro === 'esperando' ? 'todas' : 'esperando'; document.querySelector(`[data-f="${alvo}"]`).click(); return; }
+    if (a === 'listas') { if (ehGestor(estado.eu)) return abrirTags(); document.getElementById('filtros-tags')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); toast('Toque numa tag acima da lista para filtrar.'); return; }
+    if (a === 'crm') return mostrar('funil');
+    if (a === 'nova') return $('nova-teste-cel').click();
+  });
+  // Seleção de várias conversas
+  function entrarSelecao() { estado.selecao = new Set(); $('barra-selecao').hidden = false; $('acoes-selecao').hidden = false; $('casca').classList.add('em-selecao'); atualizarSelecao(); desenharLista(); }
+  function sairSelecao() { estado.selecao = null; $('barra-selecao').hidden = true; $('acoes-selecao').hidden = true; $('casca').classList.remove('em-selecao'); desenharLista(); }
+  function atualizarSelecao() {
+    const n = estado.selecao?.size || 0;
+    $('sel-qtd').textContent = n ? (n === 1 ? '1 selecionada' : `${n} selecionadas`) : 'Selecione conversas';
+    document.querySelectorAll('#acoes-selecao button').forEach((b) => { b.disabled = !n; });
+  }
+  $('sel-cancelar').addEventListener('click', sairSelecao);
+  $('sel-todas').addEventListener('click', () => { const ids = filtradas().map((c) => c.id); const todas = ids.every((id) => estado.selecao.has(id)); estado.selecao = new Set(todas ? [] : ids); atualizarSelecao(); desenharLista(); });
+  function escolher(titulo, sub, opcoes) {
+    $('esc-titulo').textContent = titulo; $('esc-sub').textContent = sub;
+    return new Promise((ok) => {
+      $('esc-lista').replaceChildren(...opcoes.map((o) => { const b = el('button', { class: 'et-etapa', onclick: () => { $('d-escolha').close(); ok(o.valor); } }, el('i'), el('span', { text: o.nome })); b.style.setProperty('--cor', o.cor || 'var(--marca-azul)'); return b; }));
+      $('d-escolha').addEventListener('close', () => ok(null), { once: true });
+      $('d-escolha').showModal();
+    });
+  }
+  $('acoes-selecao').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-sel]'); if (!b || !estado.selecao?.size) return;
+    const ids = [...estado.selecao]; const qtd = ids.length === 1 ? '1 conversa' : `${ids.length} conversas`;
+    try {
+      if (b.dataset.sel === 'lidas') { await post('/api/conversas/lidas', { ids }); toast(`${qtd} marcada(s) como lida ✓`); }
+      else if (b.dataset.sel === 'nao-lidas') { await post('/api/conversas/nao-lidas', { ids }); toast(`${qtd} marcada(s) como não lida ✓`); }
+      else if (b.dataset.sel === 'crm') {
+        const funis = await api('/api/funis'); const f = funis[0]; if (!f) return;
+        const etapa = await escolher('Mover no CRM', `${qtd} · ${f.nome}`, f.etapas.map((x) => ({ nome: x.nome, cor: x.cor, valor: x })));
+        if (!etapa) return;
+        await Promise.all(ids.map((id) => post(`/api/conversas/${id}/funis/${f.id}`, { etapaId: etapa.id })));
+        toast(`${qtd} movida(s) para ${etapa.nome} ✓`);
+      } else if (b.dataset.sel === 'tags') {
+        await carregarTags(); if (!estado.tags.length) return toast('Nenhuma tag ainda.');
+        const t = await escolher('Marcar tag', qtd, estado.tags.map((x) => ({ nome: x.nome, cor: x.cor, valor: x })));
+        if (!t) return;
+        await Promise.all(ids.filter((id) => !(estado.conversas.find((c) => c.id === id)?.tags || []).some((x) => x.id === t.id)).map((id) => post(`/api/conversas/${id}/tags`, { tagId: t.id })));
+        toast(`Tag ${t.nome} em ${qtd} ✓`);
+      }
+      sairSelecao(); estado.assinatura = ''; await atualizar();
+    } catch (x) { toast(x.message); }
   });
   $('f-teste').addEventListener('submit', async (e) => {
     if (e.submitter?.value !== 'ok') return;
@@ -1924,7 +2027,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   async function atualizar() {
     try { estado.conversas = await api('/api/conversas'); } catch { return; }
-    const n = estado.conversas.filter(esperando).length;
+    const n = estado.conversas.filter(naoLida).length;
     $('contador').hidden = !n; $('contador').textContent = String(n);
     $('lt-qtd').hidden = !n; $('lt-qtd').textContent = String(n);
     $('qtd-nao-lidas').textContent = n ? String(n) : '';

@@ -1,3 +1,4 @@
+import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
@@ -260,6 +261,7 @@ const app = criarServidor({
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
   midias,
   notificacoes: { notificador, armazem: armazemNotificacoes, chaves: chavesPush },
+  leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   gestao: {
     tags,
     empresa,

@@ -4,6 +4,7 @@ import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
+import type { Leituras } from './app/leituras.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
@@ -60,6 +61,8 @@ export interface DependenciasServidor {
   /** Tags, aba IA (configuração, treinamento, testar), painel completo e empresa. */
   /** Sino, notificações e push (Web Push). */
   notificacoes?: OpcoesNotificacoes;
+  /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
+  leituras?: Leituras;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
 }
 
@@ -186,19 +189,40 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const [todas, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
     const lista = todas.filter(visivelPara(req));
     const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(lista.map((c) => c.id)) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
+    const lidas = d.leituras && req.usuario ? await d.leituras.doUsuario(req.usuario.id) : new Map<string, Date>();
     return lista
       .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], lidaAte: lidas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
+  });
+
+  // Lidas e não lidas por pessoa (menu ⋯ da lista: marcar tudo como lido, selecionar conversas).
+  const IdsLeitura = z.object({ ids: z.array(z.string().uuid()).max(2000).optional(), todas: z.boolean().optional() });
+  app.post('/api/conversas/lidas', async (req, reply) => {
+    if (!d.leituras || !req.usuario) return reply.code(501).send({ erro: 'Leitura por pessoa indisponível' });
+    const b = IdsLeitura.parse(req.body ?? {});
+    const visiveis = (await d.repo.listarConversas()).filter(visivelPara(req)).map((c) => c.id);
+    const ids = b.todas ? visiveis : (b.ids ?? []).filter((id) => visiveis.includes(id));
+    await d.leituras.marcar(req.usuario.id, ids, new Date());
+    return { ok: true, marcadas: ids.length };
+  });
+  app.post('/api/conversas/nao-lidas', async (req, reply) => {
+    if (!d.leituras || !req.usuario) return reply.code(501).send({ erro: 'Leitura por pessoa indisponível' });
+    const b = IdsLeitura.parse(req.body ?? {});
+    const visiveis = new Set((await d.repo.listarConversas()).filter(visivelPara(req)).map((c) => c.id));
+    const ids = (b.ids ?? []).filter((id) => visiveis.has(id));
+    await d.leituras.desmarcar(req.usuario.id, ids);
+    return { ok: true, marcadas: ids.length };
   });
 
   app.get('/api/conversas/:id', async (req) => {
     const conversa = await conversaVisivel(req);
     const id = conversa.id;
     const u = req.usuario;
+    if (u && d.leituras) await d.leituras.marcar(u.id, [id], new Date());
     // Quem mais está respondendo agora (sem horário, para a tela só redesenhar quando muda).
     const digitando = (await d.sintonia.quemEstaRespondendo(id))
       .filter((x) => x.usuarioId !== u?.id)
