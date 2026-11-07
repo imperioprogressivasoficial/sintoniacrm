@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Conexões · Sintonia</title>
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef4fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#04121f" media="(prefers-color-scheme: dark)">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/icone-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/icone-180.png">
@@ -15,86 +15,220 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/ds.css">
 <style>
-  :root { --fundo: #ffffff; --painel: #f4f8fc; --linha: #dbe6f1; --texto: #08243f; --sub: #5a6b7d; --verde: #106ebe; --verde-claro: #e3effa; --entrada: #ffffff; --erro: #c43a3a; --aviso: #fff6db; --aviso-txt: #5e4b00; }
-  @media (prefers-color-scheme: dark) { :root { --fundo: #071d33; --painel: #05172a; --linha: #143a5e; --texto: #eaf3fc; --sub: #8fb1d1; --verde: #0ffcbe; --verde-claro: #0f3a63; --entrada: #0d3050; --erro: #ff8a8a; --aviso: #2a2410; --aviso-txt: #ffd47a; } }
+  :root { --erro: #c43a3a; --ok: #087a5c; --ok-fundo: rgba(15, 252, 190, .18); --raio: 22px; }
+  @media (prefers-color-scheme: dark) { :root { --erro: #ff8a8a; --ok: #0ffcbe; --ok-fundo: rgba(15, 252, 190, .12); } }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  body { margin: 0; font-family: "Urbanist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--painel); color: var(--texto); -webkit-font-smoothing: antialiased; }
-  header { position: sticky; top: 0; z-index: 2; background: var(--fundo); border-bottom: 1px solid var(--linha); height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 12px; }
-  header a { color: var(--texto); text-decoration: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
-  header a:hover { background: var(--painel); }
-  header h1 { font-size: 19px; font-weight: 500; margin: 0; }
-  main { max-width: 720px; margin: 0 auto; padding: 16px 12px 60px; display: grid; gap: 14px; }
-  section { background: var(--fundo); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; }
-  h2 { margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-  h2 .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
-  h2 .ic svg { width: 18px; height: 18px; }
-  p { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.45; }
-  label { display: grid; gap: 5px; font-size: 13.5px; color: var(--sub); }
-  input { background: var(--entrada); border: 1px solid var(--linha); border-radius: 8px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; }
+  html { scroll-padding-top: 128px; }
+  body { margin: 0; min-height: 100vh; font-family: var(--fonte); background: var(--aurora); background-attachment: fixed; color: var(--texto); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+
+  /* cabeçalho de vidro */
+  .topo { position: sticky; top: 0; z-index: 5; padding: 10px 12px 8px; padding-top: max(10px, env(safe-area-inset-top));
+    background: var(--vidro-fundo); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); border-bottom: 1px solid var(--vidro-borda); }
+  .topo-linha { max-width: 920px; margin: 0 auto; display: flex; align-items: center; gap: 8px; }
+  .voltar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; text-decoration: none; flex: none; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .voltar svg { width: 22px; height: 22px; }
+  .topo h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  .topo .sub { font-size: 12.5px; color: var(--sub); }
+  .atalhos { max-width: 920px; margin: 8px auto 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .atalhos::-webkit-scrollbar { display: none; }
+  .atalhos a { flex: none; text-decoration: none; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); white-space: nowrap; }
+  .atalhos a:hover { background: var(--vidro-ativo); }
+
+  main { max-width: 920px; margin: 0 auto; padding: 16px 16px calc(60px + env(safe-area-inset-bottom)); display: grid; gap: 16px; }
+  .grupo { font-size: 11.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); margin: 10px 4px -4px; }
+  section { background: var(--vidro-fundo); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho);
+    border-radius: var(--raio); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+  h2 { margin: 0; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 12px; line-height: 1.25; }
+  h2 small { display: block; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-top: 2px; }
+  .ic { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff; flex: none; background: var(--marca-gradiente); box-shadow: var(--brilho-azul); }
+  .ic.menta { background: linear-gradient(135deg, #0ffcbe, #0a8f7a); color: #08243f; box-shadow: var(--brilho-menta); }
+  .ic.tinta { background: linear-gradient(135deg, #1b4a74, #08243f); }
+  .ic svg { width: 20px; height: 20px; }
+  h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  p { margin: 0; font-size: 14px; color: var(--sub); line-height: 1.5; }
+  p b, li b { color: var(--texto); font-weight: 700; }
+  label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sub); min-width: 0; }
+  label .dica { font-weight: 500; font-size: 12px; }
+  input { background: var(--vidro-item); border: 1px solid var(--vidro-borda); box-shadow: inset 0 1px 2px rgba(8,36,63,.06); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; min-width: 0; }
+  input:focus { outline: 2px solid color-mix(in srgb, var(--marca-azul) 60%, transparent); outline-offset: 1px; background: var(--vidro-ativo); }
+  input[readonly] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .campos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .botao { all: unset; cursor: pointer; background: var(--verde); color: #fff; border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 700; }
-  @media (prefers-color-scheme: dark) { .botao { color: #071d33; } }
-  .botao.leve { background: var(--painel); color: var(--texto); }
-  .botao.perigo { background: transparent; color: var(--erro); border: 1px solid var(--linha); }
+  .copia { display: flex; gap: 6px; min-width: 0; }
+  .copia input { flex: 1; }
+
+  .botao { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 700; text-align: center; background: var(--marca-gradiente); color: #fff; box-shadow: var(--brilho-azul); }
+  .botao:hover { filter: brightness(1.06); }
+  .botao:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+  .botao.leve { background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .botao.perigo { background: transparent; color: var(--erro); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .botao.mini { padding: 8px 12px; font-size: 13px; }
   .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
-  .estado { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--painel); color: var(--sub); white-space: nowrap; }
-  .estado.ok { background: var(--verde-claro); color: var(--verde); }
-  .res { font-size: 13.5px; }
-  .res.ok { color: var(--verde); }
+
+  .estado { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); white-space: nowrap; }
+  .estado.ok { background: var(--ok-fundo); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(15,252,190,.35); }
+  .estado.aviso { background: var(--aviso); color: var(--aviso-txt); box-shadow: none; }
+  .res { font-size: 13.5px; font-weight: 600; }
+  .res.ok { color: var(--ok); }
   .res.erro { color: var(--erro); }
-  .loja { border: 1px solid var(--linha); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
-  .loja .topo { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
-  .loja b { font-weight: 500; }
-  .aviso { background: var(--aviso); color: var(--aviso-txt); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; }
-  dialog { border: 0; border-radius: 14px; padding: 22px; width: min(380px, calc(100vw - 24px)); background: var(--fundo); color: var(--texto); text-align: center; }
-  dialog::backdrop { background: rgba(11,20,26,.6); }
-  dialog img { width: 264px; height: 264px; background: #fff; border-radius: 8px; padding: 8px; }
+  .cartoes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .cartao { border-radius: 18px; padding: 14px; display: grid; gap: 12px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); min-width: 0; align-content: start; }
+  .cartao .cab { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cartao .cab b { font-size: 15px; }
+  .aviso { background: var(--aviso); color: var(--aviso-txt); border-radius: 14px; padding: 11px 13px; font-size: 13.5px; line-height: 1.5; }
+
+  /* escolha do canal por unidade */
+  .escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .escolha button { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 12px; padding: 10px 8px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--sub); line-height: 1.2; }
+  .escolha button small { display: block; font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+  .escolha button[aria-pressed="true"] { background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(16,110,190,.16); }
+  [data-tema="escuro"] .escolha button[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px rgba(15,252,190,.55), 0 8px 22px rgba(0,0,0,.3); }
+  .escolha button:focus-visible { outline: 2px solid var(--marca-menta); }
+
+  details.passos { border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); padding: 2px 14px; }
+  details.passos summary { cursor: pointer; font-weight: 700; font-size: 14px; padding: 12px 0; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+  details.passos summary::-webkit-details-marker { display: none; }
+  details.passos summary::after { content: "＋"; color: var(--sub); }
+  details.passos[open] summary::after { content: "－"; }
+  details.passos ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--sub); line-height: 1.5; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--vidro-ativo); padding: 1px 6px; border-radius: 6px; color: var(--texto); word-break: break-all; }
+  .modelos { display: grid; gap: 8px; }
+  .modelo { border-radius: 12px; padding: 10px 12px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda); display: grid; gap: 4px; font-size: 13px; }
+  .modelo b { font-size: 13.5px; word-break: break-all; }
+  .modelo span { color: var(--sub); }
+  .reservado { border-style: dashed; }
+  .reservado .ic { opacity: .75; }
+
+  dialog { border: 0; border-radius: 24px; padding: 22px; width: min(380px, calc(100vw - 24px)); background: var(--vidro-forte); -webkit-backdrop-filter: blur(22px); backdrop-filter: blur(22px); color: var(--texto); text-align: center; box-shadow: var(--vidro-brilho); }
+  dialog::backdrop { background: rgba(4,12,20,.55); }
+  dialog img { width: 264px; max-width: 100%; aspect-ratio: 1; background: #fff; border-radius: 12px; padding: 8px; }
   dialog ol { text-align: left; font-size: 14px; color: var(--sub); padding-left: 20px; margin: 12px 0; line-height: 1.6; }
+  @media (max-width: 520px) {
+    main { padding-left: 12px; padding-right: 12px; }
+    section { padding: 16px 14px; border-radius: 20px; }
+    .cartoes, .campos { grid-template-columns: minmax(0, 1fr); }
+    .linha .botao { flex: 1 1 auto; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <a href="/app" aria-label="Voltar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></a>
-  <h1>Conexões</h1>
+<script>
+/* Tema: o mesmo do app ("auto" segue o aparelho; "claro"/"escuro" vale para a página inteira). */
+(() => {
+  let tema = 'auto';
+  try { tema = localStorage.getItem('sintonia.tema') || 'auto'; } catch {}
+  const escuroDoAparelho = matchMedia('(prefers-color-scheme: dark)');
+  const original = new WeakMap();
+  const aplicarEm = (regras) => {
+    for (const r of regras) {
+      if (!(r instanceof CSSMediaRule)) continue;
+      if (!original.has(r)) original.set(r, r.media.mediaText);
+      const m = original.get(r);
+      if (/prefers-color-scheme:\s*dark/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'escuro' ? m.replace(/\(prefers-color-scheme:\s*dark\)/, 'all') : 'not all';
+      else if (/prefers-color-scheme:\s*light/.test(m)) r.media.mediaText = tema === 'auto' ? m : tema === 'claro' ? m.replace(/\(prefers-color-scheme:\s*light\)/, 'all') : 'not all';
+      aplicarEm(r.cssRules);
+    }
+  };
+  const aplicar = () => {
+    for (const f of document.styleSheets) { try { aplicarEm(f.cssRules); } catch {} }
+    document.documentElement.dataset.tema = tema === 'escuro' || (tema === 'auto' && escuroDoAparelho.matches) ? 'escuro' : 'claro';
+  };
+  escuroDoAparelho.addEventListener('change', aplicar);
+  addEventListener('load', aplicar);
+  aplicar();
+})();
+</script>
+
+<header class="topo">
+  <div class="topo-linha">
+    <a class="voltar" href="/app" aria-label="Voltar para o app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></a>
+    <div><h1>Conexões</h1><div class="sub">WhatsApp, IA, agenda e relatório</div></div>
+  </div>
+  <nav class="atalhos" aria-label="Seções">
+    <a href="#lojas-canal">Cada loja</a>
+    <a href="#nao-oficial">WhatsApp não oficial</a>
+    <a href="#oficial">WhatsApp oficial</a>
+    <a href="#ia">IA</a>
+    <a href="#agenda">Agenda</a>
+    <a href="#transcricao">Transcrição</a>
+    <a href="#relatorio">Relatório</a>
+  </nav>
 </header>
+
 <main>
-  <section>
-    <h2><span class="ic" style="background:#106ebe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span>WhatsApp das lojas</h2>
-    <p>Cada loja conecta o seu número lendo um QR Code, igual ao WhatsApp Web. As mensagens passam a chegar na Sintonia.</p>
+  <div class="grupo">WhatsApp</div>
+
+  <section id="lojas-canal" aria-labelledby="t-canal">
+    <h2 id="t-canal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span><span>Qual WhatsApp cada loja usa<small>Uma loja usa um só caminho por vez</small></span></h2>
+    <p><b>Não oficial (QR Code)</b>: liga o WhatsApp que a loja já tem, lendo um QR Code. Rápido, mas o número pode ser bloqueado pelo WhatsApp. <b>Oficial (Meta)</b>: a API da própria Meta, mais estável; exige uma conta no Gerenciador do WhatsApp e, depois de 24 horas sem a cliente escrever, só aceita modelos aprovados.</p>
+    <div class="cartoes" id="escolhas"></div>
+  </section>
+
+  <section id="nao-oficial" aria-labelledby="t-nao-oficial">
+    <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>Evolution, conexão por QR Code</small></span></h2>
     <div class="aviso">Atenção: se o número já está ligado na Assia (n8n), as duas vão receber as mesmas mensagens e podem responder em dobro. Antes de conectar aqui, decida qual das duas atende esse número.</div>
-    <p id="wa-sem-evolution">Preencha a Evolution logo abaixo para conectar os números.</p>
-    <div id="lojas" style="display:grid;gap:10px"></div>
+    <h3>1. Servidor da Evolution</h3>
+    <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
+    <div class="campos">
+      <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com" autocomplete="off"></label>
+      <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
+    </div>
+    <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution" role="status"></span></div>
+    <h3>2. Número de cada loja</h3>
+    <p id="wa-sem-evolution">Preencha a Evolution acima para conectar os números.</p>
+    <div class="cartoes" id="lojas"></div>
   </section>
 
-  <section>
-    <h2><span class="ic" style="background:#0a4c86"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span>Inteligência artificial</h2>
-    <p>Chave da API da Anthropic (Claude). Com ela, a IA responde, sugere e revisa mensagens.</p>
+  <section id="oficial" aria-labelledby="t-oficial">
+    <h2 id="t-oficial"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span><span>WhatsApp — API oficial<small>WhatsApp Cloud API da Meta</small></span></h2>
+    <p>As mensagens chegam direto da Meta, sem celular ligado. Preencha os dados de cada loja (copiados do painel da Meta), cole a <b>URL do webhook</b> e o <b>Verify Token</b> lá, e depois escolha “Oficial” em <a href="#lojas-canal">Qual WhatsApp cada loja usa</a>.</p>
+    <label>URL do webhook (igual para as duas lojas)
+      <span class="copia"><input id="webhookUrl" readonly value="" aria-label="URL do webhook"><button class="botao leve mini" data-copiar="webhookUrl">Copiar</button></span>
+    </label>
+    <details class="passos">
+      <summary>Passo a passo no painel da Meta</summary>
+      <ol>
+        <li>Entre em <b>developers.facebook.com</b> › <b>Meus apps</b> e abra (ou crie) o app do tipo <b>Empresa</b> com o produto <b>WhatsApp</b>.</li>
+        <li>Em <b>WhatsApp › Configuração da API</b>, copie o <b>Phone Number ID</b> (identificação do número) e o <b>WhatsApp Business Account ID</b> de cada loja e cole aqui.</li>
+        <li>Crie um <b>token permanente</b>: Configurações do negócio › <b>Usuários do sistema</b> › gerar token com as permissões <code>whatsapp_business_messaging</code> e <code>whatsapp_business_management</code>. Cole em “Token de acesso”.</li>
+        <li>Em <b>Configurações do app › Básico</b>, clique em “Mostrar” no <b>Chave secreta do app</b> (App Secret) e cole aqui. Com ela a Sintonia confere que cada aviso veio mesmo da Meta.</li>
+        <li>Em <b>WhatsApp › Configuração › Webhook</b>, clique em <b>Editar</b>: cole a <b>URL do webhook</b> acima e o <b>Verify Token</b> da loja. Salve e, em “Campos do webhook”, assine <code>messages</code>.</li>
+        <li>Volte aqui, toque em <b>Testar</b> na loja e, se responder, escolha <b>Oficial</b> para ela lá em cima.</li>
+      </ol>
+    </details>
+    <div class="cartoes" id="meta-lojas"></div>
+  </section>
+
+  <div class="grupo">Inteligência e integrações</div>
+
+  <section id="ia" aria-labelledby="t-ia">
+    <h2 id="t-ia"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></span><span>Inteligência artificial<small>Anthropic (Claude)</small></span></h2>
+    <p>Chave da API da Anthropic. Com ela, a IA responde, sugere e revisa mensagens.</p>
     <label>Chave da IA <input id="anthropicApiKey" type="password" autocomplete="off" placeholder="sk-ant-..."></label>
-    <div class="linha"><button class="botao" data-salvar="anthropicApiKey">Salvar</button><button class="botao leve" data-testar="ia">Testar</button><span class="res" id="res-ia"></span></div>
+    <div class="linha"><button class="botao" data-salvar="anthropicApiKey">Salvar</button><button class="botao leve" data-testar="ia">Testar</button><span class="res" id="res-ia" role="status"></span></div>
   </section>
 
-  <section>
-    <h2><span class="ic" style="background:#1a8be0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span>Agenda (Trinks)</h2>
+  <section id="agenda" aria-labelledby="t-agenda">
+    <h2 id="t-agenda"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span><span>Agenda<small>Trinks</small></span></h2>
     <p>Chave da API da Trinks. Com ela, o botão Agendar e a IA marcam horário sem abrir o Trinks.</p>
     <label>Chave da Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
-    <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks"></span></div>
+    <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks" role="status"></span></div>
   </section>
 
-  <section>
-    <h2><span class="ic" style="background:#0a4c86"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>Evolution API</h2>
-    <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
-    <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com"></label>
-    <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
-    <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution"></span></div>
+  <section id="transcricao" class="reservado" aria-labelledby="t-transcricao">
+    <h2 id="t-transcricao"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span>Transcrição de áudio<small>Áudios das clientes viram texto</small></span></h2>
+    <div id="transcricao-campos"><p>Em breve: a chave para transcrever os áudios aparece aqui.</p></div>
   </section>
 
-  <section>
-    <h2><span class="ic" style="background:#0a8f7a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span>Relatório do dia</h2>
+  <section id="relatorio" aria-labelledby="t-relatorio">
+    <h2 id="t-relatorio"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg></span><span>Relatório do dia<small>Todo dia às 20h</small></span></h2>
     <p>Telefones que recebem, às 20h, o resumo do dia pelo WhatsApp da loja. Separe por vírgula, com DDD.</p>
     <label>Telefones <input id="relatorioDestinos" type="text" inputmode="tel" placeholder="71 99999-9999, 71 98888-8888"></label>
-    <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio"></span></div>
+    <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio" role="status"></span></div>
   </section>
 </main>
 
@@ -113,70 +247,114 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const NOMES = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré' };
+  const UNIDADES = [['norte', 'Norte', 'Salvador Norte Shopping'], ['sumare', 'Sumare', 'Shopping Sumaré']];
+  const NOMES = Object.fromEntries(UNIDADES.map(([u, , n]) => [u, n]));
+  const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...filhos.filter((f) => f !== null && f !== undefined)); return e; };
   const api = async (url, opcoes = {}) => {
     const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
     if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
     if (r.status === 403) { location.href = '/app'; throw new Error('sem permissão'); }
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.erro || 'Algo deu errado');
+    if (!r.ok) throw new Error(j.detalhes?.[0]?.message || j.erro || 'Algo deu errado');
     return j;
   };
   const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
+  const haQuanto = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'agora há pouco' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia(s)`; };
+  const mostrar = (res, ok, texto) => { res.className = 'res ' + (ok ? 'ok' : 'erro'); res.textContent = texto; };
   let resumo = null;
+  let meta = null;
 
+  // ---------- campos (genérico: o id do input é o nome do campo) ----------
   function preencher() {
     for (const [campo, info] of Object.entries(resumo.campos)) {
-      const input = $(campo); if (!input) continue;
-      if (input.type === 'password') { input.value = ''; input.placeholder = info.definido ? `Salva (termina em ${info.final}). Cole outra para trocar.` : (input.dataset.ph || input.placeholder); }
-      else input.value = info.valor ?? '';
+      const input = $(campo); if (!input || input.readOnly) continue;
+      if (input.type === 'password') { input.value = ''; input.placeholder = info.definido ? `Salvo (termina em ${info.final}). Cole outro para trocar.` : (input.dataset.ph || ''); }
+      else if (document.activeElement !== input) input.value = info.valor ?? '';
     }
     $('relatorioDestinos').value = resumo.destinosRelatorio.map(formatarTel).join(', ');
   }
 
-  document.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
+  async function salvarCampos(botao, campos) {
     const corpo = {};
-    for (const campo of b.dataset.salvar.split(',')) {
+    for (const campo of campos) {
       const v = $(campo).value.trim();
-      if ($(campo).type === 'password' && !v) continue; // vazio = manter a chave salva
+      if ($(campo).type === 'password' && !v) continue; // vazio = manter o segredo salvo
       corpo[campo] = v;
     }
-    const res = b.parentElement.querySelector('.res');
-    if (!Object.keys(corpo).length) { res.className = 'res erro'; res.textContent = 'Cole a chave antes de salvar.'; return; }
-    b.setAttribute('aria-busy', 'true');
-    try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify(corpo) }); preencher(); res.className = 'res ok'; res.textContent = 'Salvo ✓'; carregarLojas(); }
-    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
-    finally { b.removeAttribute('aria-busy'); }
-  }));
+    const res = botao.parentElement.querySelector('.res') || botao.closest('.cartao, section').querySelector('.res');
+    if (!Object.keys(corpo).length) { mostrar(res, false, 'Preencha antes de salvar.'); return false; }
+    botao.setAttribute('aria-busy', 'true');
+    try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify(corpo) }); preencher(); mostrar(res, true, 'Salvo ✓'); return true; }
+    catch (x) { mostrar(res, false, x.message); return false; }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
 
-  document.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
-    const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
-    try { const r = await api('/api/conexoes/testar', { method: 'POST', body: JSON.stringify({ alvo: b.dataset.testar }) }); res.className = 'res ' + (r.ok ? 'ok' : 'erro'); res.textContent = r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro; }
-    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
-    finally { b.removeAttribute('aria-busy'); }
-  }));
+  function ligarBotoes(raiz) {
+    raiz.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
+      if (await salvarCampos(b, b.dataset.salvar.split(','))) { carregarLojas(); carregarMeta(); desenharEscolhas(); }
+    }));
+    raiz.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
+      const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+      try { const r = await api('/api/conexoes/testar', { method: 'POST', body: JSON.stringify({ alvo: b.dataset.testar }) }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+      catch (x) { mostrar(res, false, x.message); }
+      finally { b.removeAttribute('aria-busy'); }
+    }));
+    raiz.querySelectorAll('[data-copiar]').forEach((b) => b.addEventListener('click', async () => {
+      const input = $(b.dataset.copiar);
+      try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand?.('copy'); }
+      const antes = b.textContent; b.textContent = 'Copiado ✓'; setTimeout(() => (b.textContent = antes), 1500);
+    }));
+  }
 
-  // ---------- WhatsApp das lojas ----------
+  // ---------- qual WhatsApp cada loja usa ----------
+  function desenharEscolhas() {
+    if (!resumo) return;
+    $('escolhas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => {
+      const atual = resumo.canais?.[u] || 'evolution';
+      const infoMeta = meta?.unidades.find((x) => x.unidade === u);
+      const evoNum = resumo.numeros.some((n) => n.unidade === u);
+      const pronta = atual === 'meta' ? Boolean(infoMeta?.pronta) : evoNum;
+      const estado = el('span', { className: 'estado' + (pronta ? ' ok' : ' aviso'), textContent: atual === 'meta' ? (pronta ? 'Oficial ativa' : 'Oficial: falta configurar') : (evoNum ? 'QR Code conectado' : 'Sem número conectado') });
+      const res = el('span', { className: 'res', role: 'status' });
+      const opcao = (valor, titulo, sub) => {
+        const b = el('button', { type: 'button' }, titulo, el('small', { textContent: sub }));
+        b.setAttribute('aria-pressed', String(atual === valor));
+        b.addEventListener('click', async () => {
+          if (valor === atual) return;
+          const aviso = valor === 'meta'
+            ? `${nome} passa a usar a API oficial: as mensagens chegam pelo número da Meta e o QR Code deixa de ser usado. Continuar?`
+            : `${nome} volta para a API não oficial (QR Code). As mensagens da API oficial deixam de entrar. Continuar?`;
+          if (!confirm(aviso)) return;
+          b.parentElement.setAttribute('aria-busy', 'true');
+          try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify({ ['canal' + suf]: valor }) }); desenharEscolhas(); carregarMeta(); carregarLojas(); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { b.parentElement.removeAttribute('aria-busy'); }
+        });
+        return b;
+      };
+      const escolha = el('div', { className: 'escolha', role: 'group' }, opcao('evolution', 'Não oficial', 'QR Code'), opcao('meta', 'Oficial', 'Meta'));
+      escolha.setAttribute('aria-label', `API de WhatsApp de ${nome}`);
+      return el('div', { className: 'cartao' }, el('div', { className: 'cab' }, el('b', { textContent: nome }), estado), escolha, res);
+    }));
+  }
+
+  // ---------- não oficial: números por QR Code ----------
   async function carregarLojas() {
     const caixa = $('lojas');
     let r; try { r = await api('/api/conexoes/whatsapp'); } catch (x) { caixa.textContent = x.message; return; }
     $('wa-sem-evolution').hidden = r.configurada;
     caixa.replaceChildren(...r.unidades.map((u) => {
       const ok = u.estado === 'conectada';
-      const div = document.createElement('div'); div.className = 'loja';
-      const topo = document.createElement('div'); topo.className = 'topo';
-      const nome = document.createElement('b'); nome.textContent = NOMES[u.unidade] || u.unidade;
-      const est = document.createElement('span'); est.className = 'estado' + (ok ? ' ok' : '');
-      est.textContent = ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando QR Code' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado';
-      topo.append(nome, est); div.append(topo);
-      if (ok && u.numero) { const p = document.createElement('p'); p.textContent = `${formatarTel(u.numero)}${u.perfil ? ' · ' + u.perfil : ''}`; div.append(p); }
-      if (u.erro) { const p = document.createElement('p'); p.className = 'res erro'; p.textContent = u.erro; div.append(p); }
-      const acoes = document.createElement('div'); acoes.className = 'linha';
-      const b = document.createElement('button'); b.className = ok ? 'botao perigo' : 'botao';
-      b.textContent = ok ? 'Desconectar' : 'Conectar WhatsApp';
+      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando QR Code' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado' });
+      const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar WhatsApp' });
       b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade, b)));
-      acoes.append(b); div.append(acoes);
-      return div;
+      const usaOficial = resumo?.canais?.[u.unidade] === 'meta';
+      return el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: NOMES[u.unidade] || u.unidade }), est),
+        ok && u.numero ? el('p', { textContent: `${formatarTel(u.numero)}${u.perfil ? ' · ' + u.perfil : ''}` }) : null,
+        u.erro ? el('p', { className: 'res erro', textContent: u.erro }) : null,
+        usaOficial ? el('p', { textContent: 'Esta loja está usando a API oficial agora; o QR Code fica sem uso.' }) : null,
+        el('div', { className: 'linha' }, b));
     }));
   }
 
@@ -194,7 +372,7 @@
         voltas++;
         const lista = await api('/api/conexoes/whatsapp').catch(() => null);
         const u = lista?.unidades.find((x) => x.unidade === unidade);
-        if (u?.estado === 'conectada') { clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓'; setTimeout(() => $('d-qr').close(), 1200); carregarLojas(); return; }
+        if (u?.estado === 'conectada') { clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓'; setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas(); return; }
         if (voltas % 8 === 0) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
       }, 3000);
     } catch (x) { alert(x.message); }
@@ -203,20 +381,84 @@
   function mostrarQr(qr) {
     const area = $('qr-area'); area.replaceChildren();
     if (!qr) { area.textContent = 'A Evolution não devolveu o QR Code. Tente de novo.'; return; }
-    const img = document.createElement('img'); img.alt = 'QR Code para conectar'; img.src = qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr; area.append(img);
+    area.append(el('img', { alt: 'QR Code para conectar', src: qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr }));
   }
   $('qr-fechar').addEventListener('click', () => { clearInterval(espera); $('d-qr').close(); carregarLojas(); });
   async function desconectar(unidade, botao) {
     if (!confirm(`Desconectar o WhatsApp de ${NOMES[unidade]}? As mensagens deixam de chegar na Sintonia.`)) return;
     botao.setAttribute('aria-busy', 'true');
-    try { await api(`/api/conexoes/whatsapp/${unidade}/desconectar`, { method: 'POST', body: '{}' }); await carregarLojas(); }
+    try { await api(`/api/conexoes/whatsapp/${unidade}/desconectar`, { method: 'POST', body: '{}' }); resumo = await api('/api/conexoes'); await carregarLojas(); desenharEscolhas(); }
     catch (x) { alert(x.message); }
     finally { botao.removeAttribute('aria-busy'); }
   }
 
+  // ---------- oficial: dados de cada loja ----------
+  function cartaoMeta(u, suf, nome) {
+    const campo = (rotulo, parte, tipo, dica, extra = {}) => el('label', {}, rotulo, dica ? el('span', { className: 'dica', textContent: dica }) : null,
+      el('input', { id: `meta${parte}${suf}`, type: tipo, autocomplete: 'off', ...extra }));
+    const verify = el('input', { id: `metaVerifyToken${suf}`, readOnly: true });
+    verify.setAttribute('aria-label', `Verify Token de ${nome}`);
+    const copiar = el('button', { className: 'botao leve mini', textContent: 'Copiar' }); copiar.dataset.copiar = verify.id;
+    const novo = el('button', { className: 'botao leve mini', textContent: 'Gerar outro' });
+    novo.addEventListener('click', async () => {
+      if (!confirm('Gerar outro Verify Token? O atual deixa de valer: cole o novo no painel da Meta.')) return;
+      try { const r = await api(`/api/conexoes/meta/${u}/verify-token`, { method: 'POST', body: '{}' }); verify.value = r.verifyToken; } catch (x) { alert(x.message); }
+    });
+    const salvar = el('button', { className: 'botao', textContent: 'Salvar' });
+    salvar.dataset.salvar = ['PhoneNumberId', 'WabaId', 'Token', 'AppSecret'].map((p) => `meta${p}${suf}`).join(',');
+    const testar = el('button', { className: 'botao leve', textContent: 'Testar' });
+    const res = el('span', { className: 'res', role: 'status', id: `res-meta-${u}` });
+    testar.addEventListener('click', async () => {
+      testar.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Consultando o número na Meta…';
+      try { const r = await api(`/api/conexoes/meta/${u}/testar`, { method: 'POST', body: '{}' }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+      catch (x) { mostrar(res, false, x.message); }
+      finally { testar.removeAttribute('aria-busy'); }
+    });
+    const verModelos = el('button', { className: 'botao leve', textContent: 'Modelos aprovados' });
+    const lista = el('div', { className: 'modelos', id: `modelos-${u}` });
+    verModelos.addEventListener('click', async () => {
+      verModelos.setAttribute('aria-busy', 'true'); lista.replaceChildren(el('p', { textContent: 'Buscando…' }));
+      try {
+        const r = await api(`/api/conexoes/meta/${u}/modelos`);
+        lista.replaceChildren(...(r.modelos.length ? r.modelos.map((m) => el('div', { className: 'modelo' }, el('b', { textContent: `${m.nome} · ${m.idioma}` }), el('span', { textContent: m.corpo || '(sem texto)' }), el('span', { textContent: `${m.categoria.toLowerCase()} · ${m.variaveis} variável(is)` }))) : [el('p', { textContent: 'Nenhum modelo aprovado ainda. Crie em WhatsApp Manager › Modelos de mensagem.' })]));
+      } catch (x) { lista.replaceChildren(el('p', { className: 'res erro', textContent: x.message })); }
+      finally { verModelos.removeAttribute('aria-busy'); }
+    });
+    return el('div', { className: 'cartao', id: `meta-${u}` },
+      el('div', { className: 'cab' }, el('b', { textContent: nome }), el('span', { className: 'estado', id: `meta-estado-${u}`, textContent: '…' })),
+      el('p', { id: `meta-visto-${u}` }),
+      campo('Phone Number ID', 'PhoneNumberId', 'text', null, { inputMode: 'numeric', placeholder: 'ex.: 109876543210987' }),
+      campo('WhatsApp Business Account ID', 'WabaId', 'text', 'Para listar os modelos aprovados', { inputMode: 'numeric', placeholder: 'ex.: 102030405060708' }),
+      campo('Token de acesso', 'Token', 'password', 'Token permanente do usuário do sistema'),
+      campo('App Secret', 'AppSecret', 'password', 'Confere que os avisos vêm mesmo da Meta'),
+      el('label', {}, 'Verify Token', el('span', { className: 'dica', textContent: 'Gerado pela Sintonia: cole no painel da Meta' }), el('span', { className: 'copia' }, verify, copiar)),
+      el('div', { className: 'linha' }, salvar, testar, verModelos, novo),
+      res, lista);
+  }
+
+  async function carregarMeta() {
+    try { meta = await api('/api/conexoes/meta'); } catch { return; }
+    $('webhookUrl').value = meta.webhookUrl;
+    for (const info of meta.unidades) {
+      const suf = UNIDADES.find(([u]) => u === info.unidade)[1];
+      $(`metaVerifyToken${suf}`).value = info.verifyToken || '';
+      const est = $(`meta-estado-${info.unidade}`);
+      const usando = info.canal === 'meta';
+      est.className = 'estado' + (info.pronta ? ' ok' : info.faltando.length < 4 ? ' aviso' : '');
+      est.textContent = info.pronta ? (usando ? 'Pronta · em uso' : 'Pronta · não está em uso') : info.faltando.length < 4 ? 'Incompleta' : 'Não configurada';
+      $(`meta-visto-${info.unidade}`).textContent = info.pronta || info.faltando.length < 4
+        ? [info.faltando.length ? `Falta: ${info.faltando.join(', ')}.` : null, info.ultimoWebhook ? `Último aviso da Meta ${haQuanto(info.ultimoWebhook)}.` : 'Nenhum aviso da Meta chegou ainda.'].filter(Boolean).join(' ')
+        : 'Preencha os dados abaixo com o que está no painel da Meta.';
+    }
+    desenharEscolhas();
+  }
+
   (async () => {
+    $('meta-lojas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => cartaoMeta(u, suf, nome)));
     document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
-    resumo = await api('/api/conexoes'); preencher(); carregarLojas();
+    ligarBotoes(document);
+    resumo = await api('/api/conexoes'); preencher(); desenharEscolhas();
+    carregarLojas(); carregarMeta();
   })();
 })();
 </script>

@@ -15,6 +15,8 @@ import { carregarBase } from './ai/prompt.js';
 import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { CanalMeta } from './channels/meta.js';
+import { numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
+import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
 import pg from 'pg';
 import { migrar } from './store/migrar.js';
@@ -109,7 +111,10 @@ const conexoes = new Conexoes(
 
 // A lista de números é a mesma usada pela Sintonia: é refeita no lugar quando as conexões mudam.
 let evolution = new CanalEvolution(cfg.EVOLUTION_URL ?? '', cfg.EVOLUTION_API_KEY ?? '');
+// API oficial por variável de ambiente (configuração antiga, SINTONIA_NUMEROS com canal "meta"); a tela de Conexões vale por unidade.
 const meta = cfg.META_TOKEN ? new CanalMeta(cfg.META_TOKEN) : undefined;
+/** Canal da API oficial de cada unidade: refeito quando muda o token ou a WABA. */
+const canaisMeta = new Map<string, { chave: string; canal: CanalWhatsApp }>();
 const canalTeste = new CanalTeste();
 const numeros: NumeroConectado[] = [];
 const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId);
@@ -124,13 +129,15 @@ function aplicarConexoes() {
   agendaLigada = Boolean(conexoes.get('trinksApiKey'));
   evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
   const temEvolution = Boolean(conexoes.get('evolutionUrl') && conexoes.get('evolutionApiKey'));
-  const lista: NumeroConectado[] = [];
-  for (const n of cfg.numeros) {
-    const canal = n.canal === 'evolution' ? (temEvolution ? evolution : undefined) : meta;
-    if (canal) lista.push({ canalId: n.canalId, unidade: n.unidade, canal });
-    else log(`Número ${n.canalId} ignorado: canal ${n.canal} sem credenciais`);
-  }
-  if (temEvolution) for (const n of conexoes.numeros()) if (!lista.some((x) => x.canalId === n.canalId)) lista.push({ ...n, canal: evolution });
+  // Cada unidade usa a API escolhida na tela: oficial (Meta) ou não oficial (Evolution, QR Code).
+  const lista: NumeroConectado[] = numerosDasConexoes({
+    conexoes,
+    evolution: temEvolution ? evolution : undefined,
+    doAmbiente: cfg.numeros,
+    metaDoAmbiente: meta,
+    cacheMeta: canaisMeta,
+    log,
+  });
   // WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
   for (const unidade of ['norte', 'sumare'] as const) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
   numeros.splice(0, numeros.length, ...lista);
@@ -212,7 +219,14 @@ const app = criarServidor({
       return { profissionais: lista.length };
     },
   },
-  meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
+  get meta() {
+    // Lido a cada webhook: vale o que está na tela agora.
+    return opcoesWebhookMeta(
+      conexoes,
+      { verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET, temNumerosMeta: Boolean(meta) && cfg.numeros.some((n) => n.canal === 'meta') },
+      (lista) => sintonia.statusRecebidos(lista),
+    );
+  },
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
   midias,

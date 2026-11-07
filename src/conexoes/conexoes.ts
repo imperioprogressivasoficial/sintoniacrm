@@ -16,9 +16,50 @@ export const CAMPOS = {
   numeros: { segredo: false },
   /** Telefones (só dígitos, separados por vírgula) que recebem o relatório do dia. */
   relatorioDestinos: { segredo: false },
+
+  // ---------- WhatsApp: qual API cada unidade usa ("evolution" = não oficial, QR Code; "meta" = oficial) ----------
+  canalNorte: { segredo: false },
+  canalSumare: { segredo: false },
+
+  // ---------- WhatsApp oficial (Cloud API da Meta), por unidade ----------
+  metaPhoneNumberIdNorte: { segredo: false },
+  metaWabaIdNorte: { segredo: false },
+  metaTokenNorte: { segredo: true },
+  metaAppSecretNorte: { segredo: true },
+  /** Gerado pela Sintonia; é colado no painel da Meta junto com a URL do webhook. */
+  metaVerifyTokenNorte: { segredo: false },
+  metaPhoneNumberIdSumare: { segredo: false },
+  metaWabaIdSumare: { segredo: false },
+  metaTokenSumare: { segredo: true },
+  metaAppSecretSumare: { segredo: true },
+  metaVerifyTokenSumare: { segredo: false },
 } as const;
 export type Campo = keyof typeof CAMPOS;
 export type ValoresConexao = Partial<Record<Campo, string>>;
+
+/** Unidades com WhatsApp (Feira está em obras). */
+export const UNIDADES_WHATSAPP = ['norte', 'sumare'] as const;
+export type UnidadeWhatsApp = (typeof UNIDADES_WHATSAPP)[number];
+export type TipoCanalUnidade = 'evolution' | 'meta';
+
+const SUFIXO: Record<UnidadeWhatsApp, 'Norte' | 'Sumare'> = { norte: 'Norte', sumare: 'Sumare' };
+type ParteMeta = 'PhoneNumberId' | 'WabaId' | 'Token' | 'AppSecret' | 'VerifyToken';
+/** Nome do campo da API oficial de uma unidade, ex.: campoMeta('Token', 'norte') = "metaTokenNorte". */
+export const campoMeta = (parte: ParteMeta, u: UnidadeWhatsApp) => `meta${parte}${SUFIXO[u]}` as Campo;
+export const campoCanal = (u: UnidadeWhatsApp) => `canal${SUFIXO[u]}` as Campo;
+const ehUnidadeWhatsApp = (u: string): u is UnidadeWhatsApp => (UNIDADES_WHATSAPP as readonly string[]).includes(u);
+
+/** Configuração da API oficial de uma unidade (só com Phone Number ID e token, o mínimo para enviar). */
+export interface ContaMeta {
+  unidade: UnidadeWhatsApp;
+  phoneNumberId: string;
+  wabaId?: string;
+  token: string;
+  appSecret?: string;
+  verifyToken?: string;
+}
+
+export const novoVerifyToken = () => `sintonia-${randomBytes(16).toString('hex')}`;
 
 export const NumeroConectadoCfg = z.object({ canalId: z.string().min(1), unidade: z.enum(['norte', 'sumare', 'feira']) });
 export type NumeroCfg = { canalId: string; unidade: UnidadeId };
@@ -85,7 +126,11 @@ export class Conexoes {
       }
     }
     this.valores = { ...limpar(this.doAmbiente), ...salvos };
-    if (!this.valores.webhookToken) await this.salvar({ webhookToken: randomBytes(24).toString('hex') }, 'sistema');
+    // Gerados pela Sintonia na primeira vez: token do webhook da Evolution e o Verify Token da Meta de cada unidade.
+    const gerar: ValoresConexao = {};
+    if (!this.valores.webhookToken) gerar.webhookToken = randomBytes(24).toString('hex');
+    for (const u of UNIDADES_WHATSAPP) if (!this.valores[campoMeta('VerifyToken', u)]) gerar[campoMeta('VerifyToken', u)] = novoVerifyToken();
+    if (Object.keys(gerar).length) await this.salvar(gerar, 'sistema');
     else this.avisar();
   }
 
@@ -99,6 +144,33 @@ export class Conexoes {
     } catch {
       return [];
     }
+  }
+
+  /** Qual API a unidade usa. Sem escolha salva: a não oficial (Evolution), como antes. */
+  canalDaUnidade(u: string): TipoCanalUnidade {
+    if (!ehUnidadeWhatsApp(u)) return 'evolution';
+    return this.valores[campoCanal(u)] === 'meta' ? 'meta' : 'evolution';
+  }
+
+  /** API oficial da unidade, se tem o mínimo para funcionar (Phone Number ID e token). */
+  contaMeta(u: string): ContaMeta | undefined {
+    if (!ehUnidadeWhatsApp(u)) return undefined;
+    const phoneNumberId = this.get(campoMeta('PhoneNumberId', u));
+    const token = this.get(campoMeta('Token', u));
+    if (!phoneNumberId || !token) return undefined;
+    const conta: ContaMeta = { unidade: u, phoneNumberId, token };
+    const wabaId = this.get(campoMeta('WabaId', u));
+    const appSecret = this.get(campoMeta('AppSecret', u));
+    const verifyToken = this.get(campoMeta('VerifyToken', u));
+    if (wabaId) conta.wabaId = wabaId;
+    if (appSecret) conta.appSecret = appSecret;
+    if (verifyToken) conta.verifyToken = verifyToken;
+    return conta;
+  }
+
+  /** Verify Tokens de todas as unidades (a verificação do webhook aceita qualquer um deles). */
+  verifyTokensMeta(): string[] {
+    return UNIDADES_WHATSAPP.map((u) => this.get(campoMeta('VerifyToken', u))).filter((t): t is string => Boolean(t));
   }
 
   destinosRelatorio(): string[] {
@@ -130,7 +202,8 @@ export class Conexoes {
         return [c, CAMPOS[c].segredo ? { definido: Boolean(v), final: v ? v.slice(-4) : null } : { definido: Boolean(v), valor: v ?? null }];
       }),
     );
-    return { campos, numeros: this.numeros(), destinosRelatorio: this.destinosRelatorio() };
+    const canais = Object.fromEntries(UNIDADES_WHATSAPP.map((u) => [u, this.canalDaUnidade(u)])) as Record<UnidadeWhatsApp, TipoCanalUnidade>;
+    return { campos, numeros: this.numeros(), destinosRelatorio: this.destinosRelatorio(), canais };
   }
 
   private avisar() {

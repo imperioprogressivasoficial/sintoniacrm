@@ -50,6 +50,8 @@ export interface Mensagem {
   idExterno?: string;
   /** Foto, áudio, vídeo, documento ou figurinha. O `texto` continua com o marcador para a IA ("[foto] legenda"). */
   anexo?: Anexo;
+  /** Mensagem da loja: como está a entrega no WhatsApp (API oficial avisa enviada, entregue, lida ou falhou). */
+  entrega?: 'enviada' | 'entregue' | 'lida' | 'falhou';
 }
 
 export type TipoAnexo = 'imagem' | 'audio' | 'video' | 'documento' | 'figurinha';

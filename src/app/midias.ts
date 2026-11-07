@@ -65,7 +65,7 @@ export class Midias {
       return;
     }
     try {
-      const r = await canal.baixarMidia(i.canalId, i.idExterno);
+      const r = await canal.baixarMidia(i.canalId, i.idExterno, i.ref);
       if (r.conteudo.length > LIMITE_MIDIA) await this.repo.midiaGrande(i.mensagemId, r.conteudo.length);
       else await this.repo.guardarMidia(i.mensagemId, r);
     } catch (e) {

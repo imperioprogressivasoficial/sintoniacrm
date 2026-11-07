@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
-import { VALIDADE_DIGITANDO_MS, type Evento, type MidiaPendente, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import { ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type MidiaPendente, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
 
@@ -73,13 +73,14 @@ interface LinhaMensagem {
   md_tamanho: string | null;
   md_voz: boolean | null;
   md_situacao: SituacaoAnexo | null;
+  entrega: Mensagem['entrega'] | null;
 }
 
-const COLUNAS_MENSAGEM = `m.id, m.conversa_id, m.autor, m.autor_nome, m.texto, m.id_externo, m.em,
+const COLUNAS_MENSAGEM = `m.id, m.conversa_id, m.autor, m.autor_nome, m.texto, m.id_externo, m.em, m.entrega,
   md.tipo as md_tipo, md.mimetype as md_mimetype, md.nome_arquivo as md_nome_arquivo, md.duracao_seg as md_duracao_seg,
   md.legenda as md_legenda, md.tamanho as md_tamanho, md.voz as md_voz, md.situacao as md_situacao`;
 
-function anexoDa(l: Omit<LinhaMensagem, 'id' | 'conversa_id' | 'autor' | 'autor_nome' | 'texto' | 'id_externo' | 'em'>): Anexo | undefined {
+function anexoDa(l: Omit<LinhaMensagem, 'id' | 'conversa_id' | 'autor' | 'autor_nome' | 'texto' | 'id_externo' | 'em' | 'entrega'>): Anexo | undefined {
   if (!l.md_tipo || !l.md_situacao) return undefined;
   const a: Anexo = { tipo: l.md_tipo, situacao: l.md_situacao };
   if (l.md_mimetype) a.mimetype = l.md_mimetype;
@@ -103,6 +104,7 @@ function paraMensagem(r: LinhaMensagem): Mensagem {
   };
   const anexo = anexoDa(r);
   if (anexo) m.anexo = anexo;
+  if (r.entrega) m.entrega = r.entrega;
   return m;
 }
 
@@ -173,7 +175,7 @@ export class RepositorioPostgres implements Repositorio {
     return rows.map(paraConversa);
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
     const valores = [m.id ?? randomUUID(), m.conversaId, m.autor, m.autorNome ?? null, m.texto, m.idExterno || null, m.em];
     const inserir = `insert into sintonia.mensagens (id, conversa_id, autor, autor_nome, texto, id_externo, em)
        values ($1, $2, $3, $4, $5, $6, $7)
@@ -186,9 +188,19 @@ export class RepositorioPostgres implements Repositorio {
     const a = m.anexo;
     const r = await this.pool.query(
       `with nova as (${inserir} returning id)
-       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao)
-       select id, $8, $9, $10, $11, $12, $13, $14, $15 from nova`,
-      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao],
+       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal)
+       select id, $8, $9, $10, $11, $12, $13, $14, $15, $16 from nova`,
+      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, m.refMidia ?? null],
+    );
+    return (r.rowCount ?? 0) > 0;
+  }
+
+  async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date) {
+    const ordem = `case entrega when 'enviada' then 1 when 'entregue' then 2 when 'lida' then 3 when 'falhou' then 4 else 0 end`;
+    const r = await this.pool.query(
+      `update sintonia.mensagens set entrega = $2, entrega_em = $3
+        where id_externo = $1 and ${ordem} < $4`,
+      [idExterno, status, em, ORDEM_ENTREGA[status]],
     );
     return (r.rowCount ?? 0) > 0;
   }
@@ -233,7 +245,7 @@ export class RepositorioPostgres implements Repositorio {
 
   async reivindicarMidias(agora: Date, limite = 10, reservaMs = 5 * 60_000) {
     // "skip locked": dois processos nunca baixam a mesma mídia; a reserva vence se o processo cair.
-    const { rows } = await this.pool.query<{ mensagem_id: string; conversa_id: string; canal_id: string; id_externo: string; tentativas: number }>(
+    const { rows } = await this.pool.query<{ mensagem_id: string; conversa_id: string; canal_id: string; id_externo: string; tentativas: number; ref_canal: string | null }>(
       `with prontas as (
          select md.mensagem_id from sintonia.midias md
           where md.situacao = 'pendente' and md.proxima_tentativa <= $1
@@ -247,11 +259,18 @@ export class RepositorioPostgres implements Repositorio {
          from prontas, sintonia.mensagens m, sintonia.conversas c
         where md.mensagem_id = prontas.mensagem_id and m.id = md.mensagem_id and c.id = m.conversa_id
           and m.id_externo is not null
-       returning md.mensagem_id, m.conversa_id, c.canal_id, m.id_externo, md.tentativas`,
+       returning md.mensagem_id, m.conversa_id, c.canal_id, m.id_externo, md.tentativas, md.ref_canal`,
       [agora, limite, reservaMs],
     );
     return rows.map(
-      (r): MidiaPendente => ({ mensagemId: r.mensagem_id, conversaId: r.conversa_id, canalId: r.canal_id, idExterno: r.id_externo, tentativas: r.tentativas }),
+      (r): MidiaPendente => ({
+        mensagemId: r.mensagem_id,
+        conversaId: r.conversa_id,
+        canalId: r.canal_id,
+        idExterno: r.id_externo,
+        tentativas: r.tentativas,
+        ...(r.ref_canal ? { ref: r.ref_canal } : {}),
+      }),
     );
   }
 

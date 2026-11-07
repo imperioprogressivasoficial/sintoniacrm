@@ -189,7 +189,7 @@ describe('webhook da Evolution: mídias', () => {
   });
 });
 
-describe('webhook da Meta: mídia segue como texto (sem quebrar)', () => {
+describe('webhook da Meta: mídia vira marcador e anexo', () => {
   const corpo = (msg: Record<string, unknown>) => ({
     object: 'whatsapp_business_account',
     entry: [{ changes: [{ value: { metadata: { phone_number_id: '1122' }, messages: [{ from: '5571988124471', id: 'wamid.X', timestamp: '1793980000', ...msg }] } }] }],
@@ -199,7 +199,13 @@ describe('webhook da Meta: mídia segue como texto (sem quebrar)', () => {
     expect(lerWebhookMeta(corpo({ type: 'document', document: { id: 'm2', filename: 'a.pdf' } }))[0]!.texto).toBe('[documento: a.pdf]');
     expect(lerWebhookMeta(corpo({ type: 'video', video: { id: 'm3' } }))[0]!.texto).toBe('[vídeo]');
     expect(lerWebhookMeta(corpo({ type: 'sticker', sticker: { id: 'm4' } }))[0]!.texto).toBe('[figurinha]');
-    expect(lerWebhookMeta(corpo({ type: 'audio', audio: { id: 'm5' } }))[0]!.anexo).toBeUndefined();
+    // O anexo leva o id da mídia na Meta: o baixador busca o arquivo por ele.
+    expect(lerWebhookMeta(corpo({ type: 'audio', audio: { id: 'm5', mime_type: 'audio/ogg; codecs=opus', voice: true } }))[0]!.anexo).toEqual({
+      tipo: 'audio',
+      ref: 'm5',
+      mimetype: 'audio/ogg; codecs=opus',
+      voz: true,
+    });
   });
 });
 

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Etapa, ModoAtendimento, UnidadeId } from '../domain.js';
-import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio } from '../channels/tipos.js';
+import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio, ModeloAprovado, ModeloEnvio, StatusRecebido } from '../channels/tipos.js';
+import { FORA_DA_JANELA, textoDoModelo } from '../channels/meta.js';
 import { LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
 import { bloqueioPorDigitacao, viraDonaAoResponder, type Quem } from '../auth/acesso.js';
@@ -149,6 +150,7 @@ export class Sintonia {
         em: msg.em,
         idExterno: msg.idExterno,
         ...(anexo ? { anexo } : {}),
+        ...(msg.anexo?.ref ? { refMidia: msg.anexo.ref } : {}),
       });
       if (gravou && msg.anexo && anexo) baixar = await this.guardarAnexoRecebido(mensagemId, msg.anexo, anexo);
 
@@ -289,6 +291,75 @@ export class Sintonia {
     });
     if (!feito) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
     return feito;
+  }
+
+  /**
+   * Atendente enviou um modelo aprovado (API oficial): a única forma de escrever para quem não fala com a loja há mais de 24 h.
+   * O texto da conversa é o corpo do modelo com as variáveis preenchidas.
+   */
+  async equipeEnviouModelo(conversaId: string, modelo: ModeloEnvio, atendente: string, quem?: Quem): Promise<{ texto: string }> {
+    const { regras } = await this.configAgora();
+    const feito = await this.mutar(conversaId, async (c) => {
+      if (quem) await this.conferirVezEm(c, quem);
+      const n = this.numeroDa(c);
+      if (!n.canal.enviarModelo) {
+        throw Object.assign(new Error('Modelos aprovados só existem na API oficial do WhatsApp.'), { statusCode: 400 });
+      }
+      const corpo = n.canal.listarModelos
+        ? await n.canal.listarModelos(n.canalId).then((l) => l.find((m) => m.nome === modelo.nome && m.idioma === modelo.idioma)?.corpo).catch(() => undefined)
+        : undefined;
+      const texto = textoDoModelo(corpo, modelo);
+      const agora = this.agora();
+      const espera = this.tempoDeResposta(c, agora);
+      const id = await this.enviarCom(c, texto, () => n.canal.enviarModelo!(n.canalId, c.telefone, modelo), { modelo: true });
+      await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
+      await this.depoisDoEnvioDaEquipe(c, agora, atendente, espera, regras, quem);
+      return { texto };
+    });
+    if (!feito) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    return feito;
+  }
+
+  /** Modelos aprovados do número da conversa (API oficial). */
+  async modelosDa(conversaId: string): Promise<ModeloAprovado[]> {
+    const c = await this.d.repo.buscarConversa(conversaId);
+    if (!c) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    const n = this.numeroDa(c);
+    if (!n.canal.listarModelos) throw Object.assign(new Error('Modelos aprovados só existem na API oficial do WhatsApp.'), { statusCode: 400 });
+    return n.canal.listarModelos(n.canalId);
+  }
+
+  /**
+   * Janela de 24 h da API oficial: a loja escreve livremente até 24 h depois da última mensagem da cliente.
+   * Fora dela, só modelo aprovado. Nos outros canais, sempre aberta.
+   */
+  janelaDa(c: Conversa): { canal: CanalWhatsApp['tipo'] | null; aberta: boolean; fechaEm: Date | null } {
+    const n = this.d.numeros.find((x) => x.canalId === c.canalId);
+    if (!n || n.canal.tipo !== 'meta') return { canal: n?.canal.tipo ?? null, aberta: true, fechaEm: null };
+    const ult = c.ultimaMensagemCliente?.getTime();
+    const fechaEm = ult ? new Date(ult + DIA) : null;
+    return { canal: 'meta', aberta: Boolean(fechaEm && fechaEm.getTime() > this.agora().getTime()), fechaEm };
+  }
+
+  /** Marca a última mensagem da cliente como lida no WhatsApp (só onde o canal permite, ex.: API oficial). */
+  async marcarLida(conversaId: string): Promise<boolean> {
+    const c = await this.d.repo.buscarConversa(conversaId);
+    const n = c && this.d.numeros.find((x) => x.canalId === c.canalId);
+    if (!c || !n?.canal.marcarLida) return false;
+    const ultima = (await this.d.repo.mensagens(c.id, 30)).filter((m) => m.autor === 'cliente' && m.idExterno).at(-1);
+    if (!ultima?.idExterno) return false;
+    await n.canal.marcarLida(n.canalId, ultima.idExterno);
+    return true;
+  }
+
+  /** Avisos de entrega e leitura (API oficial): ficam na mensagem; falha vai para o log. */
+  async statusRecebidos(lista: StatusRecebido[]): Promise<number> {
+    let n = 0;
+    for (const s of lista) {
+      if (await this.d.repo.registrarEntrega(s.idExterno, s.status, s.em)) n++;
+      if (s.status === 'falhou') this.log('WhatsApp avisou falha na entrega', { canal: s.canalId, mensagem: s.idExterno, erro: s.erro });
+    }
+    return n;
   }
 
   private async depoisDoEnvioDaEquipe(c: Conversa, agora: Date, atendente: string, espera: number | undefined, regras: RegrasAtendimento, quem?: Quem): Promise<void> {
@@ -680,14 +751,27 @@ export class Sintonia {
     return this.enviarCom(c, texto, (n) => n.canal.enviarTexto(n.canalId, c.telefone, texto));
   }
 
-  /** Envia pelo canal da conversa e marca o id como nosso. `texto` é o que volta no eco do webhook. */
-  private async enviarCom(c: Conversa, texto: string, envio: (n: NumeroConectado) => Promise<EnvioResultado>): Promise<string> {
+  /**
+   * Envia pelo canal da conversa e marca o id como nosso. `texto` é o que volta no eco do webhook.
+   * API oficial: fora da janela de 24 h só passa modelo aprovado (`modelo: true`).
+   */
+  private async enviarCom(
+    c: Conversa,
+    texto: string,
+    envio: (n: NumeroConectado) => Promise<EnvioResultado>,
+    opcoes: { modelo?: boolean } = {},
+  ): Promise<string> {
     const n = this.numeroDa(c);
+    if (n.canal.tipo === 'meta' && !opcoes.modelo && !this.janelaDa(c).aberta) {
+      throw Object.assign(new Error(FORA_DA_JANELA), { statusCode: 422, codigo: 'fora_da_janela' });
+    }
     const chave = this.chaveEnvio(n.canalId, c.telefone, texto);
     this.enviando.set(chave, Date.now());
     try {
       const r = await envio(n);
       await this.d.repo.registrarEnviadoPorNos(r.idExterno);
+      // Respondeu: a cliente vê os dois tiques azuis na mensagem dela (onde o canal permite).
+      if (n.canal.marcarLida && !opcoes.modelo) this.marcarLida(c.id).catch((e) => this.log('Falha ao marcar como lida', String(e)));
       return r.idExterno;
     } finally {
       // Dá um tempo para o eco do webhook chegar e depois esquece.
