@@ -126,6 +126,14 @@ export class RepositorioPostgres implements Repositorio {
     return (r.rowCount ?? 0) > 0;
   }
 
+  async ultimasMensagens() {
+    const { rows } = await this.pool.query<{ id: string; conversa_id: string; autor: Mensagem['autor']; autor_nome: string | null; texto: string; id_externo: string | null; em: Date }>(
+      `select distinct on (conversa_id) id, conversa_id, autor, autor_nome, texto, id_externo, em
+         from sintonia.mensagens order by conversa_id, em desc, id desc`,
+    );
+    return new Map(rows.map((r) => [r.conversa_id, { id: r.id, conversaId: r.conversa_id, autor: r.autor, autorNome: r.autor_nome ?? undefined, texto: r.texto, em: r.em, idExterno: r.id_externo ?? undefined }]));
+  }
+
   async mensagens(conversaId: string, limite = 40) {
     const { rows } = await this.pool.query<{
       id: string;

@@ -100,8 +100,13 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   // ---------- API da tela do CRM ----------
   // Atenção: antes de expor na internet, estas rotas precisam de login (Fase 1).
   app.get('/api/conversas', async () => {
-    const lista = await d.repo.listarConversas();
-    return lista.sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime());
+    const [lista, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
+    return lista
+      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
+      .map((c) => {
+        const m = ultimas.get(c.id);
+        return { ...c, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em } : null };
+      });
   });
 
   app.get('/api/conversas/:id', async (req, reply) => {

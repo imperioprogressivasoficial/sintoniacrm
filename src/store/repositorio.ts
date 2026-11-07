@@ -50,6 +50,8 @@ export interface Repositorio {
   /** Retorna false se a mensagem (pelo idExterno) já foi registrada. */
   adicionarMensagem(m: Omit<Mensagem, 'id'>): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** Última mensagem de cada conversa (prévia da lista), numa consulta só. */
+  ultimasMensagens(): Promise<Map<string, Mensagem>>;
 
   /** Marca ids de mensagens que a própria Sintonia enviou, para não confundi-las com a atendente. */
   registrarEnviadoPorNos(idExterno: string): Promise<void>;
@@ -133,6 +135,15 @@ export class RepositorioMemoria implements Repositorio {
 
   async mensagens(conversaId: string, limite = 40) {
     return this.msgs.filter((m) => m.conversaId === conversaId).slice(-limite);
+  }
+
+  async ultimasMensagens() {
+    const r = new Map<string, Mensagem>();
+    for (const m of this.msgs) {
+      const atual = r.get(m.conversaId);
+      if (!atual || atual.em.getTime() <= m.em.getTime()) r.set(m.conversaId, m);
+    }
+    return r;
   }
 
   async registrarEnviadoPorNos(id: string) {
