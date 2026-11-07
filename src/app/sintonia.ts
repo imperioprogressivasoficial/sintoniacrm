@@ -1,5 +1,7 @@
-import type { Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
-import type { CanalWhatsApp, MensagemRecebida } from '../channels/tipos.js';
+import { randomUUID } from 'node:crypto';
+import type { Anexo, Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
+import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio } from '../channels/tipos.js';
+import { LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
 import { bloqueioPorDigitacao, viraDonaAoResponder, type Quem } from '../auth/acesso.js';
 import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
@@ -30,6 +32,8 @@ export interface DependenciasSintonia {
   trava?: Trava;
   /** Avisa a equipe (ex.: WhatsApp da gerente) quando a IA passa uma conversa adiante. */
   avisarEquipe?: (texto: string, conversa: Conversa) => Promise<void>;
+  /** Baixador de mídias: avisado quando chega foto/áudio/vídeo/documento para baixar (sem esperar o relógio). */
+  midias?: { avisar(): void };
   log?: (msg: string, extra?: unknown) => void;
 }
 
@@ -99,16 +103,23 @@ export class Sintonia {
 
     // Toda alteração na conversa acontece sob a trava dela, lendo a versão mais nova:
     // dois processos nunca gravam um por cima do outro.
+    let baixar = false;
     const pensar = await this.mutar(criada.conversa.id, async (conversa) => {
       const agora = this.agora();
+      // A mensagem (com os dados da mídia) é gravada primeiro; o arquivo é baixado depois, fora daqui.
+      const mensagemId = randomUUID();
+      const anexo = msg.anexo ? anexoInicial(msg.anexo, numero.canal) : undefined;
       const gravou = await this.d.repo.adicionarMensagem({
+        id: mensagemId,
         conversaId: conversa.id,
         autor: msg.deMim ? 'equipe' : 'cliente',
         autorNome: msg.deMim ? 'celular da loja' : undefined,
         texto: msg.texto,
         em: msg.em,
         idExterno: msg.idExterno,
+        ...(anexo ? { anexo } : {}),
       });
+      if (gravou && msg.anexo && anexo) baixar = await this.guardarAnexoRecebido(mensagemId, msg.anexo, anexo);
 
       if (msg.deMim) {
         if (!gravou) return false;
@@ -141,7 +152,24 @@ export class Sintonia {
       await this.evento('mensagem_cliente', conversa);
       return true;
     });
+    if (baixar) this.d.midias?.avisar();
     if (pensar) await this.processar(criada.conversa.id);
+  }
+
+  /** Arquivo que já veio no webhook é guardado na hora. Retorna true se ainda falta baixar. */
+  private async guardarAnexoRecebido(mensagemId: string, recebido: AnexoRecebido, anexo: Anexo): Promise<boolean> {
+    if (anexo.situacao !== 'pendente') return false;
+    if (!recebido.base64) return true;
+    try {
+      const conteudo = Buffer.from(recebido.base64, 'base64');
+      if (conteudo.length > LIMITE_MIDIA) await this.d.repo.midiaGrande(mensagemId, conteudo.length);
+      else await this.d.repo.guardarMidia(mensagemId, { conteudo });
+      return false;
+    } catch (e) {
+      // Não conseguiu guardar agora: fica pendente e o baixador tenta pelo canal.
+      this.log('Falha ao guardar mídia do webhook', String(e));
+      return true;
+    }
   }
 
   // ---------- ações vindas da tela do CRM ----------
@@ -186,6 +214,47 @@ export class Sintonia {
     const espera = this.tempoDeResposta(c, agora);
     const id = await this.enviar(c, texto);
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
+    await this.depoisDoEnvioDaEquipe(c, agora, atendente, espera, quem);
+    return true;
+  }
+
+  /**
+   * Atendente enviou foto, vídeo, documento ou nota de voz pelo CRM.
+   * O arquivo fica guardado com a mensagem; o texto leva o marcador para a IA ("[foto] legenda").
+   */
+  async equipeEnviouMidia(
+    conversaId: string,
+    midia: MidiaEnvio & { duracaoSeg?: number },
+    atendente: string,
+    quem?: Quem,
+  ): Promise<{ mensagemId: string }> {
+    const feito = await this.mutar(conversaId, async (c) => {
+      if (quem) await this.conferirVezEm(c, quem);
+      const n = this.numeroDa(c);
+      if (!n.canal.enviarMidia) {
+        throw Object.assign(new Error('Este número ainda não envia arquivos pela Sintonia.'), { statusCode: 501 });
+      }
+      const agora = this.agora();
+      const espera = this.tempoDeResposta(c, agora);
+      const legenda = midia.tipo === 'audio' ? undefined : midia.legenda?.trim() || undefined;
+      const texto = textoDoAnexo(midia.tipo, legenda, midia.tipo === 'documento' ? midia.nomeArquivo : undefined);
+      const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }));
+      const mensagemId = randomUUID();
+      const anexo: Anexo = { tipo: midia.tipo, mimetype: midia.mimetype, tamanho: midia.conteudo.length, situacao: 'pendente' };
+      if (midia.nomeArquivo) anexo.nomeArquivo = midia.nomeArquivo;
+      if (legenda) anexo.legenda = legenda;
+      if (midia.duracaoSeg !== undefined) anexo.duracaoSeg = midia.duracaoSeg;
+      if (midia.tipo === 'audio') anexo.voz = true;
+      await this.d.repo.adicionarMensagem({ id: mensagemId, conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id, anexo });
+      await this.d.repo.guardarMidia(mensagemId, { conteudo: midia.conteudo });
+      await this.depoisDoEnvioDaEquipe(c, agora, atendente, espera, quem);
+      return { mensagemId };
+    });
+    if (!feito) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    return feito;
+  }
+
+  private async depoisDoEnvioDaEquipe(c: Conversa, agora: Date, atendente: string, espera: number | undefined, quem?: Quem): Promise<void> {
     Object.assign(c, equipeAtuou(c, agora, this.regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
     if (quem) await this.donaPelaPrimeiraResposta(c, quem);
     await this.d.repo.salvarConversa(c);
@@ -193,7 +262,6 @@ export class Sintonia {
     await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
     await this.programarFollowups(c, agora);
     await this.evento('equipe_respondeu', c, { atendente, tempoRespostaMs: espera });
-    return true;
   }
 
   async mudarModo(conversaId: string, modo: ModoAtendimento): Promise<void> {
@@ -467,12 +535,17 @@ export class Sintonia {
     return n;
   }
 
-  private async enviar(c: Conversa, texto: string): Promise<string> {
+  private enviar(c: Conversa, texto: string): Promise<string> {
+    return this.enviarCom(c, texto, (n) => n.canal.enviarTexto(n.canalId, c.telefone, texto));
+  }
+
+  /** Envia pelo canal da conversa e marca o id como nosso. `texto` é o que volta no eco do webhook. */
+  private async enviarCom(c: Conversa, texto: string, envio: (n: NumeroConectado) => Promise<EnvioResultado>): Promise<string> {
     const n = this.numeroDa(c);
     const chave = this.chaveEnvio(n.canalId, c.telefone, texto);
     this.enviando.set(chave, Date.now());
     try {
-      const r = await n.canal.enviarTexto(n.canalId, c.telefone, texto);
+      const r = await envio(n);
       await this.d.repo.registrarEnviadoPorNos(r.idExterno);
       return r.idExterno;
     } finally {
@@ -488,4 +561,18 @@ export class Sintonia {
   private evento(tipo: Parameters<Repositorio['registrarEvento']>[0]['tipo'], c: Conversa, dados?: Record<string, unknown>) {
     return this.d.repo.registrarEvento({ tipo, conversaId: c.id, unidade: c.unidade, em: this.agora(), dados });
   }
+}
+
+/** Situação inicial da mídia recebida: grande demais, sem como baixar, ou pendente (baixa em seguida). */
+function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
+  const a: Anexo = { tipo: r.tipo, situacao: 'pendente' };
+  if (r.mimetype) a.mimetype = r.mimetype;
+  if (r.nomeArquivo) a.nomeArquivo = r.nomeArquivo;
+  if (r.duracaoSeg !== undefined) a.duracaoSeg = r.duracaoSeg;
+  if (r.legenda) a.legenda = r.legenda;
+  if (r.tamanho !== undefined) a.tamanho = r.tamanho;
+  if (r.voz) a.voz = true;
+  if (r.tamanho !== undefined && r.tamanho > LIMITE_MIDIA) a.situacao = 'grande';
+  else if (!r.base64 && !canal.baixarMidia) a.situacao = 'falhou';
+  return a;
 }

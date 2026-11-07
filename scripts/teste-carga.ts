@@ -51,7 +51,7 @@ const MADRUGADA_OFFSET = process.env.CARGA_OFFSET ? Number(process.env.CARGA_OFF
 
 // ---------------------------------------------------------------- processo trabalhador
 async function trabalhador() {
-  const pool = new pg.Pool({ connectionString: url, max: 12 });
+  const pool = new pg.Pool({ connectionString: url, max: 8 });
   const repo = new RepositorioPostgres(pool);
   let n = 0;
   const canal: CanalWhatsApp = {
@@ -66,7 +66,7 @@ async function trabalhador() {
     empresaId: 'carga',
     repo,
     numeros: [{ canalId: CANAL_ID, unidade: 'norte', canal }],
-    trava: new TravaPostgres(new pg.Pool({ connectionString: url, max: Number(process.env.CARGA_PARALELO ?? 8) + 8 })),
+    trava: new TravaPostgres(new pg.Pool({ connectionString: url, max: Number(process.env.CARGA_PARALELO ?? 8) + 2 })),
     agora: () => new Date(Date.now() + MADRUGADA_OFFSET),
     agente: {
       executar: async (p) => {

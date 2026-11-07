@@ -128,6 +128,98 @@
   .bal.env .meta { color: color-mix(in srgb, var(--texto) 60%, transparent); }
   .bal .meta svg { width: 16px; height: 11px; color: var(--check); }
 
+  /* mídia nas conversas: foto, áudio, vídeo, documento, figurinha (cores só por variável) */
+  :root {
+    --midia-caixa: rgba(11,20,26,.05); --midia-meta: #ffffff; --midia-degrade: rgba(11,20,26,.45);
+    --visor-fundo: rgba(11,20,26,.94); --visor-txt: #ffffff;
+    --doc-pdf: #e5252a; --doc-planilha: #1d8f4e; --doc-texto: #2b6bd6; --doc-outro: #8696a0;
+    --ic-doc: #7f66ff; --ic-foto: #007bfc; --gravando: #ea0038; --video-fundo: #000000;
+    --onda: rgba(84,101,111,.35); --onda-tocada: #54656f; --onda-cursor: #53bdeb;
+    --encaminhar-fundo: rgba(11,20,26,.22); --encaminhar-icone: #ffffff;
+    --mic-fundo: #111b21; --mic-icone: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --midia-caixa: rgba(255,255,255,.06); --midia-degrade: rgba(0,0,0,.5); --visor-fundo: rgba(11,20,26,.96); --doc-outro: #aebac1;
+      --onda: rgba(174,186,193,.35); --onda-tocada: #d1d7db; --encaminhar-fundo: rgba(255,255,255,.14); --mic-fundo: #ffffff; --mic-icone: #111b21; }
+  }
+  .bal.midia { padding: 3px 3px 5px; }
+  .bal.midia .autor { padding: 0 6px; }
+  .bal .legenda { display: block; padding: 5px 6px 0 6px; }
+  .bal.midia.so-midia { padding-bottom: 3px; }
+  .bal.midia.so-midia .meta { position: absolute; right: 9px; bottom: 8px; margin: 0; color: var(--midia-meta); text-shadow: 0 1px 2px var(--midia-degrade); z-index: 1; }
+  .bal.midia.so-midia .meta svg { color: var(--midia-meta); }
+  .bal.midia.so-midia.sem-sombra .meta { position: static; float: right; color: var(--sub); text-shadow: none; margin: 4px 4px -2px 10px; }
+  .bal.midia.so-midia.sem-sombra .meta svg { color: var(--check); }
+  .mid-foto { all: unset; display: block; cursor: zoom-in; position: relative; border-radius: 6px; overflow: hidden; background: var(--midia-caixa); min-width: 120px; min-height: 90px; }
+  .mid-foto img, .mid-video { display: block; max-width: min(330px, calc(100vw - 104px)); max-height: 420px; border-radius: 6px; }
+  .mid-foto img { width: auto; height: auto; min-width: 120px; object-fit: cover; }
+  .mid-foto::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 36px; background: linear-gradient(transparent, var(--midia-degrade)); pointer-events: none; opacity: 0; }
+  .so-midia .mid-foto::after { opacity: 1; }
+  .mid-video { background: var(--video-fundo); width: min(330px, calc(100vw - 104px)); }
+  .bal.fig { background: transparent !important; box-shadow: none; padding: 0; }
+  .bal.fig::before { display: none; }
+  .bal.fig .mid-foto { background: transparent; cursor: default; min-width: 0; min-height: 0; }
+  .bal.fig .mid-foto img { width: 150px; height: 150px; object-fit: contain; }
+  .bal.fig .mid-foto::after { display: none; }
+  .bal.fig .meta { position: static !important; float: none; display: flex; width: max-content; margin: 2px 0 0 auto; background: var(--data); color: var(--sub) !important; text-shadow: none !important; border-radius: 8px; padding: 2px 6px; box-shadow: var(--sombra); }
+  .bal.fig .meta svg { color: var(--check) !important; }
+  .bal.aud { padding: 6px 8px 8px 6px; }
+  .audio { display: flex; align-items: center; gap: 6px; width: min(300px, calc(100vw - 110px)); padding-bottom: 12px; }
+  .audio .quem-aud { position: relative; flex: none; width: 48px; height: 48px; }
+  .audio .quem-aud .avatar { width: 48px; height: 48px; font-size: 16px; }
+  .audio .selo { position: absolute; right: -4px; bottom: -2px; width: 20px; height: 20px; color: var(--onda-cursor); filter: drop-shadow(0 0 1.5px var(--recebida)); }
+  .bal.env .audio .selo { filter: drop-shadow(0 0 1.5px var(--enviada)); }
+  .audio .selo svg { width: 100%; height: 100%; }
+  .audio .tocar { all: unset; cursor: pointer; width: 34px; height: 40px; flex: none; display: grid; place-items: center; color: var(--icone); }
+  .audio .tocar svg { width: 28px; height: 28px; }
+  .audio .lado { flex: 1; min-width: 0; position: relative; }
+  .audio .onda { position: relative; height: 30px; display: flex; align-items: center; gap: 2px; cursor: pointer; touch-action: none; overflow: hidden; padding: 0 2px; }
+  .audio .onda i { flex: none; width: 3px; border-radius: 2px; background: var(--onda); }
+  .audio .onda i.tocada { background: var(--onda-tocada); }
+  .audio .cursor { position: absolute; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -4px; border-radius: 50%; background: var(--onda-cursor); pointer-events: none; }
+  .audio .tempo { position: absolute; left: 0; top: 32px; font-size: 11px; color: var(--sub); line-height: 15px; font-variant-numeric: tabular-nums; }
+  .bal.aud .meta { position: absolute; right: 8px; bottom: 6px; margin: 0; float: none; }
+  .bal .encaminhar { position: absolute; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--encaminhar-fundo); color: var(--encaminhar-icone); text-decoration: none; }
+  .bal .encaminhar svg { width: 18px; height: 18px; }
+  .bal.rec .encaminhar { right: -44px; }
+  .bal.env .encaminhar { left: -44px; }
+  .doc { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; background: var(--midia-caixa); border-radius: 6px; padding: 10px 10px 10px 8px; width: min(300px, 62vw); box-sizing: border-box; }
+  .doc .doc-ic { width: 30px; height: 38px; flex: none; position: relative; color: var(--doc-outro); }
+  .doc .doc-ic svg { width: 100%; height: 100%; }
+  .doc .doc-ic b { position: absolute; left: 0; right: 0; bottom: 5px; font-size: 8px; font-weight: 700; color: var(--midia-meta); text-align: center; letter-spacing: .2px; }
+  .doc .doc-ic[data-ext="PDF"] { color: var(--doc-pdf); }
+  .doc .doc-ic[data-ext="XLS"], .doc .doc-ic[data-ext="XLSX"], .doc .doc-ic[data-ext="CSV"] { color: var(--doc-planilha); }
+  .doc .doc-ic[data-ext="DOC"], .doc .doc-ic[data-ext="DOCX"], .doc .doc-ic[data-ext="TXT"] { color: var(--doc-texto); }
+  .doc .doc-t { flex: 1; min-width: 0; display: grid; }
+  .doc .doc-t b { font-weight: 400; font-size: 14.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc .doc-t small { font-size: 11.5px; color: var(--sub); }
+  .doc .baixar { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--sub) 60%, transparent); display: grid; place-items: center; color: var(--sub); }
+  .doc .baixar svg { width: 18px; height: 18px; }
+  .doc.aviso { cursor: default; }
+  .doc button { all: unset; cursor: pointer; color: var(--verde-forte); font-size: 13px; font-weight: 600; white-space: nowrap; padding: 4px; }
+  .girando { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--sub) 35%, transparent); border-top-color: var(--verde-forte); animation: girar .9s linear infinite; flex: none; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  .mid-espera { display: grid; place-items: center; gap: 8px; width: min(240px, 60vw); height: 150px; border-radius: 6px; background: var(--midia-caixa); color: var(--sub); font-size: 12.5px; text-align: center; padding: 10px; box-sizing: border-box; }
+  .visor { position: fixed; inset: 0; z-index: 60; background: var(--visor-fundo); color: var(--visor-txt); display: flex; flex-direction: column; }
+  .visor .barra-visor { display: flex; align-items: center; gap: 8px; padding: 10px 12px calc(10px) 16px; padding-top: calc(10px + env(safe-area-inset-top)); }
+  .visor .barra-visor span { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .visor .icone { color: var(--visor-txt); }
+  .visor .icone:hover { background: color-mix(in srgb, var(--visor-txt) 12%, transparent); }
+  .visor .palco { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px 16px 24px; }
+  .visor .palco img { max-width: 100%; max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); object-fit: contain; }
+  .visor .legenda-visor { text-align: center; padding: 0 16px calc(18px + env(safe-area-inset-bottom)); font-size: 15px; white-space: pre-wrap; }
+  /* gravação de áudio e prévia de envio */
+  .compor .gravando { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 4px; }
+  .compor .gravando .ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--gravando); animation: piscar 1s ease-in-out infinite; }
+  @keyframes piscar { 50% { opacity: .25; } }
+  .compor .gravando .relogio { font-size: 17px; font-variant-numeric: tabular-nums; min-width: 44px; }
+  .compor .gravando .dica { flex: 1; color: var(--sub); font-size: 14px; }
+  .compor.gravando > #mais, .compor.gravando > .caixa, .compor.gravando > #enviar { display: none !important; }
+  #d-midia { width: min(560px, calc(100vw - 24px)); }
+  #d-midia .previa-midia { display: grid; place-items: center; background: var(--painel); border-radius: 10px; min-height: 160px; max-height: 52vh; overflow: hidden; }
+  #d-midia .previa-midia img, #d-midia .previa-midia video { max-width: 100%; max-height: 52vh; display: block; object-fit: contain; }
+  #d-midia .previa-midia .doc { width: auto; max-width: 100%; margin: 18px; background: var(--fundo); }
+
   .sugestao, .revisao { background: var(--painel); padding: 6px 10px 0; flex: none; }
   .citacao { background: var(--citacao); border-radius: 7.5px; border-left: 4px solid #06cf9c; padding: 7px 10px; display: flex; gap: 10px; align-items: flex-start; }
   @media (prefers-color-scheme: light) { .citacao { background: #e6e9ec; } }
@@ -148,6 +240,7 @@
   .compor .caixa .icone { width: 36px; height: 40px; }
   .falar { background: var(--verde-forte) !important; color: #fff !important; width: 44px !important; height: 44px !important; margin-bottom: 5px !important; }
   @media (prefers-color-scheme: dark) { .falar { color: #111b21 !important; } }
+  #enviar.mic-vazio { background: var(--mic-fundo) !important; color: var(--mic-icone) !important; }
   .menu-mais { position: absolute; left: 10px; bottom: 66px; background: var(--fundo); border-radius: 16px; box-shadow: 0 6px 30px rgba(11,20,26,.3); padding: 8px; display: grid; gap: 2px; min-width: 240px; z-index: 5; }
   .menu-mais button { all: unset; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px; font-size: 15px; }
   .menu-mais button:hover { background: var(--hover); }
@@ -370,7 +463,16 @@
               <button class="icone" id="camera" title="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
             </div>
             <button class="icone falar" id="enviar" title="Gravar áudio"><svg id="ic-mic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg><svg id="ic-enviar" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
+            <div class="gravando" id="gravando" hidden>
+              <button class="icone" id="grav-cancelar" title="Cancelar gravação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg></button>
+              <span class="ponto"></span><span class="relogio" id="grav-tempo">0:00</span><span class="dica">Gravando…</span>
+              <button class="icone falar" id="grav-enviar" title="Parar e enviar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
+            </div>
+            <input type="file" id="arq-foto" accept="image/*,video/*" hidden>
+            <input type="file" id="arq-doc" hidden>
             <div class="menu-mais" id="menu-mais" hidden>
+              <button id="m-documento"><i style="background:var(--ic-doc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg></i>Documento</button>
+              <button id="m-fotos"><i style="background:var(--ic-foto)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="9.5" r="1.8"/><path d="m4 18 5.5-5.5L13 16l3-3 4 4"/></svg></i>Fotos e vídeos</button>
               <button id="m-agendar"><i style="background:#007bfc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></i>Agendar no Trinks</button>
               <button id="m-revisar"><i style="background:#02a698"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 12 4 4 10-10"/></svg></i>Revisar com IA</button>
               <button id="m-sugestao"><i style="background:#7f66ff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></svg></i>Usar sugestão da IA</button>
@@ -495,6 +597,25 @@
     <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Transferir</button></div>
   </form>
 </dialog>
+<dialog id="d-midia">
+  <form method="dialog" id="f-midia">
+    <h2 id="dm-titulo">Enviar foto</h2>
+    <div class="previa-midia" id="dm-previa"></div>
+    <label id="dm-legenda-rot">Legenda <input id="dm-legenda" maxlength="3000" placeholder="Adicione uma legenda (opcional)" autocomplete="off"></label>
+    <div class="info" id="dm-info"></div>
+    <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" id="dm-ok" value="ok">Enviar</button></div>
+  </form>
+</dialog>
+
+<div class="visor" id="visor" hidden role="dialog" aria-label="Foto">
+  <div class="barra-visor">
+    <span id="visor-quem"></span>
+    <a class="icone" id="visor-baixar" title="Baixar" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></a>
+    <button class="icone" id="visor-fechar" title="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="palco" id="visor-palco"></div>
+  <div class="legenda-visor" id="visor-legenda"></div>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -583,7 +704,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const previa = el('span', { class: 'previa' });
       if (u && u.autor !== 'cliente') previa.insertAdjacentHTML('beforeend', CHECK);
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
-      previa.append(document.createTextNode(u ? u.texto.replace(/\s+/g, ' ') : ''));
+      previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       const l2 = el('div', { class: 'l2' }, previa);
       if (ehTeste(c)) l2.append(el('span', { class: 'tag', text: 'teste' }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1' }));
@@ -597,6 +718,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // conversa
   async function abrir(id) {
+    if (grav.rec) pararGravacao(true);
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
     desenharLista();
@@ -624,6 +746,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('modo').dataset.m = c.modo; $('modo-txt').textContent = MODO[c.modo];
     const caixa = $('msgs'); const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
     caixa.replaceChildren();
+    if (caixa.dataset.conversa !== c.id) nosMidia.clear();
     if (ehTeste(c)) caixa.append(el('div', { class: 'sistema', text: '🔒 Conversa de teste: nada é enviado para fora da Sintonia.' }));
     let dia = '', anterior = '';
     for (const m of mensagens) {
@@ -634,9 +757,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const bal = el('div', { class: `bal ${lado}${quem !== anterior ? ' primeira' : ''}` });
       if (quem !== anterior && m.autor === 'ia') bal.append(el('span', { class: 'autor ia', text: 'IA da Sintonia' }));
       if (quem !== anterior && m.autor === 'equipe') bal.append(el('span', { class: 'autor eq', text: m.autorNome || 'Equipe' }));
-      bal.append(document.createTextNode(m.texto));
+      if (m.anexo) montarBalaoMidia(bal, m, c); else bal.append(document.createTextNode(m.texto));
       const meta = el('span', { class: 'meta', text: hm(m.em) }); if (lado === 'env') meta.insertAdjacentHTML('beforeend', CHECK);
-      bal.append(meta);
+      (bal.querySelector(':scope > .legenda') || bal).append(meta);
       caixa.append(bal); anterior = quem;
     }
     if (!mensagens.length) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
@@ -679,6 +802,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   function trocarBotao() {
     const tem = texto.value.trim().length > 0;
     $('ic-mic').hidden = tem; $('ic-enviar').hidden = !tem; $('enviar').title = tem ? 'Enviar' : 'Gravar áudio';
+    $('enviar').classList.toggle('mic-vazio', !tem);
   }
   texto.addEventListener('input', () => {
     texto.style.height = 'auto'; texto.style.height = Math.min(texto.scrollHeight, 120) + 'px';
@@ -686,8 +810,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.aberta && Date.now() - digitandoEm > 15000) { digitandoEm = Date.now(); post(`/api/conversas/${estado.aberta}/digitando`).catch(() => {}); }
   });
   texto.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(min-width: 761px)').matches) { e.preventDefault(); enviar(); } });
-  $('enviar').addEventListener('click', () => (texto.value.trim() ? enviar() : toast('Áudio chega numa próxima versão.')));
-  $('camera').addEventListener('click', () => toast('Envio de fotos chega numa próxima versão.'));
+  $('enviar').addEventListener('click', () => (texto.value.trim() ? enviar() : iniciarGravacao()));
+  $('camera').addEventListener('click', () => $('arq-foto').click());
   async function enviar() {
     const t = texto.value.trim(); if (!t || !estado.aberta) return;
     $('enviar').disabled = true;
@@ -697,6 +821,254 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   const usarTexto = (t) => { texto.value = t; texto.dispatchEvent(new Event('input')); texto.focus(); };
   $('usar-sugestao').addEventListener('click', () => usarTexto($('sugestao-txt').textContent));
+
+  // ---------- mídia: fotos, áudios, vídeos, documentos e figurinhas ----------
+  const LIMITE_ENVIO = 16 * 1024 * 1024;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.6v12.8a.8.8 0 0 0 1.2.7l10-6.4a.8.8 0 0 0 0-1.4l-10-6.4A.8.8 0 0 0 8 5.6Z"/></svg>';
+  const PAUSA = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5" width="3.8" height="14" rx="1"/><rect x="13.7" y="5" width="3.8" height="14" rx="1"/></svg>';
+  const MIC = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg>';
+  const NOTA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17.5V6.2l10-2.2v11.3a2.8 2.8 0 1 1-1.8-2.6V7.3L10.8 8.7v8.8A2.8 2.8 0 1 1 9 15Z"/></svg>';
+  const FOLHA = '<svg viewBox="0 0 30 38"><path fill="currentColor" d="M3 0h17l10 10v25a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3V3a3 3 0 0 1 3-3Z"/><path fill="rgba(255,255,255,.45)" d="M20 0v7a3 3 0 0 0 3 3h7Z"/></svg>';
+  const BAIXAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10M7.5 10.5 12 15l4.5-4.5M6 19h12"/></svg>';
+  const duracao = (s) => { s = Math.max(0, Math.round(Number(s) || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const tamanhoTxt = (b) => (b == null ? '' : b < 1024 ? `${b} B` : b < 1048576 ? `${Math.round(b / 1024)} kB` : `${(b / 1048576).toFixed(1).replace('.', ',')} MB`);
+  const extDe = (nome, mimetype) => { const m = /\.([a-z0-9]{1,5})$/i.exec(nome || ''); if (m) return m[1].toUpperCase(); const t = String(mimetype || '').split('/')[1] || ''; return t === 'pdf' ? 'PDF' : ''; };
+  /** Prévia da lista, como no WhatsApp: "📷 Foto", "🎤 Áudio 0:12", "📄 nome.pdf". */
+  function textoPrevia(u) {
+    const a = u.anexo; if (!a) return u.texto;
+    if (a.tipo === 'imagem') return '📷 ' + (a.legenda || 'Foto');
+    if (a.tipo === 'video') return '🎥 ' + (a.legenda || 'Vídeo');
+    if (a.tipo === 'audio') return '🎤 Áudio' + (a.duracaoSeg ? ' ' + duracao(a.duracaoSeg) : '');
+    if (a.tipo === 'figurinha') return '💟 Figurinha';
+    return '📄 ' + (a.nomeArquivo || 'Documento');
+  }
+  const urlMidia = (c, m) => `/api/conversas/${c.id}/midias/${m.id}`;
+  // O mesmo elemento é reaproveitado a cada atualização da conversa: o áudio não para e a foto não pisca.
+  const nosMidia = new Map();
+  function montarBalaoMidia(bal, m, c) {
+    const a = m.anexo;
+    bal.classList.add('midia');
+    if (a.tipo === 'figurinha' && a.situacao === 'pronta') bal.classList.add('fig');
+    const chave = m.id + ':' + a.situacao;
+    let no = nosMidia.get(chave);
+    if (!no) { no = criarNoMidia(m, c); nosMidia.set(chave, no); }
+    bal.append(no);
+    const legenda = a.tipo === 'audio' || a.tipo === 'figurinha' ? '' : a.legenda;
+    if (legenda) bal.append(el('span', { class: 'legenda', text: legenda }));
+    else if (a.tipo === 'imagem' && a.situacao === 'pronta') bal.classList.add('so-midia');
+    if (a.tipo === 'audio' && a.situacao === 'pronta') { bal.classList.remove('midia'); bal.classList.add('aud'); }
+    // Botão ao lado do balão (como o "encaminhar" do WhatsApp): por enquanto baixa o arquivo.
+    if ((a.tipo === 'imagem' || a.tipo === 'video') && a.situacao === 'pronta') {
+      bal.append(el('a', { class: 'encaminhar', href: urlMidia(c, m) + '?baixar=1', download: a.nomeArquivo || '', title: 'Baixar', 'aria-label': 'Baixar', html: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 5.5V9C7.5 9.6 4.3 13.6 3.5 19c2.3-3.2 5.6-4.7 10.5-4.7v3.6l6.5-6.2Z"/></svg>' }));
+    }
+  }
+  function linhaDoc(a, sub, direita, href) {
+    const ext = extDe(a.nomeArquivo, a.mimetype);
+    const icone = a.tipo === 'documento' ? el('span', { class: 'doc-ic', 'data-ext': ext, html: FOLHA }, ext ? el('b', { text: ext.slice(0, 4) }) : null)
+      : el('span', { class: 'doc-ic', html: a.tipo === 'audio' ? MIC : a.tipo === 'video' ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h7A2.5 2.5 0 0 1 16 6.5V9l4-2.6v11.2L16 15v2.5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 4 17.5Z"/></svg>' : FOLHA });
+    const nome = a.nomeArquivo || { imagem: 'Foto', video: 'Vídeo', audio: 'Áudio', figurinha: 'Figurinha', documento: 'Documento' }[a.tipo];
+    return el(href ? 'a' : 'div', { class: 'doc' + (href ? '' : ' aviso'), href, download: href ? (a.nomeArquivo || '') : undefined, title: href ? 'Baixar ' + nome : undefined },
+      icone, el('span', { class: 'doc-t' }, el('b', { text: nome }), el('small', { text: sub })), direita);
+  }
+  function criarNoMidia(m, c) {
+    const a = m.anexo, url = urlMidia(c, m);
+    const visual = a.tipo === 'imagem' || a.tipo === 'video' || a.tipo === 'figurinha';
+    if (a.situacao === 'pendente') {
+      return visual ? el('div', { class: 'mid-espera' }, el('span', { class: 'girando' }), el('span', { text: 'Baixando…' }))
+        : linhaDoc(a, 'Baixando…', el('span', { class: 'girando' }));
+    }
+    if (a.situacao === 'grande') return linhaDoc(a, `Arquivo grande demais para guardar${a.tamanho ? ' (' + tamanhoTxt(a.tamanho) + ')' : ''}. Veja no celular da loja.`);
+    if (a.situacao === 'falhou') {
+      const tentar = el('button', { type: 'button', text: 'Tentar de novo', onclick: async (e) => {
+        e.currentTarget.disabled = true;
+        try { await post(`${url}/baixar`); await atualizar(); } catch (x) { toast(x.message); }
+      } });
+      return linhaDoc(a, 'Não foi possível baixar', tentar);
+    }
+    if (a.tipo === 'imagem' || a.tipo === 'figurinha') {
+      const img = el('img', { src: url, alt: a.tipo === 'imagem' ? (a.legenda || 'Foto') : 'Figurinha', loading: 'lazy', decoding: 'async' });
+      // A foto carrega depois: se a conversa estava no fim, continua no fim.
+      img.addEventListener('load', () => { const cx = $('msgs'); if (cx.contains(img) && cx.scrollHeight - cx.scrollTop - cx.clientHeight < img.clientHeight + 120) cx.scrollTop = cx.scrollHeight; });
+      const b = el('button', { class: 'mid-foto', type: 'button', 'aria-label': a.tipo === 'imagem' ? 'Abrir foto' : 'Figurinha' }, img);
+      if (a.tipo === 'imagem') b.addEventListener('click', () => abrirVisor(url, a.legenda, m.autor === 'cliente' ? nomeDe(c) : (m.autor === 'ia' ? 'IA da Sintonia' : m.autorNome || 'Equipe'), m.em));
+      return b;
+    }
+    if (a.tipo === 'video') return el('video', { class: 'mid-video', src: url, controls: '', preload: 'metadata', playsinline: '' });
+    if (a.tipo === 'audio') return playerAudio(url, a, m, c);
+    const sub = [extDe(a.nomeArquivo, a.mimetype), tamanhoTxt(a.tamanho)].filter(Boolean).join(' · ');
+    return linhaDoc(a, sub || 'Documento', el('span', { class: 'baixar', html: BAIXAR }), url + '?baixar=1');
+  }
+  let tocando = null;
+  /** Alturas da onda: pseudoaleatórias, mas sempre iguais para a mesma mensagem. */
+  function alturasOnda(semente, n) {
+    let h = 2166136261; for (const ch of String(semente)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+    const r = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0), (h ^= h >>> 13), (h >>> 0) / 4294967296);
+    let ant = 0.4;
+    return Array.from({ length: n }, (_, i) => { ant = Math.min(1, Math.max(0.12, ant * 0.45 + r() * 0.75 * (i < 2 || i > n - 3 ? 0.5 : 1))); return ant; });
+  }
+  /** Áudio no padrão do WhatsApp: foto com selo de microfone, ▶, onda com cursor, duração; <audio> escondido. */
+  function playerAudio(url, a, m, c) {
+    const audio = new Audio(); audio.preload = 'metadata'; audio.src = url;
+    const N = 34;
+    const barras = alturasOnda(m.id, N).map((v) => el('i', { style: `height:${Math.round(4 + v * 22)}px` }));
+    const cursor = el('span', { class: 'cursor' });
+    const onda = el('div', { class: 'onda', role: 'slider', 'aria-label': 'Posição do áudio', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0', tabindex: '0' }, ...barras, cursor);
+    const tempo = el('span', { class: 'tempo', text: duracao(a.duracaoSeg) });
+    const botao = el('button', { class: 'tocar', type: 'button', 'aria-label': 'Tocar áudio', html: PLAY });
+    const foto = m.autor === 'cliente' ? avatar(c)
+      : m.autor === 'ia' ? el('span', { class: 'avatar', style: 'background:var(--ia)', text: 'IA' })
+      : el('span', { class: 'avatar', style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') });
+    const quem = el('span', { class: 'quem-aud' }, foto, el('span', { class: 'selo', html: a.voz ? MIC : NOTA }));
+    const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(a.duracaoSeg) || 0);
+    const pintar = (p) => {
+      p = Math.max(0, Math.min(1, p || 0));
+      const ate = Math.round(p * N);
+      barras.forEach((b, i) => b.classList.toggle('tocada', i < ate));
+      cursor.style.left = `calc(${(p * 100).toFixed(2)}% - ${(p * 6).toFixed(1)}px + 2px)`;
+      onda.setAttribute('aria-valuenow', String(Math.round(p * 100)));
+    };
+    pintar(0);
+    botao.addEventListener('click', () => {
+      if (audio.paused) { if (tocando && tocando !== audio) tocando.pause(); audio.play().catch(() => toast('Não deu para tocar este áudio aqui.')); }
+      else audio.pause();
+    });
+    audio.addEventListener('play', () => { tocando = audio; botao.innerHTML = PAUSA; botao.setAttribute('aria-label', 'Pausar áudio'); });
+    audio.addEventListener('pause', () => { botao.innerHTML = PLAY; botao.setAttribute('aria-label', 'Tocar áudio'); });
+    audio.addEventListener('ended', () => { pintar(0); tempo.textContent = duracao(total()); });
+    audio.addEventListener('timeupdate', () => { const t = total(); if (!t || audio.ended) return; pintar(audio.currentTime / t); tempo.textContent = duracao(audio.currentTime); });
+    audio.addEventListener('loadedmetadata', () => { if (!a.duracaoSeg && total()) tempo.textContent = duracao(total()); });
+    // Toque ou arraste na onda para pular.
+    const pular = (e) => {
+      const r = onda.getBoundingClientRect(); const p = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); const t = total();
+      pintar(p); if (t) { audio.currentTime = p * t; tempo.textContent = duracao(p * t); }
+    };
+    onda.addEventListener('pointerdown', (e) => { onda.setPointerCapture(e.pointerId); pular(e); });
+    onda.addEventListener('pointermove', (e) => { if (onda.hasPointerCapture(e.pointerId)) pular(e); });
+    onda.addEventListener('keydown', (e) => {
+      const t = total(); if (!t || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+      e.preventDefault(); audio.currentTime = Math.max(0, Math.min(t, audio.currentTime + (e.key === 'ArrowRight' ? 5 : -5))); pintar(audio.currentTime / t);
+    });
+    const caixa = el('div', { class: 'audio' }, botao, el('div', { class: 'lado' }, onda, tempo));
+    caixa.prepend(quem);
+    return caixa;
+  }
+  // foto em tela cheia
+  function abrirVisor(url, legenda, quem, em) {
+    $('visor-palco').replaceChildren(el('img', { src: url, alt: legenda || 'Foto' }));
+    $('visor-legenda').textContent = legenda || '';
+    $('visor-quem').textContent = `${quem} · ${quando(em)}`;
+    $('visor-baixar').href = url + '?baixar=1';
+    $('visor').hidden = false; $('visor-fechar').focus();
+  }
+  const fecharVisor = () => { $('visor').hidden = true; $('visor-palco').replaceChildren(); };
+  $('visor-fechar').addEventListener('click', fecharVisor);
+  $('visor-palco').addEventListener('click', (e) => { if (e.target === e.currentTarget) fecharVisor(); });
+
+  // enviar foto, vídeo ou documento: escolhe, vê a prévia, escreve a legenda, envia
+  const paraBase64 = (blob) => new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => erro(r.error); r.readAsDataURL(blob); });
+  /** Foto grande do celular é reduzida antes de enviar (o WhatsApp também reduz). */
+  async function reduzirFoto(f) {
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 1.5 * 1048576 || !window.createImageBitmap) return f;
+    const bmp = await createImageBitmap(f);
+    const escala = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+    const tela = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * escala), height: Math.round(bmp.height * escala) });
+    tela.getContext('2d').drawImage(bmp, 0, 0, tela.width, tela.height);
+    const blob = await new Promise((ok) => tela.toBlob(ok, 'image/jpeg', 0.85));
+    return blob && blob.size < f.size ? new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : f;
+  }
+  let preparo = null;
+  async function prepararEnvio(f, tipo) {
+    if (!estado.aberta || !f) return;
+    let arquivo = f;
+    if (tipo === 'imagem') arquivo = await reduzirFoto(f).catch(() => f);
+    if (arquivo.size > LIMITE_ENVIO) { toast('Arquivo grande demais: o limite é 16 MB.'); return; }
+    if (!arquivo.size) { toast('Arquivo vazio.'); return; }
+    if (preparo) URL.revokeObjectURL(preparo.url);
+    preparo = { arquivo, tipo, url: URL.createObjectURL(arquivo), conversa: estado.aberta };
+    const a = { tipo, nomeArquivo: arquivo.name, mimetype: arquivo.type, tamanho: arquivo.size };
+    $('dm-previa').replaceChildren(tipo === 'imagem' ? el('img', { src: preparo.url, alt: 'Prévia' })
+      : tipo === 'video' ? el('video', { src: preparo.url, controls: '', playsinline: '', preload: 'metadata' })
+      : linhaDoc(a, [extDe(a.nomeArquivo, a.mimetype), tamanhoTxt(a.tamanho)].filter(Boolean).join(' · ')));
+    $('dm-titulo').textContent = { imagem: 'Enviar foto', video: 'Enviar vídeo', documento: 'Enviar documento' }[tipo];
+    $('dm-info').textContent = `Para ${nomeDe(estado.detalhe.conversa)} · ${tamanhoTxt(arquivo.size)}`;
+    $('dm-legenda').value = '';
+    $('d-midia').showModal(); $('dm-legenda').focus();
+  }
+  $('arq-foto').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) prepararEnvio(f, f.type.startsWith('video/') ? 'video' : f.type.startsWith('image/') ? 'imagem' : 'documento'); });
+  $('arq-doc').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) prepararEnvio(f, 'documento'); });
+  $('m-fotos').addEventListener('click', () => { $('menu-mais').hidden = true; $('arq-foto').click(); });
+  $('m-documento').addEventListener('click', () => { $('menu-mais').hidden = true; $('arq-doc').click(); });
+  $('dm-legenda').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); $('dm-ok').click(); } });
+  $('d-midia').addEventListener('close', () => { if (preparo && !preparo.enviando) { URL.revokeObjectURL(preparo.url); preparo = null; } });
+  $('f-midia').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok' || !preparo) return;
+    e.preventDefault();
+    const p = preparo; p.enviando = true; $('dm-ok').disabled = true;
+    const ok = await enviarArquivo({ blob: p.arquivo, tipo: p.tipo, mimetype: p.arquivo.type || 'application/octet-stream', nomeArquivo: p.arquivo.name, legenda: $('dm-legenda').value.trim() || undefined }, p.conversa);
+    $('dm-ok').disabled = false; p.enviando = false;
+    if (ok) { $('d-midia').close(); URL.revokeObjectURL(p.url); preparo = null; }
+  });
+  async function enviarArquivo({ blob, tipo, mimetype, nomeArquivo, legenda, duracaoSeg }, conversaId = estado.aberta) {
+    if (blob.size > LIMITE_ENVIO) { toast('Arquivo grande demais: o limite é 16 MB.'); return false; }
+    toast(tipo === 'audio' ? 'Enviando áudio…' : 'Enviando…');
+    try {
+      const base64 = await paraBase64(blob);
+      await post(`/api/conversas/${conversaId}/enviar-midia`, { tipo, base64, mimetype, nomeArquivo, legenda, duracaoSeg, atendente: estado.eu.nome });
+      toast(tipo === 'audio' ? 'Áudio enviado ✓' : 'Enviado ✓');
+      await atualizar();
+      return true;
+    } catch (x) { toast('Não enviou: ' + x.message); return false; }
+  }
+
+  // nota de voz: toque no microfone para gravar; enviar ou lixeira para terminar
+  const grav = { rec: null, stream: null, partes: [], inicio: 0, relogio: 0, cancelado: false, conversa: null };
+  const MAX_GRAVACAO_S = 15 * 60;
+  function tipoGravacao() {
+    for (const t of ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']) if (window.MediaRecorder?.isTypeSupported?.(t)) return t;
+    return '';
+  }
+  async function iniciarGravacao() {
+    if (!estado.aberta || grav.rec) return;
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      toast(window.isSecureContext ? 'Este navegador não grava áudio.' : 'Para gravar áudio, abra a Sintonia pelo endereço seguro (https).'); return;
+    }
+    try { grav.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { toast('Sem acesso ao microfone. Libere o microfone para a Sintonia no navegador.'); return; }
+    const tipo = tipoGravacao();
+    try { grav.rec = new MediaRecorder(grav.stream, tipo ? { mimeType: tipo } : undefined); }
+    catch { grav.stream.getTracks().forEach((t) => t.stop()); toast('Este navegador não grava áudio.'); return; }
+    Object.assign(grav, { partes: [], cancelado: false, inicio: Date.now(), conversa: estado.aberta });
+    grav.rec.addEventListener('dataavailable', (e) => { if (e.data.size) grav.partes.push(e.data); });
+    grav.rec.addEventListener('stop', terminarGravacao);
+    grav.rec.start(250);
+    document.querySelector('.compor').classList.add('gravando'); $('gravando').hidden = false; $('grav-tempo').textContent = '0:00';
+    grav.relogio = setInterval(() => {
+      const s = (Date.now() - grav.inicio) / 1000; $('grav-tempo').textContent = duracao(Math.floor(s));
+      if (s >= MAX_GRAVACAO_S) pararGravacao(false);
+    }, 250);
+  }
+  function pararGravacao(cancelar) {
+    if (!grav.rec) return;
+    grav.cancelado = cancelar;
+    if (grav.rec.state !== 'inactive') grav.rec.stop(); else terminarGravacao();
+  }
+  async function terminarGravacao() {
+    const rec = grav.rec; if (!rec) return;
+    clearInterval(grav.relogio); grav.stream?.getTracks().forEach((t) => t.stop());
+    grav.rec = null; grav.stream = null;
+    document.querySelector('.compor').classList.remove('gravando'); $('gravando').hidden = true;
+    const segundos = (Date.now() - grav.inicio) / 1000;
+    if (grav.cancelado) return;
+    if (segundos < 1) { toast('Áudio muito curto. Toque no microfone, fale e toque em enviar.'); return; }
+    const mimetype = (rec.mimeType || 'audio/webm').split(';')[0];
+    await enviarArquivo({ blob: new Blob(grav.partes, { type: mimetype }), tipo: 'audio', mimetype, duracaoSeg: Math.round(segundos) }, grav.conversa);
+  }
+  $('grav-enviar').addEventListener('click', () => pararGravacao(false));
+  $('grav-cancelar').addEventListener('click', () => { pararGravacao(true); toast('Gravação descartada.'); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('visor').hidden) fecharVisor(); else if (grav.rec) pararGravacao(true);
+  });
 
   // menu +
   $('mais').addEventListener('click', (e) => { e.stopPropagation(); $('menu-mais').hidden = !$('menu-mais').hidden; });

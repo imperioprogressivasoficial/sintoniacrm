@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
-import type { Conversa, Etapa, Mensagem, ModoAtendimento, UnidadeId } from '../domain.js';
-import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
+import { VALIDADE_DIGITANDO_MS, type Evento, type MidiaPendente, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
 
@@ -55,6 +55,56 @@ function paraConversa(l: LinhaConversa): Conversa {
 
 const COLUNAS_CONVERSA = `id, empresa_id, unidade, canal_id, telefone, nome, modo, etapa, trinks_cliente_id, pausa_ia_ate,
   ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, responsavel_id, responsavel_nome, criada_em, atualizada_em`;
+
+/** Mensagem com os dados da mídia (sem o arquivo). */
+interface LinhaMensagem {
+  id: string;
+  conversa_id: string;
+  autor: Mensagem['autor'];
+  autor_nome: string | null;
+  texto: string;
+  id_externo: string | null;
+  em: Date;
+  md_tipo: TipoAnexo | null;
+  md_mimetype: string | null;
+  md_nome_arquivo: string | null;
+  md_duracao_seg: number | null;
+  md_legenda: string | null;
+  md_tamanho: string | null;
+  md_voz: boolean | null;
+  md_situacao: SituacaoAnexo | null;
+}
+
+const COLUNAS_MENSAGEM = `m.id, m.conversa_id, m.autor, m.autor_nome, m.texto, m.id_externo, m.em,
+  md.tipo as md_tipo, md.mimetype as md_mimetype, md.nome_arquivo as md_nome_arquivo, md.duracao_seg as md_duracao_seg,
+  md.legenda as md_legenda, md.tamanho as md_tamanho, md.voz as md_voz, md.situacao as md_situacao`;
+
+function anexoDa(l: Omit<LinhaMensagem, 'id' | 'conversa_id' | 'autor' | 'autor_nome' | 'texto' | 'id_externo' | 'em'>): Anexo | undefined {
+  if (!l.md_tipo || !l.md_situacao) return undefined;
+  const a: Anexo = { tipo: l.md_tipo, situacao: l.md_situacao };
+  if (l.md_mimetype) a.mimetype = l.md_mimetype;
+  if (l.md_nome_arquivo) a.nomeArquivo = l.md_nome_arquivo;
+  if (l.md_duracao_seg !== null) a.duracaoSeg = l.md_duracao_seg;
+  if (l.md_legenda) a.legenda = l.md_legenda;
+  if (l.md_tamanho !== null) a.tamanho = Number(l.md_tamanho);
+  if (l.md_voz) a.voz = true;
+  return a;
+}
+
+function paraMensagem(r: LinhaMensagem): Mensagem {
+  const m: Mensagem = {
+    id: r.id,
+    conversaId: r.conversa_id,
+    autor: r.autor,
+    autorNome: ou(r.autor_nome),
+    texto: r.texto,
+    idExterno: ou(r.id_externo),
+    em: r.em,
+  };
+  const anexo = anexoDa(r);
+  if (anexo) m.anexo = anexo;
+  return m;
+}
 
 export class RepositorioPostgres implements Repositorio {
   constructor(private readonly pool: pg.Pool) {}
@@ -123,12 +173,93 @@ export class RepositorioPostgres implements Repositorio {
     return rows.map(paraConversa);
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'>) {
-    const r = await this.pool.query(
-      `insert into sintonia.mensagens (id, conversa_id, autor, autor_nome, texto, id_externo, em)
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string }) {
+    const valores = [m.id ?? randomUUID(), m.conversaId, m.autor, m.autorNome ?? null, m.texto, m.idExterno || null, m.em];
+    const inserir = `insert into sintonia.mensagens (id, conversa_id, autor, autor_nome, texto, id_externo, em)
        values ($1, $2, $3, $4, $5, $6, $7)
-       on conflict (id_externo) do nothing`,
-      [randomUUID(), m.conversaId, m.autor, m.autorNome ?? null, m.texto, m.idExterno || null, m.em],
+       on conflict (id_externo) do nothing`;
+    if (!m.anexo) {
+      const r = await this.pool.query(inserir, valores);
+      return (r.rowCount ?? 0) > 0;
+    }
+    // Mensagem e dados da mídia num comando só: ou entram os dois, ou nenhum (mensagem repetida).
+    const a = m.anexo;
+    const r = await this.pool.query(
+      `with nova as (${inserir} returning id)
+       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao)
+       select id, $8, $9, $10, $11, $12, $13, $14, $15 from nova`,
+      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao],
+    );
+    return (r.rowCount ?? 0) > 0;
+  }
+
+  async midia(mensagemId: string) {
+    const { rows } = await this.pool.query<LinhaMensagem & { conteudo: Buffer | null }>(
+      `select ${COLUNAS_MENSAGEM}, md.conteudo
+         from sintonia.midias md join sintonia.mensagens m on m.id = md.mensagem_id
+        where md.mensagem_id = $1`,
+      [mensagemId],
+    );
+    const r = rows[0];
+    if (!r) return undefined;
+    return { conversaId: r.conversa_id, anexo: anexoDa(r)!, conteudo: r.conteudo };
+  }
+
+  async guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }) {
+    await this.pool.query(
+      `update sintonia.midias set conteudo = $2, tamanho = $3, situacao = 'pronta', erro = null,
+         mimetype = coalesce(mimetype, $4), nome_arquivo = coalesce(nome_arquivo, $5)
+       where mensagem_id = $1`,
+      [mensagemId, r.conteudo, r.conteudo.length, r.mimetype ?? null, r.nomeArquivo ?? null],
+    );
+  }
+
+  async midiaGrande(mensagemId: string, tamanho?: number) {
+    await this.pool.query(
+      `update sintonia.midias set situacao = 'grande', conteudo = null, tamanho = coalesce($2, tamanho) where mensagem_id = $1`,
+      [mensagemId, tamanho ?? null],
+    );
+  }
+
+  async falhaMidia(mensagemId: string, erro: string, proxima?: Date) {
+    await this.pool.query(
+      `update sintonia.midias set erro = $2,
+         proxima_tentativa = coalesce($3, proxima_tentativa),
+         situacao = case when $3::timestamptz is null then 'falhou' else situacao end
+       where mensagem_id = $1 and situacao = 'pendente'`,
+      [mensagemId, erro.slice(0, 1000), proxima ?? null],
+    );
+  }
+
+  async reivindicarMidias(agora: Date, limite = 10, reservaMs = 5 * 60_000) {
+    // "skip locked": dois processos nunca baixam a mesma mídia; a reserva vence se o processo cair.
+    const { rows } = await this.pool.query<{ mensagem_id: string; conversa_id: string; canal_id: string; id_externo: string; tentativas: number }>(
+      `with prontas as (
+         select md.mensagem_id from sintonia.midias md
+          where md.situacao = 'pendente' and md.proxima_tentativa <= $1
+          order by md.proxima_tentativa
+          limit $2
+          for update skip locked
+       )
+       update sintonia.midias md
+          set tentativas = md.tentativas + 1,
+              proxima_tentativa = $1::timestamptz + make_interval(secs => $3::double precision / 1000)
+         from prontas, sintonia.mensagens m, sintonia.conversas c
+        where md.mensagem_id = prontas.mensagem_id and m.id = md.mensagem_id and c.id = m.conversa_id
+          and m.id_externo is not null
+       returning md.mensagem_id, m.conversa_id, c.canal_id, m.id_externo, md.tentativas`,
+      [agora, limite, reservaMs],
+    );
+    return rows.map(
+      (r): MidiaPendente => ({ mensagemId: r.mensagem_id, conversaId: r.conversa_id, canalId: r.canal_id, idExterno: r.id_externo, tentativas: r.tentativas }),
+    );
+  }
+
+  async rebaixarMidia(mensagemId: string, agora: Date) {
+    const r = await this.pool.query(
+      `update sintonia.midias set situacao = 'pendente', tentativas = 0, proxima_tentativa = $2, erro = null
+        where mensagem_id = $1 and situacao = 'falhou'`,
+      [mensagemId, agora],
     );
     return (r.rowCount ?? 0) > 0;
   }
@@ -151,39 +282,25 @@ export class RepositorioPostgres implements Repositorio {
   }
 
   async ultimasMensagens() {
-    const { rows } = await this.pool.query<{ id: string; conversa_id: string; autor: Mensagem['autor']; autor_nome: string | null; texto: string; id_externo: string | null; em: Date }>(
-      `select distinct on (conversa_id) id, conversa_id, autor, autor_nome, texto, id_externo, em
-         from sintonia.mensagens order by conversa_id, em desc, id desc`,
+    const { rows } = await this.pool.query<LinhaMensagem>(
+      `select distinct on (m.conversa_id) ${COLUNAS_MENSAGEM}
+         from sintonia.mensagens m left join sintonia.midias md on md.mensagem_id = m.id
+        order by m.conversa_id, m.em desc, m.id desc`,
     );
-    return new Map(rows.map((r) => [r.conversa_id, { id: r.id, conversaId: r.conversa_id, autor: r.autor, autorNome: r.autor_nome ?? undefined, texto: r.texto, em: r.em, idExterno: r.id_externo ?? undefined }]));
+    return new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)]));
   }
 
   async mensagens(conversaId: string, limite = 40) {
-    const { rows } = await this.pool.query<{
-      id: string;
-      conversa_id: string;
-      autor: Mensagem['autor'];
-      autor_nome: string | null;
-      texto: string;
-      id_externo: string | null;
-      em: Date;
-    }>(
+    const { rows } = await this.pool.query<LinhaMensagem>(
       `select * from (
-         select id, conversa_id, autor, autor_nome, texto, id_externo, em
-           from sintonia.mensagens where conversa_id = $1
-          order by em desc, id desc limit $2
+         select ${COLUNAS_MENSAGEM}
+           from sintonia.mensagens m left join sintonia.midias md on md.mensagem_id = m.id
+          where m.conversa_id = $1
+          order by m.em desc, m.id desc limit $2
        ) ultimas order by em asc`,
       [conversaId, limite],
     );
-    return rows.map((r) => ({
-      id: r.id,
-      conversaId: r.conversa_id,
-      autor: r.autor,
-      autorNome: ou(r.autor_nome),
-      texto: r.texto,
-      idExterno: ou(r.id_externo),
-      em: r.em,
-    }));
+    return rows.map(paraMensagem);
   }
 
   async registrarEnviadoPorNos(idExterno: string) {

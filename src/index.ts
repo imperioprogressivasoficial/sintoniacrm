@@ -6,6 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
 import { ArmazemMemoria, ArmazemPostgres, Conexoes } from './conexoes/conexoes.js';
 import { Cofre } from './conexoes/cofre.js';
+import { Midias } from './app/midias.js';
+import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
@@ -123,6 +125,9 @@ conexoes.aoMudar(aplicarConexoes);
 await conexoes.carregar();
 const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.destinosRelatorio() : cfg.destinosRelatorio);
 
+// Fotos, áudios, vídeos e documentos recebidos: baixados à parte, sem segurar o texto.
+const midias = new Midias(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log);
+
 const sintonia = new Sintonia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
@@ -130,6 +135,7 @@ const sintonia = new Sintonia({
   agente,
   log,
   trava,
+  midias,
   avisarEquipe: async (texto) => {
     // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
     const n = numeros.find(ehReal);
@@ -166,13 +172,20 @@ const app = criarServidor({
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
-  clienteTeste: async ({ unidade, nome, telefone, texto }) => {
+  midias,
+  clienteTeste: async ({ unidade, nome, telefone, texto, midia }) => {
     const canalId = canalTesteDa(unidade);
     const agora = new Date();
     // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
     const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
     if (nova && !iaLigada) await sintonia.mudarModo(conversa.id, 'humano');
-    await sintonia.receber({ canalId, telefone, nome, texto, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora });
+    // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
+    const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;
+    const anexo = midia && tipo
+      ? { tipo, mimetype: midia.mimetype, nomeArquivo: tipo === 'documento' ? (midia.nomeArquivo ?? 'arquivo') : undefined, duracaoSeg: midia.duracaoSeg, legenda: texto, voz: tipo === 'audio' || undefined, base64: midia.base64 }
+      : undefined;
+    const conteudo = anexo ? textoDoAnexo(anexo.tipo, texto, anexo.nomeArquivo) : (texto ?? '');
+    await sintonia.receber({ canalId, telefone, nome, texto: conteudo, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora, ...(anexo ? { anexo } : {}) });
   },
   revisar: async (conversaId, rascunho) => {
     const conversa = await repo.buscarConversa(conversaId);
@@ -191,6 +204,7 @@ const app = criarServidor({
 let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
+  midias.avisar(); // novas tentativas de download que já venceram
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);

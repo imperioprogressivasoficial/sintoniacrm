@@ -16,6 +16,7 @@ import { atualizacoesDeHoje } from './app/atualizacoes.js';
 import { ligacoesDoDia, quemLigar, registrarLigacao } from './app/ligacoes.js';
 import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
+import { registrarRotasMidia } from './web/midias.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
 
 export interface DependenciasServidor {
@@ -38,8 +39,16 @@ export interface DependenciasServidor {
   fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
   situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number };
-  /** Simulador: uma "cliente" escreve pelo WhatsApp de teste. */
-  clienteTeste?: (p: { unidade: 'norte' | 'sumare'; nome: string; telefone: string; texto: string }) => Promise<void>;
+  /** Simulador: uma "cliente" escreve pelo WhatsApp de teste (texto e, se quiser, uma mídia de teste). */
+  clienteTeste?: (p: {
+    unidade: 'norte' | 'sumare';
+    nome: string;
+    telefone: string;
+    texto?: string;
+    midia?: { base64: string; mimetype: string; nomeArquivo?: string; duracaoSeg?: number };
+  }) => Promise<void>;
+  /** Baixador de mídias recebidas (fotos, áudios...): avisado para tentar de novo. */
+  midias?: { avisar(): void };
 }
 
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
@@ -132,7 +141,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em } : null };
+        return { ...c, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 
@@ -250,17 +259,31 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     simulador: Boolean(d.clienteTeste),
   }));
 
-  const ClienteTeste = z.object({
-    unidade: z.enum(['norte', 'sumare']),
-    nome: z.string().trim().min(2).max(60),
-    telefone: z.string().regex(/^5599\d{9}$/, 'Telefone de teste inválido'),
-    texto: z.string().trim().min(1).max(2000),
-  });
-  app.post('/api/teste/cliente', async (req, reply) => {
+  const ClienteTeste = z
+    .object({
+      unidade: z.enum(['norte', 'sumare']),
+      nome: z.string().trim().min(2).max(60),
+      telefone: z.string().regex(/^5599\d{9}$/, 'Telefone de teste inválido'),
+      texto: z.string().trim().max(2000).optional(),
+      /** Mídia de teste: como se a cliente mandasse uma foto, áudio, vídeo ou documento. */
+      midia: z
+        .object({
+          base64: z.string().min(1),
+          mimetype: z.string().regex(/^[\w.+-]+\/[\w.+-]+(\s*;.*)?$/),
+          nomeArquivo: z.string().trim().min(1).max(200).optional(),
+          duracaoSeg: z.number().min(0).max(4 * 3600).optional(),
+        })
+        .optional(),
+    })
+    .refine((b) => Boolean(b.texto) || Boolean(b.midia), 'Escreva a mensagem ou mande um arquivo');
+  app.post('/api/teste/cliente', { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     if (!d.clienteTeste) return reply.code(404).send({ erro: 'Simulador desligado' });
     await d.clienteTeste(ClienteTeste.parse(req.body));
     return { ok: true };
   });
+
+  // ---------- Fotos, áudios, vídeos e documentos ----------
+  registrarRotasMidia(app, { sintonia: d.sintonia, repo: d.repo, midias: d.midias, agora: d.agora, conversaVisivel, quemDe: (req) => req.usuario });
 
   // Painel e relatório só contam as conversas que a pessoa pode ver.
   const filtroDe = (req: FastifyRequest) => (req.usuario && !veTudo(req.usuario) ? visivelPara(req) : undefined);
