@@ -13,6 +13,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/conexoes': { arquivo: 'conexoes.html', tipo: 'text/html; charset=utf-8' },
   '/estilo.css': { arquivo: 'estilo.css', tipo: 'text/css; charset=utf-8' },
   '/marca.svg': { arquivo: 'marca.svg', tipo: 'image/svg+xml' },
+  '/ds.css': { arquivo: 'ds.css', tipo: 'text/css; charset=utf-8' },
+  '/acesso-rapido.js': { arquivo: 'acesso-rapido.js', tipo: 'text/javascript; charset=utf-8' },
 };
 
 export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void {

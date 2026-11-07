@@ -1,0 +1,202 @@
+/*
+ * Design system da Sintonia.
+ * Estrutura e medidas do WhatsApp (as atendentes já sabem usar), com a identidade da Sintonia:
+ * azul #106EBE e menta #0FFCBE no lugar do verde, e brilho nos pontos de ação.
+ * Claro e escuro seguem o aparelho.
+ */
+:root {
+  /* marca */
+  --marca-azul: #106ebe;
+  --marca-azul-escuro: #0a4c86;
+  --marca-menta: #0ffcbe;
+  --marca-gradiente: linear-gradient(135deg, #1a8be0 0%, #106ebe 45%, #0bc7a8 100%);
+  --brilho-menta: 0 0 0 1px rgba(15, 252, 190, .25), 0 6px 22px rgba(15, 252, 190, .38);
+  --brilho-azul: 0 6px 22px rgba(16, 110, 190, .38);
+
+  /* superfícies (medidas e papéis iguais ao WhatsApp) */
+  --fundo: #ffffff;
+  --painel: #f1f4f8;
+  --chat: #eaf0f6;
+  --linha: #e4eaf0;
+  --hover: #f4f7fa;
+  --sel: #e9f1f9;
+  --texto: #0d1b2a;
+  --sub: #5f7183;
+  --icone: #4f6476;
+  --entrada: #ffffff;
+
+  /* conversa */
+  --recebida: #ffffff;
+  --enviada: #d4f8ee;
+  --check: #2f9ae8;
+  --data: #ffffff;
+  --sombra: 0 1px .5px rgba(13, 27, 42, .13);
+  --textura: rgba(16, 110, 190, .05);
+  --aviso: #fff3d1;
+  --aviso-txt: #5e4b00;
+
+  /* acentos: onde o WhatsApp usa verde, a Sintonia usa azul/menta */
+  --verde: #0bb89a;          /* hora de não lida, destaques de texto */
+  --verde-forte: #106ebe;     /* botões principais, enviar */
+  --badge: #0ffcbe;           /* bolinha de não lidas */
+  --badge-txt: #063a4d;
+  --chip-ativo: #d5f9ef;
+  --chip-ativo-txt: #0a6b5b;
+  --ia: #0a8f7a;
+  --citacao: #e6edf3;
+  --azul: #106ebe;
+  --boneco-fundo: #dbe4ec;
+  --boneco: #ffffff;
+  --vidro: rgba(255, 255, 255, .78);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0e1824;
+    --painel: #172434;
+    --chat: #08111b;
+    --linha: #1f2d3d;
+    --hover: #172434;
+    --sel: #1f3046;
+    --texto: #e8eef4;
+    --sub: #8b9cad;
+    --icone: #a9b8c6;
+    --entrada: #1f3046;
+
+    --recebida: #182636;
+    --enviada: #0b4f63;
+    --check: #5ec4ff;
+    --data: #142131;
+    --sombra: 0 1px .5px rgba(0, 0, 0, .45);
+    --textura: rgba(15, 252, 190, .03);
+    --aviso: #2a2410;
+    --aviso-txt: #ffd47a;
+
+    --verde: #0ffcbe;
+    --verde-forte: #1a8be0;
+    --badge: #0ffcbe;
+    --badge-txt: #04263a;
+    --chip-ativo: #0d3a40;
+    --chip-ativo-txt: #b9ffee;
+    --ia: #0ffcbe;
+    --citacao: #13202e;
+    --boneco-fundo: #34485c;
+    --boneco: #a9bacb;
+    --vidro: rgba(14, 24, 36, .78);
+  }
+}
+
+/* ---------- componentes ---------- */
+
+/* botão principal com brilho (enviar, salvar, conectar) */
+.ds-primario {
+  background: var(--marca-gradiente) !important;
+  color: #fff !important;
+  box-shadow: var(--brilho-azul);
+}
+.ds-primario:hover { filter: brightness(1.06); }
+
+/* bolinha de não lidas com brilho menta */
+.ds-badge {
+  background: var(--badge) !important;
+  color: var(--badge-txt) !important;
+  box-shadow: 0 0 10px rgba(15, 252, 190, .55);
+}
+
+/* ícone da marca com halo */
+.ds-marca { filter: drop-shadow(0 4px 14px rgba(16, 110, 190, .45)); }
+
+/* ---------- bolinha de acesso rápido (estilo AssistiveTouch) ---------- */
+.ar {
+  position: fixed;
+  z-index: 40;
+  width: 58px;
+  height: 58px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.ar-botao {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--vidro);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid var(--linha);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .22), var(--brilho-menta);
+  transition: transform .18s ease, opacity .2s ease;
+}
+.ar-botao:active { transform: scale(.94); }
+.ar-botao img { width: 34px; height: 34px; border-radius: 10px; }
+.ar-botao::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 252, 190, .45);
+  animation: ar-pulso 2.8s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes ar-pulso {
+  0% { transform: scale(.92); opacity: .9; }
+  70% { transform: scale(1.18); opacity: 0; }
+  100% { opacity: 0; }
+}
+.ar.aberta .ar-botao::after { animation: none; opacity: 0; }
+.ar.ociosa:not(.aberta) .ar-botao { opacity: .55; }
+.ar-item {
+  all: unset;
+  cursor: pointer;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+  transform: translate(0, 0) scale(.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .26s cubic-bezier(.2, .9, .3, 1.25), opacity .18s ease;
+}
+.ar-item svg { width: 24px; height: 24px; }
+.ar-item span {
+  position: absolute;
+  top: 100%;
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--texto);
+  background: var(--vidro);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.ar.aberta .ar-item { opacity: 1; pointer-events: auto; }
+.ar-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(4, 12, 20, .28);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.ar-fundo.ver { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .ar-botao::after { animation: none; }
+  .ar-item { transition: opacity .15s ease; }
+}
