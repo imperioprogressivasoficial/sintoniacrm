@@ -395,6 +395,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 (() => {
   const $ = (id) => document.getElementById(id);
   const ETAPAS = [['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];

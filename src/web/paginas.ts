@@ -36,7 +36,7 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
       }
       reply
         .header('content-type', tipo)
-        .header('cache-control', tipo.startsWith('text/html') ? 'no-cache' : 'public, max-age=3600')
+        .header('cache-control', tipo.startsWith('text/html') ? 'no-store, max-age=0' : 'public, max-age=3600')
         .header('x-content-type-options', 'nosniff')
         .header('referrer-policy', 'strict-origin-when-cross-origin');
       if (tipo.startsWith('text/html')) reply.header('x-frame-options', 'DENY');
