@@ -18,10 +18,23 @@ export interface OpcoesAuth {
   agora?: () => Date;
   /** Permissões, convites, sessões e auditoria (padrão: escolhido pelo tipo de `contas`). */
   acessos?: Acessos;
+  /** Como o link de "esqueci minha senha" chega à pessoa (e-mail do sistema e/ou WhatsApp). */
+  recuperacao?: Recuperacao;
 }
 
+/** Envio do link de redefinição. Sem nenhum canal, a tela orienta a pedir à administração. */
+export interface Recuperacao {
+  canais(): Promise<{ email: boolean; whatsapp: boolean }>;
+  /** Manda o link pelos canais disponíveis; devolve por quais saiu. */
+  enviar(u: Usuario, link: string, validadeMin: number): Promise<string[]>;
+}
+
+/** Validade do link pedido pela própria pessoa. */
+export const VALIDADE_ESQUECI_MIN = 60;
+export const RESPOSTA_ESQUECI = 'Se houver uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora.';
+
 /** Rotas da API que não pedem login. */
-const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao']);
+const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/auth/esqueci', '/api/auth/esqueci/canais', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao']);
 /** O que quem precisa trocar a senha (ou está fora do horário) ainda pode chamar. */
 const SEMPRE = new Set(['/api/auth/eu', '/api/auth/senha', '/api/auth/sair']);
 
@@ -62,6 +75,14 @@ class Limite {
   limpar(chave: string) {
     this.tentativas.delete(chave);
   }
+}
+
+/** Endereço por onde a pessoa acessou (base dos links mandados para ela). */
+export function linkBase(req: FastifyRequest): string {
+  if (process.env.SINTONIA_URL_PUBLICA) return process.env.SINTONIA_URL_PUBLICA.replace(/\/+$/, '');
+  const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
+  const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? (req.protocol || 'http');
+  return `${proto}://${host}`;
 }
 
 export async function usuarioDaRequisicao(req: FastifyRequest, o: OpcoesAuth): Promise<Usuario | undefined> {
@@ -150,6 +171,41 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     }
     reply.header('set-cookie', cookie(token, horas * 3600));
     return { nome: u.nome, papel: u.papel, ...(extras?.trocarSenha ? { trocarSenha: true } : {}) };
+  });
+
+  // ---------------------------------------------------------------- esqueci minha senha
+  // A resposta é sempre a mesma (exista ou não a conta) e o envio acontece fora da requisição,
+  // para nem o tempo de resposta revelar quem tem conta. O token só fica guardado como hash.
+  const esqueciIp = new Limite(5, 60 * 60_000);
+  const esqueciEmail = new Limite(3, 60 * 60_000);
+  const semCanais = { email: false, whatsapp: false };
+  const canaisRecuperacao = async () => (o.recuperacao && acessos ? await o.recuperacao.canais().catch(() => semCanais) : semCanais);
+  app.get('/api/auth/esqueci/canais', async () => {
+    const c = await canaisRecuperacao();
+    return { ...c, disponivel: c.email || c.whatsapp };
+  });
+  const Esqueci = z.object({ email: z.string().trim().toLowerCase().email().max(200) });
+  app.post('/api/auth/esqueci', async (req, reply) => {
+    const b = Esqueci.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ erro: 'Informe um e-mail válido.' });
+    const t = agora().getTime();
+    const email = b.data.email;
+    if (esqueciIp.excedeu(req.ip, t) || esqueciEmail.excedeu(email, t)) {
+      return reply.code(429).send({ erro: 'Muitos pedidos seguidos. Espere um pouco e tente de novo.' });
+    }
+    esqueciIp.registrar(req.ip, t);
+    esqueciEmail.registrar(email, t);
+    const canais = await canaisRecuperacao();
+    if (!canais.email && !canais.whatsapp) return { ok: true, mensagem: RESPOSTA_ESQUECI, semEnvio: true };
+    const base = linkBase(req);
+    void (async () => {
+      const u = await o.contas.buscarPorEmail(email);
+      if (!u || !u.ativo || !acessos || !o.recuperacao) return;
+      const token = await acessos.criarConvite(u.id, 'redefinir', new Date(agora().getTime() + VALIDADE_ESQUECI_MIN * 60_000));
+      const usados = await o.recuperacao.enviar(u, `${base}/nova-senha?t=${encodeURIComponent(token)}`, VALIDADE_ESQUECI_MIN);
+      await acessos.auditar({ empresaId: u.empresaId, autorId: u.id, autorNome: u.nome, alvoId: u.id, alvoNome: u.nome, acao: 'pediu nova senha', detalhe: usados.length ? `link enviado por ${usados.join(' e ')}` : 'nenhum envio funcionou', em: agora() });
+    })().catch((e) => req.log.warn({ err: e }, 'falha ao enviar o link de redefinição'));
+    return { ok: true, mensagem: RESPOSTA_ESQUECI };
   });
 
   app.post('/api/auth/sair', async (req, reply) => {

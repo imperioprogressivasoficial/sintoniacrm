@@ -11,6 +11,10 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/': { arquivo: 'index.html', tipo: 'text/html; charset=utf-8' },
   '/entrar': { arquivo: 'entrar.html', tipo: 'text/html; charset=utf-8' },
   '/convite': { arquivo: 'convite.html', tipo: 'text/html; charset=utf-8' },
+  '/esqueci-senha': { arquivo: 'esqueci-senha.html', tipo: 'text/html; charset=utf-8' },
+  '/nova-senha': { arquivo: 'nova-senha.html', tipo: 'text/html; charset=utf-8' },
+  // Tela de "abrindo o aplicativo" (login e primeira carga do /app).
+  '/abertura.css': { arquivo: 'abertura.css', tipo: 'text/css; charset=utf-8' },
   '/app': { arquivo: 'app.html', tipo: 'text/html; charset=utf-8' },
   '/conexoes': { arquivo: 'conexoes.html', tipo: 'text/html; charset=utf-8' },
   '/estilo.css': { arquivo: 'estilo.css', tipo: 'text/css; charset=utf-8' },

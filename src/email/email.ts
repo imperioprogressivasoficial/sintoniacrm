@@ -491,6 +491,27 @@ export class EmailMarketing {
     return rows[0];
   }
 
+  /** Há uma conta remetente ativa (para e-mails do sistema, como a redefinição de senha)? */
+  async temContaAtiva(): Promise<boolean> {
+    return Boolean(await this.contaPadrao());
+  }
+
+  /** E-mail do sistema (fora das campanhas): sai na hora pela conta padrão, sem rastreio. */
+  async enviarSistema(m: { para: string; nome?: string; assunto: string; html: string; texto: string }): Promise<boolean> {
+    const conta = await this.contaPadrao();
+    if (!conta) return false;
+    await this.o.transporte(this.envioDe(conta)).enviar({
+      de: { nome: conta.remetente_nome, email: conta.remetente_email },
+      para: { email: m.para, nome: m.nome ?? null },
+      responderPara: conta.responder_para,
+      assunto: m.assunto,
+      html: m.html,
+      texto: m.texto,
+      messageId: `<sistema-${novoToken()}@${dominio(conta.remetente_email)}>`,
+    });
+    return true;
+  }
+
   private conferirPronta(c: Awaited<ReturnType<EmailMarketing['campanha']>>) {
     if (!c.contaId) throw new ErroEmail('Escolha a conta remetente (configure uma em Conexões → E-mail).');
     if (!c.assunto.trim()) throw new ErroEmail('Escreva o assunto do e-mail.');

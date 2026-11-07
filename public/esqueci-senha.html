@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Esqueci minha senha · Sintonia CRM</title>
+<meta name="theme-color" content="#106EBE">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icone-180.png" media="(prefers-color-scheme: light)">
+<link rel="apple-touch-icon" href="/icone-escuro-180.png" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="/icone-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sintonia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@400;700&display=swap">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/abertura.css">
+<meta name="referrer" content="no-referrer">
+<style>
+  .lado-form .miudo a, .lado-form .voltar { color: #106EBE; font-weight: 600; text-decoration: none; }
+  .lado-form .miudo a:hover, .lado-form .voltar:hover { text-decoration: underline; }
+  .lado-form .voltar { font-size: 13.5px; justify-self: start; }
+  .lado-form .feito { display: grid; gap: 12px; }
+  .lado-form .feito .icone-ok { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #dffcf4; color: #087a5c; }
+  .lado-form .feito .icone-ok svg { width: 24px; height: 24px; }
+  .lado-form .forca { height: 4px; border-radius: 999px; background: rgba(16,110,190,.12); overflow: hidden; }
+  .lado-form .forca span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #3aa0ff, #0ffcbe); transition: width .25s ease; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="tela-login">
+  <section class="lado-azul">
+    <div class="arco" aria-hidden="true"></div>
+    <a class="logo" href="/" aria-label="Sintonia CRM, início"><img src="/simbolo-escuro.png" alt="" width="40" height="40" style="filter:drop-shadow(0 4px 14px rgba(15,252,190,.35))"><span>sintonia<b>.</b></span></a>
+    <div>
+      <h1>Acontece. <em>Vamos criar uma senha nova.</em></h1>
+      <p>Informe o e-mail da sua conta. Mandamos um link seguro, válido por 1 hora.</p>
+    </div>
+    <span></span>
+  </section>
+  <section class="lado-form">
+    <form class="cartao" id="form-esqueci" novalidate>
+      <a class="voltar" href="/entrar">← Voltar para entrar</a>
+      <div>
+        <h2>Esqueci minha senha</h2>
+        <p class="sub" id="sub">Digite o e-mail que você usa para entrar.</p>
+      </div>
+      <div class="campo" id="bloco-email"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="username" inputmode="email" required></div>
+      <div id="aviso" role="status" aria-live="polite"></div>
+      <button class="botao botao-azul" type="submit" id="ok">Enviar link</button>
+      <div class="feito" id="feito" hidden>
+        <span class="icone-ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8 6 8-6"/><rect x="3" y="5" width="18" height="14" rx="3"/></svg></span>
+        <p class="miudo" id="feito-txt" style="font-size:14px;color:inherit"></p>
+        <p class="miudo">Não chegou? Confira o spam ou a caixa de promoções. Se ainda assim não aparecer, peça para a administração redefinir sua senha.</p>
+      </div>
+      <p class="miudo" id="sem-envio" hidden><b>Peça para a administração redefinir sua senha.</b> Ainda não há envio de e-mail configurado nesta empresa: a administração gera um link em Equipe › Atendentes e acessos.</p>
+    </form>
+  </section>
+</div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const email = $('email');
+  const q = new URLSearchParams(location.search).get('email'); if (q) email.value = q;
+  const aviso = (m, tipo = 'erro') => { $('aviso').className = 'aviso ' + tipo; $('aviso').textContent = m; };
+  const semEnvio = () => { $('sem-envio').hidden = false; $('ok').hidden = true; $('bloco-email').hidden = true; $('sub').textContent = 'Não conseguimos mandar o link por aqui.'; };
+  fetch('/api/auth/esqueci/canais').then((r) => r.json()).then((c) => { if (!c.disponivel) semEnvio(); }).catch(() => {});
+  $('form-esqueci').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('aviso').className = ''; $('aviso').textContent = '';
+    const v = email.value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return aviso('Confira o e-mail.');
+    $('ok').disabled = true; $('ok').textContent = 'Enviando…';
+    try {
+      const r = await fetch('/api/auth/esqueci', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: v }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { aviso(j.erro || 'Não deu certo agora. Tente de novo.'); return; }
+      if (j.semEnvio) return semEnvio();
+      $('bloco-email').hidden = true; $('ok').hidden = true;
+      $('sub').textContent = 'Pedido recebido.';
+      $('feito-txt').textContent = j.mensagem;
+      $('feito').hidden = false;
+    } catch { aviso('Sem conexão. Tente de novo.'); }
+    finally { $('ok').disabled = false; $('ok').textContent = 'Enviar link'; }
+  });
+})();
+</script>
+</body>
+</html>

@@ -190,6 +190,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   addEventListener('pointerdown', prepararAudio, { once: true, capture: true });
   addEventListener('keydown', prepararAudio, { once: true, capture: true });
   function tocar() {
+    // O som é o mesmo da mensagem nova (padrão: Futurista), desenhado em /telas/alertas.js.
+    const al = window.SintoniaTelas.alertas;
+    if (al?.tocarMensagem && al.tocarMensagem()) return;
     try {
       prepararAudio(); if (!audio || audio.state !== 'running') return;
       const t = audio.currentTime;
@@ -338,6 +341,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       painel.style.right = `${Math.max(12, Math.round(innerWidth - r.right))}px`;
       painel.style.top = `${Math.round(r.bottom + 8)}px`;
       painel.style.maxHeight = `calc(100vh - ${Math.round(r.bottom + 20)}px)`;
+    } else if (matchMedia('(min-width: 761px)').matches) {
+      // Computador sem sino no topo (aberto pelo menu): mesmo lugar, no canto superior direito.
+      painel.style.left = 'auto'; painel.style.right = '16px'; painel.style.top = '64px'; painel.style.maxHeight = 'calc(100vh - 80px)';
     } else { painel.style.left = ''; painel.style.right = ''; painel.style.top = ''; painel.style.maxHeight = ''; }
   }
 

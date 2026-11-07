@@ -61,6 +61,7 @@ import { configCapiDe, registrarRastreio } from './rastreio/rotas.js';
 import { Transmissoes } from './transmissoes/transmissoes.js';
 import { registrarTransmissoes } from './transmissoes/rotas.js';
 import { EmailMarketing } from './email/email.js';
+import { recuperacaoPorEmail } from './auth/recuperacao.js';
 import { registrarEmail } from './email/rotas.js';
 import { transporteArquivo, transporteReal } from './email/transporte.js';
 import { calendarioPostgres } from './automacoes/calendario.js';
@@ -403,7 +404,7 @@ const app = criarServidor({
   sintonia,
   repo,
   log,
-  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
+  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}) },
   fila: { fila, avisar: () => trabalhador.avisar() },
   contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {

@@ -45,7 +45,10 @@ export interface InscricaoPush {
 }
 
 /** Sons de mensagem (Web Audio, desenhados no app). */
-export const SONS_MENSAGEM = ['gota', 'bolha', 'sininho', 'duplo'] as const;
+export const SONS_MENSAGEM = ['futurista', 'gota', 'bolha', 'sininho', 'duplo'] as const;
+/** Alarmes de cliente esperando. */
+export const SONS_ALARME = ['futurista', 'sirene'] as const;
+export type SomAlarme = (typeof SONS_ALARME)[number];
 export type SomMensagem = (typeof SONS_MENSAGEM)[number];
 
 const HORA = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM');
@@ -56,7 +59,7 @@ export const EsquemaPreferencias = z.object({
   push: z.boolean(),
   naoPerturbe: z.object({ ligado: z.boolean(), inicio: HORA, fim: HORA }),
   mensagens: z.object({ push: z.boolean(), som: z.boolean(), vibrar: z.boolean(), tipoSom: z.enum(SONS_MENSAGEM), volume: z.number().int().min(0).max(100) }).partial(),
-  espera: z.object({ push: z.boolean(), alarme: z.boolean(), volume: z.number().int().min(0).max(100), silencioAte: z.string().datetime().nullable() }).partial(),
+  espera: z.object({ push: z.boolean(), alarme: z.boolean(), tipoAlarme: z.enum(SONS_ALARME), volume: z.number().int().min(0).max(100), silencioAte: z.string().datetime().nullable() }).partial(),
 });
 export type Preferencias = {
   tipos: Record<(typeof TIPOS_NOTIFICACAO)[number], boolean>;
@@ -66,7 +69,7 @@ export type Preferencias = {
   /** Cada mensagem recebida: push que toca de novo, som e vibração com o app aberto. */
   mensagens: { push: boolean; som: boolean; vibrar: boolean; tipoSom: SomMensagem; volume: number };
   /** Cliente esperando: push dos alertas, alarme repetido no app e silêncio temporário (ISO ou null). */
-  espera: { push: boolean; alarme: boolean; volume: number; silencioAte: string | null };
+  espera: { push: boolean; alarme: boolean; tipoAlarme: SomAlarme; volume: number; silencioAte: string | null };
 };
 
 export const PREFERENCIAS_PADRAO: Preferencias = {
@@ -74,8 +77,8 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   som: true,
   push: true,
   naoPerturbe: { ligado: false, inicio: '22:00', fim: '07:00' },
-  mensagens: { push: true, som: true, vibrar: true, tipoSom: 'gota', volume: 70 },
-  espera: { push: true, alarme: true, volume: 80, silencioAte: null },
+  mensagens: { push: true, som: true, vibrar: true, tipoSom: 'futurista', volume: 70 },
+  espera: { push: true, alarme: true, tipoAlarme: 'futurista', volume: 80, silencioAte: null },
 };
 
 /** Junta o que está guardado com o padrão (tipos novos nascem ligados). */

@@ -90,10 +90,10 @@ export function registrarUsuarios(app: FastifyInstance, o: OpcoesUsuarios): void
   };
   const auditar = (g: Usuario, alvo: Pick<Usuario, 'id' | 'nome'> | null, acao: string, detalhe?: string) =>
     acessos.auditar({ empresaId: g.empresaId, autorId: g.id, autorNome: g.nome, alvoId: alvo?.id ?? null, alvoNome: alvo?.nome ?? null, acao, detalhe: detalhe ?? null, em: o.agora() });
-  const link = (req: FastifyRequest, token: string) => {
+  const link = (req: FastifyRequest, token: string, pagina = 'convite') => {
     const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
     const proto = (req.headers['x-forwarded-proto'] as string | undefined) ?? (req.protocol || 'http');
-    return `${proto}://${host}/convite?t=${encodeURIComponent(token)}`;
+    return `${proto}://${host}/${pagina}?t=${encodeURIComponent(token)}`;
   };
   /** Ajustes que este gestor pode dar (admin dá qualquer coisa; os outros, só o que têm). */
   const conferirAjustes = (g: Usuario, meu: Permissoes, bruto: unknown): Ajustes => {
@@ -270,7 +270,7 @@ export function registrarUsuarios(app: FastifyInstance, o: OpcoesUsuarios): void
     const expiraEm = new Date(o.agora().getTime() + horas * 3600_000);
     const token = await acessos.criarConvite(alvo.id, 'redefinir', expiraEm);
     await auditar(g, alvo, 'redefinir', `link válido por ${horas} h`);
-    return { link: link(req, token), expiraEm: expiraEm.toISOString() };
+    return { link: link(req, token, 'nova-senha'), expiraEm: expiraEm.toISOString() };
   });
 
   app.get('/api/acessos/usuarios/:id/sessoes', async (req) => {

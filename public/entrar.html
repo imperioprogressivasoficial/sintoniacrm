@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@400;700&display=swap">
 <link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/abertura.css">
 </head>
 <body>
 <div class="tela-login">
@@ -45,11 +46,16 @@
       </div>
       <div id="aviso-entrar" role="status" aria-live="polite"></div>
       <button class="botao botao-azul" type="submit">Entrar</button>
-      <p class="miudo">Esqueceu a senha? Peça ao administrador da sua empresa para criar uma nova.</p>
+      <p class="miudo"><a href="/esqueci-senha" id="link-esqueci">Esqueci minha senha</a></p>
     </form>
   </section>
 </div>
 
+<div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo o aplicativo" hidden>
+  <div class="ab-simbolo" aria-hidden="true"><span class="ab-brilho"></span><span class="ab-anel"></span><img src="/simbolo-escuro.png" alt="" width="64" height="64"></div>
+  <p class="ab-texto">Abrindo o aplicativo<small>Preparando suas conversas</small></p>
+  <div class="ab-barra" aria-hidden="true"><span></span></div>
+</div>
 <script>
 (() => {
   const form = document.getElementById('form-entrar');
@@ -61,6 +67,29 @@
     senha.type = mostrando ? 'password' : 'text';
     ver.textContent = mostrando ? 'Mostrar' : 'Esconder';
   });
+  // Senha certa: o cartão sai com desfoque e escala, entra a tela "abrindo o aplicativo" e só então vai para o /app.
+  const abrirApp = () => {
+    const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ab = document.getElementById('abertura');
+    const p = (v) => ab.style.setProperty('--ab-p', String(v));
+    form.classList.add('saindo');
+    document.querySelector('.lado-azul')?.classList.add('saindo');
+    setTimeout(() => {
+      ab.hidden = false; ab.classList.add('ab-entrando'); p(0.06);
+      requestAnimationFrame(() => requestAnimationFrame(() => { ab.classList.remove('ab-entrando'); p(0.35); }));
+      setTimeout(() => p(0.6), reduz ? 120 : 450);
+      setTimeout(() => p(0.72), reduz ? 240 : 850);
+    }, reduz ? 120 : 360);
+    setTimeout(() => {
+      try { sessionStorage.setItem('sintonia.abertura', String(Date.now())); } catch {}
+      location.href = '/app';
+    }, reduz ? 450 : 1400);
+  };
+  const email = document.getElementById('email');
+  document.getElementById('link-esqueci').addEventListener('click', (e) => {
+    if (!email.value.trim()) return;
+    e.preventDefault(); location.href = '/esqueci-senha?email=' + encodeURIComponent(email.value.trim());
+  });
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const dados = Object.fromEntries(new FormData(form));
@@ -70,7 +99,7 @@
     try {
       const r = await fetch('/api/auth/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(dados) });
       const j = await r.json().catch(() => ({}));
-      if (r.ok) { location.href = '/app'; return; }
+      if (r.ok) { abrirApp(); return; }
       aviso.className = 'aviso erro';
       aviso.textContent = j.erro || 'Não foi possível entrar agora.';
     } catch { aviso.className = 'aviso erro'; aviso.textContent = 'Sem conexão. Tente de novo.'; }

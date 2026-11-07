@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
 <link rel="stylesheet" href="/ds.css">
+<link rel="stylesheet" href="/abertura.css">
 <style>
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -787,6 +788,30 @@
 <link rel="stylesheet" href="/responsivo.css">
 </head>
 <body>
+<div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo o aplicativo">
+  <div class="ab-simbolo" aria-hidden="true"><span class="ab-brilho"></span><span class="ab-anel"></span><img src="/simbolo-escuro.png" alt="" width="64" height="64"></div>
+  <p class="ab-texto">Abrindo o aplicativo<small>Carregando suas conversas</small></p>
+  <div class="ab-barra" aria-hidden="true"><span></span></div>
+</div>
+<script>
+// Carregamento inicial: some com fade quando a primeira lista é desenhada (ou em até 4 s, para nunca prender ninguém).
+(() => {
+  const ab = document.getElementById('abertura'); if (!ab) return;
+  let veio = false;
+  try { veio = Date.now() - Number(sessionStorage.getItem('sintonia.abertura') || 0) < 15000; sessionStorage.removeItem('sintonia.abertura'); } catch {}
+  let p = 0;
+  const por = (v) => { p = Math.max(p, Math.min(1, v)); ab.style.setProperty('--ab-p', String(p)); };
+  por(veio ? 0.72 : 0.14);
+  const passo = setInterval(() => por(p + (0.94 - p) * 0.14), 220);
+  let feito = false;
+  const pronto = () => {
+    if (feito) return; feito = true; clearInterval(passo); por(1);
+    setTimeout(() => { ab.classList.add('ab-saindo'); ab.setAttribute('aria-hidden', 'true'); setTimeout(() => ab.remove(), 700); }, 240);
+  };
+  window.SintoniaAbertura = { pronto };
+  setTimeout(pronto, 4000);
+})();
+</script>
 <div class="casca" id="casca">
   <aside class="lateral" id="lateral" aria-label="Menu">
     <div class="lt-topo">
@@ -873,7 +898,6 @@
     <div class="aviso-topo" id="aviso" hidden></div>
     <header class="topo-pc" id="topo-pc">
       <nav class="tp-trilha" id="tp-trilha" aria-label="Você está em"></nav>
-      <button class="tp-botao" id="lt-sino" type="button" title="Notificações" aria-label="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="tp-qtd" id="lt-sino-qtd" hidden></span></button>
     </header>
 
     <section class="vista ativa" id="v-conversas">
@@ -2359,6 +2383,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('qtd-nao-lidas').textContent = n ? String(n) : '';
     $('voltar-qtd').textContent = n ? String(n) : '';
     desenharLista();
+    window.SintoniaAbertura?.pronto();
     if (estado.aberta) await carregarConversa();
     if (estado.vista === 'funil') desenharFunil();
   }

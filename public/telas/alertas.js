@@ -54,8 +54,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------------------------------------------------------------- preferências da pessoa
   let prefs = null;
   const carregarPrefs = async () => { prefs = await api('/api/notificacoes/preferencias').catch(() => prefs); return prefs; };
-  const pm = () => (prefs && prefs.mensagens) || { push: true, som: true, vibrar: true, tipoSom: 'gota', volume: 70 };
-  const pe = () => (prefs && prefs.espera) || { push: true, alarme: true, volume: 80, silencioAte: null };
+  const pm = () => (prefs && prefs.mensagens) || { push: true, som: true, vibrar: true, tipoSom: 'futurista', volume: 70 };
+  const pe = () => (prefs && prefs.espera) || { push: true, alarme: true, tipoAlarme: 'futurista', volume: 80, silencioAte: null };
   addEventListener('sintonia:preferencias', (e) => { if (e.detail) prefs = e.detail; });
 
   // ---------------------------------------------------------------- sons (Web Audio)
@@ -63,18 +63,52 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const prep = () => { try { audio ??= new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch {} };
   addEventListener('pointerdown', prep, { capture: true });
   addEventListener('keydown', prep, { capture: true });
-  /** Uma nota: frequência inicial → final, forma, início, duração e volume relativo. */
-  function nota(f0, f1, tipo, ini, dur, v, ganho) {
+  /** Uma nota: frequência inicial → final, forma, início, duração, volume relativo e (opcional) para onde vai. */
+  function nota(f0, f1, tipo, ini, dur, v, ganho, destino, glide = 0.9) {
     const t = audio.currentTime + ini;
     const o = audio.createOscillator(), g = audio.createGain();
     o.type = tipo; o.frequency.setValueAtTime(f0, t);
-    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.9);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur * glide);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(Math.max(0.0002, v * ganho), t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + 0.02);
+    o.connect(g).connect(destino || audio.destination); o.start(t); o.stop(t + dur + 0.02);
+  }
+  /** Cadeia "sci-fi": filtro passa-baixa que abre + eco curto e discreto (o brilho). Some sozinha depois de `vida` s. */
+  function cadeiaFuturista(vida, abre = [1800, 7000]) {
+    const t = audio.currentTime;
+    const filtro = audio.createBiquadFilter();
+    filtro.type = 'lowpass'; filtro.Q.value = 5;
+    filtro.frequency.setValueAtTime(abre[0], t);
+    filtro.frequency.exponentialRampToValueAtTime(abre[1], t + Math.min(0.18, vida * 0.6));
+    const eco = audio.createDelay(0.3), volta = audio.createGain(), molhado = audio.createGain();
+    eco.delayTime.value = 0.075; volta.gain.value = 0.28; molhado.gain.value = 0.22;
+    filtro.connect(audio.destination);
+    filtro.connect(eco); eco.connect(volta).connect(eco); eco.connect(molhado).connect(audio.destination);
+    setTimeout(() => { try { filtro.disconnect(); eco.disconnect(); volta.disconnect(); molhado.disconnect(); } catch {} }, (vida + 1) * 1000);
+    return filtro;
+  }
+  /** Mensagem nova: dois tons subindo com leve glide e um brilho agudo, ~250 ms. */
+  function somFuturista(g) {
+    const saida = cadeiaFuturista(0.3);
+    nota(660, 990, 'sine', 0, 0.13, 0.55, g, saida, 0.55);
+    nota(990, 1480, 'triangle', 0.075, 0.17, 0.42, g, saida, 0.5);
+    nota(2960, 2960, 'sine', 0.1, 0.15, 0.09, g, saida);
+  }
+  /** Cliente esperando: arpejo que sobe em três degraus, repetido; insistente mas macio (sem dente de serra). */
+  function alarmeFuturista(voltas, g) {
+    const saida = cadeiaFuturista(voltas * 0.5 + 0.4, [1400, 5200]);
+    for (let i = 0; i < voltas; i++) {
+      const b = i * 0.5;
+      nota(523, 784, 'triangle', b, 0.12, 0.42, g, saida, 0.6);
+      nota(784, 1046, 'triangle', b + 0.11, 0.12, 0.42, g, saida, 0.6);
+      nota(1046, 1568, 'sine', b + 0.22, 0.2, 0.46, g, saida, 0.5);
+      nota(3136, 3136, 'sine', b + 0.24, 0.14, 0.06, g, saida);
+      nota(262, 262, 'sine', b, 0.36, 0.18, g, saida);
+    }
   }
   const SONS = {
+    futurista: { nome: 'Futurista (padrão)', tocar: (g) => somFuturista(g) },
     gota: { nome: 'Gota', tocar: (g) => { nota(1350, 520, 'sine', 0, 0.16, 0.5, g); nota(1750, 900, 'sine', 0.1, 0.14, 0.32, g); } },
     bolha: { nome: 'Bolha', tocar: (g) => { nota(420, 900, 'sine', 0, 0.09, 0.55, g); nota(620, 1300, 'sine', 0.11, 0.1, 0.45, g); } },
     sininho: { nome: 'Sininho', tocar: (g) => { nota(1568, 1568, 'triangle', 0, 0.42, 0.42, g); nota(2093, 2093, 'sine', 0.07, 0.5, 0.26, g); } },
@@ -84,17 +118,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     try {
       prep(); if (!audio || audio.state !== 'running') return false;
       const v = (volume ?? pm().volume) / 100; if (v <= 0) return false;
-      (SONS[tipo || pm().tipoSom] || SONS.gota).tocar(v * 0.6);
+      (SONS[tipo || pm().tipoSom] || SONS.futurista).tocar(v * 0.6);
       return true;
     } catch { return false; }
   }
-  /** Alarme de cliente esperando: sirene curta (mais longa no alerta forte). */
-  function tocarAlarme(nivel = 2, volume) {
+  const ALARMES = {
+    futurista: { nome: 'Futurista (padrão)', tocar: (voltas, v) => alarmeFuturista(voltas, v) },
+    sirene: { nome: 'Sirene clássica', tocar: (voltas, v) => { for (let i = 0; i < voltas; i++) { nota(880, 880, 'sawtooth', i * 0.36, 0.16, 0.22, v); nota(660, 660, 'sawtooth', i * 0.36 + 0.18, 0.16, 0.22, v); } } },
+  };
+  /** Alarme de cliente esperando (mais longo no alerta forte). */
+  function tocarAlarme(nivel = 2, volume, tipo) {
     try {
       prep(); if (!audio || audio.state !== 'running') return false;
       const v = (volume ?? pe().volume) / 100; if (v <= 0) return false;
-      const voltas = nivel >= 2 ? 3 : 2;
-      for (let i = 0; i < voltas; i++) { nota(880, 880, 'sawtooth', i * 0.36, 0.16, 0.22, v); nota(660, 660, 'sawtooth', i * 0.36 + 0.18, 0.16, 0.22, v); }
+      (ALARMES[tipo || pe().tipoAlarme] || ALARMES.futurista).tocar(nivel >= 2 ? 3 : 2, v);
       return true;
     } catch { return false; }
   }
@@ -261,7 +298,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     prefs = p;
     const m = p.mensagens, e = p.espera;
     const tipo = el('select', { 'aria-label': 'Tipo de som da mensagem' }, ...Object.entries(SONS).map(([k, s]) => el('option', { value: k, text: s.nome })));
-    tipo.value = m.tipoSom;
+    tipo.value = SONS[m.tipoSom] ? m.tipoSom : 'futurista';
+    const tipoAl = el('select', { 'aria-label': 'Tipo de alarme de cliente esperando' }, ...Object.entries(ALARMES).map(([k, s]) => el('option', { value: k, text: s.nome })));
+    tipoAl.value = ALARMES[e.tipoAlarme] ? e.tipoAlarme : 'futurista';
+    tipoAl.addEventListener('change', () => { salvar({ espera: { tipoAlarme: tipoAl.value } }); prep(); setTimeout(() => tocarAlarme(1, undefined, tipoAl.value), 30); });
     tipo.addEventListener('change', () => { salvar({ mensagens: { tipoSom: tipo.value } }); prep(); setTimeout(() => tocarMensagem(tipo.value), 30); });
     const secMsg = el('div', { class: 'nt-secao', id: 'nt-sec-mensagens' }, el('h3', { text: 'Cada mensagem' }),
       linha('Avisar no celular a cada mensagem', 'O celular toca de novo a cada mensagem nova (na mesma notificação da conversa).', chave(m.push, (v) => salvar({ mensagens: { push: v } }), 'Push a cada mensagem')),
@@ -274,8 +314,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const secEsp = el('div', { class: 'nt-secao', id: 'nt-sec-espera' }, el('h3', { text: 'Cliente esperando' }),
       linha('Avisar no celular', 'Quando uma cliente passa do limite sem resposta.', chave(e.push, (v) => salvar({ espera: { push: v } }), 'Push de cliente esperando')),
       linha('Alarme repetido no app', 'Toca de novo até alguém responder ou você silenciar.', chave(e.alarme, (v) => salvar({ espera: { alarme: v } }), 'Alarme repetido')),
-      linha('Volume do alarme', '', volume(e.volume, 'Volume do alarme', (v) => { salvar({ espera: { volume: v } }); prep(); setTimeout(() => tocarAlarme(1, v), 30); })),
-      el('div', { class: 'nt-acoes' }, el('button', { class: 'nt-botao', text: 'Testar alarme', onclick: () => { prep(); setTimeout(() => { tocarAlarme(2); vibrar([300, 120, 300]); }, 30); } })));
+      linha('Tipo de alarme', '', tipoAl),
+      linha('Volume do alarme', '', volume(e.volume, 'Volume do alarme', (v) => { salvar({ espera: { volume: v } }); prep(); setTimeout(() => tocarAlarme(1, v, tipoAl.value), 30); })),
+      el('div', { class: 'nt-acoes' }, el('button', { class: 'nt-botao', text: 'Testar alarme', onclick: () => { prep(); setTimeout(() => { tocarAlarme(2, undefined, tipoAl.value); vibrar([300, 120, 300]); }, 30); } })));
 
     // Limites por unidade (a gestão muda; as demais pessoas veem).
     const regras = await api('/api/espera/regras').catch(() => null);
