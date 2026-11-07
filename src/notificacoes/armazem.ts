@@ -40,6 +40,8 @@ export interface ArmazemNotificacoes {
   config(chave: string): Promise<string | undefined>;
   /** Grava só se ainda não existe e devolve o que ficou guardado (dois processos nunca geram chaves diferentes). */
   gravarConfigSeNova(chave: string, valor: string): Promise<string>;
+  /** Grava (ou troca) uma configuração. */
+  gravarConfig(chave: string, valor: string): Promise<void>;
 }
 
 const copia = (n: Notificacao): Notificacao => ({ ...n });
@@ -136,6 +138,9 @@ export class ArmazemNotificacoesMemoria implements ArmazemNotificacoes {
   async gravarConfigSeNova(chave: string, valor: string) {
     if (!this.cfg.has(chave)) this.cfg.set(chave, valor);
     return this.cfg.get(chave)!;
+  }
+  async gravarConfig(chave: string, valor: string) {
+    this.cfg.set(chave, valor);
   }
 }
 
@@ -293,5 +298,8 @@ export class ArmazemNotificacoesPostgres implements ArmazemNotificacoes {
   async gravarConfigSeNova(chave: string, valor: string) {
     await this.pool.query('insert into sintonia.push_config (chave, valor) values ($1, $2) on conflict (chave) do nothing', [chave, valor]);
     return (await this.config(chave))!;
+  }
+  async gravarConfig(chave: string, valor: string) {
+    await this.pool.query('insert into sintonia.push_config (chave, valor) values ($1, $2) on conflict (chave) do update set valor = excluded.valor', [chave, valor]);
   }
 }

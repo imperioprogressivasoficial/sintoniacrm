@@ -4,6 +4,9 @@ import type { Usuario } from '../auth/contas.js';
 import type { ArmazemNotificacoes } from './armazem.js';
 import type { Notificador } from './notificador.js';
 import type { ChavesPush } from './push.js';
+import { ehGestor, veTudo } from '../auth/acesso.js';
+import type { UnidadeId } from '../domain.js';
+import { UNIDADES } from '../unidades.js';
 import { completarPreferencias, emNaoPerturbe, EsquemaPreferencias, type Notificacao } from './tipos.js';
 
 export interface OpcoesNotificacoes {
@@ -96,7 +99,13 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
     const u = exigeLogin(req);
     const b = EsquemaPreferencias.partial().parse(req.body);
     const atual = await o.notificador.preferencias(u.id);
-    const nova = completarPreferencias({ ...atual, ...b, tipos: { ...atual.tipos, ...(b.tipos ?? {}) } });
+    const nova = completarPreferencias({
+      ...atual,
+      ...b,
+      tipos: { ...atual.tipos, ...(b.tipos ?? {}) },
+      mensagens: { ...atual.mensagens, ...(b.mensagens ?? {}) },
+      espera: { ...atual.espera, ...(b.espera ?? {}) },
+    });
     await o.armazem.salvarPreferencias(u.id, nova);
     return nova;
   });
@@ -131,5 +140,48 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
     const u = exigeLogin(req);
     const b = z.object({ endpoint: z.string().max(1000) }).parse(req.body);
     return { ok: await o.armazem.removerInscricao(b.endpoint, u.id) };
+  });
+
+  // ---------- Cliente esperando (faixa, alarme, regras por unidade) ----------
+  app.get('/api/espera', async (req) => {
+    const u = exigeLogin(req);
+    const prefs = await o.notificador.preferencias(u.id);
+    const itens = await o.notificador.esperasPara(u);
+    return {
+      itens,
+      silencioAte: prefs.espera.silencioAte && new Date(prefs.espera.silencioAte).getTime() > agora().getTime() ? prefs.espera.silencioAte : null,
+      agora: agora(),
+    };
+  });
+
+  /** Silencia o alarme e os pushes de espera por X minutos (0 = volta a tocar). */
+  app.post('/api/espera/silenciar', async (req) => {
+    const u = exigeLogin(req);
+    const { minutos } = z.object({ minutos: z.number().int().min(0).max(240) }).parse(req.body);
+    const atual = await o.notificador.preferencias(u.id);
+    const silencioAte = minutos ? new Date(agora().getTime() + minutos * 60_000).toISOString() : null;
+    await o.armazem.salvarPreferencias(u.id, completarPreferencias({ ...atual, espera: { ...atual.espera, silencioAte } }));
+    return { ok: true, silencioAte };
+  });
+
+  const unidadesDe = (u: Usuario): UnidadeId[] => (veTudo(u) ? (Object.keys(UNIDADES) as UnidadeId[]) : (u.unidades as UnidadeId[]).filter((x) => x in UNIDADES));
+  app.get('/api/espera/regras', async (req) => {
+    const u = exigeLogin(req);
+    const regras = await o.notificador.regrasEspera();
+    return {
+      podeEditar: ehGestor(u),
+      unidades: unidadesDe(u).map((id) => ({ id, nome: UNIDADES[id].nome, regra: o.notificador.regraDaUnidade(regras, id) })),
+    };
+  });
+  app.put('/api/espera/regras/:unidade', async (req, reply) => {
+    const u = exigeLogin(req);
+    const { unidade } = z.object({ unidade: z.enum(['norte', 'sumare', 'feira']) }).parse(req.params);
+    if (!ehGestor(u) || !unidadesDe(u).includes(unidade)) return reply.code(403).send({ erro: 'Só a gestão da unidade muda os alertas de espera.' });
+    try {
+      return { ok: true, regra: await o.notificador.salvarRegrasEspera(unidade, req.body ?? {}) };
+    } catch (x) {
+      if (x instanceof z.ZodError) return reply.code(400).send({ erro: x.issues[0]?.message ?? 'Regra inválida' });
+      throw x;
+    }
   });
 }

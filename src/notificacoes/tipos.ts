@@ -44,6 +44,10 @@ export interface InscricaoPush {
   agente?: string;
 }
 
+/** Sons de mensagem (Web Audio, desenhados no app). */
+export const SONS_MENSAGEM = ['gota', 'bolha', 'sininho', 'duplo'] as const;
+export type SomMensagem = (typeof SONS_MENSAGEM)[number];
+
 const HORA = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use HH:MM');
 
 export const EsquemaPreferencias = z.object({
@@ -51,12 +55,18 @@ export const EsquemaPreferencias = z.object({
   som: z.boolean(),
   push: z.boolean(),
   naoPerturbe: z.object({ ligado: z.boolean(), inicio: HORA, fim: HORA }),
+  mensagens: z.object({ push: z.boolean(), som: z.boolean(), vibrar: z.boolean(), tipoSom: z.enum(SONS_MENSAGEM), volume: z.number().int().min(0).max(100) }).partial(),
+  espera: z.object({ push: z.boolean(), alarme: z.boolean(), volume: z.number().int().min(0).max(100), silencioAte: z.string().datetime().nullable() }).partial(),
 });
 export type Preferencias = {
   tipos: Record<(typeof TIPOS_NOTIFICACAO)[number], boolean>;
   som: boolean;
   push: boolean;
   naoPerturbe: { ligado: boolean; inicio: string; fim: string };
+  /** Cada mensagem recebida: push que toca de novo, som e vibração com o app aberto. */
+  mensagens: { push: boolean; som: boolean; vibrar: boolean; tipoSom: SomMensagem; volume: number };
+  /** Cliente esperando: push dos alertas, alarme repetido no app e silêncio temporário (ISO ou null). */
+  espera: { push: boolean; alarme: boolean; volume: number; silencioAte: string | null };
 };
 
 export const PREFERENCIAS_PADRAO: Preferencias = {
@@ -64,6 +74,8 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   som: true,
   push: true,
   naoPerturbe: { ligado: false, inicio: '22:00', fim: '07:00' },
+  mensagens: { push: true, som: true, vibrar: true, tipoSom: 'gota', volume: 70 },
+  espera: { push: true, alarme: true, volume: 80, silencioAte: null },
 };
 
 /** Junta o que está guardado com o padrão (tipos novos nascem ligados). */
@@ -73,6 +85,8 @@ export function completarPreferencias(p?: Partial<Preferencias> | null): Prefere
     som: p?.som ?? PREFERENCIAS_PADRAO.som,
     push: p?.push ?? PREFERENCIAS_PADRAO.push,
     naoPerturbe: { ...PREFERENCIAS_PADRAO.naoPerturbe, ...(p?.naoPerturbe ?? {}) },
+    mensagens: { ...PREFERENCIAS_PADRAO.mensagens, ...(p?.mensagens ?? {}) },
+    espera: { ...PREFERENCIAS_PADRAO.espera, ...(p?.espera ?? {}) },
   };
 }
 
@@ -85,4 +99,9 @@ export function emNaoPerturbe(p: Preferencias, agora: Date): boolean {
   const fim = minutosDoDia(p.naoPerturbe.fim);
   if (ini === fim) return false;
   return ini < fim ? m >= ini && m < fim : m >= ini || m < fim;
+}
+
+/** A pessoa silenciou os alertas de espera até um horário que ainda não passou? */
+export function esperaSilenciada(p: Preferencias, agora: Date): boolean {
+  return Boolean(p.espera.silencioAte && new Date(p.espera.silencioAte).getTime() > agora.getTime());
 }

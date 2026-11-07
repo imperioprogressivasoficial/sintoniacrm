@@ -189,6 +189,8 @@ const notificador = new Notificador({
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   push: { chaves: chavesPush, enviador: enviadorWebPush, assunto: `mailto:${process.env.VAPID_EMAIL || cfg.ADMIN_EMAIL || 'suporte@example.com'}` },
+  // Cliente esperando: sem alerta enquanto um bot ou um follow-up conduz a conversa (criados mais abaixo).
+  automacaoAtiva: async (id) => (await armazemBots.ativasDaConversa(id)).length > 0 || Boolean((await followup.seloDaConversa(id)).cadencia),
   log,
 });
 observarEventos(repo, (e) => notificador.aoEvento(e));
@@ -243,8 +245,9 @@ const automacoes = new Automacoes({
   transmissoes: () => transmissoes,
 });
 // Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
+const armazemBots = pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria();
 const bots = new Bots({
-  armazem: pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria(),
+  armazem: armazemBots,
   repo,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   sintonia: () => sintonia,

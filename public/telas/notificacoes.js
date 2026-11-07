@@ -129,9 +129,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CLASSE_IC = { nova_cliente: 'nt-ic-acento', falha: 'nt-ic-alerta', espera: 'nt-ic-alerta' };
   const TIPOS = [
     ['nova_cliente', 'Nova cliente', 'Alguém novo chamou no WhatsApp da sua unidade.'],
-    ['mensagem', 'Mensagem da cliente', 'Nas suas conversas (ou nas sem dona, quando a IA não responde sozinha). Várias seguidas viram um aviso só.'],
+    ['mensagem', 'Mensagem da cliente', 'Nas suas conversas (ou nas sem dona, quando a IA não responde sozinha). No sino, várias seguidas viram um aviso só.'],
     ['ia_equipe', 'A IA passou para a equipe', 'Quando a IA pede ajuda de uma pessoa.'],
-    ['espera', 'Cliente esperando', 'Ninguém respondeu há mais de 10 minutos.'],
+    ['espera', 'Cliente esperando', 'Ninguém respondeu além do limite da unidade (aviso e alerta forte).'],
     ['transferida', 'Conversa passada para você', ''],
     ['agendamento', 'Agendamento feito', 'Pela IA ou pela equipe, nas suas conversas (e para a gestão).'],
     ['lembrete_ligacao', 'Lembrete de ligação', 'Criado pelas automações, na hora marcada.'],
@@ -263,7 +263,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const fora = novas.filter((n) => !(n.conversaId && ui.estado.aberta === n.conversaId && !document.hidden));
     if (!fora.length) return;
     if (!est.aberto) mostrarToast(fora[0]);
-    if (!est.silencio && (est.prefs?.som ?? true)) tocar();
+    // Mensagem da cliente já tem o som próprio (/telas/alertas.js): sem toque em dobro.
+    const soMensagens = fora.every((n) => n.tipo === 'mensagem' || n.tipo === 'nova_cliente') && est.prefs?.mensagens?.som !== false && window.SintoniaTelas.alertas;
+    if (fora.some((n) => n.tipo === 'espera')) window.SintoniaTelas.alertas?.atualizar();
+    if (!est.silencio && (est.prefs?.som ?? true) && !soMensagens) tocar();
   }
 
   addEventListener('sintonia:notificacoes', (e) => {
@@ -415,7 +418,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------------------------------------------------------------- preferências
   let dlg;
   async function salvar(campos) {
-    try { est.prefs = { ...est.prefs, ...(await api('/api/notificacoes/preferencias', { method: 'PUT', body: JSON.stringify(campos) })) }; }
+    try { est.prefs = { ...est.prefs, ...(await api('/api/notificacoes/preferencias', { method: 'PUT', body: JSON.stringify(campos) })) }; dispatchEvent(new CustomEvent('sintonia:preferencias', { detail: est.prefs })); }
     catch (x) { toast(x.message); }
   }
   const chave = (checked, onchange, rotulo, disabled = false) => {
@@ -482,7 +485,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const secTipos = el('div', { class: 'nt-secao' }, el('h3', { text: 'O que avisar' }),
       ...TIPOS.filter(([t]) => t !== 'falha' || souGestao).map(([t, titulo, sub]) => linhaPref(titulo, sub, chave(p.tipos[t] !== false, (v) => salvar({ tipos: { [t]: v } }), titulo))));
 
-    corpo.append(secPush, secNp, secTipos);
+    const extras = window.SintoniaTelas.alertas ? await window.SintoniaTelas.alertas.secoesPreferencias(p).catch(() => []) : [];
+    corpo.append(secPush, ...extras, secNp, secTipos);
     document.body.append(dlg);
     dlg.addEventListener('close', () => dlg.remove());
     dlg.showModal();
