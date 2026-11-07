@@ -2014,10 +2014,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('d-agendar').showModal();
     await prepararAgenda();
   }
-  // Agenda pronta: se faltar a chave da API ou o ID do estabelecimento da unidade, mostra só o que falta.
-  function pendenciasAgenda() {
+  // Agenda pronta: se faltar algo no sistema de agenda da unidade (Trinks, Avec ou AppBarber), mostra só o que falta.
+  function unidadeAgenda() {
     const ag = estado.situacao.agenda || { chave: estado.situacao.agendaLigada, unidades: [] };
-    const u = (ag.unidades || []).find((x) => x.id === $('ag-unidade').value);
+    return { ag, u: (ag.unidades || []).find((x) => x.id === $('ag-unidade').value) };
+  }
+  function pendenciasAgenda() {
+    const { ag, u } = unidadeAgenda();
+    if (u && u.sistema === 'nenhum') return ['Escolher o sistema de agenda desta unidade'];
+    if (u && Array.isArray(u.falta)) return u.falta;
     const falta = [];
     if (!ag.chave) falta.push('Chave da API do Trinks');
     if (u && !u.estabelecimento) falta.push(`ID do estabelecimento (${u.nome})`);
@@ -2030,12 +2035,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     ['ag-servico', 'ag-prof', 'ag-data', 'ag-nome', 'ag-confirmar'].forEach((id) => { $(id).disabled = !pronto; });
     if (!pronto) {
       const gestor = estado.eu && (estado.eu.papel === 'admin' || estado.eu.papel === 'direcao');
+      const sis = unidadeAgenda().u?.sistemaNome || (unidadeAgenda().u?.sistema === 'nenhum' ? null : 'Trinks');
+      const art = sis === 'Avec' ? 'a' : 'o';
       caixa.replaceChildren(
-        el('b', { text: 'Agenda pronta — falta só conectar' }),
+        el('b', { text: sis ? `Agenda pronta — falta só conectar ${art} ${sis}` : 'Agenda pronta — falta só escolher o sistema de agenda' }),
         el('ul', {}, ...falta.map((f) => el('li', { text: f }))),
-        el('p', { text: gestor ? 'Preencha em Conexões › Agenda. Assim que salvar, o Agendar e a IA já marcam horário direto no Trinks.' : 'Peça para a administração preencher em Conexões › Agenda.' }),
+        el('p', { text: gestor ? `Preencha em Conexões › Agenda. Assim que salvar, o Agendar e a IA já marcam horário direto ${sis ? (art === 'a' ? 'na ' : 'no ') + sis : 'no sistema escolhido'}.` : 'Peça para a administração preencher em Conexões › Agenda.' }),
         gestor ? el('a', { class: 'botao', href: '/conexoes#agenda', text: 'Abrir Conexões' }) : null);
-      $('ag-servico').replaceChildren(el('option', { value: '', text: 'Serviços do Trinks aparecem aqui' }));
+      $('ag-servico').replaceChildren(el('option', { value: '', text: `Serviços do ${sis || 'sistema de agenda'} aparecem aqui` }));
       $('ag-prof').replaceChildren(el('option', { value: '', text: 'Qualquer uma' }));
       $('ag-horarios').replaceChildren(el('span', { class: 'info', text: 'Os horários livres aparecem aqui depois de conectar.' }));
       return;

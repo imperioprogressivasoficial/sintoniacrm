@@ -58,6 +58,7 @@
   p b, li b { color: var(--texto); font-weight: 700; }
   label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sub); min-width: 0; }
   label .dica { font-weight: 500; font-size: 12px; }
+  .cab .dica { font-size: 12px; color: var(--sub); }
   input { background: var(--vidro-item); border: 1px solid var(--vidro-borda); box-shadow: inset 0 1px 2px rgba(8,36,63,.06); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; min-width: 0; }
   input:focus { outline: 2px solid color-mix(in srgb, var(--marca-azul) 60%, transparent); outline-offset: 1px; background: var(--vidro-ativo); }
   input[readonly] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
@@ -88,6 +89,8 @@
 
   /* escolha do canal por unidade */
   .escolha { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .escolha.quatro { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 420px) { .escolha.quatro { grid-template-columns: 1fr 1fr; } }
   .escolha button { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 12px; padding: 10px 8px; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--sub); line-height: 1.2; }
   .escolha button small { display: block; font-size: 11.5px; font-weight: 600; margin-top: 2px; }
   .escolha button[aria-pressed="true"] { background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 6px 18px rgba(16,110,190,.16); }
@@ -220,12 +223,16 @@
   </section>
 
   <section id="agenda" aria-labelledby="t-agenda">
-    <h2 id="t-agenda"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span><span>Agenda<small>Trinks</small></span></h2>
-    <p>Preencha a chave da API e o ID do estabelecimento de cada unidade. Com isso, o botão Agendar e a IA marcam horário sem abrir o Trinks. A chave e o ID ficam no Trinks, em Configurações › Integrações (API).</p>
-    <label>Chave da API do Trinks <input id="trinksApiKey" type="password" autocomplete="off"></label>
-    <label>ID do estabelecimento · Salvador Norte Shopping <input id="trinksEstabelecimentoNorte" inputmode="numeric" autocomplete="off" placeholder="Em uso: 240643 (confira no Trinks)"></label>
-    <label>ID do estabelecimento · Shopping Sumaré <input id="trinksEstabelecimentoSumare" inputmode="numeric" autocomplete="off" placeholder="Em uso: 222074 (confira no Trinks)"></label>
-    <div class="linha"><button class="botao" data-salvar="trinksApiKey,trinksEstabelecimentoNorte,trinksEstabelecimentoSumare">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks" role="status"></span></div>
+    <h2 id="t-agenda"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg></span><span>Agenda<small>Trinks, Avec ou AppBarber, por unidade</small></span></h2>
+    <p>Escolha o sistema de agenda de cada unidade e preencha os dados dele. Com a agenda conectada, o botão <b>Agendar</b> e a IA consultam horários e marcam direto no sistema, sem abrir outra tela.</p>
+    <div class="cartoes" id="agenda-unidades"><p>Carregando…</p></div>
+    <div class="cartao" id="agenda-geral">
+      <div class="cab"><b>Dados de conta</b><span class="dica">valem para todas as unidades</span></div>
+      <label id="ag-g-trinks">Chave da API do Trinks <span class="dica">No Trinks: Meu Cadastro › Token de API Pessoal › Gerar token. Uma chave serve para todos os estabelecimentos.</span><input id="trinksApiKey" type="password" autocomplete="off"></label>
+      <label id="ag-g-avec">URL base da API da Avec <span class="dica">A Avec informa junto com o token. A documentação pública só mostra um endereço de exemplo.</span><input id="avecUrl" type="url" autocomplete="off" placeholder="https://…"></label>
+      <label id="ag-g-appbarber">URL base da API do AppBarber <span class="dica">O AppBarber ainda não publica API: preencha quando o comercial enviar a documentação.</span><input id="appbarberUrl" type="url" autocomplete="off" placeholder="https://…"></label>
+      <div class="linha"><button class="botao" data-salvar="trinksApiKey,avecUrl,appbarberUrl">Salvar</button><span class="res" role="status"></span></div>
+    </div>
   </section>
 
   <section id="transcricao" aria-labelledby="t-transcricao">
@@ -345,7 +352,7 @@
 
   function ligarBotoes(raiz) {
     raiz.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
-      if (await salvarCampos(b, b.dataset.salvar.split(','))) { carregarLojas(); carregarMeta(); desenharEscolhas(); }
+      if (await salvarCampos(b, b.dataset.salvar.split(','))) { carregarLojas(); carregarMeta(); desenharEscolhas(); carregarAgenda(); }
     }));
     raiz.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
       const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
@@ -358,6 +365,85 @@
       try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand?.('copy'); }
       const antes = b.textContent; b.textContent = 'Copiado ✓'; setTimeout(() => (b.textContent = antes), 1500);
     }));
+  }
+
+  // ---------- Agenda: sistema de cada unidade ----------
+  let agenda = null;
+  const SISTEMAS = [['trinks', 'Trinks', 'API pública'], ['avec', 'Avec', 'Avec Salão'], ['appbarber', 'AppBarber', 'Barbearias'], ['nenhum', 'Nenhum', 'Sem agenda']];
+  // Campos de cada sistema, por unidade (o id do input é o nome do campo salvo).
+  const CAMPOS_AGENDA = {
+    trinks: (suf, nome, u) => [['trinksEstabelecimento' + suf, 'ID do estabelecimento no Trinks', 'text', u === 'norte' ? 'Padrão: 240643 (confira no Trinks)' : 'Padrão: 222074 (confira no Trinks)']],
+    avec: (suf) => [['avecToken' + suf, 'Token da API da Avec', 'password', 'Gerado no painel da Avec (API de relatórios)'], ['avecUnidade' + suf, 'ID da unidade na Avec (opcional)', 'text', 'Ex.: 1234']],
+    appbarber: (suf) => [['appbarberToken' + suf, 'Token do AppBarber', 'password', 'Enviado pelo AppBarber'], ['appbarberLoja' + suf, 'ID da loja no AppBarber', 'text', 'Ex.: 1234']],
+    nenhum: () => [],
+  };
+  async function carregarAgenda() {
+    try { agenda = await api('/api/conexoes/agenda'); } catch (x) { $('agenda-unidades').textContent = x.message; return; }
+    desenharAgenda();
+  }
+  function desenharAgenda() {
+    if (!agenda) return;
+    const usados = new Set(agenda.unidades.map((u) => u.sistema));
+    $('ag-g-trinks').hidden = !usados.has('trinks');
+    $('ag-g-avec').hidden = !usados.has('avec');
+    $('ag-g-appbarber').hidden = !usados.has('appbarber');
+    $('agenda-geral').hidden = !['trinks', 'avec', 'appbarber'].some((s) => usados.has(s));
+    $('agenda-unidades').replaceChildren(...agenda.unidades.map((info) => {
+      const [, suf, nome] = UNIDADES.find(([u]) => u === info.unidade);
+      const atual = info.sistema;
+      const estado = el('span', {
+        className: 'estado' + (info.pronta ? ' ok' : atual === 'nenhum' ? '' : ' aviso'),
+        textContent: info.pronta ? `${info.sistemaNome} conectado` : atual === 'nenhum' ? 'Sem agenda' : info.conectada ? `${info.sistemaNome}: aguardando documentação` : `${info.sistemaNome}: falta configurar`,
+      });
+      const res = el('span', { className: 'res', role: 'status' });
+      const opcao = ([valor, titulo, sub]) => {
+        const b = el('button', { type: 'button' }, titulo, el('small', { textContent: sub }));
+        b.setAttribute('aria-pressed', String(atual === valor));
+        b.addEventListener('click', async () => {
+          if (valor === atual) return;
+          if (!confirm(valor === 'nenhum' ? `${nome} fica sem agenda: o Agendar e a IA deixam de marcar horário nesta unidade. Continuar?` : `${nome} passa a usar o ${titulo} para consultar e marcar horários. Continuar?`)) return;
+          b.parentElement.setAttribute('aria-busy', 'true');
+          try { resumo = await api('/api/conexoes', { method: 'PUT', body: JSON.stringify({ ['agendaSistema' + suf]: valor }) }); await carregarAgenda(); preencher(); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { b.parentElement.removeAttribute('aria-busy'); }
+        });
+        return b;
+      };
+      const escolha = el('div', { className: 'escolha quatro', role: 'group' }, ...SISTEMAS.map(opcao));
+      escolha.setAttribute('aria-label', `Sistema de agenda de ${nome}`);
+      const campos = CAMPOS_AGENDA[atual](suf, nome, info.unidade);
+      const inputs = campos.map(([id, rotulo, tipo, ph]) => {
+        const input = el('input', { id, type: tipo, autocomplete: 'off', placeholder: ph });
+        input.dataset.ph = ph;
+        return el('label', {}, rotulo, input);
+      });
+      const avisos = [];
+      if (info.falta.length && atual !== 'nenhum') avisos.push(el('p', {}, el('b', { textContent: 'Falta: ' }), info.falta.join(', ') + '.'));
+      if (info.aviso) avisos.push(el('div', { className: 'aviso', textContent: info.aviso }));
+      const botoes = [];
+      if (campos.length) {
+        const salvar = el('button', { className: 'botao', textContent: 'Salvar' });
+        salvar.dataset.salvar = campos.map(([id]) => id).join(',');
+        botoes.push(salvar);
+      }
+      if (atual !== 'nenhum') {
+        const testar = el('button', { className: 'botao leve', textContent: 'Testar' });
+        testar.addEventListener('click', async () => {
+          testar.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
+          try { const r = await api(`/api/conexoes/agenda/${info.unidade}/testar`, { method: 'POST', body: '{}' }); mostrar(res, r.ok, r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro); }
+          catch (x) { mostrar(res, false, x.message); }
+          finally { testar.removeAttribute('aria-busy'); }
+        });
+        botoes.push(testar);
+      }
+      const cartao = el('div', { className: 'cartao' },
+        el('div', { className: 'cab' }, el('b', { textContent: nome }), estado),
+        escolha, ...inputs, ...avisos,
+        el('div', { className: 'linha' }, ...botoes, res));
+      ligarBotoes(cartao);
+      return cartao;
+    }));
+    if (resumo) preencher();
   }
 
   // ---------- qual WhatsApp cada loja usa ----------
@@ -591,6 +677,7 @@
     document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
     ligarBotoes(document);
     resumo = await api('/api/conexoes'); preencher(); desenharEscolhas();
+    carregarAgenda();
     carregarCapi();
     carregarLojas(); carregarMeta();
   })();

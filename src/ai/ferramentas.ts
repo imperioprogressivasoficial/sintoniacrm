@@ -1,21 +1,15 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { Agendamento, Conversa, Etapa } from '../domain.js';
-import type { ClienteTrinks } from '../agenda/trinks.js';
-import { agendarNoTrinks, estabelecimentoDa, horariosLivres } from '../agenda/agendar.js';
+import { agendar, agendaDaUnidade, horariosLivres } from '../agenda/agendar.js';
+import type { FonteAgenda } from '../agenda/sistema.js';
 import { dataISO, DIA } from '../util/tempo.js';
 
-/** O que o agente precisa da agenda. O ClienteTrinks atende; nos testes usamos um falso. */
-export type Agenda = Pick<
-  ClienteTrinks,
-  | 'listarServicos'
-  | 'listarProfissionais'
-  | 'horariosVagos'
-  | 'buscarClientePorTelefone'
-  | 'criarCliente'
-  | 'criarAgendamento'
-  | 'listarAgendamentosDoCliente'
->;
+/**
+ * O que o agente precisa da agenda (src/agenda/sistema.ts): o roteador que escolhe o sistema de cada unidade
+ * (Trinks, Avec ou AppBarber) ou um sistema só (nos testes, um falso no formato do Trinks).
+ */
+export type Agenda = FonteAgenda;
 
 /** Efeitos que o agente pede e o app aplica depois (funil, lembretes, alerta para a equipe). */
 export type AcaoAgente =
@@ -43,7 +37,7 @@ const unidadeProp = {
 };
 
 export const FERRAMENTAS_LEITURA: Ferramenta[] = [
-  def('ver_servicos', 'Lista os serviços da unidade no Trinks, com id, preço de tabela, preço promocional de hoje e duração.', {
+  def('ver_servicos', 'Lista os serviços da unidade no sistema de agenda do salão, com id, preço de tabela, preço promocional de hoje e duração.', {
     unidade: unidadeProp,
   }),
   def(
@@ -80,7 +74,7 @@ export function ferramentaMarcarTag(nomes: string[]): Ferramenta {
 export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   def(
     'agendar',
-    'Marca o horário no Trinks. Só use depois que a cliente confirmou serviço, unidade, dia, hora e profissional.',
+    'Marca o horário no sistema de agenda do salão. Só use depois que a cliente confirmou serviço, unidade, dia, hora e profissional.',
     {
       unidade: unidadeProp,
       servico_id: { type: 'integer' },
@@ -125,7 +119,7 @@ export interface ContextoFerramentas {
   conversa: Conversa;
   agora: Date;
   acoes: AcaoAgente[];
-  /** Em modo sugestão, nada é gravado no Trinks. */
+  /** Em modo sugestão, nada é gravado na agenda. */
   podeEscrever: boolean;
   /** Tags que a IA pode marcar (vazio = não marca). */
   tagsDisponiveis?: string[];
@@ -157,7 +151,8 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
   switch (nome) {
     case 'ver_servicos': {
       const i = ENTRADAS.ver_servicos.parse(entrada);
-      const servicos = await agenda.listarServicos(estabelecimentoDa(i.unidade));
+      const { sistema, local } = agendaDaUnidade(agenda, i.unidade);
+      const servicos = await sistema.listarServicos(local);
       return servicos
         .filter((s) => s.visivelParaCliente !== false)
         .map((s) => ({
@@ -177,17 +172,18 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
     }
     case 'ver_agendamentos_da_cliente': {
       const i = ENTRADAS.ver_agendamentos_da_cliente.parse(entrada);
-      const est = estabelecimentoDa(i.unidade);
+      const { sistema, tipo, local: est } = agendaDaUnidade(agenda, i.unidade);
       const clienteId =
-        conversa.trinksClienteId ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id;
-      if (!clienteId) return 'Cliente ainda não tem cadastro no Trinks.';
-      const lista = await agenda.listarAgendamentosDoCliente(
+        (tipo === 'trinks' ? conversa.trinksClienteId : undefined) ?? (await sistema.buscarClientePorTelefone(est, conversa.telefone))?.id;
+      if (!clienteId) return 'Cliente ainda não tem cadastro na agenda do salão.';
+      const lista = await sistema.listarAgendamentosDoCliente(
         est,
         clienteId,
         dataISO(agora),
         dataISO(new Date(agora.getTime() + 60 * DIA)),
       );
-      const ativos = lista.filter((a) => a.status?.id !== 9);
+      // Status 9 = cancelado no Trinks; os outros sistemas marcam `cancelado`.
+      const ativos = lista.filter((a) => !a.cancelado && !(tipo === 'trinks' && a.status?.id === 9));
       return ativos.length
         ? ativos.map((a) => ({
             id: a.id,
@@ -206,7 +202,7 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
     case 'agendar': {
       const i = ENTRADAS.agendar.parse(entrada);
       if (!ctx.podeEscrever) throw new Error('Modo sugestão: não agende. Escreva a mensagem propondo o horário.');
-      const r = await agendarNoTrinks(
+      const r = await agendar(
         agenda,
         conversa,
         {

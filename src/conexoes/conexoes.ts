@@ -11,6 +11,23 @@ export const CAMPOS = {
   /** ID do estabelecimento no Trinks (header estabelecimentoId), por unidade. Vazio = o padrão de src/unidades.ts. */
   trinksEstabelecimentoNorte: { segredo: false },
   trinksEstabelecimentoSumare: { segredo: false },
+
+  // ---------- Agenda: qual sistema cada unidade usa ("trinks", "avec", "appbarber" ou "nenhum"; vazio = trinks) ----------
+  agendaSistemaNorte: { segredo: false },
+  agendaSistemaSumare: { segredo: false },
+  /** Avec: URL base da API (a documentação pública mostra só um endereço de exemplo). */
+  avecUrl: { segredo: false },
+  avecTokenNorte: { segredo: true },
+  avecTokenSumare: { segredo: true },
+  /** ID da unidade na Avec (opcional enquanto só os relatórios estão documentados). */
+  avecUnidadeNorte: { segredo: false },
+  avecUnidadeSumare: { segredo: false },
+  /** AppBarber: URL base, token e ID da loja, quando o AppBarber liberar a integração. */
+  appbarberUrl: { segredo: false },
+  appbarberTokenNorte: { segredo: true },
+  appbarberTokenSumare: { segredo: true },
+  appbarberLojaNorte: { segredo: false },
+  appbarberLojaSumare: { segredo: false },
   /** OpenAI (Whisper): transcrição dos áudios na conversa. */
   openaiApiKey: { segredo: true },
   evolutionUrl: { segredo: false },

@@ -2,6 +2,7 @@ import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
+import { AgendasDasUnidades, UNIDADES_AGENDA } from './agenda/unidades-agenda.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
@@ -77,6 +78,9 @@ const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString
 let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
 const claude = new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) });
 const trinks = new ClienteTrinks({ apiKey: cfg.TRINKS_API_KEY ?? '', intervaloMs: cfg.TRINKS_INTERVALO_MS });
+// Sistema de agenda de cada unidade, lido das Conexões a cada uso (vale o que está na tela agora;
+// `conexoes` é criada mais abaixo e só é lida depois, quando alguém usa a agenda).
+const agendas = new AgendasDasUnidades({ ler: (campo) => conexoes.get(campo as Parameters<typeof conexoes.get>[0]), trinks, intervaloMs: cfg.TRINKS_INTERVALO_MS });
 let repo: Repositorio;
 let fila: FilaEntrada;
 let trava: Trava;
@@ -108,7 +112,7 @@ const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marca
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
 const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
-const agente = new Agente(claude, trinks, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
+const agente = new Agente(claude, agendas, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
 if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
@@ -165,7 +169,8 @@ function aplicarConexoes() {
   for (const [u, campo] of [['norte', 'trinksEstabelecimentoNorte'], ['sumare', 'trinksEstabelecimentoSumare']] as const) {
     UNIDADES[u].trinksEstabelecimentoId = conexoes.get(campo) || ESTABELECIMENTO_PADRAO[u];
   }
-  agendaLigada = Boolean(conexoes.get('trinksApiKey')) && (['norte', 'sumare'] as const).some((u) => UNIDADES[u].trinksEstabelecimentoId);
+  // Cada unidade usa o sistema escolhido em Conexões › Agenda (Trinks, Avec, AppBarber ou nenhum).
+  agendaLigada = agendas.algumaPronta();
   evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
   const temEvolution = Boolean(conexoes.get('evolutionUrl') && conexoes.get('evolutionApiKey'));
   // Cada unidade usa a API escolhida na tela: oficial (Meta) ou não oficial (Evolution, QR Code).
@@ -327,7 +332,7 @@ const agentesIa = montarAgentesIa({
   pool,
   repo,
   cofre,
-  agenda: trinks,
+  agenda: agendas,
   baseGeral: () => base.texto(),
   padrao: agente,
   chaveGeral: (p) => (p === 'openai' ? conexoes.get('openaiApiKey') : conexoes.get('anthropicApiKey')) || undefined,
@@ -374,13 +379,14 @@ const app = criarServidor({
   fila: { fila, avisar: () => trabalhador.avisar() },
   contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
-    return agendaLigada ? trinks : undefined;
+    return agendaLigada ? agendas : undefined;
   },
   get evolution() {
     return { canal: evolution, token: conexoes.get('webhookToken') };
   },
   conexoes: {
     conexoes,
+    agendas,
     testarIA: async (chave) => {
       await new Anthropic({ apiKey: chave }).models.list({ limit: 1 });
     },
@@ -422,7 +428,10 @@ const app = criarServidor({
     numerosReais: numeros.filter(ehReal).length,
     agenda: {
       chave: Boolean(conexoes.get('trinksApiKey')),
-      unidades: (['norte', 'sumare'] as const).map((u) => ({ id: u, nome: UNIDADES[u].nome, estabelecimento: Boolean(UNIDADES[u].trinksEstabelecimentoId) })),
+      unidades: UNIDADES_AGENDA.map((u) => {
+        const a = agendas.config(u);
+        return { id: u, nome: a.nome, estabelecimento: Boolean(a.local), sistema: a.escolha, sistemaNome: a.sistemaNome, falta: a.aviso && !a.falta.length ? [a.aviso] : a.falta, pronta: a.pronta };
+      }),
     },
   }),
   midias,
@@ -460,8 +469,9 @@ const app = criarServidor({
   revisar: async (conversaId, rascunho) => {
     const conversa = await repo.buscarConversa(conversaId);
     if (!conversa) throw new Error('Conversa não encontrada');
-    const est = UNIDADES[conversa.unidade].trinksEstabelecimentoId;
-    const servicos = est ? await trinks.listarServicos(est).catch(() => []) : [];
+    const servicos = await Promise.resolve()
+      .then(() => { const a = agendas.paraUnidade(conversa.unidade); return a.sistema.listarServicos(a.local); })
+      .catch(() => []);
     return revisarRascunho(
       claude,
       { modelo: cfg.SINTONIA_MODELO, baseConhecimento: await base.texto() },

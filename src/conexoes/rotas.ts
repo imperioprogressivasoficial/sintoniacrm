@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { usuarioDaRequisicao, type OpcoesAuth } from '../auth/rotas.js';
 import { EvolutionAdmin, PREFIXO_INSTANCIA } from '../channels/evolution-admin.js';
 import { GraphMeta } from '../channels/meta.js';
+import { NOMES_SISTEMA } from '../agenda/sistema.js';
+import { UNIDADES_AGENDA, type AgendasDasUnidades } from '../agenda/unidades-agenda.js';
 import { campoCanal, campoMeta, novoVerifyToken, UNIDADES_WHATSAPP, type Conexoes, type NumeroCfg, type UnidadeWhatsApp } from './conexoes.js';
 
 export interface OpcoesConexoes {
@@ -15,6 +17,8 @@ export interface OpcoesConexoes {
   /** Confere a chave da OpenAI (transcrição de áudio). Ausente = não testa. */
   testarOpenAI?: (chave: string) => Promise<void>;
   fetchFn?: typeof fetch;
+  /** Agenda de cada unidade (Trinks, Avec ou AppBarber): status e "Testar" em Conexões › Agenda. */
+  agendas?: AgendasDasUnidades;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
 }
@@ -26,12 +30,28 @@ const Unidade = z.enum(UNIDADES);
 const IdMeta = z.string().trim().regex(/^\d*$/, 'Use só os números do id (copie do painel da Meta)').max(40).optional();
 const Segredo = z.string().max(600).optional();
 const Canal = z.enum(['evolution', 'meta']).optional();
+// Vazio = volta ao padrão (Trinks).
+const SistemaAgenda = z.enum(['', 'trinks', 'avec', 'appbarber', 'nenhum']).optional();
+const IdLoja = z.string().trim().regex(/^[\w.-]*$/, 'Use só letras, números, ponto, hífen ou sublinhado no ID').max(60).optional();
+const UrlOpcional = z.union([z.literal(''), z.string().trim().url().max(300)]).optional();
 
 const Salvar = z.object({
   anthropicApiKey: z.string().max(400).optional(),
   trinksApiKey: z.string().max(400).optional(),
   trinksEstabelecimentoNorte: z.string().trim().regex(/^\d*$/, 'Use só os números do ID do estabelecimento').max(20).optional(),
   trinksEstabelecimentoSumare: z.string().trim().regex(/^\d*$/, 'Use só os números do ID do estabelecimento').max(20).optional(),
+  agendaSistemaNorte: SistemaAgenda,
+  agendaSistemaSumare: SistemaAgenda,
+  avecUrl: UrlOpcional,
+  avecTokenNorte: Segredo,
+  avecTokenSumare: Segredo,
+  avecUnidadeNorte: IdLoja,
+  avecUnidadeSumare: IdLoja,
+  appbarberUrl: UrlOpcional,
+  appbarberTokenNorte: Segredo,
+  appbarberTokenSumare: Segredo,
+  appbarberLojaNorte: IdLoja,
+  appbarberLojaSumare: IdLoja,
   openaiApiKey: z.string().max(400).optional(),
   evolutionUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
   evolutionApiKey: z.string().max(400).optional(),
@@ -110,6 +130,42 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     }
     await c.salvar(dados, autor);
     return c.resumo();
+  });
+
+  // ---------- Agenda: sistema de cada unidade ----------
+  const UnidadeAgendaZ = z.enum(UNIDADES_AGENDA);
+  app.get('/api/conexoes/agenda', async (req) => {
+    await quem(req);
+    if (!o.agendas) return { unidades: [] };
+    return {
+      sistemas: Object.entries(NOMES_SISTEMA).map(([id, nome]) => ({ id, nome })),
+      unidades: o.agendas.configs().map((cfg) => ({
+        unidade: cfg.unidade,
+        nome: cfg.nome,
+        sistema: cfg.escolha,
+        sistemaNome: cfg.sistemaNome,
+        local: cfg.local,
+        falta: cfg.falta,
+        conectada: cfg.conectada,
+        pronta: cfg.pronta,
+        aviso: cfg.aviso,
+      })),
+    };
+  });
+
+  app.post('/api/conexoes/agenda/:unidade/testar', async (req, reply) => {
+    await quem(req);
+    const u = UnidadeAgendaZ.parse((req.params as { unidade: string }).unidade);
+    if (!o.agendas) return reply.code(501).send({ ok: false, erro: 'Agenda não disponível neste servidor' });
+    const cfg = o.agendas.config(u);
+    if (cfg.escolha === 'nenhum') return { ok: false, erro: `${cfg.nome} está sem sistema de agenda.` };
+    if (cfg.falta.length) return { ok: false, erro: `Falta preencher: ${cfg.falta.join(', ')}.` };
+    try {
+      const resumo = await o.agendas.sistemaDa(u)!.testar(cfg.local!);
+      return { ok: true, mensagem: `${cfg.sistemaNome} respondendo: ${resumo}` };
+    } catch (e) {
+      return { ok: false, erro: erroCurto(e) };
+    }
   });
 
   // ---------- WhatsApp oficial (Meta) ----------
