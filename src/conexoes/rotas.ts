@@ -12,6 +12,8 @@ export interface OpcoesConexoes {
   testarIA: (chave: string) => Promise<void>;
   /** Confere a chave da Trinks lendo os profissionais de uma unidade. */
   testarTrinks: (chave: string) => Promise<{ profissionais: number }>;
+  /** Confere a chave da OpenAI (transcrição de áudio). Ausente = não testa. */
+  testarOpenAI?: (chave: string) => Promise<void>;
   fetchFn?: typeof fetch;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
@@ -28,6 +30,7 @@ const Canal = z.enum(['evolution', 'meta']).optional();
 const Salvar = z.object({
   anthropicApiKey: z.string().max(400).optional(),
   trinksApiKey: z.string().max(400).optional(),
+  openaiApiKey: z.string().max(400).optional(),
   evolutionUrl: z.union([z.literal(''), z.string().url().max(300)]).optional(),
   evolutionApiKey: z.string().max(400).optional(),
   relatorioDestinos: z.string().max(400).optional(),
@@ -169,13 +172,20 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
 
   app.post('/api/conexoes/testar', async (req, reply) => {
     await quem(req);
-    const { alvo } = z.object({ alvo: z.enum(['ia', 'trinks', 'evolution']) }).parse(req.body);
+    const { alvo } = z.object({ alvo: z.enum(['ia', 'trinks', 'evolution', 'openai']) }).parse(req.body);
     try {
       if (alvo === 'ia') {
         const k = c.get('anthropicApiKey');
         if (!k) return reply.code(400).send({ ok: false, erro: 'Chave da IA não preenchida' });
         await o.testarIA(k);
         return { ok: true, mensagem: 'IA respondendo' };
+      }
+      if (alvo === 'openai') {
+        const k = c.get('openaiApiKey');
+        if (!k) return reply.code(400).send({ ok: false, erro: 'Chave da OpenAI não preenchida' });
+        if (!o.testarOpenAI) return { ok: true, mensagem: 'Chave salva' };
+        await o.testarOpenAI(k);
+        return { ok: true, mensagem: 'Transcrição pronta' };
       }
       if (alvo === 'trinks') {
         const k = c.get('trinksApiKey');

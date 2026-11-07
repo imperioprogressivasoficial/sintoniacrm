@@ -1252,7 +1252,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (m.autor === 'sistema') { caixa.append(el('div', { class: 'sistema', text: m.texto })); anterior = ''; continue; }
       const lado = m.autor === 'cliente' ? 'rec' : 'env';
       const quem = m.autor + '|' + (m.autorNome || '');
-      const bal = el('div', { class: `bal ${lado}${quem !== anterior ? ' primeira' : ''}` });
+      const bal = el('div', { class: `bal ${lado}${quem !== anterior ? ' primeira' : ''}`, 'data-id': m.id, 'data-autor': m.autor });
       if (quem !== anterior && m.autor === 'ia') bal.append(el('span', { class: 'autor ia', text: 'IA da Sintonia' }));
       if (quem !== anterior && m.autor === 'equipe') bal.append(el('span', { class: 'autor eq', text: m.autorNome || 'Equipe' }));
       if (m.anexo) montarBalaoMidia(bal, m, c); else bal.append(document.createTextNode(m.texto));
@@ -1369,7 +1369,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   let digitandoEm = 0;
   function trocarBotao() {
     const tem = texto.value.trim().length > 0;
-    $('ic-mic').hidden = tem; $('ic-enviar').hidden = !tem; $('enviar').title = tem ? 'Enviar' : 'Gravar áudio';
+    $('ic-mic').toggleAttribute('hidden', tem); $('ic-enviar').toggleAttribute('hidden', !tem); // <svg> não tem .hidden: só o atributo funciona $('enviar').title = tem ? 'Enviar' : 'Gravar áudio';
     $('enviar').classList.toggle('mic-vazio', !tem);
   }
   texto.addEventListener('input', () => {
@@ -1378,7 +1378,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.aberta && Date.now() - digitandoEm > 15000) { digitandoEm = Date.now(); post(`/api/conversas/${estado.aberta}/digitando`).catch(() => {}); }
   });
   texto.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(min-width: 761px)').matches) { e.preventDefault(); enviar(); } });
-  $('enviar').addEventListener('click', () => (texto.value.trim() ? enviar() : iniciarGravacao()));
+  // Com texto, o botão envia. Sem texto, é o microfone (segurar/clicar: veja "nota de voz" abaixo).
+  $('enviar').addEventListener('click', (e) => { if (texto.value.trim()) enviar(); else if (e.detail === 0 && !grav.rec) iniciarGravacao(); });
   $('camera').addEventListener('click', () => $('arq-foto').click());
   async function enviar() {
     const t = texto.value.trim(); if (!t || !estado.aberta) return;
@@ -1518,7 +1519,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     });
     const caixa = el('div', { class: 'audio' }, botao, el('div', { class: 'lado' }, onda, tempo));
     caixa.prepend(quem);
-    return caixa;
+    // Embrulho: /telas/conversa-extras.js põe aqui a velocidade (1x/1,5x/2x) e a transcrição.
+    const bloco = el('div', { class: 'audio-bloco', 'data-mid': m.id, 'data-autor': m.autor }, caixa);
+    bloco._audio = audio;
+    return bloco;
   }
   // foto em tela cheia
   function abrirVisor(url, legenda, quem, em) {
@@ -1588,8 +1592,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     } catch (x) { toast('Não enviou: ' + x.message); return false; }
   }
 
-  // nota de voz: toque no microfone para gravar; enviar ou lixeira para terminar
-  const grav = { rec: null, stream: null, partes: [], inicio: 0, relogio: 0, cancelado: false, conversa: null };
+  // nota de voz, como no WhatsApp: segure o microfone para gravar e solte para enviar; arraste para o lado para cancelar.
+  // Um toque (ou clique no computador) grava sem segurar: depois é só tocar em enviar ou na lixeira.
+  const grav = { rec: null, stream: null, partes: [], inicio: 0, relogio: 0, cancelado: false, conversa: null, parando: false, segurar: null };
   const MAX_GRAVACAO_S = 15 * 60;
   function tipoGravacao() {
     for (const t of ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']) if (window.MediaRecorder?.isTypeSupported?.(t)) return t;
@@ -1605,18 +1610,25 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const tipo = tipoGravacao();
     try { grav.rec = new MediaRecorder(grav.stream, tipo ? { mimeType: tipo } : undefined); }
     catch { grav.stream.getTracks().forEach((t) => t.stop()); toast('Este navegador não grava áudio.'); return; }
-    Object.assign(grav, { partes: [], cancelado: false, inicio: Date.now(), conversa: estado.aberta });
+    Object.assign(grav, { partes: [], cancelado: false, parando: false, inicio: Date.now(), conversa: estado.aberta });
     grav.rec.addEventListener('dataavailable', (e) => { if (e.data.size) grav.partes.push(e.data); });
     grav.rec.addEventListener('stop', terminarGravacao);
     grav.rec.start(250);
     document.querySelector('.compor').classList.add('gravando'); $('gravando').hidden = false; $('grav-tempo').textContent = '0:00';
+    modoGravacao(grav.segurar ? 'segurar' : 'travado');
+    if (navigator.vibrate) try { navigator.vibrate(18); } catch {}
     grav.relogio = setInterval(() => {
       const s = (Date.now() - grav.inicio) / 1000; $('grav-tempo').textContent = duracao(Math.floor(s));
       if (s >= MAX_GRAVACAO_S) pararGravacao(false);
     }, 250);
   }
+  function modoGravacao(modo) {
+    $('gravando').dataset.modo = modo; $('gravando').style.removeProperty('--arrasto');
+    $('gravando').querySelector('.dica').textContent = modo === 'segurar' ? '‹ Deslize para cancelar' : 'Gravando…';
+  }
   function pararGravacao(cancelar) {
-    if (!grav.rec) return;
+    if (!grav.rec || grav.parando) return;
+    grav.parando = true; grav.segurar = null;
     grav.cancelado = cancelar;
     if (grav.rec.state !== 'inactive') grav.rec.stop(); else terminarGravacao();
   }
@@ -1627,11 +1639,35 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelector('.compor').classList.remove('gravando'); $('gravando').hidden = true;
     const segundos = (Date.now() - grav.inicio) / 1000;
     if (grav.cancelado) return;
-    if (segundos < 1) { toast('Áudio muito curto. Toque no microfone, fale e toque em enviar.'); return; }
+    if (segundos < 1) { toast('Áudio muito curto. Segure o microfone enquanto fala.'); return; }
     const mimetype = (rec.mimeType || 'audio/webm').split(';')[0];
     await enviarArquivo({ blob: new Blob(grav.partes, { type: mimetype }), tipo: 'audio', mimetype, duracaoSeg: Math.round(segundos) }, grav.conversa);
   }
   $('grav-enviar').addEventListener('click', () => pararGravacao(false));
+  // Segurar o microfone: começa a gravar no toque; soltar envia; arrastar uns 90 px para o lado cancela.
+  // Toque curto (menos de 0,35 s) ou permissão do microfone ainda aberta: continua gravando "travado".
+  const ARRASTO_CANCELA = 90;
+  $('enviar').addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || texto.value.trim() || grav.rec || !estado.aberta) return;
+    e.preventDefault();
+    grav.segurar = { id: e.pointerId, x: e.clientX, em: Date.now() };
+    iniciarGravacao();
+  });
+  addEventListener('pointermove', (e) => {
+    const s = grav.segurar; if (!s || e.pointerId !== s.id || !grav.rec) return;
+    const dx = Math.max(0, s.x - e.clientX);
+    $('gravando').style.setProperty('--arrasto', Math.min(dx, ARRASTO_CANCELA) + 'px');
+    if (dx >= ARRASTO_CANCELA) { pararGravacao(true); toast('Gravação descartada.'); }
+  });
+  const soltar = (e) => {
+    const s = grav.segurar; if (!s || e.pointerId !== s.id) return;
+    grav.segurar = null;
+    if (!grav.rec) return; // ainda pedindo o microfone: quando começar, fica travado
+    if (e.type === 'pointercancel' || Date.now() - s.em < 350) { modoGravacao('travado'); return; }
+    pararGravacao(false);
+  };
+  addEventListener('pointerup', soltar);
+  addEventListener('pointercancel', soltar);
   $('grav-cancelar').addEventListener('click', () => { pararGravacao(true); toast('Gravação descartada.'); });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -1661,7 +1697,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // simulador
   $('nova-teste').addEventListener('click', () => $('d-teste').showModal());
-  $('nova-teste-cel').addEventListener('click', () => $('d-teste').showModal());
+  $('nova-teste-cel').addEventListener('click', () => (window.SintoniaConversa?.novaConversa ? window.SintoniaConversa.novaConversa() : $('d-teste').showModal()));
   $('mais-lista').addEventListener('click', () => {
     const alvo = estado.filtro === 'esperando' ? 'todas' : 'esperando';
     document.querySelector(`[data-f="${alvo}"]`).click();
@@ -2063,6 +2099,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
   window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
+  // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
+  Object.assign(window.Sintonia.ui, { usarTexto, atualizar, abrirTeste: () => $('d-teste').showModal() });
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -2075,7 +2113,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
     if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
     estado.avisos = avisos;
-    $('nova-teste').hidden = !estado.situacao.simulador; $('nova-teste-cel').hidden = !estado.situacao.simulador;
+    $('nova-teste').hidden = !estado.situacao.simulador; $('nova-teste-cel').hidden = false;
     await atualizar();
     carregarTags();
     setInterval(atualizar, 4000);
@@ -2085,5 +2123,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 </script>
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>
+<script src="/telas/conversa-extras.js" defer></script>
 </body>
 </html>

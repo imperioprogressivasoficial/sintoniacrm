@@ -219,9 +219,13 @@
     <div class="linha"><button class="botao" data-salvar="trinksApiKey">Salvar</button><button class="botao leve" data-testar="trinks">Testar</button><span class="res" id="res-trinks" role="status"></span></div>
   </section>
 
-  <section id="transcricao" class="reservado" aria-labelledby="t-transcricao">
+  <section id="transcricao" aria-labelledby="t-transcricao">
     <h2 id="t-transcricao"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><span>Transcrição de áudio<small>Áudios das clientes viram texto</small></span></h2>
-    <div id="transcricao-campos"><p>Em breve: a chave para transcrever os áudios aparece aqui.</p></div>
+    <div id="transcricao-campos">
+      <p>Chave da API da OpenAI (Whisper). Com ela, o botão Transcrever dos áudios da conversa escreve o que a cliente falou. Cada áudio é transcrito uma vez só.</p>
+      <label>Chave da OpenAI <input id="openaiApiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+      <div class="linha"><button class="botao" data-salvar="openaiApiKey">Salvar</button><button class="botao leve" data-testar="openai">Testar</button><span class="res" id="res-openai" role="status"></span></div>
+    </div>
   </section>
 
   <section id="relatorio" aria-labelledby="t-relatorio">

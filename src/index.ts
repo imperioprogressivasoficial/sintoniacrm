@@ -36,6 +36,9 @@ import { simularResposta } from './ai/simulacao.js';
 import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis } from './funis/funis.js';
 import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, ligarFunis } from './automacoes/automacoes.js';
 import { registrarFunis } from './rotas/funis.js';
+import { registrarConversa } from './conversa/rotas.js';
+import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
+import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './conversa/transcricao.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -213,6 +216,10 @@ const app = criarServidor({
     testarIA: async (chave) => {
       await new Anthropic({ apiKey: chave }).models.list({ limit: 1 });
     },
+    testarOpenAI: async (chave) => {
+      const r = await fetch('https://api.openai.com/v1/models/whisper-1', { headers: { authorization: `Bearer ${chave}` }, signal: AbortSignal.timeout(15_000) });
+      if (!r.ok) throw new Error(r.status === 401 ? 'Chave recusada pela OpenAI' : `OpenAI respondeu ${r.status}`);
+    },
     testarTrinks: async (chave) => {
       const t = new ClienteTrinks({ apiKey: chave });
       const lista = await t.listarProfissionais(UNIDADES.norte.trinksEstabelecimentoId ?? '');
@@ -271,6 +278,27 @@ const app = criarServidor({
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes });
+
+// Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
+registrarConversa(app, {
+  repo,
+  sintonia,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  respostas: pool ? new RespostasPostgres(pool) : new RespostasMemoria(),
+  transcricoes: pool ? new TranscricoesPostgres(pool) : new TranscricoesMemoria(),
+  transcritor: new TranscritorOpenAI(() => conexoes.get('openaiApiKey')),
+  transcricaoLigada: () => Boolean(conexoes.get('openaiApiKey')),
+  ia: { claude, modelo: cfg.SINTONIA_MODELO, base: () => base.texto(), ligada: () => iaLigada },
+  // Envia pelo número real da unidade; o de teste só vale enquanto nenhum número real estiver conectado.
+  canalDa: (unidade) => {
+    const real = numeros.find((n) => n.unidade === unidade && ehReal(n));
+    if (real) return { canalId: real.canalId };
+    const teste = numeros.find((n) => n.unidade === unidade);
+    if (teste && !numeros.some(ehReal)) return { canalId: teste.canalId };
+    return { erro: 'Esta unidade ainda não tem WhatsApp conectado. Conecte o número em Conexões.' };
+  },
+  modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+});
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
