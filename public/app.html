@@ -797,6 +797,10 @@
     </section>
     <section class="vista" id="v-ia"><div class="painel" id="ia"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
+    <!-- Relatórios, Leads (importar/exportar/duplicatas) e Agenda: telas em /telas/*.js -->
+    <section class="vista" id="v-relatorios"><div class="painel" id="relatorios"></div></section>
+    <section class="vista" id="v-leads"><div class="painel" id="leads"></div></section>
+    <section class="vista" id="v-agenda"><div class="painel" id="agenda"></div></section>
     <section class="vista" id="v-equipe"><div class="painel"><div class="gestao" id="equipe" style="display:grid;gap:14px"></div></div></section>
     <section class="vista" id="v-configuracoes"><div class="painel"><div class="gestao" id="configuracoes" style="display:grid;gap:14px"></div></div></section>
   </div>
@@ -1062,6 +1066,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
+    if ((v === 'relatorios' || v === 'leads' || v === 'agenda') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
   }
 
   // lista
@@ -2036,7 +2041,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
 
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
-  window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
+  window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -2059,5 +2064,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 </script>
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>
+<script src="/telas/relatorios.js" defer></script>
+<script src="/telas/leads.js" defer></script>
+<script src="/telas/agenda.js" defer></script>
 </body>
 </html>

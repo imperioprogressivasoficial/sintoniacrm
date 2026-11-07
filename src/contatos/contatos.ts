@@ -105,6 +105,13 @@ export class ContatosMemoria implements ArmazemContatos {
     l.splice(i, 1);
     return true;
   }
+  /** Só na memória (leads: exportar, importar, duplicatas). No Postgres é SQL (leads/armazem.ts). */
+  async listar(empresaId: string) {
+    return [...this.contatos.entries()].filter(([k]) => k.startsWith(`${empresaId}|`)).map(([, c]) => structuredClone(c));
+  }
+  async apagar(empresaId: string, telefone: string) {
+    this.contatos.delete(`${empresaId}|${telefone}`);
+  }
 }
 
 type LinhaContato = {

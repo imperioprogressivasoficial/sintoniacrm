@@ -610,6 +610,9 @@ export class Sintonia {
           atendenteId: autor === 'equipe' ? atendenteId : undefined,
           servico: a.agendamento.servico,
           inicio: a.agendamento.inicio.toISOString(),
+          // Para a Agenda (src/agenda/agenda-dia.ts).
+          profissional: a.agendamento.profissional,
+          duracaoMin: a.agendamento.duracaoMin,
         });
       }
       if (a.tipo === 'passar_para_humano') {

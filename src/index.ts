@@ -34,6 +34,7 @@ import { simularResposta } from './ai/simulacao.js';
 import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis } from './funis/funis.js';
 import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, ligarFunis } from './automacoes/automacoes.js';
 import { registrarFunis } from './rotas/funis.js';
+import { montarExtras, registrarExtras } from './rotas/extras.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -186,6 +187,8 @@ const sintonia = new Sintonia({
   },
 });
 
+const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
+
 const trabalhador = new Trabalhador({ fila, processar: (m) => sintonia.receber(m), paralelo: cfg.SINTONIA_PARALELO, log });
 
 const app = criarServidor({
@@ -194,7 +197,7 @@ const app = criarServidor({
   log,
   auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
   fila: { fila, avisar: () => trabalhador.avisar() },
-  contatos: { armazem: pool ? new ContatosPostgres(pool) : new ContatosMemoria(), empresaId: cfg.SINTONIA_EMPRESA_ID },
+  contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
     return agendaLigada ? trinks : undefined;
   },
@@ -257,6 +260,20 @@ const app = criarServidor({
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes });
+// Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
+const extras = montarExtras({
+  repo,
+  pool,
+  contatos: armazemContatos,
+  armazemTags,
+  tags,
+  funis,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  // Conversa importada: pelo número real da unidade (se houver), senão pelo de teste.
+  canalDa: (unidade) => (numeros.find((n) => n.unidade === unidade && ehReal(n)) ?? numeros.find((n) => n.unidade === unidade))?.canalId,
+  comConversa: (id, fn) => sintonia.comConversa(id, fn),
+});
+registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
