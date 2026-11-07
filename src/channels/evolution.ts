@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CanalWhatsApp, EnvioResultado, MensagemRecebida } from './tipos.js';
+import type { CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida } from './tipos.js';
 import { telefoneDoJid } from '../util/telefone.js';
 
 /**
@@ -99,5 +99,24 @@ export class CanalEvolution implements CanalWhatsApp {
     }
     const json = (await resp.json()) as { key?: { id?: string } };
     return { idExterno: json.key?.id ?? '' };
+  }
+
+  async buscarFoto(instancia: string, telefone: string): Promise<FotoPerfil | null> {
+    const url = `${this.baseUrl.replace(/\/$/, '')}/chat/fetchProfilePictureUrl/${encodeURIComponent(instancia)}`;
+    const resp = await this.fetchFn(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: this.apiKey },
+      body: JSON.stringify({ number: telefone }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!resp.ok) throw new Error(`Evolution recusou a foto (${resp.status})`);
+    const { profilePictureUrl } = (await resp.json()) as { profilePictureUrl?: string | null };
+    if (!profilePictureUrl) return null;
+    const img = await this.fetchFn(profilePictureUrl, { signal: AbortSignal.timeout(10_000) });
+    if (!img.ok) throw new Error(`Foto indisponível (${img.status})`);
+    const tipo = img.headers.get('content-type') ?? 'image/jpeg';
+    if (!tipo.startsWith('image/')) return null;
+    const conteudo = Buffer.from(await img.arrayBuffer());
+    return conteudo.length > 0 && conteudo.length < 2_000_000 ? { conteudo, tipo } : null;
   }
 }

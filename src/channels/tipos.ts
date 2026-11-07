@@ -24,4 +24,11 @@ export interface CanalWhatsApp {
   /** Converte o corpo do webhook em mensagens de texto. Ignora o que não é conversa (status, grupos etc.). */
   lerWebhook(corpo: unknown): MensagemRecebida[];
   enviarTexto(canalId: string, telefone: string, texto: string): Promise<EnvioResultado>;
+  /** Foto de perfil do WhatsApp da cliente (null quando ela não tem foto ou esconde). Opcional: a API oficial não oferece. */
+  buscarFoto?(canalId: string, telefone: string): Promise<FotoPerfil | null>;
+}
+
+export interface FotoPerfil {
+  conteudo: Buffer;
+  tipo: string;
 }

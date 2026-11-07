@@ -50,6 +50,9 @@ export interface Repositorio {
   /** Retorna false se a mensagem (pelo idExterno) já foi registrada. */
   adicionarMensagem(m: Omit<Mensagem, 'id'>): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
+  foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
+  salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
   /** Última mensagem de cada conversa (prévia da lista), numa consulta só. */
   ultimasMensagens(): Promise<Map<string, Mensagem>>;
 
@@ -135,6 +138,14 @@ export class RepositorioMemoria implements Repositorio {
 
   async mensagens(conversaId: string, limite = 40) {
     return this.msgs.filter((m) => m.conversaId === conversaId).slice(-limite);
+  }
+
+  private fotos = new Map<string, { conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date }>();
+  async foto(telefone: string) {
+    return this.fotos.get(telefone);
+  }
+  async salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    this.fotos.set(telefone, { conteudo: foto?.conteudo ?? null, tipo: foto?.tipo ?? null, atualizadaEm: em });
   }
 
   async ultimasMensagens() {

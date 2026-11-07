@@ -3,6 +3,7 @@ import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
+import { Fotos } from './app/fotos.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
@@ -115,6 +116,7 @@ const app = criarServidor({
   agenda: cfg.TRINKS_API_KEY ? trinks : undefined,
   evolution: evolution ? { canal: evolution, token: cfg.EVOLUTION_WEBHOOK_TOKEN } : undefined,
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
+  fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada: Boolean(cfg.TRINKS_API_KEY), numerosReais: numeros.filter((n) => !ehCanalTeste(n.canalId)).length }),
   clienteTeste: async ({ unidade, nome, telefone, texto }) => {
     const canalId = canalTesteDa(unidade);

@@ -126,6 +126,23 @@ export class RepositorioPostgres implements Repositorio {
     return (r.rowCount ?? 0) > 0;
   }
 
+  async foto(telefone: string) {
+    const { rows } = await this.pool.query<{ conteudo: Buffer | null; tipo: string | null; atualizada_em: Date }>(
+      'select conteudo, tipo, atualizada_em from sintonia.fotos where telefone = $1',
+      [telefone],
+    );
+    const r = rows[0];
+    return r ? { conteudo: r.conteudo, tipo: r.tipo, atualizadaEm: r.atualizada_em } : undefined;
+  }
+
+  async salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    await this.pool.query(
+      `insert into sintonia.fotos (telefone, conteudo, tipo, atualizada_em) values ($1, $2, $3, $4)
+       on conflict (telefone) do update set conteudo = excluded.conteudo, tipo = excluded.tipo, atualizada_em = excluded.atualizada_em`,
+      [telefone, foto?.conteudo ?? null, foto?.tipo ?? null, em],
+    );
+  }
+
   async ultimasMensagens() {
     const { rows } = await this.pool.query<{ id: string; conversa_id: string; autor: Mensagem['autor']; autor_nome: string | null; texto: string; id_externo: string | null; em: Date }>(
       `select distinct on (conversa_id) id, conversa_id, autor, autor_nome, texto, id_externo, em

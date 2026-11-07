@@ -26,6 +26,8 @@ export interface DependenciasServidor {
   log?: (msg: string, extra?: unknown) => void;
   /** Login. Sem ele, a API fica aberta (só para teste local). */
   auth?: OpcoesAuth;
+  /** Fotos de perfil das clientes. */
+  fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
   situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number };
   /** Simulador: uma "cliente" escreve pelo WhatsApp de teste. */
@@ -114,6 +116,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const conversa = await d.repo.buscarConversa(id);
     if (!conversa) return reply.code(404).send();
     return { conversa, mensagens: await d.repo.mensagens(id, 200), sugestao: await d.repo.sugestao(id) };
+  });
+
+  app.get('/api/conversas/:id/foto', async (req, reply) => {
+    const c = await d.repo.buscarConversa((req.params as { id: string }).id);
+    const foto = c && d.fotos ? await d.fotos.da(c) : null;
+    // "Sem foto" nunca fica guardado no navegador: assim que a foto existir, ela aparece.
+    if (!foto) return reply.header('cache-control', 'no-store').code(204).send();
+    return reply.header('cache-control', 'private, max-age=3600').type(foto.tipo).send(foto.conteudo);
   });
 
   app.post('/api/conversas/:id/digitando', async (req) => {
