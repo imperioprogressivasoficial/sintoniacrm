@@ -78,6 +78,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/alertas.js': { arquivo: 'telas/alertas.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/rastreio.js': { arquivo: 'telas/rastreio.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/comercial.js': { arquivo: 'telas/comercial.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/planos.js': { arquivo: 'telas/planos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/desempenho.js': { arquivo: 'telas/desempenho.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/clientes.js': { arquivo: 'telas/clientes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/respostas.js': { arquivo: 'telas/respostas.js', tipo: 'text/javascript; charset=utf-8' },

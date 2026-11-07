@@ -66,6 +66,11 @@ import { FonteComercialMemoria, FonteComercialPostgres } from './comercial/fonte
 import { registrarComercial } from './comercial/rotas.js';
 import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
 import { registrarDesempenho } from './desempenho/rotas.js';
+import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
+import { anotadorDe, comPorteiro, medirCliente, type Anotar } from './planos/medidor.js';
+import { PagamentoManual } from './planos/pagamento.js';
+import { Planos } from './planos/porteiro.js';
+import { registrarPlanos } from './planos/rotas.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
@@ -75,7 +80,9 @@ const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString
 
 // A chave da IA pode chegar depois (tela de Conexões): o agente usa sempre o cliente em vigor.
 let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
-const claude = new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) });
+// Cada chamada à IA tem o uso (tokens, custo, dentro/fora do horário) medido para o plano da IA (src/planos).
+let anotarUso: Anotar = () => {};
+const claude = medirCliente(new Proxy({} as Anthropic, { get: (_alvo, prop) => Reflect.get(claudeAtual, prop) }), (r) => anotarUso(r));
 const trinks = new ClienteTrinks({ apiKey: cfg.TRINKS_API_KEY ?? '', intervaloMs: cfg.TRINKS_INTERVALO_MS });
 let repo: Repositorio;
 let fila: FilaEntrada;
@@ -99,6 +106,14 @@ if (cfg.DATABASE_URL) {
   trava = new TravaMemoria();
   contas = new ContasMemoria();
 }
+
+// Plano da IA: medição de uso e porteiro. A conta original (SINTONIA_PLANO_FUNDADOR, padrão "imperio") fica no Fundador.
+const planos = new Planos({
+  armazem: pool ? new ArmazemPlanosPostgres(pool) : new ArmazemPlanosMemoria(),
+  fundadoras: (process.env.SINTONIA_PLANO_FUNDADOR ?? 'imperio').split(',').map((x) => x.trim()).filter(Boolean),
+  log,
+});
+anotarUso = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
 const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
@@ -332,7 +347,7 @@ const agentesIa = montarAgentesIa({
   padrao: agente,
   chaveGeral: (p) => (p === 'openai' ? conexoes.get('openaiApiKey') : conexoes.get('anthropicApiKey')) || undefined,
   claudeGeral: claude,
-  claudeComChave: (chave) => new Anthropic({ apiKey: chave }),
+  claudeComChave: (chave) => medirCliente(new Anthropic({ apiKey: chave }), (r) => anotarUso(r)),
   sintonia: () => sintonia,
   tags: tagsParaAgentes(tags, repo),
   moverEtapa: moverEtapaPara({ funis, armazemTags, empresaId: cfg.SINTONIA_EMPRESA_ID, repo, comConversa: (id, fn) => sintonia.comConversa(id, fn) }),
@@ -348,7 +363,8 @@ const sintonia = new Sintonia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
   numeros,
-  agente: agentesIa.agente,
+  // Porteiro do plano da IA: sem plano, fora da janela ou sem cota, a conversa fica para a equipe.
+  agente: comPorteiro(agentesIa.agente, { planos, empresaId: cfg.SINTONIA_EMPRESA_ID, log }),
   modoInicial: agentesIa.modoInicial,
   log,
   trava,
@@ -511,6 +527,16 @@ registrarDesempenho(app, {
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   unidades: ['norte', 'sumare'],
   agora: () => new Date(),
+});
+// Plano e uso da IA (Mais › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
+registrarPlanos(app, {
+  planos,
+  pagamento: new PagamentoManual(),
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  agora: () => new Date(),
+  fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
+  armazemComercial,
+  contas,
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
