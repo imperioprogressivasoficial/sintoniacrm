@@ -101,6 +101,11 @@ export class ControleIa {
       executar: async (p) => {
         const a = await this.agenteDe(p.conversa).catch(() => undefined);
         if (!a) return this.d.padrao.executar(p);
+        // "Retomar conversas paradas" desligado na unidade: o agente não manda follow-up (nada é enviado).
+        if (p.tipoAtivo?.startsWith('followup')) {
+          const cfg = await this.configDa(p.conversa.unidade).catch(() => undefined);
+          if (cfg?.ligado && cfg.retomarParadas === false) return { texto: '', acoes: [], recusou: false };
+        }
         try {
           const r = await this.d.executor.executar(a, p);
           return { texto: r.texto, acoes: r.acoes, recusou: r.recusou };
