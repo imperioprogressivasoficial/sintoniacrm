@@ -9,13 +9,15 @@ import { normalizarCelular } from '../util/telefone.js';
 import { DadosResposta, ErroAtalhoRepetido, type ArmazemRespostas, type RespostaRapida } from './respostas.js';
 import { ErroTranscricao, type ArmazemTranscricoes, type Transcritor } from './transcricao.js';
 import { ACOES_IA, ajudarComIa, ErroAssistente } from './assistente.js';
+import { relatorioDaConversa } from './relatorio.js';
 
 /**
  * Recursos da tela de conversa:
  * - respostas rápidas (/api/respostas-rapidas);
  * - ajuda da IA no topo da conversa (/api/conversas/:id/ia);
  * - transcrição dos áudios (/api/conversas/:id/transcricoes, .../midias/:mensagemId/transcrever);
- * - nova conversa por número (/api/conversas/nova).
+ * - nova conversa por número (/api/conversas/nova);
+ * - relatório do cliente na ficha (/api/conversas/:id/relatorio).
  * Registradas depois de criarServidor (src/index.ts): valem o login e o tratamento de erros de lá.
  * Sem login (teste local) tudo fica liberado, como no resto da API.
  */
@@ -139,6 +141,9 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
       throw e;
     }
   }
+
+  // ------------------------------------------------------------ relatório do cliente
+  app.get('/api/conversas/:id/relatorio', async (req) => relatorioDaConversa(o.repo, await conversaVisivel(req), agora()));
 
   app.get('/api/conversas/:id/transcricoes', async (req) => {
     const c = await conversaVisivel(req);

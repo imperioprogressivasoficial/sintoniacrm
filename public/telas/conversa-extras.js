@@ -542,8 +542,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('label', {}, document.createTextNode('Nome'), nome),
       unidades.length > 1 ? el('div', { style: 'display:grid;gap:6px' }, el('span', { class: 'cx-sub', text: 'Unidade (número que vai mandar a mensagem)' }), el('div', { class: 'nc-unidades' }, ...botoesUnidade)) : null,
       caixaMsg, erro,
-      el('div', { class: 'cx-botoes' }, enviar),
-      estado.situacao?.simulador ? el('button', { type: 'button', class: 'nc-teste', text: 'Criar conversa de teste (simulador)', onclick: () => { d.close(); ui.abrirTeste(); } }) : null);
+      el('div', { class: 'cx-botoes' }, enviar));
     if (!unidades.length) erro.textContent = 'Você ainda não tem unidade. Peça para a gestão liberar.';
     ligarRespostas(msg, caixaMsg, { conversa: () => ({ unidade, nome: nome.value }), nome: () => nome.value });
     form.addEventListener('submit', async (e) => {
