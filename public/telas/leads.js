@@ -38,7 +38,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-campo { display: grid; gap: 5px; font-size: 12px; color: var(--sub); font-weight: 700; min-width: 0; }
   .ld-campo select, .ld-campo input:not([type=checkbox]), .ld-campo textarea { font: inherit; font-size: 15px; font-weight: 600; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 14px; padding: 11px 12px; min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; }
   .ld-campo textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 13px; font-weight: 500; }
-  .ld-campo select option { color: #08243f; }
+  .ld-campo select option { color: #002941; }
   .ld-periodo { grid-column: 1 / -1; max-width: 560px; }
   .ld-periodo > div { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
   .ld-periodo > div span { color: var(--sub); font-weight: 500; }
@@ -75,7 +75,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-col b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-col span { grid-column: 1; font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ld-col select { grid-column: 2; grid-row: 1 / span 2; font: inherit; font-size: 14px; font-weight: 600; color: var(--texto); background: var(--vidro-ativo); border: 1px solid var(--vidro-borda); border-radius: 12px; padding: 9px; min-width: 0; min-height: 40px; }
-  .ld-col select option { color: #08243f; }
+  .ld-col select option { color: #002941; }
   .ld-col.ld-ignorada b { color: var(--sub); }
   @media (max-width: 480px) { .ld-col { grid-template-columns: minmax(0, 1fr); } .ld-col select { grid-column: 1; grid-row: auto; } }
   .ld-numeros-res { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }

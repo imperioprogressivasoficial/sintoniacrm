@@ -42,7 +42,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .rl-campo { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 0 8px 0 14px; min-height: 44px; box-sizing: border-box; min-width: 0; }
   .rl-campo span { font-size: 12px; color: var(--sub); font-weight: 700; white-space: nowrap; }
   .rl-campo select, .rl-campo input { all: unset; font: inherit; font-size: 14px; font-weight: 600; color: var(--texto); padding: 8px 6px; cursor: pointer; min-width: 0; max-width: 170px; }
-  .rl-campo select option { color: #08243f; }
+  .rl-campo select option { color: #002941; }
   html[data-tema="escuro"] .rl input, html[data-tema="escuro"] .rl select { color-scheme: dark; }
   @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .rl input, html:not([data-tema="claro"]) .rl select { color-scheme: dark; } }
   .rl-espaco { flex: 1; }

@@ -655,6 +655,7 @@
     <div class="lt-secao">Principal</div>
     <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
     <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
+    <button class="lt-item" id="lt-sino" title="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="lt-rot">Notificações</span><span class="lt-qtd" id="lt-sino-qtd" hidden></span></button>
     <button class="nav lt-item" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
     <button class="nav lt-item" data-vista="agenda" title="Agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
     <button class="nav lt-item lt-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
@@ -691,6 +692,7 @@
           <div class="titulo">
             <button class="icone redondo" id="mais-lista" title="Mais opções"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
             <span class="espaco"></span>
+            <button class="icone redondo" id="sino-cel" title="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="nt-bolinha" id="sino-cel-qtd" hidden></span></button>
             <button class="icone redondo branco" id="nova-teste-cel" title="Nova conversa" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
             <button class="icone so-nunca" id="nova-teste" title="Nova conversa de teste" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8v7M8.5 11.5h7"/></svg></button>
           </div>
@@ -1039,6 +1041,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const api = async (url, opcoes = {}) => {
     const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
     if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    // Resumo do sino em qualquer resposta que o traga (lista de conversas, atualizações): /telas/notificacoes.js escuta.
+    const sino = r.headers.get('x-notificacoes');
+    if (sino) { try { dispatchEvent(new CustomEvent('sintonia:notificacoes', { detail: JSON.parse(sino) })); } catch {} }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(j.erro || 'Algo deu errado'), { status: r.status });
     return j;
@@ -2067,6 +2072,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; })] : [])),
       el('div', { class: 'opcoes-conta' },
+        botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', 'Notificações', () => window.SintoniaTelas?.notificacoes?.preferencias()),
         botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
         botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
     );
@@ -2139,5 +2145,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/relatorios.js" defer></script>
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
+<script src="/telas/notificacoes.js" defer></script>
 </body>
 </html>

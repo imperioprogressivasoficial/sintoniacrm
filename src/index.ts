@@ -40,6 +40,9 @@ import { registrarConversa } from './conversa/rotas.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './conversa/transcricao.js';
 import { montarExtras, registrarExtras } from './rotas/extras.js';
+import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
+import { Notificador, observarEventos } from './notificacoes/notificador.js';
+import { ChavesPush, enviadorWebPush } from './notificacoes/push.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -99,9 +102,10 @@ if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
 }
 
 // Conexões: o que for salvo na tela vale por cima do ambiente, e é aplicado na hora.
+const cofre = new Cofre(process.env.SINTONIA_SEGREDO || cfg.DATABASE_URL || 'sintonia-local');
 const conexoes = new Conexoes(
   pool ? new ArmazemPostgres(pool) : new ArmazemMemoria(),
-  new Cofre(process.env.SINTONIA_SEGREDO || cfg.DATABASE_URL || 'sintonia-local'),
+  cofre,
   {
     anthropicApiKey: cfg.ANTHROPIC_API_KEY,
     trinksApiKey: cfg.TRINKS_API_KEY,
@@ -149,6 +153,21 @@ function aplicarConexoes() {
 }
 conexoes.aoMudar(aplicarConexoes);
 await conexoes.carregar();
+
+// Notificações (sino e push): cada evento registrado vira aviso para quem pode ver a conversa.
+const armazemNotificacoes = pool ? new ArmazemNotificacoesPostgres(pool) : new ArmazemNotificacoesMemoria();
+const chavesPush = new ChavesPush(armazemNotificacoes, cofre);
+const notificador = new Notificador({
+  armazem: armazemNotificacoes,
+  contas,
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  push: { chaves: chavesPush, enviador: enviadorWebPush, assunto: `mailto:${process.env.VAPID_EMAIL || cfg.ADMIN_EMAIL || 'suporte@example.com'}` },
+  log,
+});
+observarEventos(repo, (e) => notificador.aoEvento(e));
+await chavesPush.obter().catch((e) => log('Falha ao preparar as chaves do push', String(e)));
+
 const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.destinosRelatorio() : cfg.destinosRelatorio);
 
 // Fotos, áudios, vídeos e documentos recebidos: baixados à parte, sem segurar o texto.
@@ -240,6 +259,7 @@ const app = criarServidor({
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({ iaLigada, agendaLigada, numerosReais: numeros.filter(ehReal).length }),
   midias,
+  notificacoes: { notificador, armazem: armazemNotificacoes, chaves: chavesPush },
   gestao: {
     tags,
     empresa,
@@ -322,6 +342,7 @@ let relatorioEnviadoEm = '';
 const relogio = setInterval(async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
+  await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram
   const agora = new Date();
   const p = partesBahia(agora);
@@ -346,6 +367,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     clearInterval(relogio);
     await app.close().catch(() => {});
     await trabalhador.parar();
+    await notificador.ocioso().catch(() => {});
     await pool?.end();
     process.exit(0);
   });

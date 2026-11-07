@@ -54,7 +54,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ag-seg button { all: unset; cursor: pointer; padding: 8px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--sub); white-space: nowrap; border: 1px solid transparent; }
   .ag-seg button[aria-pressed="true"] { background: var(--vidro-ativo); color: var(--texto); font-weight: 700; border-color: var(--vidro-borda); box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
   .ag-sel { font: inherit; font-size: 13.5px; font-weight: 600; color: var(--texto); border-radius: 999px; padding: 0 12px; min-height: 42px; flex: none; max-width: 200px; box-shadow: none; }
-  .ag-sel option { color: #08243f; }
+  .ag-sel option { color: #002941; }
   html[data-tema="escuro"] .ag select, html[data-tema="escuro"] .ag-dlg input { color-scheme: dark; }
   .ag-corpo { padding: 14px 16px 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; min-width: 0; }
   @media (max-width: 760px) { .ag-corpo { padding-bottom: 120px; } }

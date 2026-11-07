@@ -31,6 +31,9 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/relatorios.js': { arquivo: 'telas/relatorios.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/leads.js': { arquivo: 'telas/leads.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agenda.js': { arquivo: 'telas/agenda.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/notificacoes.js': { arquivo: 'telas/notificacoes.js', tipo: 'text/javascript; charset=utf-8' },
+  // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
+  '/sw.js': { arquivo: 'sw.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
   '/ds.css': { arquivo: 'ds.css', tipo: 'text/css; charset=utf-8' },
   '/acesso-rapido.js': { arquivo: 'acesso-rapido.js', tipo: 'text/javascript; charset=utf-8' },
@@ -61,6 +64,7 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
         .header('x-content-type-options', 'nosniff')
         .header('referrer-policy', 'strict-origin-when-cross-origin');
       if (tipo.startsWith('text/html')) reply.header('x-frame-options', 'DENY');
+      if (rota === '/sw.js') reply.header('cache-control', 'no-cache').header('service-worker-allowed', '/');
       return reply.send(ler(arquivo));
     });
   }
