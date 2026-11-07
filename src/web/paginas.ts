@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { usuarioDaRequisicao, type OpcoesAuth } from '../auth/rotas.js';
@@ -90,6 +91,27 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
     return b;
   };
 
+  const versoes = new Map<string, string>();
+  const versao = (arquivo: string) => {
+    let v = versoes.get(arquivo);
+    if (!v) { v = createHash('sha256').update(ler(arquivo)).digest('hex').slice(0, 10); versoes.set(arquivo, v); }
+    return v;
+  };
+  const porRota = new Map(Object.entries(ARQUIVOS).map(([r, a]) => [r, a.arquivo]));
+  const htmlPronto = new Map<string, Buffer>();
+  const comVersoes = (arquivo: string) => {
+    let h = htmlPronto.get(arquivo);
+    if (!h) {
+      const texto = ler(arquivo).toString('utf8').replace(/(href|src)="(\/[^"?#]+\.(?:css|js))"/g, (m, attr: string, rota: string) => {
+        const a = porRota.get(rota);
+        return a ? `${attr}="${rota}?v=${versao(a)}"` : m;
+      });
+      h = Buffer.from(texto, 'utf8');
+      htmlPronto.set(arquivo, h);
+    }
+    return h;
+  };
+
   for (const [rota, { arquivo, tipo }] of Object.entries(ARQUIVOS)) {
     app.get(rota, async (req, reply) => {
       if (auth && (rota === '/app' || rota === '/conexoes' || rota === '/entrar')) {
@@ -105,6 +127,14 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
         .header('referrer-policy', 'strict-origin-when-cross-origin');
       if (tipo.startsWith('text/html')) reply.header('x-frame-options', 'DENY');
       if (rota === '/sw.js') reply.header('cache-control', 'no-cache').header('service-worker-allowed', '/');
+      // HTML: cada CSS/JS local ganha ?v=<versão>, para o celular nunca misturar página nova com estilo antigo guardado.
+      if (tipo.startsWith('text/html')) return reply.send(comVersoes(arquivo));
+      // CSS e JS: o navegador confere a versão a cada uso (ETag) e só baixa de novo quando mudou.
+      if (/^(text\/css|text\/javascript|application\/javascript)/.test(tipo)) {
+        const etag = `"${versao(arquivo)}"`;
+        reply.header('cache-control', 'no-cache').header('etag', etag);
+        if (req.headers['if-none-match'] === etag) return reply.code(304).send();
+      }
       return reply.send(ler(arquivo));
     });
   }
