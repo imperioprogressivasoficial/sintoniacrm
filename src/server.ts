@@ -15,6 +15,8 @@ import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
 import { ligacoesDoDia, quemLigar, registrarLigacao } from './app/ligacoes.js';
 import { bahia, DIA, partesBahia } from './util/tempo.js';
+import { registrarContatos } from './contatos/rotas.js';
+import type { ArmazemContatos } from './contatos/contatos.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
 import { registrarRotasMidia } from './web/midias.js';
 import { agendarNoTrinks, ErroAgendamento, estabelecimentoDa, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
@@ -37,6 +39,8 @@ export interface DependenciasServidor {
   auth?: OpcoesAuth;
   /** Tela de Conexões (chaves da IA, Trinks, Evolution e QR Code do WhatsApp). */
   conexoes?: Omit<OpcoesConexoes, 'auth'>;
+  /** Ficha do contato e campos personalizados. */
+  contatos?: { armazem: ArmazemContatos; empresaId: string };
   /** Fotos de perfil das clientes. */
   fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
@@ -292,6 +296,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Fotos, áudios, vídeos e documentos ----------
+  if (d.contatos) registrarContatos(app, { contatos: d.contatos.armazem, empresaId: d.contatos.empresaId, conversaVisivel, renomear: (id, nome) => d.sintonia.renomearCliente(id, nome) });
   registrarRotasMidia(app, { sintonia: d.sintonia, repo: d.repo, midias: d.midias, agora: d.agora, conversaVisivel, quemDe: (req) => req.usuario });
 
   // Painel e relatório só contam as conversas que a pessoa pode ver.

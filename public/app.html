@@ -511,6 +511,20 @@
   .apagar-tag { font-size: 13px; color: #ea0038; padding: 6px 8px; border-radius: 8px; }
   .apagar-tag:hover { background: var(--hover); }
   @media (max-width: 760px) { .trilho .marca { display: none !important; } }
+
+  /* ficha da cliente */
+  .acoes-perfil { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+  .acao-perfil { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 4px; min-width: 96px; padding: 10px 12px; border-radius: 14px; background: var(--painel); color: var(--texto); font-size: 13px; }
+  .acao-perfil svg { width: 22px; height: 22px; color: var(--marca-azul); }
+  .ficha-form { display: grid; gap: 10px; }
+  .ficha-form label { display: grid; gap: 4px; font-size: 13px; color: var(--sub); }
+  .ficha-form input, .ficha-form textarea, .ficha-form select, #cp-tipo, #cp-opcoes { background: var(--painel); border: 1px solid var(--linha); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; color: var(--texto); resize: vertical; }
+  .ficha-form .interruptor { display: flex; align-items: center; gap: 10px; color: var(--texto); font-size: 15px; padding: 4px 0; }
+  .ficha-form .interruptor input { width: 20px; height: 20px; accent-color: var(--marca-azul); }
+  #f-empresa { display: grid; gap: 10px; padding: 12px; border-radius: 12px; border: 1px dashed var(--linha); }
+  #f-campos { display: grid; gap: 10px; }
+  .rodape-ficha { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: sticky; bottom: 0; padding: 10px 0 4px; background: var(--fundo); }
+  .ficha { padding-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -613,7 +627,27 @@
 
       <aside class="ficha" id="ficha" hidden>
         <div class="topo"><button class="icone" id="fechar-ficha" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>Dados da cliente</div>
-        <div class="bloco perfil"><span class="avatar" id="f-avatar"></span><b id="f-nome"></b><span id="f-tel"></span></div>
+        <div class="bloco perfil"><span class="avatar" id="f-avatar"></span><b id="f-nome"></b><span id="f-tel"></span>
+          <div class="acoes-perfil"><a class="acao-perfil" id="f-ligar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>Ligar</a><button class="acao-perfil" id="f-copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar número</button></div>
+        </div>
+        <form class="bloco ficha-form" id="f-contato" autocomplete="off">
+          <h3>Dados da cliente</h3>
+          <label>Nome <input name="nome" maxlength="120" placeholder="Nome da cliente"></label>
+          <label>E-mail <input name="email" type="email" maxlength="200" placeholder="email@exemplo.com"></label>
+          <label>Data de nascimento <input name="nascimento" type="date"></label>
+          <label>Observações <textarea name="observacoes" rows="3" maxlength="4000" placeholder="Preferências, histórico, cuidados…"></textarea></label>
+          <div id="f-campos"></div>
+          <label class="interruptor"><input type="checkbox" name="juridica"><span>É empresa</span></label>
+          <div id="f-empresa" hidden>
+            <label>Razão social <input name="razaoSocial" maxlength="200"></label>
+            <label>Nome fantasia <input name="nomeFantasia" maxlength="200"></label>
+            <label>CNPJ <input name="cnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00"></label>
+            <label>Cargo da cliente <input name="cargo" maxlength="120"></label>
+            <label>Site <input name="site" maxlength="200" placeholder="www.exemplo.com.br"></label>
+          </div>
+          <div class="erro-txt" id="f-erro"></div>
+          <div class="rodape-ficha"><span class="info" id="f-salvo"></span><button class="botao ds-primario" id="f-salvar">Salvar</button></div>
+        </form>
         <div class="bloco">
           <h3>Etapa do funil (a IA move sozinha)</h3>
           <select id="f-etapa" disabled></select>
@@ -657,6 +691,19 @@
     <div class="cores" id="tg-cores"></div>
     <div class="rodape"><button type="button" class="botao leve" id="tg-cancelar" hidden>Cancelar</button><button class="botao" id="tg-ok">Criar tag</button></div>
     <div class="erro-txt" id="tg-erro"></div>
+  </form>
+</dialog>
+
+<dialog id="d-campos" class="folha">
+  <div class="folha-topo"><span></span><h2>Campos da ficha</h2><button class="icone fechar-folha" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <p class="info" style="margin:0 4px 10px">Campos que aparecem na ficha de toda cliente. Ex.: Tipo de cabelo, Alergias, Como conheceu.</p>
+  <div class="folha-lista" id="cp-lista"></div>
+  <form id="f-campo" class="tag-form">
+    <input id="cp-nome" maxlength="60" placeholder="Nome do campo" required autocomplete="off">
+    <select id="cp-tipo"><option value="texto">Texto</option><option value="lista">Lista de opções</option><option value="sim_nao">Sim ou não</option><option value="numero">Número</option><option value="data">Data</option></select>
+    <input id="cp-opcoes" placeholder="Opções separadas por vírgula (ex.: Liso, Ondulado, Cacheado, Crespo)" hidden>
+    <div class="rodape"><button class="botao">Adicionar campo</button></div>
+    <div class="erro-txt" id="cp-erro"></div>
   </form>
 </dialog>
 
@@ -984,6 +1031,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
     desenharLista();
     await carregarConversa();
+    if (!$('ficha').hidden) carregarContato();
   }
   $('voltar').addEventListener('click', () => { $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa'); $('ficha').hidden = true; });
 
@@ -1042,7 +1090,64 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('f-resumo-bloco').hidden = !c.resumo; $('f-resumo').textContent = c.resumo || '';
     $('f-etiquetas-bloco').hidden = !(c.tags || []).length; $('f-etiquetas').replaceChildren(...(c.tags || []).map(pilulaTag));
   }
-  const abrirFicha = () => { $('ficha').hidden = false; $('menu-mais').hidden = true; };
+  const abrirFicha = () => { $('ficha').hidden = false; $('menu-mais').hidden = true; carregarContato(); };
+  const TIPO_CAMPO = { texto: 'Texto', lista: 'Lista', sim_nao: 'Sim ou não', numero: 'Número', data: 'Data' };
+  estado.ficha = null;
+  async function carregarContato() {
+    const c = estado.detalhe?.conversa; if (!c) return;
+    $('f-erro').textContent = ''; $('f-salvo').textContent = '';
+    $('f-ligar').href = 'tel:+' + c.telefone;
+    let r; try { r = await api(`/api/conversas/${c.id}/contato`); } catch (x) { $('f-erro').textContent = x.message; return; }
+    estado.ficha = r;
+    const f = $('f-contato'), k = r.contato;
+    f.nome.value = k.nome || ''; f.email.value = k.email || ''; f.nascimento.value = k.nascimento || ''; f.observacoes.value = k.observacoes || '';
+    f.juridica.checked = k.pessoa === 'juridica'; $('f-empresa').hidden = !f.juridica.checked;
+    for (const n of ['razaoSocial', 'nomeFantasia', 'cnpj', 'cargo', 'site']) f[n].value = (n === 'cnpj' && k.empresa.cnpj) ? k.empresa.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : (k.empresa[n] || '');
+    $('f-campos').replaceChildren(...r.campos.map((d) => {
+      const v = k.campos[d.id];
+      let entrada;
+      if (d.tipo === 'lista') entrada = el('select', { 'data-campo': d.id }, el('option', { value: '', text: '—' }), ...d.opcoes.map((o) => el('option', { value: o, text: o })));
+      else if (d.tipo === 'sim_nao') entrada = el('select', { 'data-campo': d.id, 'data-tipo': 'sim_nao' }, el('option', { value: '', text: '—' }), el('option', { value: 'sim', text: 'Sim' }), el('option', { value: 'nao', text: 'Não' }));
+      else entrada = el('input', { 'data-campo': d.id, type: d.tipo === 'numero' ? 'number' : d.tipo === 'data' ? 'date' : 'text', step: d.tipo === 'numero' ? 'any' : undefined, maxlength: '2000' });
+      entrada.value = v === true ? 'sim' : v === false ? 'nao' : (v ?? '');
+      return el('label', {}, document.createTextNode(d.nome), entrada);
+    }));
+    if (k.atualizadoEm) $('f-salvo').textContent = `Atualizado ${quando(k.atualizadoEm)}`;
+  }
+  $('f-contato').juridica.addEventListener('change', (e) => { $('f-empresa').hidden = !e.target.checked; });
+  $('f-copiar').addEventListener('click', async () => { const c = estado.detalhe?.conversa; if (!c) return; try { await navigator.clipboard.writeText('+' + c.telefone); toast('Número copiado'); } catch { toast('+' + c.telefone); } });
+  $('f-contato').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const c = estado.detalhe?.conversa; if (!c) return;
+    const f = e.target; const campos = {};
+    f.querySelectorAll('[data-campo]').forEach((x) => { const v = x.value; campos[x.dataset.campo] = v === '' ? null : x.dataset.tipo === 'sim_nao' ? v === 'sim' : (x.type === 'number' ? Number(v) : v); });
+    const corpo = { nome: f.nome.value, email: f.email.value, nascimento: f.nascimento.value, observacoes: f.observacoes.value, pessoa: f.juridica.checked ? 'juridica' : 'fisica', campos };
+    if (f.juridica.checked) corpo.empresa = { razaoSocial: f.razaoSocial.value, nomeFantasia: f.nomeFantasia.value, cnpj: f.cnpj.value, cargo: f.cargo.value, site: f.site.value };
+    $('f-salvar').disabled = true; $('f-erro').textContent = '';
+    try { await api(`/api/conversas/${c.id}/contato`, { method: 'PUT', body: JSON.stringify(corpo) }); toast('Ficha salva ✓'); estado.assinatura = ''; await atualizar(); carregarContato(); }
+    catch (x) { $('f-erro').textContent = x.message; }
+    finally { $('f-salvar').disabled = false; }
+  });
+
+  // Conta › Campos da ficha
+  async function abrirCampos() { await desenharCampos(); $('d-campos').showModal(); }
+  async function desenharCampos() {
+    const lista = await api('/api/campos-contato').catch(() => []);
+    $('cp-lista').replaceChildren(...(lista.length ? lista.map((d) => el('button', { type: 'button' },
+      el('span', {}, el('b', { text: d.nome }), el('small', { text: TIPO_CAMPO[d.tipo] + (d.opcoes.length ? ': ' + d.opcoes.join(', ') : '') })),
+      el('span', { class: 'apagar-tag', role: 'button', text: 'Apagar', onclick: async () => {
+        if (!confirm(`Apagar o campo "${d.nome}"? O que foi preenchido nele deixa de aparecer.`)) return;
+        try { await api('/api/campos-contato/' + d.id, { method: 'DELETE' }); desenharCampos(); } catch (x) { toast(x.message); }
+      } }))) : [el('p', { class: 'info', style: 'padding:14px 16px;margin:0', text: 'Nenhum campo ainda.' })]));
+  }
+  $('cp-tipo').addEventListener('change', (e) => { $('cp-opcoes').hidden = e.target.value !== 'lista'; });
+  $('f-campo').addEventListener('submit', async (e) => {
+    e.preventDefault(); $('cp-erro').textContent = '';
+    const tipo = $('cp-tipo').value;
+    const opcoes = tipo === 'lista' ? $('cp-opcoes').value.split(',').map((x) => x.trim()).filter(Boolean) : [];
+    try { await post('/api/campos-contato', { nome: $('cp-nome').value.trim(), tipo, opcoes }); $('cp-nome').value = ''; $('cp-opcoes').value = ''; desenharCampos(); }
+    catch (x) { $('cp-erro').textContent = x.message; }
+  });
   $('topo-ficha').addEventListener('click', abrirFicha);
   $('figurinha').addEventListener('click', () => toast('Figurinhas chegam numa próxima versão.'));
   // Ligar: abre a ligação no celular e, na volta, pede o resultado (aba Ligações do Funil).
@@ -1705,6 +1810,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const ICONE_IA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/></svg>';
     const ICONE_EMPRESA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg>';
     const ICONE_TAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>';
+    const ICONE_CAMPOS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>';
     const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
     const ICONE_RELATORIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg>';
     const botao = (icone, texto, acao, classe = '') => { const b = el('button', { class: classe, onclick: acao }); b.insertAdjacentHTML('beforeend', icone); b.append(texto); return b; };
@@ -1717,7 +1823,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         el('div', { class: 'linha' }, el('span', { class: 'info', style: 'color:var(--sub)', text: SOBRE_PAPEL[eu.papel] || '' }))),
       el('div', { class: 'opcoes-conta' },
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_EMPRESA, 'Empresa', abrirEmpresa)] : []),
-        ...(ehGestor(eu) ? [botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe')), botao(ICONE_TAG, 'Tags', abrirTags)] : []),
+        ...(ehGestor(eu) ? [botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_CAMPOS, 'Campos da ficha', abrirCampos)] : []),
         botao(ICONE_IA, 'Inteligência artificial', () => mostrar('ia')),
         ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões e integrações', () => { location.href = '/conexoes'; })] : []),
         botao(ICONE_RELATORIO, 'Relatórios e painel', () => mostrar('painel'))),

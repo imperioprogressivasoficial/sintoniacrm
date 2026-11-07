@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
 import { ArmazemMemoria, ArmazemPostgres, Conexoes } from './conexoes/conexoes.js';
 import { Cofre } from './conexoes/cofre.js';
+import { ContatosMemoria, ContatosPostgres } from './contatos/contatos.js';
 import { Midias } from './app/midias.js';
 import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
@@ -164,6 +165,7 @@ const app = criarServidor({
   log,
   auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1' },
   fila: { fila, avisar: () => trabalhador.avisar() },
+  contatos: { armazem: pool ? new ContatosPostgres(pool) : new ContatosMemoria(), empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
     return agendaLigada ? trinks : undefined;
   },

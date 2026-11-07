@@ -25,7 +25,7 @@ export async function poolDeTeste(): Promise<pg.Pool> {
     migrado = true;
   }
   await pool.query(
-    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados, sintonia.digitando, sintonia.fotos, sintonia.conexoes, sintonia.midias, sintonia.tags, sintonia.conversa_tags, sintonia.base_secoes, sintonia.base_versoes, sintonia.base_faq restart identity cascade',
+    'truncate sintonia.conversas, sintonia.mensagens, sintonia.enviados, sintonia.tarefas, sintonia.eventos, sintonia.entrada, sintonia.empresas, sintonia.usuarios, sintonia.sessoes, sintonia.interessados, sintonia.digitando, sintonia.fotos, sintonia.conexoes, sintonia.midias, sintonia.tags, sintonia.conversa_tags, sintonia.base_secoes, sintonia.base_versoes, sintonia.base_faq, sintonia.contatos, sintonia.campos_contato restart identity cascade',
   );
   return pool;
 }

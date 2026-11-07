@@ -280,6 +280,14 @@ export class Sintonia {
     await this.evento('equipe_respondeu', c, { atendente, atendenteId: quem?.id, tempoRespostaMs: espera });
   }
 
+  /** Nome da cliente editado na ficha: vale para a lista, a busca e o que a IA vê. */
+  async renomearCliente(conversaId: string, nome: string | null): Promise<void> {
+    await this.mutar(conversaId, async (c) => {
+      c.nome = nome ?? undefined;
+      await this.d.repo.salvarConversa(c);
+    });
+  }
+
   async mudarModo(conversaId: string, modo: ModoAtendimento): Promise<void> {
     const existe = await this.mutar(conversaId, async (c) => {
       c.modo = modo;
