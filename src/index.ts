@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
 import { Agente } from './ai/agente.js';
+import { randomUUID } from 'node:crypto';
+import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
 import { Sintonia, type NumeroConectado } from './app/sintonia.js';
@@ -82,6 +84,11 @@ const numeros: NumeroConectado[] = cfg.numeros.flatMap((n) => {
   return [{ canalId: n.canalId, unidade: n.unidade, canal }];
 });
 
+// WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
+const canalTeste = new CanalTeste();
+for (const unidade of ['norte', 'sumare'] as const) numeros.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
+const iaLigada = Boolean(process.env.ANTHROPIC_API_KEY);
+
 const sintonia = new Sintonia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   repo,
@@ -108,6 +115,15 @@ const app = criarServidor({
   agenda: cfg.TRINKS_API_KEY ? trinks : undefined,
   evolution: evolution ? { canal: evolution, token: cfg.EVOLUTION_WEBHOOK_TOKEN } : undefined,
   meta: meta ? { canal: meta, verifyToken: cfg.META_VERIFY_TOKEN, appSecret: cfg.META_APP_SECRET } : undefined,
+  situacao: () => ({ iaLigada, agendaLigada: Boolean(cfg.TRINKS_API_KEY), numerosReais: numeros.filter((n) => !ehCanalTeste(n.canalId)).length }),
+  clienteTeste: async ({ unidade, nome, telefone, texto }) => {
+    const canalId = canalTesteDa(unidade);
+    const agora = new Date();
+    // Sem a chave da IA, a conversa de teste nasce em "Só eu" para a IA não ficar tentando responder.
+    const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
+    if (nova && !iaLigada) await sintonia.mudarModo(conversa.id, 'humano');
+    await sintonia.receber({ canalId, telefone, nome, texto, deMim: false, idExterno: `teste-${randomUUID()}`, em: agora });
+  },
   revisar: async (conversaId, rascunho) => {
     const conversa = await repo.buscarConversa(conversaId);
     if (!conversa) throw new Error('Conversa não encontrada');

@@ -26,6 +26,10 @@ export interface DependenciasServidor {
   log?: (msg: string, extra?: unknown) => void;
   /** Login. Sem ele, a API fica aberta (só para teste local). */
   auth?: OpcoesAuth;
+  /** O que está ligado, para a tela avisar (IA, agenda, números). */
+  situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number };
+  /** Simulador: uma "cliente" escreve pelo WhatsApp de teste. */
+  clienteTeste?: (p: { unidade: 'norte' | 'sumare'; nome: string; telefone: string; texto: string }) => Promise<void>;
 }
 
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
@@ -141,6 +145,23 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     if (!d.fila) return reply.code(404).send();
     await d.fila.fila.reprocessar(Number((req.params as { id: string }).id), new Date());
     d.fila.avisar?.();
+    return { ok: true };
+  });
+
+  app.get('/api/situacao', async () => ({
+    ...(d.situacao?.() ?? { iaLigada: false, agendaLigada: Boolean(d.agenda), numerosReais: 0 }),
+    simulador: Boolean(d.clienteTeste),
+  }));
+
+  const ClienteTeste = z.object({
+    unidade: z.enum(['norte', 'sumare']),
+    nome: z.string().trim().min(2).max(60),
+    telefone: z.string().regex(/^5599\d{9}$/, 'Telefone de teste inválido'),
+    texto: z.string().trim().min(1).max(2000),
+  });
+  app.post('/api/teste/cliente', async (req, reply) => {
+    if (!d.clienteTeste) return reply.code(404).send({ erro: 'Simulador desligado' });
+    await d.clienteTeste(ClienteTeste.parse(req.body));
     return { ok: true };
   });
 

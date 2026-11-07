@@ -9,35 +9,548 @@
 <link rel="icon" href="/marca.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;600;700;800&display=swap">
 <link rel="stylesheet" href="/estilo.css">
+<style>
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { background: var(--papel); overflow: hidden; }
+  button { font-family: var(--fonte); }
+  .casca { display: grid; grid-template-columns: 76px minmax(0, 1fr); height: 100vh; height: 100dvh; }
+
+  /* trilho lateral */
+  .trilho { background: var(--azul); color: #fff; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 6px; }
+  .trilho .marca { width: 38px; height: 38px; margin-bottom: 14px; }
+  .nav { all: unset; cursor: pointer; width: 60px; padding: 10px 0 8px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,.75); }
+  .nav svg { width: 22px; height: 22px; }
+  .nav:hover { background: rgba(255,255,255,.08); color: #fff; }
+  .nav[aria-current="page"] { background: rgba(15,252,190,.16); color: var(--menta); }
+  .trilho .espaco { flex: 1; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--menta); color: var(--azul-escuro); display: grid; place-items: center; font-weight: 800; font-size: 14px; flex: none; }
+  .avatar.cliente { background: #e3eef9; color: var(--azul-escuro); }
+
+  .area { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .aviso-topo { background: #fff8db; color: #6b5200; font-size: 13px; font-weight: 600; padding: 8px 16px; border-bottom: 1px solid #f1e3a6; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+  .aviso-topo b { font-weight: 800; }
+  .vista { flex: 1; min-height: 0; min-width: 0; display: none; }
+  .vista.ativa { display: flex; }
+
+  /* conversas */
+  .lista { width: 340px; flex: none; background: #fff; border-right: 1px solid var(--linha); display: flex; flex-direction: column; min-height: 0; }
+  .lista-topo { padding: 16px 16px 10px; display: grid; gap: 10px; }
+  .lista-topo h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em; display: flex; justify-content: space-between; align-items: center; }
+  .busca { width: 100%; border: 1px solid var(--linha); background: var(--papel); border-radius: 999px; padding: 10px 14px; font: 600 14px var(--fonte); color: var(--tinta); }
+  .filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--linha); background: #fff; border-radius: 999px; padding: 6px 12px; font: 700 12px var(--fonte); color: var(--cinza); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
+  .itens { overflow-y: auto; flex: 1; }
+  .item { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eef3f8; width: 100%; }
+  .item:hover { background: #f7fafd; }
+  .item[aria-current="true"] { background: #eaf3fc; }
+  .item .nome { font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .previa { font-size: 13px; color: var(--cinza); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .lado { display: grid; justify-items: end; gap: 4px; font-size: 11px; color: var(--cinza); font-weight: 600; }
+  .bolinha { min-width: 18px; height: 18px; border-radius: 999px; background: var(--menta); color: var(--azul-escuro); font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 5px; }
+  .vazio { padding: 32px 20px; text-align: center; color: var(--cinza); font-size: 14px; display: grid; gap: 12px; justify-items: center; }
+
+  .chat { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--papel); }
+  .chat-topo { background: #fff; border-bottom: 1px solid var(--linha); padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .chat-topo .quem { flex: 1; min-width: 160px; }
+  .chat-topo .quem b { display: block; font-size: 16px; }
+  .chat-topo .quem span { font-size: 12px; color: var(--cinza); font-weight: 600; }
+  .voltar { display: none; border: 0; background: none; font-size: 22px; cursor: pointer; color: var(--azul); padding: 4px 8px; }
+  .modos { display: inline-flex; background: var(--papel); border: 1px solid var(--linha); border-radius: 999px; padding: 3px; }
+  .modos button { border: 0; background: none; border-radius: 999px; padding: 7px 12px; font: 800 12px var(--fonte); color: var(--cinza); cursor: pointer; }
+  .modos button[aria-pressed="true"] { background: var(--azul); color: #fff; }
+  .msgs { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: min(560px, 80%); padding: 9px 13px; border-radius: 16px; font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 1px rgba(8,36,63,.06); }
+  .msg small { display: block; font-size: 11px; margin-top: 4px; opacity: .7; font-weight: 600; }
+  .msg.cliente { align-self: flex-start; background: #fff; border-top-left-radius: 4px; }
+  .msg.equipe { align-self: flex-end; background: var(--azul); color: #fff; border-top-right-radius: 4px; }
+  .msg.ia { align-self: flex-end; background: var(--menta-suave); color: var(--tinta); border-top-right-radius: 4px; }
+  .msg.sistema { align-self: center; background: transparent; box-shadow: none; color: var(--cinza); font-size: 12px; font-weight: 600; }
+  .sugestao { margin: 0 16px 8px; background: #fff; border: 1px solid #bff5e2; border-left: 4px solid var(--menta); border-radius: 14px; padding: 10px 12px; font-size: 14px; display: grid; gap: 8px; }
+  .sugestao b { font-size: 12px; color: #0a7a5c; letter-spacing: .04em; text-transform: uppercase; }
+  .revisao { margin: 0 16px 8px; background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; display: grid; gap: 6px; }
+  .revisao.ok { border-color: #bff5e2; }
+  .compor { background: #fff; border-top: 1px solid var(--linha); padding: 10px 12px; display: grid; gap: 8px; }
+  .compor textarea { width: 100%; resize: none; border: 1px solid var(--linha); border-radius: 16px; padding: 10px 14px; font: 500 15px/1.4 var(--fonte); color: var(--tinta); min-height: 44px; max-height: 160px; }
+  .compor .acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .b { border: 0; border-radius: 999px; padding: 10px 16px; font: 800 13px var(--fonte); cursor: pointer; }
+  .b-azul { background: var(--azul); color: #fff; }
+  .b-menta { background: var(--menta); color: var(--azul-escuro); }
+  .b-claro { background: var(--papel); color: var(--azul-escuro); border: 1px solid var(--linha); }
+  .b[disabled] { opacity: .55; cursor: default; }
+  .b-mini { padding: 6px 12px; font-size: 12px; }
+  .simular { background: #fffaf0; border-top: 1px dashed #f1d9a6; padding: 8px 12px; display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; color: #7a5a12; }
+  .simular input { flex: 1; min-width: 0; border: 1px solid #f1d9a6; border-radius: 999px; padding: 8px 12px; font: 600 13px var(--fonte); }
+  .sem-conversa { flex: 1; display: grid; place-items: center; color: var(--cinza); text-align: center; padding: 24px; }
+  .sem-conversa div { display: grid; gap: 10px; justify-items: center; max-width: 360px; }
+
+  .ficha { width: 290px; flex: none; background: #fff; border-left: 1px solid var(--linha); overflow-y: auto; padding: 18px 16px; display: grid; gap: 16px; align-content: start; }
+  .ficha h3 { margin: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--cinza); }
+  .ficha .linha { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; border-bottom: 1px solid #eef3f8; padding: 6px 0; }
+  .ficha .linha span:first-child { color: var(--cinza); font-weight: 600; }
+  .ficha select { width: 100%; border: 1px solid var(--linha); border-radius: 12px; padding: 9px 10px; font: 700 14px var(--fonte); color: var(--tinta); background: #fff; }
+  .etiqueta { display: inline-block; background: #eaf3fc; color: var(--azul-escuro); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+
+  /* funil */
+  .funil { flex: 1; min-width: 0; overflow: auto; padding: 18px; display: flex; gap: 12px; align-items: flex-start; }
+  .coluna { width: 250px; flex: none; background: #eaf1f8; border-radius: 16px; padding: 10px; display: grid; gap: 8px; }
+  .coluna h2 { margin: 2px 4px 4px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; display: flex; justify-content: space-between; }
+  .cartao-f { all: unset; box-sizing: border-box; cursor: pointer; background: #fff; border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; font-size: 13px; box-shadow: 0 1px 2px rgba(8,36,63,.06); }
+  .cartao-f b { font-size: 14px; }
+  .cartao-f span { color: var(--cinza); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* painel */
+  .painel { flex: 1; min-width: 0; overflow: auto; padding: 22px; display: grid; gap: 18px; align-content: start; }
+  .painel h1 { margin: 0; font-size: 24px; }
+  .numeros { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .num { background: #fff; border-radius: 16px; padding: 14px 16px; border: 1px solid var(--linha); }
+  .num b { display: block; font-size: 30px; letter-spacing: -.02em; }
+  .num span { font-size: 13px; color: var(--cinza); font-weight: 700; }
+  .tabela { background: #fff; border-radius: 16px; border: 1px solid var(--linha); overflow: auto; }
+  .tabela table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tabela th, .tabela td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eef3f8; white-space: nowrap; }
+  .tabela th { font-size: 12px; color: var(--cinza); text-transform: uppercase; letter-spacing: .05em; }
+
+  /* janelas */
+  dialog { border: 0; border-radius: 20px; padding: 0; width: min(460px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(8,36,63,.3); color: var(--tinta); }
+  dialog::backdrop { background: rgba(8,36,63,.45); }
+  dialog form { padding: 20px; display: grid; gap: 12px; }
+  dialog h2 { margin: 0; font-size: 20px; }
+  dialog label { display: grid; gap: 4px; font-size: 13px; font-weight: 700; }
+  dialog input, dialog select, dialog textarea { border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; font: 600 14px var(--fonte); color: var(--tinta); background: #fff; }
+  dialog .rodape { display: flex; justify-content: flex-end; gap: 8px; }
+  .horarios { display: flex; flex-wrap: wrap; gap: 6px; max-height: 160px; overflow: auto; }
+  .horarios button { border: 1px solid var(--linha); background: #fff; border-radius: 999px; padding: 6px 10px; font: 700 13px var(--fonte); cursor: pointer; }
+  .horarios button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
+  .info { font-size: 13px; color: var(--cinza); }
+  .erro-txt { color: var(--erro); font-size: 13px; font-weight: 700; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--tinta); color: #fff; padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; z-index: 50; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.ver { opacity: 1; }
+
+  @media (max-width: 1180px) { .ficha { display: none; } }
+  @media (max-width: 760px) {
+    .casca { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+    .trilho { order: 2; flex-direction: row; justify-content: space-around; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); }
+    .trilho .marca, .trilho .espaco { display: none; }
+    .nav { width: auto; flex: 1; }
+    .lista { width: 100%; border-right: 0; }
+    #v-conversas .chat { display: none; }
+    #v-conversas.abrindo .lista { display: none; }
+    #v-conversas.abrindo .chat { display: flex; }
+    .voltar { display: inline-block; }
+    .msg { max-width: 88%; }
+    .aviso-topo { font-size: 12px; padding: 6px 12px; }
+    .aviso-topo span:not(:first-child) { display: none; }
+  }
+</style>
 </head>
-<body class="app-vazio">
-<header class="topo">
-  <div class="miolo">
-    <a class="logo" href="/app" aria-label="Sintonia CRM"><img src="/marca.svg" alt=""><span>sintonia<b>.</b></span></a>
-    <nav class="menu"><button class="botao botao-contorno" id="sair" type="button">Sair</button></nav>
+<body>
+<div class="casca">
+  <nav class="trilho" aria-label="Menu">
+    <img class="marca" src="/marca.svg" alt="Sintonia">
+    <button class="nav" data-vista="conversas" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/></svg>Conversas</button>
+    <button class="nav" data-vista="funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>Funil</button>
+    <button class="nav" data-vista="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Painel</button>
+    <span class="espaco"></span>
+    <button class="nav" id="sair" title="Sair"><span class="avatar" id="eu-avatar">··</span>Sair</button>
+  </nav>
+
+  <div class="area">
+    <div class="aviso-topo" id="aviso" hidden></div>
+
+    <!-- CONVERSAS -->
+    <section class="vista ativa" id="v-conversas">
+      <div class="lista">
+        <div class="lista-topo">
+          <h1>Conversas <button class="b b-menta b-mini" id="nova-teste" hidden>+ Conversa de teste</button></h1>
+          <input class="busca" id="busca" type="search" placeholder="Buscar por nome ou telefone" aria-label="Buscar">
+          <div class="filtros" id="filtros">
+            <button class="chip" data-f="todas" aria-pressed="true">Todas</button>
+            <button class="chip" data-f="esperando" aria-pressed="false">Esperando resposta</button>
+            <button class="chip" data-f="norte" aria-pressed="false">Norte</button>
+            <button class="chip" data-f="sumare" aria-pressed="false">Sumaré</button>
+          </div>
+        </div>
+        <div class="itens" id="itens"></div>
+      </div>
+
+      <div class="chat" id="chat">
+        <div class="sem-conversa" id="sem-conversa"><div>
+          <img src="/marca.svg" alt="" width="56" height="56">
+          <b style="font-size:18px;color:var(--tinta)">Escolha uma conversa</b>
+          <span>As mensagens das clientes aparecem à esquerda. A IA lê tudo e deixa uma sugestão de resposta embaixo de cada mensagem.</span>
+        </div></div>
+        <div id="chat-aberto" style="display:none">
+          <div class="chat-topo">
+            <button class="voltar" id="voltar" aria-label="Voltar">‹</button>
+            <span class="avatar cliente" id="c-avatar"></span>
+            <div class="quem"><b id="c-nome"></b><span id="c-sub"></span></div>
+            <div class="modos" id="modos" role="group" aria-label="Quem responde">
+              <button data-m="ia" title="A IA responde sozinha">IA</button>
+              <button data-m="copiloto" title="A IA sugere, você envia">Copiloto</button>
+              <button data-m="humano" title="A IA só organiza o funil">Só eu</button>
+            </div>
+            <button class="b b-menta" id="abrir-agendar">Agendar</button>
+          </div>
+          <div class="msgs" id="msgs"></div>
+          <div class="sugestao" id="sugestao" hidden><b>Sugestão da IA</b><span id="sugestao-txt"></span><div><button class="b b-claro b-mini" id="usar-sugestao">Usar sugestão</button></div></div>
+          <div class="revisao" id="revisao" hidden></div>
+          <div class="compor">
+            <textarea id="texto" rows="1" placeholder="Escreva sua resposta"></textarea>
+            <div class="acoes">
+              <button class="b b-azul" id="enviar">Enviar</button>
+              <button class="b b-claro" id="revisar">Revisar com IA</button>
+              <span class="info" id="compor-info"></span>
+            </div>
+          </div>
+          <div class="simular" id="simular" hidden>
+            <span>Simular cliente:</span>
+            <input id="simular-texto" placeholder="Escreva como se fosse a cliente">
+            <button class="b b-claro b-mini" id="simular-enviar">Enviar</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="ficha" id="ficha" hidden>
+        <div style="display:grid;gap:6px;justify-items:center;text-align:center">
+          <span class="avatar cliente" id="f-avatar" style="width:64px;height:64px;font-size:22px"></span>
+          <b id="f-nome" style="font-size:17px"></b>
+          <span id="f-tel" class="info"></span>
+        </div>
+        <div><h3>Funil</h3><div style="margin-top:8px"><span class="etiqueta" id="f-etapa"></span></div></div>
+        <div>
+          <h3>Ficha</h3>
+          <div class="linha"><span>Unidade</span><span id="f-unidade"></span></div>
+          <div class="linha"><span>Quem responde</span><span id="f-modo"></span></div>
+          <div class="linha"><span>Cliente desde</span><span id="f-desde"></span></div>
+          <div class="linha"><span>Última mensagem</span><span id="f-ultima"></span></div>
+          <div class="linha"><span>No Trinks</span><span id="f-trinks"></span></div>
+        </div>
+        <div id="f-resumo-bloco" hidden><h3>Resumo da IA</h3><p id="f-resumo" style="margin:8px 0 0;font-size:14px"></p></div>
+        <div id="f-etiquetas-bloco" hidden><h3>Etiquetas</h3><div id="f-etiquetas" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>
+      </aside>
+    </section>
+
+    <!-- FUNIL -->
+    <section class="vista" id="v-funil"><div class="funil" id="funil"></div></section>
+
+    <!-- PAINEL -->
+    <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
   </div>
-</header>
-<main class="miolo">
-  <div class="cartao">
-    <h2 id="ola" style="margin:0">Olá!</h2>
-    <p class="sub" id="perfil" style="margin:0;color:var(--cinza)"></p>
-    <p style="margin:0">A tela de atendimento, com conversas, sugestões da IA e o botão Agendar, chega na próxima etapa. Seu acesso já está pronto.</p>
-  </div>
-</main>
+</div>
+
+<dialog id="d-teste">
+  <form method="dialog" id="f-teste">
+    <h2>Conversa de teste</h2>
+    <p class="info" style="margin:0">Simula uma cliente chamando no WhatsApp. Nada é enviado para fora da Sintonia.</p>
+    <label>Nome da cliente <input name="nome" required minlength="2" value="Cliente Teste"></label>
+    <label>Unidade <select name="unidade"><option value="norte">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+    <label>Primeira mensagem <textarea name="texto" rows="3" required>Oi! Quanto custa a progressiva? Queria marcar pra sábado.</textarea></label>
+    <div class="rodape"><button class="b b-claro" value="cancelar" formnovalidate>Cancelar</button><button class="b b-azul" value="ok">Criar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-agendar">
+  <form method="dialog" id="f-agendar">
+    <h2>Agendar</h2>
+    <div id="ag-corpo" style="display:grid;gap:12px">
+      <label>Unidade <select name="unidade" id="ag-unidade"><option value="norte">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Serviço <select name="servico" id="ag-servico" required></select></label>
+      <label>Profissional <select name="profissional" id="ag-prof"><option value="">Qualquer uma</option></select></label>
+      <label>Data <input type="date" name="data" id="ag-data" required></label>
+      <div><span style="font-size:13px;font-weight:700">Horário</span><div class="horarios" id="ag-horarios" style="margin-top:6px"><span class="info">Escolha serviço e data.</span></div></div>
+      <label>Nome da cliente <input name="nome" id="ag-nome" required minlength="3"></label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="ag-confirmar" checked> Enviar confirmação para a cliente</label>
+    </div>
+    <div id="ag-erro" class="erro-txt"></div>
+    <div class="rodape"><button class="b b-claro" value="cancelar" formnovalidate>Fechar</button><button class="b b-azul" id="ag-ok" value="ok">Confirmar agendamento</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
-(async () => {
-  const papeis = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
-  const r = await fetch('/api/auth/eu');
-  if (r.status === 401) { location.href = '/entrar'; return; }
-  const eu = await r.json();
-  document.getElementById('ola').textContent = 'Olá, ' + eu.nome.split(' ')[0] + '!';
-  document.getElementById('perfil').textContent = (papeis[eu.papel] || eu.papel) + (eu.unidades.length ? ' · ' + eu.unidades.join(', ') : '');
-  document.getElementById('sair').addEventListener('click', async () => {
-    await fetch('/api/auth/sair', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-    location.href = '/entrar';
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ETAPAS = [['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
+  const NOME_ETAPA = Object.fromEntries(ETAPAS);
+  const UNIDADE = { norte: 'Salvador Norte', sumare: 'Sumaré', feira: 'Feira de Santana' };
+  const MODO = { ia: 'IA', copiloto: 'Copiloto', humano: 'Só eu' };
+  const estado = { eu: null, situacao: {}, conversas: [], aberta: null, detalhe: null, filtro: 'todas', busca: '', vista: 'conversas', horario: null };
+
+  const api = async (url, opcoes = {}) => {
+    const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
+    if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.erro || 'Algo deu errado'), { status: r.status });
+    return j;
+  };
+  const post = (url, corpo) => api(url, { method: 'POST', body: JSON.stringify(corpo ?? {}) });
+  const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('ver'), 2600); };
+  const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== undefined && v !== null) e.setAttribute(k, v); } for (const f of filhos) if (f != null) e.append(f); return e; };
+  const iniciais = (n) => (n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  const nomeDe = (c) => c.nome || formatarTel(c.telefone);
+  const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `(${d.slice(0,2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
+  const ehTeste = (c) => String(c.canalId || '').startsWith('teste-');
+  const hora = (d) => { if (!d) return ''; const x = new Date(d); const hoje = new Date(); return x.toDateString() === hoje.toDateString() ? x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : x.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); };
+  const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  const esperando = (c) => { const cl = c.ultimaMensagemCliente && new Date(c.ultimaMensagemCliente).getTime(); if (!cl) return false; const resp = Math.max(new Date(c.ultimaMensagemEquipe || 0).getTime(), new Date(c.ultimaMensagemIa || 0).getTime()); return cl > resp; };
+
+  // ---------- navegação ----------
+  document.querySelectorAll('.nav[data-vista]').forEach((b) => b.addEventListener('click', () => mostrar(b.dataset.vista)));
+  function mostrar(v) {
+    estado.vista = v;
+    document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+    document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
+    if (v === 'funil') desenharFunil();
+    if (v === 'painel') carregarPainel();
+  }
+
+  // ---------- lista ----------
+  $('busca').addEventListener('input', (e) => { estado.busca = e.target.value.toLowerCase(); desenharLista(); });
+  $('filtros').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; estado.filtro = b.dataset.f; document.querySelectorAll('#filtros .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b))); desenharLista(); });
+
+  function filtradas() {
+    return estado.conversas.filter((c) => {
+      if (estado.filtro === 'esperando' && !esperando(c)) return false;
+      if ((estado.filtro === 'norte' || estado.filtro === 'sumare') && c.unidade !== estado.filtro) return false;
+      if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
+      return true;
+    });
+  }
+  function desenharLista() {
+    const caixa = $('itens'); caixa.replaceChildren();
+    const lista = filtradas();
+    if (!lista.length) {
+      const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nada com esse filtro.' : 'Nenhuma conversa ainda.' }));
+      if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'O WhatsApp da loja ainda não foi conectado. Crie uma conversa de teste para ver a Sintonia funcionando.' }));
+      if (!estado.conversas.length && estado.situacao.simulador) v.append(el('button', { class: 'b b-menta', text: 'Criar conversa de teste', onclick: abrirTeste }));
+      caixa.append(v); return;
+    }
+    for (const c of lista) {
+      const lado = el('div', { class: 'lado' }, el('span', { text: hora(c.atualizadaEm) }));
+      if (esperando(c)) lado.append(el('span', { class: 'bolinha', text: '1', title: 'Esperando resposta' }));
+      caixa.append(el('button', { class: 'item', 'aria-current': String(c.id === estado.aberta), onclick: () => abrir(c.id) },
+        el('span', { class: 'avatar cliente', text: iniciais(c.nome) }),
+        el('div', { style: 'min-width:0' }, el('div', { class: 'nome', text: nomeDe(c) + (ehTeste(c) ? ' · teste' : '') }), el('div', { class: 'previa', text: `${NOME_ETAPA[c.etapa] || c.etapa} · ${UNIDADE[c.unidade] || c.unidade} · ${MODO[c.modo]}` })),
+        lado));
+    }
+  }
+
+  // ---------- conversa ----------
+  async function abrir(id) {
+    estado.aberta = id; $('revisao').hidden = true; $('texto').value = '';
+    $('v-conversas').classList.add('abrindo');
+    desenharLista();
+    await carregarConversa();
+  }
+  $('voltar').addEventListener('click', () => { $('v-conversas').classList.remove('abrindo'); });
+
+  async function carregarConversa() {
+    if (!estado.aberta) return;
+    const d = await api('/api/conversas/' + estado.aberta).catch(() => null);
+    if (!d) return;
+    const mudou = JSON.stringify(d) !== JSON.stringify(estado.detalhe);
+    estado.detalhe = d;
+    if (mudou) desenharConversa();
+  }
+  function desenharConversa() {
+    const { conversa: c, mensagens, sugestao } = estado.detalhe;
+    $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
+    $('c-avatar').textContent = iniciais(c.nome);
+    $('c-nome').textContent = nomeDe(c);
+    $('c-sub').textContent = `${formatarTel(c.telefone)} · ${UNIDADE[c.unidade] || c.unidade} · ${NOME_ETAPA[c.etapa]}`;
+    document.querySelectorAll('#modos button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === c.modo)));
+    const caixa = $('msgs'); const noFim = caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80;
+    caixa.replaceChildren();
+    if (!mensagens.length) caixa.append(el('div', { class: 'msg sistema', text: 'Sem mensagens ainda.' }));
+    for (const m of mensagens) {
+      const rotulo = m.autor === 'cliente' ? '' : m.autor === 'ia' ? 'IA · ' : m.autor === 'equipe' ? `${m.autorNome || 'Equipe'} · ` : '';
+      caixa.append(el('div', { class: 'msg ' + m.autor }, document.createTextNode(m.texto), el('small', { text: rotulo + hora(m.em) })));
+    }
+    if (noFim || caixa.dataset.conversa !== c.id) caixa.scrollTop = caixa.scrollHeight;
+    caixa.dataset.conversa = c.id;
+    const mostrarSug = Boolean(sugestao) && c.modo !== 'humano';
+    $('sugestao').hidden = !mostrarSug; if (mostrarSug) $('sugestao-txt').textContent = sugestao;
+    $('simular').hidden = !(ehTeste(c) && estado.situacao.simulador);
+    // ficha
+    $('ficha').hidden = false;
+    $('f-avatar').textContent = iniciais(c.nome); $('f-nome').textContent = nomeDe(c); $('f-tel').textContent = formatarTel(c.telefone);
+    $('f-etapa').textContent = NOME_ETAPA[c.etapa]; $('f-unidade').textContent = UNIDADE[c.unidade] || c.unidade; $('f-modo').textContent = MODO[c.modo];
+    $('f-desde').textContent = quando(c.criadaEm); $('f-ultima').textContent = quando(c.ultimaMensagemCliente);
+    $('f-trinks').textContent = c.trinksClienteId ? '#' + c.trinksClienteId : 'ainda não';
+    $('f-resumo-bloco').hidden = !c.resumo; $('f-resumo').textContent = c.resumo || '';
+    $('f-etiquetas-bloco').hidden = !(c.etiquetas || []).length; $('f-etiquetas').replaceChildren(...(c.etiquetas || []).map((t) => el('span', { class: 'etiqueta', text: t })));
+  }
+
+  $('modos').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b || !estado.aberta) return;
+    if (b.dataset.m !== 'humano' && !estado.situacao.iaLigada) toast('A IA ainda não foi ligada: ela vai começar a responder quando a chave for configurada.');
+    await post(`/api/conversas/${estado.aberta}/modo`, { modo: b.dataset.m }).catch((x) => toast(x.message));
+    await atualizar();
   });
+
+  const texto = $('texto');
+  let digitandoEm = 0;
+  texto.addEventListener('input', () => {
+    texto.style.height = 'auto'; texto.style.height = Math.min(texto.scrollHeight, 160) + 'px';
+    $('revisao').hidden = true;
+    if (estado.aberta && Date.now() - digitandoEm > 15000) { digitandoEm = Date.now(); post(`/api/conversas/${estado.aberta}/digitando`).catch(() => {}); }
+  });
+  texto.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviar(); } });
+  $('enviar').addEventListener('click', enviar);
+  async function enviar() {
+    const t = texto.value.trim(); if (!t || !estado.aberta) return;
+    $('enviar').disabled = true;
+    try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); texto.value = ''; texto.style.height = ''; $('revisao').hidden = true; await atualizar(); }
+    catch (x) { toast('Não enviou: ' + x.message); }
+    finally { $('enviar').disabled = false; texto.focus(); }
+  }
+  $('usar-sugestao').addEventListener('click', () => { texto.value = $('sugestao-txt').textContent; texto.dispatchEvent(new Event('input')); texto.focus(); });
+  $('revisar').addEventListener('click', async () => {
+    const t = texto.value.trim(); if (!t) { toast('Escreva a mensagem primeiro.'); return; }
+    const caixa = $('revisao'); caixa.hidden = false; caixa.className = 'revisao'; caixa.replaceChildren(el('span', { class: 'info', text: 'A IA está lendo sua mensagem…' }));
+    try {
+      const r = await post(`/api/conversas/${estado.aberta}/revisar`, { rascunho: t });
+      caixa.className = 'revisao' + (r.ok ? ' ok' : ''); caixa.replaceChildren(el('b', { text: r.ok ? 'Pode enviar ✓' : 'Antes de enviar' }));
+      for (const a of r.alertas || []) caixa.append(el('span', { text: '• ' + a.texto }));
+      if (r.versao_sugerida) caixa.append(el('div', {}, el('button', { class: 'b b-claro b-mini', text: 'Usar versão da IA', onclick: () => { texto.value = r.versao_sugerida; caixa.hidden = true; } })));
+    } catch (x) {
+      caixa.replaceChildren(el('span', { class: 'info', text: estado.situacao.iaLigada ? 'A revisão falhou agora: ' + x.message : 'A revisão usa a IA, que ainda não foi ligada.' }));
+    }
+  });
+
+  // ---------- simulador ----------
+  $('nova-teste').addEventListener('click', abrirTeste);
+  function abrirTeste() { $('d-teste').showModal(); }
+  $('f-teste').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    const f = Object.fromEntries(new FormData(e.target));
+    const telefone = '5599' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
+    try {
+      await post('/api/teste/cliente', { ...f, telefone });
+      await atualizar();
+      const c = estado.conversas.find((x) => x.telefone === telefone); if (c) abrir(c.id);
+    } catch (x) { toast(x.message); }
+  });
+  async function simular() {
+    const c = estado.detalhe?.conversa; const t = $('simular-texto').value.trim(); if (!c || !t) return;
+    try { await post('/api/teste/cliente', { unidade: c.unidade, nome: c.nome || 'Cliente Teste', telefone: c.telefone, texto: t }); $('simular-texto').value = ''; await atualizar(); }
+    catch (x) { toast(x.message); }
+  }
+  $('simular-enviar').addEventListener('click', simular);
+  $('simular-texto').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); simular(); } });
+
+  // ---------- agendar ----------
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  $('abrir-agendar').addEventListener('click', async () => {
+    const c = estado.detalhe?.conversa; if (!c) return;
+    $('ag-erro').textContent = ''; estado.horario = null;
+    $('ag-unidade').value = c.unidade === 'sumare' ? 'sumare' : 'norte';
+    $('ag-nome').value = c.nome || ''; $('ag-data').value = hojeISO(); $('ag-data').min = hojeISO();
+    $('d-agendar').showModal();
+    if (!estado.situacao.agendaLigada) { $('ag-corpo').hidden = true; $('ag-ok').hidden = true; $('ag-erro').textContent = 'A agenda ainda não está conectada ao Trinks. Quando a chave do Trinks for configurada, você agenda por aqui sem abrir o Trinks.'; return; }
+    $('ag-corpo').hidden = false; $('ag-ok').hidden = false;
+    await carregarCatalogo();
+  });
+  async function carregarCatalogo() {
+    const u = $('ag-unidade').value;
+    try {
+      const [servicos, profs] = await Promise.all([api('/api/agenda/servicos?unidade=' + u), api('/api/agenda/profissionais?unidade=' + u)]);
+      $('ag-servico').replaceChildren(el('option', { value: '', text: 'Escolha o serviço' }), ...servicos.map((s) => el('option', { value: s.id, text: `${s.nome} · ${s.duracaoMin} min · R$ ${Number(s.precoHoje).toFixed(2).replace('.', ',')}` })));
+      $('ag-prof').replaceChildren(el('option', { value: '', text: 'Qualquer uma' }), ...profs.map((p) => el('option', { value: p.id, text: p.nome })));
+    } catch (x) { $('ag-erro').textContent = x.message; }
+    carregarHorarios();
+  }
+  async function carregarHorarios() {
+    const caixa = $('ag-horarios'); estado.horario = null;
+    const s = $('ag-servico').value, data = $('ag-data').value; if (!s || !data) { caixa.replaceChildren(el('span', { class: 'info', text: 'Escolha serviço e data.' })); return; }
+    caixa.replaceChildren(el('span', { class: 'info', text: 'Buscando horários livres…' }));
+    try {
+      const q = new URLSearchParams({ unidade: $('ag-unidade').value, data, servicoId: s }); if ($('ag-prof').value) q.set('profissionalId', $('ag-prof').value);
+      const lista = await api('/api/agenda/horarios?' + q);
+      const botoes = lista.flatMap((p) => p.horarios.map((h) => el('button', { type: 'button', 'aria-pressed': 'false', text: `${h}${p.profissional ? ' · ' + p.profissional : ''}`, onclick: (e) => { caixa.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false')); e.currentTarget.setAttribute('aria-pressed', 'true'); estado.horario = { hora: h, profissionalId: p.profissionalId }; } })));
+      caixa.replaceChildren(...(botoes.length ? botoes : [el('span', { class: 'info', text: 'Sem horário livre nesse dia.' })]));
+    } catch (x) { caixa.replaceChildren(el('span', { class: 'erro-txt', text: x.message })); }
+  }
+  $('ag-unidade').addEventListener('change', carregarCatalogo);
+  ['ag-servico', 'ag-prof', 'ag-data'].forEach((id) => $(id).addEventListener('change', carregarHorarios));
+  $('f-agendar').addEventListener('submit', async (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    e.preventDefault();
+    if (!estado.horario) { $('ag-erro').textContent = 'Escolha um horário.'; return; }
+    $('ag-ok').disabled = true; $('ag-erro').textContent = '';
+    try {
+      const r = await post(`/api/conversas/${estado.aberta}/agendar`, { unidade: $('ag-unidade').value, servicoId: Number($('ag-servico').value), profissionalId: estado.horario.profissionalId, data: $('ag-data').value, hora: estado.horario.hora, nomeCliente: $('ag-nome').value.trim(), atendente: estado.eu.nome, enviarConfirmacao: $('ag-confirmar').checked });
+      $('d-agendar').close(); toast('Agendado no Trinks ✓'); await atualizar();
+    } catch (x) { $('ag-erro').textContent = x.status === 409 ? 'Esse horário acabou de ser ocupado. Escolha outro.' : x.message; if (x.status === 409) carregarHorarios(); }
+    finally { $('ag-ok').disabled = false; }
+  });
+
+  // ---------- funil ----------
+  function desenharFunil() {
+    const caixa = $('funil'); caixa.replaceChildren();
+    for (const [id, nome] of ETAPAS) {
+      const cs = estado.conversas.filter((c) => c.etapa === id);
+      const col = el('div', { class: 'coluna' }, el('h2', {}, el('span', { text: nome }), el('span', { text: String(cs.length) })));
+      if (!cs.length) col.append(el('span', { class: 'info', style: 'padding:4px 6px', text: '—' }));
+      for (const c of cs) col.append(el('button', { class: 'cartao-f', onclick: () => { mostrar('conversas'); abrir(c.id); } }, el('b', { text: nomeDe(c) }), el('span', { text: `${UNIDADE[c.unidade] || c.unidade} · ${MODO[c.modo]}` }), el('span', { text: 'Atualizada ' + quando(c.atualizadaEm) })));
+      caixa.append(col);
+    }
+  }
+
+  // ---------- painel ----------
+  async function carregarPainel() {
+    const caixa = $('painel');
+    let r; try { r = await api('/api/painel'); } catch (x) { caixa.replaceChildren(el('p', { class: 'erro-txt', text: x.message })); return; }
+    const esperandoAgora = estado.conversas.filter(esperando).length;
+    const num = (v, t) => el('div', { class: 'num' }, el('b', { text: String(v) }), el('span', { text: t }));
+    const linhas = Object.entries(r.porAtendente || {});
+    caixa.replaceChildren(
+      el('h1', { text: 'Hoje' }),
+      el('div', { class: 'numeros' },
+        num(r.conversas, 'clientes conversaram'),
+        num(esperandoAgora, 'esperando resposta agora'),
+        num(r.agendamentosIa + r.agendamentosEquipe, 'agendamentos'),
+        num(r.agendamentosIa, 'agendados pela IA'),
+        num(r.agendamentosEquipe, 'agendados pela equipe'),
+        num(r.iaAssumiu, 'vezes que a IA assumiu'),
+        num(r.enviosAtivos, 'follow-ups e lembretes'),
+        num(r.falhas, 'falhas')),
+      el('h1', { text: 'Equipe', style: 'font-size:18px' }),
+      el('div', { class: 'tabela' }, linhas.length
+        ? el('table', {}, el('thead', {}, el('tr', {}, ...['Atendente', 'Respostas', 'Agendamentos', 'Tempo médio de resposta'].map((t) => el('th', { text: t })))),
+            el('tbody', {}, ...linhas.map(([n, a]) => el('tr', {}, el('td', { text: n }), el('td', { text: String(a.respostas) }), el('td', { text: String(a.agendamentos) }), el('td', { text: a.tempoMedioRespostaMin == null ? '—' : a.tempoMedioRespostaMin + ' min' })))))
+        : el('p', { class: 'info', style: 'padding:14px;margin:0', text: 'Ninguém respondeu hoje ainda. Cada resposta e cada agendamento entra aqui, com o tempo que a cliente esperou.' })),
+    );
+  }
+
+  // ---------- atualização ----------
+  async function atualizar() {
+    try { estado.conversas = (await api('/api/conversas')); } catch { return; }
+    desenharLista();
+    if (estado.aberta) await carregarConversa();
+    if (estado.vista === 'funil') desenharFunil();
+  }
+
+  $('sair').addEventListener('click', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; });
+
+  (async () => {
+    estado.eu = await api('/api/auth/eu');
+    $('eu-avatar').textContent = iniciais(estado.eu.nome); $('sair').title = `${estado.eu.nome} · sair`;
+    estado.situacao = await api('/api/situacao').catch(() => ({}));
+    const avisos = [];
+    if (!estado.situacao.numerosReais) avisos.push('<b>Modo demonstração:</b> WhatsApp da loja ainda não conectado');
+    if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
+    if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
+    if (avisos.length) { $('aviso').hidden = false; $('aviso').innerHTML = avisos.map((a) => `<span>${a}</span>`).join('<span>·</span>'); }
+    $('nova-teste').hidden = !estado.situacao.simulador;
+    await atualizar();
+    setInterval(atualizar, 4000);
+  })();
 })();
 </script>
 </body>

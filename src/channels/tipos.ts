@@ -20,7 +20,7 @@ export interface EnvioResultado {
 }
 
 export interface CanalWhatsApp {
-  readonly tipo: 'evolution' | 'meta';
+  readonly tipo: 'evolution' | 'meta' | 'teste';
   /** Converte o corpo do webhook em mensagens de texto. Ignora o que não é conversa (status, grupos etc.). */
   lerWebhook(corpo: unknown): MensagemRecebida[];
   enviarTexto(canalId: string, telefone: string, texto: string): Promise<EnvioResultado>;
