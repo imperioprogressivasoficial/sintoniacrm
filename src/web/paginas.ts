@@ -69,6 +69,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/agenda.js': { arquivo: 'telas/agenda.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/notificacoes.js': { arquivo: 'telas/notificacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/rastreio.js': { arquivo: 'telas/rastreio.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/comercial.js': { arquivo: 'telas/comercial.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
   '/sw.js': { arquivo: 'sw.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
@@ -107,4 +108,16 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
       return reply.send(ler(arquivo));
     });
   }
+
+  // Painel da sala comercial na TV: público, sem login. A página só mostra algo se o token valer
+  // (os números vêm de /tv/:token/dados, em src/comercial/rotas.ts).
+  app.get('/tv/:token', async (_req, reply) =>
+    reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-store, max-age=0')
+      .header('x-content-type-options', 'nosniff')
+      .header('referrer-policy', 'no-referrer')
+      .header('x-robots-tag', 'noindex, nofollow')
+      .send(ler('tv.html')),
+  );
 }

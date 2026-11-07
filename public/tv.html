@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Sala comercial · Sintonia</title>
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
+<style>
+/* Painel da sala comercial para TV (16:9). Tudo em rem, e o rem acompanha a largura da tela:
+   16px em 1920x1080, 10,7px em 1280x720. Feito para ler a 3 metros. */
+:root {
+  --azul: #106ebe; --azul-claro: #1a8be0; --menta: #0ffcbe; --noite: #04172b; --noite-2: #071d33; --noite-3: #0b2a47;
+  --ceu: #7cc4ff; --ambar: #f5b800; --coral: #ff7a59; --prata: #c9d6e3; --bronze: #e0a36f;
+  --texto: #eef6ff; --sub: #9fb6cc; --vidro: rgba(11, 42, 71, .46); --vidro-forte: rgba(16, 60, 100, .5); --borda: rgba(255, 255, 255, .12);
+  color-scheme: dark;
+  font-size: min(calc(100vw / 120), calc(100vh / 67.5));
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--noite); color: var(--texto); font-family: Poppins, system-ui, sans-serif; }
+body {
+  background:
+    radial-gradient(60rem 40rem at 0% 0%, rgba(16, 110, 190, .55), transparent 60%),
+    radial-gradient(50rem 36rem at 100% 100%, rgba(15, 252, 190, .16), transparent 60%),
+    radial-gradient(40rem 30rem at 85% 0%, rgba(124, 196, 255, .18), transparent 60%),
+    linear-gradient(160deg, var(--noite-2), var(--noite));
+  cursor: none;
+}
+.tv { position: absolute; inset: 0; margin: auto; width: 120rem; height: 67.5rem; padding: 2.2rem 2.6rem 2rem; display: grid; grid-template-rows: auto 1fr; gap: 1.6rem; }
+.topo { display: flex; align-items: center; gap: 1.4rem; }
+.topo img { width: 3.6rem; height: 3.6rem; border-radius: 1rem; }
+.topo h1 { margin: 0; font-family: Sintony, Poppins, sans-serif; font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; }
+.topo .sub { color: var(--sub); font-size: 1.3rem; margin-top: .1rem; }
+.topo .tela-nome { margin-left: 1.6rem; display: flex; gap: .6rem; }
+.topo .tela-nome span { width: 1rem; height: 1rem; border-radius: 50%; background: rgba(255,255,255,.18); transition: background .3s; }
+.topo .tela-nome span.ativa { background: var(--menta); box-shadow: 0 0 1rem rgba(15,252,190,.6); }
+.relogio { margin-left: auto; text-align: right; }
+.relogio .h { font-size: 4.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.relogio .d { color: var(--sub); font-size: 1.3rem; }
+.vidro { background: var(--vidro); border: 1px solid var(--borda); border-radius: 2rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1.5rem 4rem rgba(0,0,0,.25);
+         -webkit-backdrop-filter: blur(1.6rem) saturate(1.4); backdrop-filter: blur(1.6rem) saturate(1.4); padding: 1.8rem 2rem; min-height: 0; min-width: 0; overflow: hidden; }
+.vidro h2 { margin: 0 0 1.2rem; font-size: 1.6rem; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: .8rem; }
+.telas { position: relative; min-height: 0; }
+.tela { position: absolute; inset: 0; display: grid; gap: 1.6rem; opacity: 0; transform: translateY(1rem); transition: opacity .6s, transform .6s; pointer-events: none; }
+.tela.ativa { opacity: 1; transform: none; }
+.t1 { grid-template-columns: 30rem 1fr 32rem; }
+.t2 { grid-template-columns: 1fr; }
+.t3 { grid-template-columns: 1fr 1fr; }
+.col { display: grid; gap: 1.6rem; min-height: 0; }
+.col-meta { grid-template-rows: auto 1fr; }
+.col-dir { grid-template-rows: 1fr auto; }
+
+/* meta do mês */
+.meta { display: grid; justify-items: center; text-align: center; gap: .6rem; background: linear-gradient(160deg, rgba(15,252,190,.16), rgba(15,252,190,.04)); border-color: rgba(15,252,190,.3); }
+.anel { position: relative; width: 22rem; height: 22rem; }
+.anel svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.anel .fundo { stroke: rgba(255,255,255,.1); }
+.anel .frente { stroke: var(--menta); filter: drop-shadow(0 0 .8rem rgba(15,252,190,.7)); transition: stroke-dashoffset 1.2s ease; }
+.anel .centro { position: absolute; inset: 0; display: grid; place-content: center; }
+.anel .pct { font-size: 6.4rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+.anel .pct small { font-size: .45em; }
+.anel .de { color: var(--sub); font-size: 1.4rem; margin-top: .3rem; }
+.meta .linha { font-size: 1.5rem; color: var(--sub); }
+.meta .linha b { color: var(--texto); font-size: 1.15em; }
+.hoje { display: grid; align-content: center; justify-items: center; text-align: center; }
+.hoje .n { font-size: 11rem; font-weight: 800; line-height: .95; letter-spacing: -.05em; color: var(--menta); text-shadow: 0 0 3rem rgba(15,252,190,.35); font-variant-numeric: tabular-nums; }
+.hoje .r { font-size: 1.9rem; font-weight: 600; margin-top: .4rem; }
+.hoje .u { display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap; justify-content: center; }
+.pilula { background: rgba(255,255,255,.08); border: 1px solid var(--borda); border-radius: 99rem; padding: .5rem 1.2rem; font-size: 1.35rem; color: var(--sub); white-space: nowrap; }
+.pilula b { color: var(--texto); }
+
+/* ranking */
+.rank { display: grid; gap: 1rem; align-content: start; }
+.pessoa { display: grid; grid-template-columns: 3.4rem 5.6rem 1fr auto; gap: 1.2rem; align-items: center; padding: .9rem 1.2rem; border-radius: 1.4rem; background: rgba(255,255,255,.04); border: 1px solid transparent; }
+.pessoa.ouro { background: linear-gradient(90deg, rgba(245,184,0,.18), rgba(255,255,255,.03)); border-color: rgba(245,184,0,.35); }
+.pos { font-size: 2.4rem; font-weight: 800; text-align: center; color: var(--sub); }
+.medalha { width: 3.2rem; height: 3.2rem; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; font-weight: 800; color: #08243f; }
+.medalha.ouro { background: radial-gradient(circle at 30% 30%, #ffe48a, var(--ambar)); box-shadow: 0 0 1.2rem rgba(245,184,0,.6); }
+.medalha.prata { background: radial-gradient(circle at 30% 30%, #fff, var(--prata)); }
+.medalha.bronze { background: radial-gradient(circle at 30% 30%, #ffd2ab, var(--bronze)); }
+.rosto { width: 5.6rem; height: 5.6rem; border-radius: 50%; background: linear-gradient(135deg, var(--azul-claro), var(--azul)); display: grid; place-items: center; font-size: 2rem; font-weight: 700; overflow: hidden; box-shadow: 0 0 0 .25rem rgba(255,255,255,.12); }
+.rosto img { width: 100%; height: 100%; object-fit: cover; }
+.pessoa .nome { font-size: 2.1rem; font-weight: 700; display: flex; align-items: center; gap: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.var { font-size: 1.2rem; font-weight: 700; padding: .15rem .7rem; border-radius: 99rem; }
+.var.sobe { color: var(--menta); background: rgba(15,252,190,.14); }
+.var.desce { color: var(--coral); background: rgba(255,122,89,.14); }
+.barra { height: 1rem; border-radius: 99rem; background: rgba(255,255,255,.1); margin-top: .6rem; overflow: hidden; }
+.barra i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--azul-claro), var(--menta)); box-shadow: 0 0 1rem rgba(15,252,190,.5); transition: width 1.2s ease; }
+.pessoa .meta-txt { color: var(--sub); font-size: 1.2rem; margin-top: .3rem; }
+.pessoa .num { text-align: right; }
+.pessoa .num b { display: block; font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.pessoa .num span { color: var(--sub); font-size: 1.2rem; }
+.t2 .rank { grid-template-columns: 1fr 1fr; gap: 1.2rem 2rem; }
+
+/* serviços */
+.servs { display: grid; gap: 1.1rem; }
+.serv .l { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; font-size: 1.7rem; font-weight: 600; }
+.serv .l b { font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+.serv .barra { height: 1.3rem; }
+.serv .barra i { background: linear-gradient(90deg, var(--azul), var(--ceu)); box-shadow: none; }
+.serv:first-child .barra i { background: linear-gradient(90deg, var(--azul-claro), var(--menta)); }
+.serv .v { color: var(--sub); font-size: 1.2rem; margin-top: .3rem; }
+.t3 .serv .l { font-size: 2.4rem; } .t3 .serv .l b { font-size: 3rem; } .t3 .serv .barra { height: 1.8rem; } .t3 .serv .v { font-size: 1.5rem; }
+
+/* último agendamento */
+.ultimo { background: linear-gradient(160deg, rgba(16,110,190,.42), rgba(11,42,71,.5)); }
+.ultimo .quem { font-size: 2.6rem; font-weight: 800; line-height: 1.15; }
+.ultimo .oq { font-size: 1.7rem; color: var(--menta); font-weight: 600; margin-top: .3rem; }
+.ultimo .det { font-size: 1.3rem; color: var(--sub); margin-top: .4rem; }
+.lista-ult { display: grid; gap: .9rem; }
+.lista-ult .it { display: grid; grid-template-columns: 6rem 1fr auto; gap: 1rem; align-items: center; font-size: 1.8rem; padding: .9rem 1.2rem; border-radius: 1.2rem; background: rgba(255,255,255,.05); }
+.lista-ult .it .hr { color: var(--sub); font-variant-numeric: tabular-nums; }
+.lista-ult .it .por { color: var(--sub); font-size: 1.4rem; }
+.vazio { color: var(--sub); font-size: 1.6rem; }
+.novo { animation: pulsar 1.2s ease 3; }
+@keyframes pulsar { 50% { box-shadow: 0 0 0 .4rem rgba(15,252,190,.55), 0 0 4rem rgba(15,252,190,.45); } }
+
+/* celebração */
+.festa { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity .4s; z-index: 5; }
+.festa.ver { opacity: 1; }
+.festa .cartao { padding: 3rem 5rem; border-radius: 3rem; text-align: center; background: rgba(4,23,43,.82); border: 2px solid rgba(15,252,190,.6); box-shadow: 0 0 6rem rgba(15,252,190,.45); transform: scale(.9); transition: transform .5s cubic-bezier(.2,1.4,.4,1); }
+.festa.ver .cartao { transform: scale(1); }
+.festa .t { font-size: 2rem; color: var(--menta); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+.festa .q { font-size: 5rem; font-weight: 800; margin: .6rem 0; }
+.festa .o { font-size: 2.4rem; color: var(--sub); }
+canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 4; }
+.aviso { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; font-size: 2.4rem; padding: 4rem; z-index: 9; background: var(--noite); }
+.aviso[hidden] { display: none; }
+.offline { position: fixed; right: 2rem; bottom: 1.2rem; font-size: 1.1rem; color: var(--sub); }
+@media (prefers-reduced-motion: reduce) { .tela, .barra i, .anel .frente, .festa .cartao { transition: none; } .novo { animation: none; } }
+</style>
+</head>
+<body>
+<div class="tv" id="tv">
+  <header class="topo">
+    <img src="/simbolo-escuro.png" alt="">
+    <div><h1 id="titulo">Sala comercial</h1><div class="sub" id="sub">Agendamentos pelo WhatsApp</div></div>
+    <div class="tela-nome" id="pontos" aria-hidden="true"></div>
+    <div class="relogio"><div class="h" id="hora">--:--</div><div class="d" id="data"></div></div>
+  </header>
+  <main class="telas" id="telas">
+    <section class="tela t1 ativa" data-tela="1">
+      <div class="col col-meta">
+        <div class="vidro meta" id="meta"></div>
+        <div class="vidro hoje" id="hoje"></div>
+      </div>
+      <div class="vidro"><h2>🏆 Ranking do mês</h2><div class="rank" id="rank"></div></div>
+      <div class="col col-dir">
+        <div class="vidro"><h2>Serviços mais agendados</h2><div class="servs" id="servs"></div></div>
+        <div class="vidro ultimo" id="ultimo"></div>
+      </div>
+    </section>
+    <section class="tela t2" data-tela="2">
+      <div class="vidro"><h2>🏆 Ranking do mês · meta individual</h2><div class="rank" id="rank2"></div></div>
+    </section>
+    <section class="tela t3" data-tela="3">
+      <div class="vidro"><h2>Serviços mais agendados no mês</h2><div class="servs" id="servs2"></div></div>
+      <div class="vidro"><h2>Últimos agendamentos</h2><div class="lista-ult" id="ultimos"></div></div>
+    </section>
+  </main>
+</div>
+<div class="festa" id="festa"><div class="cartao"><div class="t">🎉 Novo agendamento!</div><div class="q" id="festa-q"></div><div class="o" id="festa-o"></div></div></div>
+<canvas id="confete"></canvas>
+<div class="aviso" id="aviso" hidden></div>
+<div class="offline" id="offline" hidden>sem conexão · tentando de novo</div>
+<script>
+(() => {
+  const token = location.pathname.split('/').filter(Boolean)[1] || '';
+  const $ = (id) => document.getElementById(id);
+  const UNIDADE = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
+  const ATUALIZA = 30000, ROTACAO = 20000;
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const n = (v) => Number(v || 0).toLocaleString('pt-BR');
+  const brl = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const hm = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' });
+  const iniciais = (nome) => String(nome || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  let dados = null, ultimaChave = null, tela = 0;
+
+  function relogio() {
+    const a = new Date();
+    $('hora').textContent = a.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' });
+    const dt = a.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bahia' });
+    $('data').textContent = dt.charAt(0).toUpperCase() + dt.slice(1);
+  }
+
+  function anel(pct) {
+    const r = 46, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, pct || 0));
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="fundo" cx="50" cy="50" r="${r}" fill="none" stroke-width="8"/>
+      <circle class="frente" cx="50" cy="50" r="${r}" fill="none" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p / 100)}"/></svg>`;
+  }
+
+  function rosto(p) {
+    const img = p.foto ? `<img src="/tv/${encodeURIComponent(token)}/foto/${encodeURIComponent(p.id)}?v=${p.foto}" alt="" onerror="this.remove()">` : '';
+    return `<div class="rosto">${img || esc(iniciais(p.nome))}</div>`;
+  }
+
+  function pessoa(p) {
+    const med = p.medalha ? `<div class="medalha ${p.medalha}">${p.posicao}</div>` : `<div class="pos">${p.posicao}</div>`;
+    const v = p.variacao > 0 ? `<span class="var sobe">▲ ${p.variacao}</span>` : p.variacao < 0 ? `<span class="var desce">▼ ${-p.variacao}</span>` : '';
+    const pct = p.meta?.progressoPct;
+    const alvo = p.meta?.agendamentos ? `${n(p.agendamentos)} de ${n(p.meta.agendamentos)} da meta` : p.meta?.valor ? `${brl(p.valor)} de ${brl(p.meta.valor)} da meta` : 'sem meta individual';
+    return `<div class="pessoa ${p.medalha === 'ouro' ? 'ouro' : ''}">${med}${rosto(p)}
+      <div style="min-width:0"><div class="nome">${esc(p.nome)} ${v}</div>
+        <div class="barra"><i style="width:${Math.min(100, pct || 0)}%"></i></div>
+        <div class="meta-txt">${alvo}${pct != null ? ` · <b>${Math.round(pct)}%</b>` : ''}</div></div>
+      <div class="num"><b>${n(p.agendamentos)}</b><span>agend.</span></div></div>`;
+  }
+
+  function servicos(lista, max) {
+    if (!lista.length) return '<div class="vazio">Os serviços aparecem aqui conforme os agendamentos entram.</div>';
+    const topo = Math.max(...lista.map((s) => s.agendamentos), 1);
+    return lista.slice(0, max).map((s) => {
+      const u = Object.entries(s.porUnidade || {}).map(([k, q]) => `${UNIDADE[k] || k} ${q}`).join(' · ');
+      return `<div class="serv"><div class="l"><span>${esc(s.servico)}</span><b>${n(s.agendamentos)}</b></div>
+        <div class="barra"><i style="width:${(s.agendamentos / topo) * 100}%"></i></div><div class="v">${u}${s.valor ? ' · ' + brl(s.valor) : ''}</div></div>`;
+    }).join('');
+  }
+
+  const textoQuem = (u) => u.cliente ? esc(u.cliente) : 'Nova cliente';
+
+  function desenhar() {
+    const d = dados;
+    if (!d) return;
+    if (d.empresa) $('titulo').textContent = d.empresa;
+    $('sub').textContent = 'Sala comercial · agendamentos pelo WhatsApp';
+    const m = d.mes;
+    const pct = m.pctAgendamentos ?? m.pctValor;
+    const alvo = m.meta.agendamentos ? `${n(m.agendamentos)} de ${n(m.meta.agendamentos)} agendamentos` : m.meta.valor ? `${brl(m.valor)} de ${brl(m.meta.valor)}` : `${n(m.agendamentos)} agendamentos`;
+    $('meta').innerHTML = `<h2 style="margin:0">Meta do mês da equipe</h2>
+      <div class="anel">${anel(pct)}<div class="centro"><div class="pct">${pct != null ? Math.round(pct) + '<small>%</small>' : n(m.agendamentos)}</div><div class="de">${pct != null ? 'da meta' : 'no mês'}</div></div></div>
+      <div class="linha"><b>${alvo}</b></div>
+      <div class="linha">${m.meta.agendamentos && m.agendamentos < m.meta.agendamentos ? `faltam <b>${n(m.meta.agendamentos - m.agendamentos)}</b> · ` : ''}${m.diasRestantes} dia${m.diasRestantes === 1 ? '' : 's'} no mês</div>`;
+    const h = d.hoje;
+    $('hoje').innerHTML = `<div class="n">${n(h.agendamentos)}</div><div class="r">agendamento${h.agendamentos === 1 ? '' : 's'} hoje</div>
+      <div class="u">${Object.entries(h.porUnidade).map(([k, q]) => `<span class="pilula">${UNIDADE[k] || k} <b>${n(q)}</b></span>`).join('')}<span class="pilula">IA <b>${n(h.ia)}</b></span></div>`;
+    const rk = d.ranking.length ? d.ranking : [];
+    $('rank').innerHTML = rk.length ? rk.slice(0, 6).map(pessoa).join('') : '<div class="vazio">Cadastre a equipe para ver o ranking.</div>';
+    $('rank2').innerHTML = rk.length ? rk.slice(0, 10).map(pessoa).join('') : '<div class="vazio">Cadastre a equipe para ver o ranking.</div>';
+    $('servs').innerHTML = servicos(d.servicos, 5);
+    $('servs2').innerHTML = servicos(d.servicos, 6);
+    const u = d.ultimos[0];
+    $('ultimo').innerHTML = `<h2>Último agendamento</h2>` + (u
+      ? `<div class="quem">${textoQuem(u)}</div><div class="oq">${esc(u.servico || 'Agendamento')}</div><div class="det">${hm(u.em)} · ${UNIDADE[u.unidade] || u.unidade} · por ${esc(u.por)}</div>`
+      : '<div class="vazio">Nenhum agendamento ainda este mês.</div>');
+    $('ultimos').innerHTML = d.ultimos.length ? d.ultimos.map((x) => `<div class="it"><span class="hr">${hm(x.em)}</span><span><b>${textoQuem(x)}</b> · ${esc(x.servico || 'Agendamento')}</span><span class="por">${UNIDADE[x.unidade] || x.unidade} · ${esc(x.por)}</span></div>`).join('') : '<div class="vazio">Nenhum agendamento ainda este mês.</div>';
+    const telas = d.rotacao ? 3 : 1;
+    $('pontos').innerHTML = telas > 1 ? Array.from({ length: telas }, (_, i) => `<span class="${i === tela ? 'ativa' : ''}"></span>`).join('') : '';
+  }
+
+  function mostrarTela(i) {
+    tela = i;
+    document.querySelectorAll('.tela').forEach((t, k) => t.classList.toggle('ativa', k === i));
+    document.querySelectorAll('#pontos span').forEach((t, k) => t.classList.toggle('ativa', k === i));
+  }
+
+  function celebrar(u) {
+    $('festa-q').textContent = u.cliente || 'Nova cliente';
+    $('festa-o').textContent = `${u.servico || 'Agendamento'} · ${UNIDADE[u.unidade] || u.unidade} · por ${u.por}`;
+    mostrarTela(0);
+    $('festa').classList.add('ver');
+    $('ultimo').classList.add('novo');
+    confete();
+    setTimeout(() => { $('festa').classList.remove('ver'); $('ultimo').classList.remove('novo'); }, 6000);
+  }
+
+  function confete() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = $('confete'), ctx = cv.getContext('2d');
+    cv.width = innerWidth; cv.height = innerHeight;
+    const cores = ['#0ffcbe', '#1a8be0', '#7cc4ff', '#f5b800', '#ffffff'];
+    const ps = Array.from({ length: 140 }, () => ({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, r: 4 + Math.random() * 6, vy: 2 + Math.random() * 3, vx: -1 + Math.random() * 2, a: Math.random() * 6, c: cores[Math.floor(Math.random() * cores.length)] }));
+    const fim = performance.now() + 5500;
+    (function quadro(t) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (const p of ps) { p.y += p.vy; p.x += p.vx + Math.sin(p.a += .05); ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, Math.min(1, (fim - t) / 1500)); ctx.fillRect(p.x, p.y, p.r, p.r * .6); }
+      if (t < fim) requestAnimationFrame(quadro); else ctx.clearRect(0, 0, cv.width, cv.height);
+    })(performance.now());
+  }
+
+  async function carregar() {
+    try {
+      const r = await fetch(`/tv/${encodeURIComponent(token)}/dados`, { cache: 'no-store' });
+      if (r.status === 404) { $('aviso').hidden = false; $('aviso').textContent = 'Este link do Painel na TV não vale mais. Peça um novo para a gestão (Dashboard › Painel na TV).'; return; }
+      if (!r.ok) throw new Error(String(r.status));
+      dados = await r.json();
+      $('aviso').hidden = true; $('offline').hidden = true;
+      desenhar();
+      const chave = dados.ultimos[0]?.chave ?? null;
+      if (ultimaChave !== null && chave && chave !== ultimaChave) celebrar(dados.ultimos[0]);
+      ultimaChave = chave ?? '';
+    } catch { $('offline').hidden = false; }
+  }
+
+  relogio(); setInterval(relogio, 1000);
+  carregar(); setInterval(carregar, ATUALIZA);
+  setInterval(() => { if (dados?.rotacao && !$('festa').classList.contains('ver')) mostrarTela((tela + 1) % 3); }, ROTACAO);
+  // A TV fica ligada dias: recarrega a página de madrugada para pegar versões novas.
+  setInterval(() => { const h = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }); if (h === '04:00') location.reload(); }, 60000);
+  window.SintoniaTv = { carregar, celebrar, mostrarTela };
+})();
+</script>
+</body>
+</html>
