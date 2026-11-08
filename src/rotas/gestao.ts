@@ -102,9 +102,15 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
   });
 
   // ------------------------------------------------------------ aba IA
-  app.get('/api/ia/hoje', async (req) => iaHoje(o.repo, o.agora(), o.visivelPara(req)));
+  // A tela Inteligência (visão geral, treinamento, configuração) é da gestão; a atendente usa o chat "Ajuda da IA".
+  const exigeIa = (req: FastifyRequest) => exigeGestao(req, 'Só a gerência, a direção e a administração configuram a IA.');
+  app.get('/api/ia/hoje', async (req) => {
+    exigeIa(req);
+    return iaHoje(o.repo, o.agora(), o.visivelPara(req));
+  });
 
-  app.get('/api/ia/config', async () => {
+  app.get('/api/ia/config', async (req) => {
+    exigeIa(req);
     const e = exige(o.empresa, 'A configuração da IA');
     return { ...(await e.configIa()), iaLigada: o.iaLigada?.() ?? null };
   });
@@ -129,7 +135,8 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
   const chaveDe = (req: FastifyRequest) => (req.params as { chave: string }).chave;
   const base = () => exige(o.base, 'O treinamento da IA');
 
-  app.get('/api/ia/base', async () => {
+  app.get('/api/ia/base', async (req) => {
+    exigeIa(req);
     const b = base();
     const [secoes, perguntas, pendencias] = await Promise.all([b.secoes(), b.perguntas(), b.pendencias()]);
     return {
@@ -139,7 +146,10 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
     };
   });
 
-  app.get('/api/ia/base/texto', async () => ({ texto: await base().texto() }));
+  app.get('/api/ia/base/texto', async (req) => {
+    exigeIa(req);
+    return { texto: await base().texto() };
+  });
 
   app.post('/api/ia/base', async (req, reply) => {
     exigeGestao(req, 'Só a gerência, a direção e a administração treinam a IA.');
@@ -157,9 +167,15 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
     return { ok: true };
   });
 
-  app.get('/api/ia/base/:chave/historico', async (req) => base().historico(chaveDe(req)));
+  app.get('/api/ia/base/:chave/historico', async (req) => {
+    exigeIa(req);
+    return base().historico(chaveDe(req));
+  });
 
-  app.get('/api/ia/perguntas', async () => base().perguntas());
+  app.get('/api/ia/perguntas', async (req) => {
+    exigeIa(req);
+    return base().perguntas();
+  });
 
   app.post('/api/ia/perguntas', async (req, reply) => {
     exigeGestao(req, 'Só a gerência, a direção e a administração treinam a IA.');

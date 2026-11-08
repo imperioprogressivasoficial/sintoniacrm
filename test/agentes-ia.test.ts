@@ -171,7 +171,12 @@ describe.each(ambientes)('Agentes de IA ($nome)', (amb) => {
     expect((await m.como(m.gente.carla, 'POST', '/api/agentes-ia', { nome: 'X' })).statusCode).toBe(403);
     const a = await m.criarAgente({ chave: 'sk-ant-propria-123' });
     expect(a.temChavePropria).toBe(true);
-    const lista = (await m.como(m.gente.carla, 'GET', '/api/agentes-ia')).json();
+    // Atendente não vê o estúdio da IA (nem a lista, nem o detalhe, nem o prompt).
+    expect((await m.como(m.gente.carla, 'GET', '/api/agentes-ia')).statusCode).toBe(403);
+    expect((await m.como(m.gente.carla, 'GET', `/api/agentes-ia/${a.id}`)).statusCode).toBe(403);
+    expect((await m.como(m.gente.carla, 'GET', `/api/agentes-ia/${a.id}/prompt`)).statusCode).toBe(403);
+    expect((await m.como(m.gente.carla, 'GET', '/api/agentes-ia/controle')).statusCode).toBe(403);
+    const lista = (await m.como(m.gente.admin, 'GET', '/api/agentes-ia')).json();
     expect(lista.agentes).toHaveLength(1);
     expect(JSON.stringify(lista)).not.toContain('sk-ant-propria');
     expect(JSON.stringify(lista)).not.toContain('chaveCifrada');

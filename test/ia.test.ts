@@ -29,9 +29,11 @@ const fim = (t: string) => ({ stop_reason: 'end_turn', content: [{ type: 'text',
 const systemDe = (p: Record<string, unknown>) => (p.system as Array<{ text: string }>)[0]!.text;
 
 describe.each(ambientes)('Configuração da IA ($nome)', (amb) => {
-  it('todos leem, só gestão muda, e o padrão é o comportamento de hoje', async () => {
+  it('só a gestão lê e muda, e o padrão é o comportamento de hoje', async () => {
     const { gente, como } = await montarGestao(amb, { iaLigada: () => true });
-    const padrao = (await como(gente.carla, 'GET', '/api/ia/config')).json();
+    // A atendente não configura a IA: nem lê a configuração.
+    expect((await como(gente.carla, 'GET', '/api/ia/config')).statusCode).toBe(403);
+    const padrao = (await como(gente.gerenteNorte, 'GET', '/api/ia/config')).json();
     expect(padrao).toEqual({ modoPadrao: 'copiloto', assumirSemResposta: { ligado: true, minutos: 15 }, marcarTags: false, iaLigada: true });
     expect((await como(gente.carla, 'PATCH', '/api/ia/config', { modoPadrao: 'ia' })).statusCode).toBe(403);
     expect((await como(gente.rita, 'PATCH', '/api/ia/config', { modoPadrao: 'ia' })).statusCode).toBe(403);
@@ -97,7 +99,8 @@ describe.each(ambientes)('Configuração da IA ($nome)', (amb) => {
 describe.each(ambientes)('Treinamento da IA: base de conhecimento ($nome)', (amb) => {
   it('nasce do arquivo, mostra [PREENCHER], edita com histórico e só a gestão mexe', async () => {
     const { gente, como } = await montarGestao(amb);
-    const b = (await como(gente.carla, 'GET', '/api/ia/base')).json();
+    for (const url of ['/api/ia/base', '/api/ia/base/texto', '/api/ia/perguntas', '/api/ia/hoje']) expect((await como(gente.carla, 'GET', url)).statusCode).toBe(403);
+    const b = (await como(gente.gerenteNorte, 'GET', '/api/ia/base')).json();
     expect(b.secoes.map((s: { chave: string }) => s.chave)).toEqual(['quem-somos', 'jeito-de-falar', 'perguntas-frequentes']);
     expect(b.secoes[0]).toMatchObject({ titulo: 'Quem somos', atualizadaPor: 'semente', pendencias: 1 });
     expect(b.pendencias).toEqual([
@@ -109,10 +112,11 @@ describe.each(ambientes)('Treinamento da IA: base de conhecimento ($nome)', (amb
     expect((await como(gente.gerenteNorte, 'PUT', '/api/ia/base/nao-existe', { conteudo: 'x' })).statusCode).toBe(404);
     const ed = await como(gente.gerenteNorte, 'PUT', '/api/ia/base/quem-somos', { conteudo: '- Império Progressivas.\n- Endereço: Piso L2, loja 210' });
     expect(ed.json()).toMatchObject({ chave: 'quem-somos', atualizadaPor: 'Gil Norte' });
-    const depois = (await como(gente.carla, 'GET', '/api/ia/base')).json();
+    const depois = (await como(gente.gerenteNorte, 'GET', '/api/ia/base')).json();
     expect(depois.pendencias.map((p: { chave: string }) => p.chave)).toEqual(['perguntas-frequentes']);
 
-    const hist = (await como(gente.carla, 'GET', '/api/ia/base/quem-somos/historico')).json();
+    expect((await como(gente.carla, 'GET', '/api/ia/base/quem-somos/historico')).statusCode).toBe(403);
+    const hist = (await como(gente.gerenteNorte, 'GET', '/api/ia/base/quem-somos/historico')).json();
     expect(hist).toHaveLength(2);
     expect(hist[0]).toMatchObject({ por: 'Gil Norte' });
     expect(hist[0].conteudo).toContain('loja 210');
@@ -128,7 +132,7 @@ describe.each(ambientes)('Treinamento da IA: base de conhecimento ($nome)', (amb
     expect(p.statusCode).toBe(201);
     const id = p.json().id as string;
     await como(gente.gerenteNorte, 'PATCH', `/api/ia/perguntas/${id}`, { resposta: 'Sim, o do shopping (2h grátis).' });
-    const texto = (await como(gente.carla, 'GET', '/api/ia/base/texto')).json().texto as string;
+    const texto = (await como(gente.gerenteNorte, 'GET', '/api/ia/base/texto')).json().texto as string;
     expect(texto).toContain('Endereço: Piso L2, loja 210');
     expect(texto).toContain('## Unidades e horários\nSeg a sáb, 10h às 22h.');
     expect(texto).toMatch(/## Perguntas frequentes\n\[PREENCHER — cole aqui as perguntas\]\n- Pergunta: Tem estacionamento\?\n {2}Resposta: Sim, o do shopping \(2h grátis\)\./);
@@ -259,8 +263,8 @@ describe.each(ambientes)('Aba IA: o que a IA fez hoje ($nome)', (amb) => {
 
     const norte = (await g.como(g.gente.gerenteNorte, 'GET', '/api/ia/hoje')).json();
     expect(norte).toMatchObject({ conversasAtendidas: 2, agendamentos: { total: 0 }, pediuAjuda: { total: 1 } });
-    const rita = (await g.como(g.gente.rita, 'GET', '/api/ia/hoje')).json();
-    expect(rita).toMatchObject({ conversasAtendidas: 1, agendamentos: { total: 1 } });
+    // Atendente não abre a tela Inteligência (ela usa o chat "Ajuda da IA").
+    expect((await g.como(g.gente.rita, 'GET', '/api/ia/hoje')).statusCode).toBe(403);
 
     // Três horas depois ninguém mais está sendo conduzido agora.
     g.relogio.t = quinta(5, 30);

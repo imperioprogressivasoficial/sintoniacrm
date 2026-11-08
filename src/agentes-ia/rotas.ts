@@ -39,13 +39,17 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
   };
   const id = (req: FastifyRequest) => (req.params as { id: string }).id;
 
-  app.get('/api/agentes-ia', async () => ({
-    agentes: await o.servico.listar(),
-    modelos: MODELOS,
-    ferramentas: FERRAMENTAS_AGENTE.map((f) => ({ id: f, nome: NOME_FERRAMENTA[f] })),
-    memoria: CHAVES_MEMORIA.map((c) => ({ id: c, nome: NOME_MEMORIA[c] })),
-    chaves: o.chavesGerais(),
-  }));
+  // Configurar a IA é da gestão: até a leitura do estúdio (agentes, prompts, controle, aprendizados) pede a permissão.
+  app.get('/api/agentes-ia', async (req) => {
+    gestao(req, 'Só a gestão configura a IA.');
+    return {
+      agentes: await o.servico.listar(),
+      modelos: MODELOS,
+      ferramentas: FERRAMENTAS_AGENTE.map((f) => ({ id: f, nome: NOME_FERRAMENTA[f] })),
+      memoria: CHAVES_MEMORIA.map((c) => ({ id: c, nome: NOME_MEMORIA[c] })),
+      chaves: o.chavesGerais(),
+    };
+  });
 
   app.post('/api/agentes-ia', async (req, reply) => {
     gestao(req);
@@ -55,7 +59,10 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
     return reply.code(201).send(publico(a));
   });
 
-  app.get('/api/agentes-ia/controle', async () => o.servico.controle());
+  app.get('/api/agentes-ia/controle', async (req) => {
+    gestao(req, 'Só a gestão configura a IA.');
+    return o.servico.controle();
+  });
   app.put('/api/agentes-ia/controle', async (req) => {
     gestao(req, 'Só a gerência, a direção e a administração mudam quem atende primeiro.');
     return o.servico.gravarControle(req.body, quem(req));
@@ -102,6 +109,7 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
 
   // ---------- aprendizados ("a IA aprendeu isso, aprovar?")
   app.get('/api/agentes-ia/aprendizados', async (req) => {
+    gestao(req, 'Só a gestão vê o que a IA aprendeu.');
     const s = (req.query as { situacao?: string }).situacao;
     return o.servico.aprendizados(s === 'pendente' || s === 'aprovado' || s === 'recusado' ? s : undefined);
   });
@@ -116,7 +124,10 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
   });
 
   // ---------- um agente
-  app.get('/api/agentes-ia/:id', async (req) => o.servico.detalhe(id(req)));
+  app.get('/api/agentes-ia/:id', async (req) => {
+    gestao(req, 'Só a gestão configura a IA.');
+    return o.servico.detalhe(id(req));
+  });
   app.patch('/api/agentes-ia/:id', async (req) => {
     gestao(req);
     return publico(await o.servico.alterar(id(req), AgenteNovo.partial().parse(req.body ?? {}), quem(req)));
@@ -127,6 +138,7 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
     return { ok: true };
   });
   app.get('/api/agentes-ia/:id/prompt', async (req) => {
+    gestao(req, 'Só a gestão configura a IA.');
     const a = await o.servico.exigir(id(req));
     const nomes = [...ferramentasPermitidas(a.config.ferramentas, a.config.memoriaCliente)];
     return { texto: await o.executor.systemDe(a, nomes), ferramentas: nomes };
