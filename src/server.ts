@@ -25,7 +25,7 @@ import { agendar, agendaDaUnidade, ErroAgendamento, horariosLivres, textoConfirm
 import { ErroIntegracaoPendente } from './agenda/sistema.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
-import { cabecalhoNotificacoes, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
+import { cabecalhoNotificacoes, problemasDaSituacao, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -542,7 +542,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     }
   });
 
-  if (d.notificacoes) registrarNotificacoes(app, { agora, ...d.notificacoes });
+  if (d.notificacoes) registrarNotificacoes(app, { agora, problemas: d.situacao ? () => problemasDaSituacao(d.situacao!()) : undefined, ...d.notificacoes });
 
   app.setErrorHandler((erro, _req, reply) => {
     if (erro instanceof z.ZodError) return reply.code(400).send({ erro: 'Dados inválidos', detalhes: erro.issues });

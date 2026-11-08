@@ -15,6 +15,28 @@ export interface OpcoesNotificacoes {
   /** Sem chaves, o push fica desligado (a rota da chave responde 501). */
   chaves?: ChavesPush;
   agora?: () => Date;
+  /** O que impede o trabalho agora (WhatsApp, chave da IA, agenda): um item fixo cada, até alguém resolver. */
+  problemas?: () => Problema[];
+}
+
+export interface Problema {
+  chave: string;
+  titulo: string;
+  texto: string;
+  vista: string;
+}
+
+/** Problemas a partir da situação do servidor (o mesmo /api/situacao do app). */
+export function problemasDaSituacao(s: { iaLigada: boolean; numerosReais: number; agenda?: { unidades: Array<{ nome: string; sistema?: string; falta?: string[]; pronta?: boolean }> } }): Problema[] {
+  const lista: Problema[] = [];
+  if (!s.numerosReais) lista.push({ chave: 'whatsapp', titulo: 'WhatsApp desconectado', texto: 'Nenhum número da loja está conectado: as clientes não recebem respostas.', vista: 'conexoes' });
+  if (!s.iaLigada) lista.push({ chave: 'ia', titulo: 'Falta a chave da IA', texto: 'A IA está desligada até a chave (Anthropic) ser cadastrada em Conexões.', vista: 'conexoes' });
+  for (const u of s.agenda?.unidades ?? []) {
+    if (u.sistema && u.sistema !== 'nenhum' && u.pronta === false && u.falta?.length) {
+      lista.push({ chave: `agenda:${u.nome}`, titulo: `Agenda de ${u.nome} com problema`, texto: u.falta.join(' · '), vista: 'conexoes' });
+    }
+  }
+  return lista;
 }
 
 const exigeLogin = (req: FastifyRequest): Usuario => {
@@ -73,6 +95,8 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
       proximo: itens.length > q.limite && pagina.length ? cursorDe(pagina[pagina.length - 1]!) : null,
       naoLidas: resumo?.naoLidas ?? 0,
       versao: resumo?.versao ?? 0,
+      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; não entram no contador.
+      problemas: o.problemas && (ehGestor(u) || veTudo(u)) ? o.problemas() : [],
       silencio: resumo?.silencio ?? false,
     };
   });

@@ -303,8 +303,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     tipoAl.value = ALARMES[e.tipoAlarme] ? e.tipoAlarme : 'futurista';
     tipoAl.addEventListener('change', () => { salvar({ espera: { tipoAlarme: tipoAl.value } }); prep(); setTimeout(() => tocarAlarme(1, undefined, tipoAl.value), 30); });
     tipo.addEventListener('change', () => { salvar({ mensagens: { tipoSom: tipo.value } }); prep(); setTimeout(() => tocarMensagem(tipo.value), 30); });
-    const secMsg = el('div', { class: 'nt-secao', id: 'nt-sec-mensagens' }, el('h3', { text: 'Cada mensagem' }),
-      linha('Avisar no celular a cada mensagem', 'O celular toca de novo a cada mensagem nova (na mesma notificação da conversa).', chave(m.push, (v) => salvar({ mensagens: { push: v } }), 'Push a cada mensagem')),
+    const secMsg = el('div', { class: 'nt-secao', id: 'nt-sec-mensagens' }, el('h3', { text: 'Som de mensagem (app aberto)' }),
       linha('Som de mensagem no app', 'Com o app aberto, a cada mensagem nova em qualquer conversa sua.', chave(m.som, (v) => { salvar({ mensagens: { som: v } }); if (v) tocarMensagem(); }, 'Som de mensagem')),
       linha('Vibrar o celular', navigator.vibrate ? 'Junto com o som.' : 'Este aparelho não vibra pelo navegador.', chave(m.vibrar, (v) => { salvar({ mensagens: { vibrar: v } }); if (v) vibrar([120, 60, 120]); }, 'Vibrar')),
       linha('Tipo de som', '', tipo),

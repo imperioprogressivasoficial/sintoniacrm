@@ -100,57 +100,15 @@ describe('Regras de espera (puras)', () => {
   });
 });
 
-describe('Push a cada mensagem', () => {
-  it('cada mensagem nova toca de novo (mesma etiqueta da conversa), sem repetir a mesma, e respeita o não perturbe', async () => {
-    const { gente, cliente, daCarla, pushDe, repo, notificador, armazem, relogio, esperasDe } = await montar();
-    const c = await daCarla('5571988100001');
+describe('Mensagens da cliente não viram notificação', () => {
+  it('nem no sino nem no celular: quem ficou sem resposta vira "cliente esperando"', async () => {
+    const { gente, cliente, daCarla, pushDe, armazem, relogio } = await montar();
+    await daCarla('5571988100001');
     await cliente('5571988100001', 'Quanto custa a progressiva?');
     await cliente('5571988100001', 'Tem horário amanhã de manhã?');
-    await cliente('5571988100001', 'Pode ser às 10h');
-    const p = pushDe(gente.carla);
-    expect(p).toHaveLength(3);
-    expect(p.every((x) => x.etiqueta === `conversa-${c.id}` && !x.silenciosa && x.titulo === 'Juliana' && x.vibrar === true)).toBe(true);
-    expect(p[0]!.texto).toBe('Quanto custa a progressiva?');
-    expect(p[2]!.texto).toContain('Pode ser às 10h');
-    // No sino continua uma notificação só (agrupada).
-    const sino = (await armazem.listar(gente.carla.id, relogio.t, 50)).filter((n) => !n.lidaEm);
-    expect(sino).toHaveLength(1);
-    expect(sino[0]!.contador).toBe(3);
-    // Outra atendente da unidade não recebe (a conversa tem dona).
+    expect(pushDe(gente.carla)).toHaveLength(0);
+    expect((await armazem.listar(gente.carla.id, relogio.t, 50)).filter((n) => n.tipo === 'mensagem' || n.tipo === 'nova_cliente')).toHaveLength(0);
     expect(pushDe(gente.bia)).toHaveLength(0);
-
-    // O mesmo evento repetido (mesma mensagem) não toca de novo.
-    await repo.registrarEvento({ tipo: 'mensagem_cliente', conversaId: c.id, unidade: 'norte', em: relogio.t });
-    await notificador.ocioso();
-    expect(pushDe(gente.carla)).toHaveLength(3);
-
-    // Não perturbe: nada no celular, mas o sino soma.
-    await armazem.salvarPreferencias(gente.carla.id, completarPreferencias({ naoPerturbe: { ligado: true, inicio: '13:00', fim: '18:00' } }));
-    await cliente('5571988100001', 'Alô?');
-    expect(pushDe(gente.carla)).toHaveLength(3);
-    expect((await armazem.listar(gente.carla.id, relogio.t, 50))[0]!.contador).toBe(4);
-
-    // Push por mensagem desligado: volta ao aviso agrupado silencioso (no máximo um por minuto).
-    await armazem.salvarPreferencias(gente.carla.id, completarPreferencias({ mensagens: { push: false, som: true, vibrar: true, tipoSom: 'gota', volume: 70 } }));
-    relogio.t = new Date(relogio.t.getTime() + 2 * MIN);
-    await cliente('5571988100001', 'Oi?');
-    await cliente('5571988100001', 'Oi??');
-    const ult = pushDe(gente.carla).slice(3);
-    expect(ult).toHaveLength(1);
-    expect(ult[0]!.silenciosa).toBe(true);
-    void esperasDe;
-  });
-
-  it('sem dona e fora do modo IA, quem vê as conversas sem dona da unidade recebe cada mensagem', async () => {
-    const { gente, cliente, sintonia, pushDe, notificador, pushes } = await montar();
-    const c = await cliente('5571988100002', 'Oi');
-    await sintonia.mudarModo(c.id, 'humano');
-    await notificador.ocioso();
-    pushes.length = 0;
-    await cliente('5571988100002', 'Vocês abrem domingo?');
-    await cliente('5571988100002', 'Que horas?');
-    for (const u of [gente.carla, gente.bia]) expect(pushDe(u)).toHaveLength(2);
-    expect(pushDe(gente.gerente)).toHaveLength(0);
   });
 });
 

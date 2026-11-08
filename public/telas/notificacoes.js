@@ -1,5 +1,6 @@
 /* Notificações da Sintonia: registra window.SintoniaTelas.notificacoes = { abrir(), fechar(), preferencias(), verificar() }.
- * Sino com contador (barra lateral no computador, topo das Conversas no celular), painel de vidro com a lista,
+ * Sino com contador (barra lateral no computador, topo das Conversas no celular), lista no painel lateral
+ * (só o que pede ação; clientes esperando viram um item só; problemas fixos no topo),
  * aviso (toast) + som quando chega algo novo com o app aberto, contador no título e no ícone da aba,
  * preferências (tipos, som, push no celular, não perturbe) e o push de verdade (service worker /sw.js).
  * O contador chega no cabeçalho x-notificacoes das chamadas que o app já faz (evento "sintonia:notificacoes").
@@ -50,31 +51,36 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-icone { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .nt-icone svg { width: 18px; height: 18px; }
   .nt-botao:focus-visible, .nt-icone:focus-visible, .nt-item:focus-visible, .nt-chave input:focus-visible + i { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
-  .nt-lista { overflow-y: auto; overscroll-behavior: contain; padding: 0 10px 14px; min-height: 120px; }
-  .nt-grupo { font-size: 11.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); padding: 14px 10px 6px; }
-  .nt-item { all: unset; cursor: pointer; box-sizing: border-box; display: flex; gap: 12px; width: 100%; padding: 11px 10px; border-radius: 16px; position: relative; align-items: flex-start; }
-  .nt-item:hover { background: var(--vidro-item); }
-  .nt-item.nt-nova { background: color-mix(in srgb, var(--marca-azul) 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 18%, transparent); }
-  [data-tema="escuro"] .nt-item.nt-nova { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
-  .nt-item + .nt-item { margin-top: 2px; }
-  .nt-ic { flex: none; width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: var(--brilho-azul); }
-  .nt-ic svg { width: 20px; height: 20px; }
-  .nt-ic.nt-ic-acento { background: var(--marca-menta); color: var(--badge-txt); box-shadow: 0 6px 18px color-mix(in srgb, var(--marca-menta) 40%, transparent); }
-  .nt-ic.nt-ic-alerta { background: var(--aviso); color: var(--aviso-txt); box-shadow: none; }
-  .nt-corpo { flex: 1; min-width: 0; display: grid; gap: 2px; }
-  .nt-titulo { font-size: 15px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+  /* lista no painel lateral: linhas compactas (como iOS/WhatsApp) */
+  .nt-topo-lista { display: flex; align-items: center; justify-content: flex-end; margin: -6px 0 4px; min-height: 30px; }
+  .nt-link { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--marca-azul); padding: 4px 2px; }
+  [data-tema="escuro"] .nt-link { color: var(--marca-menta); }
+  .nt-link[disabled] { opacity: .4; cursor: default; }
+  .nt-lista { margin: 0 -16px; }
+  .nt-grupo { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--sub); padding: 14px 16px 4px; }
+  .nt-item { all: unset; cursor: pointer; box-sizing: border-box; display: flex; gap: 12px; width: 100%; padding: 10px 16px; align-items: center; position: relative; }
+  .nt-item:hover { background: var(--sel); }
+  .nt-item + .nt-item .nt-corpo { box-shadow: 0 -1px 0 var(--linha); }
+  .nt-corpo { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; row-gap: 1px; padding: 2px 0; margin: -10px 0; padding: 10px 0; }
+  .nt-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--cor-ic, var(--marca-azul)); background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 14%, transparent); }
+  .nt-ic svg { width: 17px; height: 17px; }
+  .nt-ic.t-espera { --cor-ic: #d97706; } .nt-ic.t-ia_equipe { --cor-ic: #0a8f7a; } .nt-ic.t-transferida { --cor-ic: #106ebe; }
+  .nt-ic.t-agenda_mudou { --cor-ic: #7c3aed; } .nt-ic.t-lembrete_ligacao { --cor-ic: #0369a1; } .nt-ic.t-falha, .nt-ic.t-problema { --cor-ic: #dc2626; }
+  [data-tema="escuro"] .nt-ic { background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 26%, transparent); filter: brightness(1.35); }
+  .nt-titulo { font-size: 15px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nt-nova .nt-titulo { font-weight: 800; }
-  .nt-texto { font-size: 13.5px; color: var(--sub); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-  .nt-quando { font-size: 12px; color: var(--sub); white-space: nowrap; }
-  .nt-ponto { position: absolute; right: 12px; top: 16px; width: 9px; height: 9px; border-radius: 50%; background: var(--badge); box-shadow: 0 0 8px var(--badge); }
-  .nt-nova .nt-quando { padding-right: 16px; }
-  .nt-vazio { text-align: center; padding: 34px 20px 40px; color: var(--sub); font-size: 14.5px; line-height: 1.45; }
-  .nt-vazio b { display: block; color: var(--texto); font-size: 16px; margin: 10px 0 4px; }
-  .nt-vazio svg { width: 44px; height: 44px; color: var(--marca-azul); opacity: .7; }
+  .nt-texto { grid-column: 1 / -1; font-size: 13.5px; color: var(--sub); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-quando { font-size: 12px; color: var(--sub); white-space: nowrap; align-self: center; display: inline-flex; align-items: center; gap: 6px; }
+  .nt-ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--marca-azul); flex: none; }
+  [data-tema="escuro"] .nt-ponto { background: var(--marca-menta); }
+  .nt-vazio { text-align: center; padding: 40px 20px; color: var(--sub); font-size: 15px; font-weight: 600; }
   .nt-fim { text-align: center; font-size: 12.5px; color: var(--sub); padding: 12px; }
-  .nt-convite { margin: 0 16px 8px; padding: 12px 14px; border-radius: 16px; display: flex; gap: 10px; align-items: center; font-size: 13.5px; line-height: 1.35;
-    background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
-  .nt-convite span { flex: 1; }
+  .nt-convite { margin: 0 0 8px; padding: 8px 8px 8px 12px; border-radius: 12px; display: flex; gap: 8px; align-items: center; font-size: 13px; line-height: 1.3;
+    background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--linha); }
+  .nt-convite span { flex: 1; color: var(--sub); }
+  .nt-convite .nt-botao { height: 30px; padding: 0 12px; font-size: 12.5px; }
+  .nt-convite .nt-x { all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); }
+  .nt-convite .nt-x svg { width: 14px; height: 14px; }
 
   .nt-toast { position: fixed; z-index: 90; display: flex; gap: 12px; align-items: center; cursor: pointer; color: var(--texto); font-family: var(--fonte);
     padding: 12px 14px; border-radius: 20px; background: var(--vidro-forte); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 18px 44px rgba(0,0,0,.22);
@@ -90,7 +96,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     background: var(--vidro-forte); box-shadow: var(--vidro-brilho), 0 24px 60px rgba(0,0,0,.25); -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); }
   .nt-pref::backdrop { background: rgba(0,0,0,.3); }
   @media (max-width: 760px) { .nt-pref { margin: auto 0 0; width: 100vw; max-width: none; max-height: 92vh; border-radius: 26px 26px 0 0; } }
-  .nt-pref-corpo { padding: 4px 18px 20px; display: grid; gap: 14px; overflow-y: auto; max-height: calc(92vh - 70px); }
+  .nt-pref-corpo { display: grid; gap: 14px; }
   .nt-secao { display: grid; gap: 2px; padding: 6px; border-radius: 18px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .nt-secao h3 { margin: 6px 10px 4px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--sub); }
   .nt-linha { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 4px 10px; border-radius: 12px; font-size: 15px; }
@@ -126,19 +132,19 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     fechar: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 'stroke-width="2.2"'),
     engrenagem: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'),
   };
-  const CLASSE_IC = { nova_cliente: 'nt-ic-acento', falha: 'nt-ic-alerta', espera: 'nt-ic-alerta' };
+  IC.agenda_mudou = IC.agendamento; IC.problema = IC.falha;
+  const CLASSE_IC = new Proxy({}, { get: (_, t) => `t-${String(t)}` });
+  // Só o que pede ação (o servidor não cria mais "nova cliente", "mensagem" nem "a IA agendou").
   const TIPOS = [
-    ['nova_cliente', 'Nova cliente', 'Alguém novo chamou no WhatsApp da sua unidade.'],
-    ['mensagem', 'Mensagem da cliente', 'Nas suas conversas (ou nas sem dona, quando a IA não responde sozinha). No sino, várias seguidas viram um aviso só.'],
-    ['ia_equipe', 'A IA passou para a equipe', 'Quando a IA pede ajuda de uma pessoa.'],
-    ['espera', 'Cliente esperando', 'Ninguém respondeu além do limite da unidade (aviso e alerta forte).'],
-    ['transferida', 'Conversa passada para você', ''],
-    ['agendamento', 'Agendamento feito', 'Pela IA ou pela equipe, nas suas conversas (e para a gestão).'],
-    ['lembrete_ligacao', 'Lembrete de ligação', 'Criado pelas automações, na hora marcada.'],
-    ['falha', 'Falhas importantes', 'WhatsApp desconectado ou chave da IA recusada (só administração e direção).'],
+    ['espera', 'Clientes esperando resposta', 'Ninguém respondeu além do limite da unidade. No sino, todas viram um item só.'],
+    ['ia_equipe', 'A IA passou para a equipe', 'Quando a IA precisa de uma pessoa (com o motivo).'],
+    ['transferida', 'Conversa passada para você', 'Transferida ou atribuída a você.'],
+    ['agenda_mudou', 'Agendamento cancelado ou remarcado', 'Quando a cliente pede para remarcar.'],
+    ['lembrete_ligacao', 'Lembrete de ligação', 'Ligações programadas, na hora marcada.'],
+    ['falha', 'Problemas que impedem o trabalho', 'WhatsApp desconectado, chave da IA, agenda (só administração e direção).'],
   ];
 
-  const est = { itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
+  const est = { problemas: [], itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
 
   // ---------------------------------------------------------------- tempo
   const diaDe = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -246,7 +252,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (mais) q.set('antes', est.proximo);
       const r = await api('/api/notificacoes?' + q);
       est.itens = mais ? est.itens.concat(r.itens.filter((x) => !est.itens.some((y) => y.id === x.id))) : r.itens;
-      est.proximo = r.proximo; est.silencio = r.silencio;
+      est.proximo = r.proximo; est.silencio = r.silencio; est.problemas = r.problemas || [];
       mostrarContador(r.naoLidas);
       if (r.versao) est.versao = Math.max(est.versao ?? 0, r.versao);
       return r;
@@ -280,102 +286,104 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (v > est.versao) { const antiga = est.versao; est.versao = v; novidades(antiga); }
   });
 
-  // ---------------------------------------------------------------- painel
-  let fundo, painel, lista, sentinela, observador;
-  function montarPainel() {
-    fundo = el('div', { class: 'nt-fundo', onclick: fechar });
-    painel = el('section', { class: 'nt-painel', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Notificações', tabindex: '-1' });
-    const marcar = el('button', { class: 'nt-botao', id: 'nt-marcar', title: 'Marcar todas como lidas', onclick: marcarTodas }, el('span', { class: 'nt-longo', text: 'Marcar todas como lidas' }), el('span', { class: 'nt-curto', text: 'Ler todas' }));
-    const pref = el('button', { class: 'nt-icone', title: 'Preferências de notificação', 'aria-label': 'Preferências de notificação', html: IC.engrenagem, onclick: () => { fechar(); abrirPreferencias(); } });
-    const x = el('button', { class: 'nt-icone', title: 'Fechar', 'aria-label': 'Fechar', html: IC.fechar, onclick: fechar });
-    lista = el('div', { class: 'nt-lista', id: 'nt-lista' });
-    painel.append(el('div', { class: 'nt-alca' }), el('div', { class: 'nt-cab' }, el('h2', { text: 'Notificações' }), marcar, pref, x), el('div', { id: 'nt-convite' }), lista);
-    painel.addEventListener('keydown', (e) => { if (e.key === 'Escape') fechar(); });
-    // Puxar a folha para baixo fecha (celular).
-    let y0 = null;
-    painel.addEventListener('touchstart', (e) => { y0 = lista.scrollTop <= 0 ? e.touches[0].clientY : null; }, { passive: true });
-    painel.addEventListener('touchmove', (e) => { if (y0 !== null && e.touches[0].clientY - y0 > 90) { y0 = null; fechar(); } }, { passive: true });
-    document.body.append(fundo, painel);
-    observador = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) buscar(true).then((r) => r && desenharLista()); }, { root: lista, rootMargin: '120px' });
-  }
+  // ---------------------------------------------------------------- painel (página do painel lateral)
+  let lista, sentinela, observador;
+  const P = () => window.SintoniaPainel;
+  const nomesCurto = (nomes) => (nomes.length <= 2 ? nomes.join(' e ') : `${nomes.slice(0, 2).join(', ')} e mais ${nomes.length - 2}`);
 
   function desenharLista() {
-    if (!lista) return;
+    if (!lista || !lista.isConnected) return;
     observador?.disconnect();
-    if (!est.itens.length) {
-      lista.replaceChildren(el('div', { class: 'nt-vazio', html: IC.sino }, ));
-      lista.firstChild.append(el('b', { text: 'Nada por aqui ainda' }), el('span', { text: 'Novas clientes, mensagens, agendamentos e lembretes aparecem aqui.' }));
-      return;
-    }
     const frag = [];
+    // Problemas que impedem o trabalho: fixos no topo até alguém resolver.
+    if (est.problemas.length) {
+      frag.push(el('div', { class: 'nt-grupo', text: 'Precisa de atenção' }));
+      for (const pr of est.problemas) frag.push(el('button', { class: 'nt-item nt-nova', onclick: () => { fechar(); irPara({ vista: pr.vista }); } },
+        el('span', { class: 'nt-ic t-problema', html: IC.falha }),
+        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: pr.titulo }), el('span', { class: 'nt-quando' }, el('span', { text: 'Resolver' })), el('span', { class: 'nt-texto', text: pr.texto }))));
+    }
+    // Clientes esperando: um item só, atualizado no lugar.
+    const esperas = est.itens.filter((n) => n.tipo === 'espera' && !n.lida);
+    const outras = est.itens.filter((n) => n.tipo !== 'espera');
+    if (esperas.length) {
+      const nomes = [...new Set(esperas.map((n) => (n.titulo || '').replace(/^Urgente: /, '').replace(/ (está esperando|espera há .*)$/, '')))];
+      const qtd = nomes.length;
+      const mais = esperas.reduce((a, n) => (new Date(n.em) > new Date(a.em) ? n : a), esperas[0]);
+      frag.push(el('div', { class: 'nt-grupo', text: 'Agora' }));
+      frag.push(el('button', { class: 'nt-item nt-nova', onclick: () => abrirEsperando(esperas) },
+        el('span', { class: 'nt-ic t-espera', html: IC.espera }),
+        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: qtd === 1 ? '1 cliente esperando resposta' : `${qtd} clientes esperando resposta` }),
+          el('span', { class: 'nt-quando' }, el('span', { text: relativo(mais.em) }), el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
+          el('span', { class: 'nt-texto', text: nomesCurto(nomes) }))));
+    }
     let grupo = '';
-    for (const n of est.itens) {
+    for (const n of outras) {
       const g = grupoDe(n.em);
       if (g !== grupo) { grupo = g; frag.push(el('div', { class: 'nt-grupo', text: g })); }
-      const b = el('button', { class: 'nt-item' + (n.lida ? '' : ' nt-nova'), 'data-id': n.id, onclick: () => tocarItem(n) },
-        el('span', { class: 'nt-ic ' + (CLASSE_IC[n.tipo] || ''), html: IC[n.tipo] || IC.sino }),
-        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: n.titulo }), n.texto ? el('span', { class: 'nt-texto', text: textoDe(n) }) : null, el('span', { class: 'nt-quando', text: relativo(n.em) })),
-        n.lida ? null : el('i', { class: 'nt-ponto', 'aria-label': 'não lida' }));
-      frag.push(b);
+      frag.push(el('button', { class: 'nt-item' + (n.lida ? '' : ' nt-nova'), 'data-id': n.id, onclick: () => tocarItem(n) },
+        el('span', { class: 'nt-ic ' + CLASSE_IC[n.tipo], html: IC[n.tipo] || IC.sino }),
+        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: n.titulo }),
+          el('span', { class: 'nt-quando' }, el('span', { text: relativo(n.em) }), n.lida ? null : el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
+          n.texto ? el('span', { class: 'nt-texto', text: textoDe(n) }) : null)));
     }
-    sentinela = el('div', { class: 'nt-fim', text: est.proximo ? 'Carregando…' : 'Isso é tudo.' });
-    frag.push(sentinela);
+    if (!frag.length) { lista.replaceChildren(el('div', { class: 'nt-vazio', text: 'Tudo em dia ✓' })); return; }
+    if (est.proximo) { sentinela = el('div', { class: 'nt-fim', text: 'Carregando…' }); frag.push(sentinela); }
     lista.replaceChildren(...frag);
     if (est.proximo) observador.observe(sentinela);
+    const marcar = $('nt-marcar'); if (marcar) marcar.disabled = !est.n;
   }
 
-  function desenharConvite() {
-    const c = $('nt-convite'); if (!c) return;
-    c.replaceChildren();
-    if (!('Notification' in window) || Notification.permission !== 'default' || est.prefs?.push === false) return;
-    c.append(el('div', { class: 'nt-convite' }, el('span', { text: 'Receba os avisos mesmo com o app fechado.' }), el('button', { class: 'nt-botao', text: 'Ativar', onclick: async () => { await ligarPush(true); desenharConvite(); } })));
+  /** Toque no "N clientes esperando": marca esses avisos como lidos e mostra a lista de não lidas. */
+  function abrirEsperando(esperas) {
+    for (const n of esperas) { n.lida = true; post(`/api/notificacoes/${n.id}/lida`).catch(() => {}); }
+    mostrarContador(Math.max(0, est.n - 1));
+    fechar();
+    const ids = [...new Set(esperas.map((n) => n.conversaId).filter(Boolean))];
+    if (ids.length === 1) { ui.abrir(ids[0]); return; }
+    ui.mostrar('conversas');
+    if (innerWidth <= 760 && ui.estado.aberta) $('voltar')?.click();
+    document.querySelector('[data-f="esperando"]')?.click();
   }
 
-  function posicionar() {
-    if (!painel) return;
-    // Computador: abre embaixo do sininho do topo, alinhado à direita. Celular: folha que sobe de baixo.
-    const sino = $('lt-sino');
-    if (matchMedia('(min-width: 761px)').matches && sino && sino.offsetParent) {
-      const r = sino.getBoundingClientRect();
-      painel.style.left = 'auto';
-      painel.style.right = `${Math.max(12, Math.round(innerWidth - r.right))}px`;
-      painel.style.top = `${Math.round(r.bottom + 8)}px`;
-      painel.style.maxHeight = `calc(100vh - ${Math.round(r.bottom + 20)}px)`;
-    } else if (matchMedia('(min-width: 761px)').matches) {
-      // Computador sem sino no topo (aberto pelo menu): mesmo lugar, no canto superior direito.
-      painel.style.left = 'auto'; painel.style.right = '16px'; painel.style.top = '64px'; painel.style.maxHeight = 'calc(100vh - 80px)';
-    } else { painel.style.left = ''; painel.style.right = ''; painel.style.top = ''; painel.style.maxHeight = ''; }
+  function desenharConvite(caixa) {
+    if (!caixa) return;
+    caixa.replaceChildren();
+    let dispensado = false; try { dispensado = localStorage.getItem('sintonia.nt.convite') === 'fechado'; } catch {}
+    if (dispensado || !('Notification' in window) || Notification.permission !== 'default' || est.prefs?.push === false) return;
+    caixa.append(el('div', { class: 'nt-convite' }, el('span', { text: 'Receba os avisos mesmo com o app fechado.' }),
+      el('button', { class: 'nt-botao', text: 'Ativar', onclick: async () => { await ligarPush(true); desenharConvite(caixa); } }),
+      el('button', { class: 'nt-x', 'aria-label': 'Dispensar', html: IC.fechar, onclick: () => { try { localStorage.setItem('sintonia.nt.convite', 'fechado'); } catch {} desenharConvite(caixa); } })));
   }
 
   async function abrir() {
-    if (!painel) montarPainel();
-    est.aberto = true; posicionar();
-    fundo.hidden = false; painel.hidden = false;
-    requestAnimationFrame(() => { fundo.classList.add('nt-ver'); painel.classList.add('nt-ver'); });
+    const pref = el('button', { class: 'pl-bt', type: 'button', title: 'Preferências de notificação', 'aria-label': 'Preferências de notificação', html: IC.engrenagem, onclick: () => abrirPreferencias({ empurrar: true }) });
+    est.aberto = true;
     ['lt-sino', 'sino-cel'].forEach((id) => $(id)?.setAttribute('aria-expanded', 'true'));
-    desenharLista(); desenharConvite();
-    painel.focus({ preventScroll: true });
+    P().abrir({ id: 'notificacoes', titulo: 'Notificações', acoes: [pref], aoFechar: () => { est.aberto = false; ['lt-sino', 'sino-cel'].forEach((id) => $(id)?.setAttribute('aria-expanded', 'false')); },
+      montar: (corpo) => {
+        const convite = el('div', { id: 'nt-convite' });
+        lista = el('div', { class: 'nt-lista', id: 'nt-lista' });
+        corpo.append(el('div', { class: 'nt-topo-lista' }, el('button', { class: 'nt-link', id: 'nt-marcar', type: 'button', text: 'Marcar todas como lidas', onclick: marcarTodas })), convite, lista);
+        desenharConvite(convite);
+        observador = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) buscar(true).then((r) => r && desenharLista()); }, { root: corpo, rootMargin: '120px' });
+        desenharLista();
+      } });
     await buscar(false).catch(() => {});
     desenharLista();
   }
   function fechar() {
-    if (!painel || !est.aberto) return;
+    if (P()?.aberto('notificacoes')) P().fechar();
     est.aberto = false;
-    fundo.classList.remove('nt-ver'); painel.classList.remove('nt-ver');
-    ['lt-sino', 'sino-cel'].forEach((id) => $(id)?.setAttribute('aria-expanded', 'false'));
-    setTimeout(() => { if (!est.aberto) { fundo.hidden = true; painel.hidden = true; } }, 260);
   }
   async function marcarTodas() {
     await post('/api/notificacoes/lidas').catch(() => {});
     est.itens.forEach((n) => (n.lida = true));
     mostrarContador(0); desenharLista(); toast('Tudo marcado como lido.');
   }
-  addEventListener('resize', posicionar);
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && est.aberto) fechar(); });
 
   for (const id of ['lt-sino', 'sino-cel']) {
     const b = $(id);
-    if (b) { b.setAttribute('aria-haspopup', 'dialog'); b.setAttribute('aria-expanded', 'false'); b.addEventListener('click', () => (est.aberto ? fechar() : abrir())); }
+    if (b) { b.setAttribute('aria-haspopup', 'dialog'); b.setAttribute('aria-expanded', 'false'); b.addEventListener('click', () => (P()?.aberto('notificacoes') ? fechar() : abrir())); }
   }
 
   // ---------------------------------------------------------------- push (service worker)
@@ -428,7 +436,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   // ---------------------------------------------------------------- preferências
-  let dlg;
   async function salvar(campos) {
     try { est.prefs = { ...est.prefs, ...(await api('/api/notificacoes/preferencias', { method: 'PUT', body: JSON.stringify(campos) })) }; dispatchEvent(new CustomEvent('sintonia:preferencias', { detail: est.prefs })); }
     catch (x) { toast(x.message); }
@@ -440,15 +447,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   };
   const linhaPref = (titulo, sub, controle) => el('div', { class: 'nt-linha' }, el('span', {}, titulo, sub ? el('small', { text: sub }) : null), controle);
 
-  async function abrirPreferencias() {
+  async function abrirPreferencias(op = {}) {
     const p = await api('/api/notificacoes/preferencias').catch((x) => { toast(x.message); return null; });
     if (!p) return;
     est.prefs = p;
-    dlg?.remove();
-    dlg = el('dialog', { class: 'nt-pref', 'aria-label': 'Preferências de notificação' });
     const corpo = el('div', { class: 'nt-pref-corpo' });
-    const x = el('button', { class: 'nt-icone', 'aria-label': 'Fechar', html: IC.fechar, onclick: () => dlg.close() });
-    dlg.append(el('div', { class: 'nt-alca' }), el('div', { class: 'nt-cab' }, el('h2', { text: 'Notificações' }), x), corpo);
 
     // Celular / computador (push)
     const permissao = 'Notification' in window ? Notification.permission : 'indisponivel';
@@ -498,10 +501,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       ...TIPOS.filter(([t]) => t !== 'falha' || souGestao).map(([t, titulo, sub]) => linhaPref(titulo, sub, chave(p.tipos[t] !== false, (v) => salvar({ tipos: { [t]: v } }), titulo))));
 
     const extras = window.SintoniaTelas.alertas ? await window.SintoniaTelas.alertas.secoesPreferencias(p).catch(() => []) : [];
-    corpo.append(secPush, ...extras, secNp, secTipos);
-    document.body.append(dlg);
-    dlg.addEventListener('close', () => dlg.remove());
-    dlg.showModal();
+    corpo.append(secTipos, secPush, ...extras, secNp);
+    const pagina = { id: 'nt-preferencias', titulo: 'Preferências', montar: (c) => c.append(corpo) };
+    if (op.empurrar && P().aberto()) P().empurrar(pagina); else P().abrir(pagina);
   }
 
   // ---------------------------------------------------------------- chegada por link (#conversa=<id>)

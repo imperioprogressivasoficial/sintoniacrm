@@ -1,15 +1,14 @@
 import type { Contas, Usuario } from '../auth/contas.js';
 import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
-import { descrever } from '../app/atualizacoes.js';
 import { ehEmailDemo } from '../demo/dados.js';
 import type { Conversa } from '../domain.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
 import { UNIDADES } from '../unidades.js';
-import { DIA, MIN } from '../util/tempo.js';
+import { MIN } from '../util/tempo.js';
 import type { ArmazemNotificacoes, Cursor } from './armazem.js';
 import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
 import { avaliarEspera, EsquemaRegraEspera, regraDa, type RegraEspera, type RegrasEspera } from './espera.js';
-import { completarPreferencias, emNaoPerturbe, esperaSilenciada, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
+import { completarPreferencias, emNaoPerturbe, esperaSilenciada, TIPOS_VISIVEIS, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
 import type { UnidadeId } from '../domain.js';
 
 /**
@@ -60,9 +59,6 @@ const FALHAS: Array<{ classe: string; teste: RegExp; titulo: string; texto: stri
 ];
 export const classificarFalha = (erro: string) => FALHAS.find((f) => f.teste.test(erro));
 
-/** Tipos de notificação que juntam as mensagens da cliente enquanto não lidas. */
-const AGRUPA = ['mensagem', 'nova_cliente'];
-
 const formatarTel = (t: string) => {
   const d = t.replace(/^55/, '');
   return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t;
@@ -75,9 +71,7 @@ export class Notificador {
   private equipeCache?: { em: number; lista: Promise<Usuario[]> };
   private ultimaEspera = 0;
   /** Conversas que acabaram de nascer: a primeira mensagem já está na notificação de "nova cliente". */
-  private readonly recemNovas = new Set<string>();
   /** Mensagens que já tocaram no aparelho de cada pessoa ("<usuario>:<mensagem>"): nunca repete. */
-  private readonly avisadas = new Set<string>();
   private regrasCache?: { em: number; regras: Promise<RegrasEspera> };
   private readonly agora: () => Date;
   private readonly log: (msg: string, extra?: unknown) => void;
@@ -143,56 +137,15 @@ export class Notificador {
     const unidade = UNIDADES[c.unidade]?.nome ?? c.unidade;
 
     switch (e.tipo) {
-      case 'conversa_nova': {
-        const previa = await this.previa(c);
-        this.recemNovas.add(c.id);
-        for (const u of this.donaOuUnidade(us, c)) {
-          await this.criar(u, { tipo: 'nova_cliente', titulo: `Nova cliente: ${nome}`, texto: previa ? `${unidade} · ${previa}` : unidade, conversaId: c.id, contador: 0 });
-        }
+      // Cliente nova e cada mensagem não viram mais notificação: a lista de conversas (não lidas) já mostra,
+      // e quem ficou sem resposta vira "clientes esperando resposta" (agrupado no sino).
+      case 'conversa_nova':
+      case 'mensagem_cliente':
         return;
-      }
-      case 'mensagem_cliente': {
-        const ultima = await this.ultimaDaCliente(c);
-        const previa = ultima ? curto(ultima.texto.replace(/\s+/g, ' ').trim()) || 'Nova mensagem' : 'Nova mensagem';
-        const porMensagem = { titulo: nome, texto: curto(previa, 110), msgId: ultima?.id ?? `${c.id}:${String(c.ultimaMensagemCliente?.getTime() ?? '')}` };
-        const primeira = this.recemNovas.delete(c.id);
-        // A mesma mensagem avisada duas vezes (evento repetido): ignora.
-        if (ultima) {
-          const ev = `msg:${ultima.id}`;
-          if (this.avisadas.has(ev)) return;
-          this.lembrar(ev);
-        }
-        const dona = this.dona(us, c);
-        // Com dona, só ela. Sem dona, a unidade, quando a IA não responde sozinha (copiloto ou "Só eu").
-        const alvos = dona.length ? dona : c.modo === 'ia' ? [] : this.linhaDeFrente(us, c);
-        const ids = new Set(alvos.map((u) => u.id));
-        // A notificação de "nova cliente" ainda não lida sempre recebe a mensagem (mesmo com a IA respondendo).
-        for (const u of us) {
-          if (ids.has(u.id)) continue;
-          const g = await this.o.armazem.grupoAberto(u.id, c.id, ['nova_cliente']);
-          if (g && podeVer(u, c)) await this.somar(u, g, `${unidade} · ${previa}`);
-        }
-        for (const u of alvos) {
-          const g = await this.o.armazem.grupoAberto(u.id, c.id, AGRUPA);
-          // A primeira mensagem já tocou com o aviso de "nova cliente".
-          if (g) await this.somar(u, g, g.tipo === 'nova_cliente' ? `${unidade} · ${previa}` : previa, primeira ? undefined : porMensagem);
-          else if (!primeira) {
-            const n = await this.criar(u, { tipo: 'mensagem', titulo: nome, texto: previa, conversaId: c.id });
-            if (n) this.avisadas.add(`${u.id}:${porMensagem.msgId}`);
-          }
-        }
-        return;
-      }
       case 'passou_para_humano': {
         const motivo = d.motivo ? String(d.motivo) : 'a cliente precisa de alguém da equipe';
         for (const u of this.donaOuUnidade(us, c)) {
           await this.criar(u, { tipo: 'ia_equipe', titulo: `A IA passou ${nome} para a equipe`, texto: curto(`Motivo: ${motivo}`), conversaId: c.id });
-        }
-        return;
-      }
-      case 'ia_assumiu': {
-        for (const u of this.dona(us, c)) {
-          await this.criar(u, { tipo: 'espera', titulo: `A IA assumiu a conversa com ${nome}`, texto: 'Ninguém respondeu a tempo e a IA respondeu por você.', conversaId: c.id });
         }
         return;
       }
@@ -205,24 +158,14 @@ export class Notificador {
         await this.criar(alvo, { tipo: 'transferida', titulo: 'Conversa passada para você', texto: `${por} passou a conversa com ${nome} (${unidade}) para você.`, conversaId: c.id });
         return;
       }
-      case 'agendamento_ia':
-      case 'agendamento_equipe': {
-        const a = descrever(e, c);
-        const quem = d.atendenteId ? String(d.atendenteId) : undefined;
-        const alvos = new Map([...this.dona(us, c), ...this.gestao(us, c)].map((u) => [u.id, u]));
-        for (const u of alvos.values()) {
-          if (u.id === quem) continue; // quem agendou já sabe
-          await this.criar(u, { tipo: 'agendamento', titulo: a?.titulo ?? 'Novo agendamento', texto: `${nome} · ${a?.detalhe || unidade}`, conversaId: c.id });
-        }
-        return;
-      }
+      // "A IA agendou" não vira notificação (aparece na Agenda e no Dashboard).
       case 'confirmacao': {
         // A cliente pediu para remarcar pela confirmação automática: a dona (ou a unidade) e a gerência ficam sabendo.
         if (d.status !== 'remarcar') return;
         const quando = d.data && d.hora ? `${String(d.data)} às ${String(d.hora)}` : '';
         const alvos = new Map([...this.donaOuUnidade(us, c), ...this.gestao(us, c)].map((u) => [u.id, u]));
         for (const u of alvos.values()) {
-          await this.criar(u, { tipo: 'agendamento', titulo: `${nome} quer remarcar`, texto: curto(`${d.servico ? String(d.servico) : 'Horário'}${quando ? ` · ${quando}` : ''} · ${unidade}`), conversaId: c.id });
+          await this.criar(u, { tipo: 'agenda_mudou', titulo: `${nome} quer remarcar`, texto: curto(`${d.servico ? String(d.servico) : 'Horário'}${quando ? ` · ${quando}` : ''} · ${unidade}`), conversaId: c.id });
         }
         return;
       }
@@ -257,16 +200,6 @@ export class Notificador {
       if (await this.o.armazem.existeChave(u.id, chave, umaHora)) continue;
       await this.criar(u, { tipo: 'falha', titulo: f.titulo, texto: f.texto, vista: 'conexoes', chave });
     }
-  }
-
-  /** Texto da última mensagem da cliente (prévia). */
-  private async previa(c: Conversa): Promise<string> {
-    const m = await this.ultimaDaCliente(c);
-    return m ? curto(m.texto.replace(/\s+/g, ' ').trim()) : '';
-  }
-  private async ultimaDaCliente(c: Conversa) {
-    const ms = await this.o.repo.mensagens(c.id, 6);
-    return [...ms].reverse().find((x) => x.autor === 'cliente');
   }
 
   // ---------------------------------------------------------------- relógio
@@ -406,38 +339,6 @@ export class Notificador {
     return criada;
   }
 
-  /**
-   * Mais uma mensagem na mesma notificação (no sino continua uma só). Com "push a cada mensagem" (padrão),
-   * o aparelho toca de novo com o início da mensagem nova (mesma etiqueta da conversa, renotify);
-   * sem ela, é atualizado em silêncio, no máximo uma vez por minuto.
-   */
-  private async somar(u: Usuario, g: Notificacao, texto: string, porMensagem?: { titulo: string; texto: string; msgId: string }): Promise<void> {
-    const agora = this.agora();
-    const n = await this.o.armazem.somar(g.id, { texto, em: agora, somar: 1 });
-    if (!n) return;
-    if (porMensagem) {
-      const p = await this.prefsDe(u.id);
-      if (p.mensagens.push && p.tipos[g.tipo as 'mensagem'] !== false) {
-        const chave = `${u.id}:${porMensagem.msgId}`;
-        if (this.avisadas.has(chave)) return;
-        this.lembrar(chave);
-        await this.o.armazem.marcarEntregue(n.id, agora);
-        await this.entregar(n, p, false, { titulo: porMensagem.titulo, texto: n.contador > 1 ? `${porMensagem.texto} · ${n.contador} mensagens` : porMensagem.texto }).catch((x) => this.log('Falha no push', String(x)));
-        return;
-      }
-    }
-    if (!g.entregueEm || agora.getTime() - g.entregueEm.getTime() >= MIN) {
-      await this.o.armazem.marcarEntregue(n.id, agora);
-      await this.entregar(n, undefined, true).catch((x) => this.log('Falha no push', String(x)));
-    }
-    void u;
-  }
-
-  private lembrar(chave: string): void {
-    this.avisadas.add(chave);
-    if (this.avisadas.size > 5000) this.avisadas.delete(this.avisadas.values().next().value!);
-  }
-
   /** Push para os aparelhos da pessoa (se ela quer e não está no "não perturbe"). Inscrição morta (404/410) é apagada. */
   async entregar(n: Notificacao, prefs?: Preferencias, silenciosa = false, troca?: { titulo?: string; texto?: string; etiqueta?: string; insistente?: boolean }): Promise<number> {
     if (!this.o.push) return 0;
@@ -484,10 +385,12 @@ export class Notificador {
     return this.criar(u, { tipo: 'teste', titulo: 'Notificações ligadas', texto: 'É assim que os avisos da Sintonia vão chegar.' });
   }
   listar(usuarioId: string, limite: number, antes?: Cursor) {
-    return this.o.armazem.listar(usuarioId, this.agora(), limite, antes);
+    return this.o.armazem.listar(usuarioId, this.agora(), limite, antes, TIPOS_VISIVEIS);
   }
-  resumo(usuarioId: string) {
-    return this.o.armazem.resumo(usuarioId, this.agora());
+  /** Não lidas do sino: só os tipos que ainda valem, e os "clientes esperando" contam como um item só (agrupados). */
+  async resumo(usuarioId: string) {
+    const r = await this.o.armazem.resumo(usuarioId, this.agora(), TIPOS_VISIVEIS);
+    return { naoLidas: r.naoLidas - r.esperaNaoLidas + (r.esperaNaoLidas > 0 ? 1 : 0), versao: r.versao };
   }
   async preferencias(usuarioId: string) {
     return this.prefsDe(usuarioId);

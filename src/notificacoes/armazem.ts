@@ -17,9 +17,9 @@ export interface ArmazemNotificacoes {
   /** Já existe notificação com esta chave para a pessoa (desde `desde`, se informado)? */
   existeChave(usuarioId: string, chave: string, desde?: Date): Promise<boolean>;
   /** Mais nova primeiro; só as que já valem (criada_em <= agora). */
-  listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor): Promise<Notificacao[]>;
+  listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]): Promise<Notificacao[]>;
   /** Não lidas e "versão" (última mudança, em ms) para o app saber quando buscar de novo. */
-  resumo(usuarioId: string, agora: Date): Promise<{ naoLidas: number; versao: number }>;
+  resumo(usuarioId: string, agora: Date, tipos?: readonly string[]): Promise<{ naoLidas: number; versao: number; esperaNaoLidas: number }>;
   marcarLida(usuarioId: string, id: string, em: Date): Promise<boolean>;
   marcarTodas(usuarioId: string, em: Date): Promise<number>;
   marcarDaConversa(usuarioId: string, conversaId: string, em: Date): Promise<number>;
@@ -74,17 +74,19 @@ export class ArmazemNotificacoesMemoria implements ArmazemNotificacoes {
   async existeChave(usuarioId: string, chave: string, desde?: Date) {
     return this.itens.some((x) => x.usuarioId === usuarioId && x.chave === chave && (!desde || x.criadaEm.getTime() >= desde.getTime()));
   }
-  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor) {
+  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]) {
     return this.itens
-      .filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime() && (!antes || depoisDe(x, antes)))
+      .filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime() && (!antes || depoisDe(x, antes)) && (!tipos || tipos.includes(x.tipo)))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime() || (a.id < b.id ? 1 : -1))
       .slice(0, limite)
       .map(copia);
   }
-  async resumo(usuarioId: string, agora: Date) {
+  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[]) {
     const minhas = this.itens.filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime());
+    const contam = minhas.filter((x) => !x.lidaEm && (!tipos || tipos.includes(x.tipo)));
     return {
-      naoLidas: minhas.filter((x) => !x.lidaEm).length,
+      naoLidas: contam.length,
+      esperaNaoLidas: contam.filter((x) => x.tipo === 'espera').length,
       versao: Math.max(0, ...minhas.map((x) => Math.max(x.atualizadaEm.getTime(), x.lidaEm?.getTime() ?? 0))),
     };
   }
@@ -209,22 +211,25 @@ export class ArmazemNotificacoesPostgres implements ArmazemNotificacoes {
     );
     return Boolean(rowCount);
   }
-  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor) {
+  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]) {
     const { rows } = await this.pool.query<Linha>(
       `select * from ${T} where usuario_id = $1 and criada_em <= $2
          and ($3::timestamptz is null or (atualizada_em, id) < ($3, $4::uuid))
+         and ($6::text[] is null or tipo = any($6))
        order by atualizada_em desc, id desc limit $5`,
-      [usuarioId, agora, antes?.em ?? null, antes?.id ?? '00000000-0000-0000-0000-000000000000', limite],
+      [usuarioId, agora, antes?.em ?? null, antes?.id ?? '00000000-0000-0000-0000-000000000000', limite, tipos ? [...tipos] : null],
     );
     return rows.map(daLinha);
   }
-  async resumo(usuarioId: string, agora: Date) {
-    const { rows } = await this.pool.query<{ n: string; v: Date | null }>(
-      `select count(*) filter (where lida_em is null) as n, max(greatest(atualizada_em, coalesce(lida_em, atualizada_em))) as v
+  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[]) {
+    const { rows } = await this.pool.query<{ n: string; e: string; v: Date | null }>(
+      `select count(*) filter (where lida_em is null and ($3::text[] is null or tipo = any($3))) as n,
+              count(*) filter (where lida_em is null and tipo = 'espera') as e,
+              max(greatest(atualizada_em, coalesce(lida_em, atualizada_em))) as v
          from ${T} where usuario_id = $1 and criada_em <= $2`,
-      [usuarioId, agora],
+      [usuarioId, agora, tipos ? [...tipos] : null],
     );
-    return { naoLidas: Number(rows[0]?.n ?? 0), versao: rows[0]?.v?.getTime() ?? 0 };
+    return { naoLidas: Number(rows[0]?.n ?? 0), esperaNaoLidas: Number(rows[0]?.e ?? 0), versao: rows[0]?.v?.getTime() ?? 0 };
   }
   async marcarLida(usuarioId: string, id: string, em: Date) {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return false;

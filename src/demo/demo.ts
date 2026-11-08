@@ -231,20 +231,17 @@ export class Demo {
     // Notificações para quem preencheu (já "entregues": nenhum push sai).
     const conv = (etapa: Etapa, i = 0) => plano.conversas.filter((c) => c.etapa === etapa)[i];
     const notas: Array<{ tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; ha: number; lida: boolean }> = [];
-    const nova = [...plano.conversas].sort((a, b) => b.criadaEm.getTime() - a.criadaEm.getTime())[0];
-    if (nova) notas.push({ tipo: 'nova_cliente', titulo: `Nova cliente: ${nova.nome}`, texto: `${(M.unidades[nova.unidade as "norte" | "sumare"] ?? UNIDADES[nova.unidade].nome)} · Quanto fica a ${M.servicos.progressiva.nome.toLowerCase()}?`, conversaId: nova.id, ha: 25 * MIN, lida: false });
+    // Só o que pede ação (como no app): clientes esperando (viram um item só no sino), a IA pedindo ajuda,
+    // remarcação e lembrete de ligação.
+    const esperando = plano.conversas.filter((c) => c.etapa === 'em_conversa' || c.etapa === 'novo_lead').slice(0, 3);
+    esperando.forEach((c, i) => notas.push({ tipo: 'espera', titulo: `${c.nome} está esperando`, texto: `Sem resposta há ${6 + i * 4} minutos.`, conversaId: c.id, ha: (6 + i * 4) * MIN, lida: false }));
     const ag = conv('agendada');
-    if (ag) notas.push({ tipo: 'agendamento', titulo: `A IA agendou ${M.servicos.progressiva.nome}`, texto: `${ag.nome} · ${(M.unidades[ag.unidade as "norte" | "sumare"] ?? UNIDADES[ag.unidade].nome)}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
+    if (ag) notas.push({ tipo: 'agenda_mudou', titulo: `${ag.nome} quer remarcar`, texto: `${M.servicos.progressiva.nome} · ${(M.unidades[ag.unidade as "norte" | "sumare"] ?? UNIDADES[ag.unidade].nome)}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
     const gest = plano.eventos.find((e) => e.tipo === 'passou_para_humano');
     const cg = gest && plano.conversas.find((c) => c.id === gest.conversaId);
     if (cg) notas.push({ tipo: 'ia_equipe', titulo: `A IA passou ${cg.nome} para a equipe`, texto: 'Motivo: cliente gestante, precisa da orientação da equipe', conversaId: cg.id, ha: 5 * HORA, lida: false });
     const it = conv('interessada', 1);
     if (it) notas.push({ tipo: 'lembrete_ligacao', titulo: `Ligar para ${it.nome}`, texto: 'Interessada e ainda não agendou', conversaId: it.id, ha: 20 * HORA, lida: true });
-    const ag2 = conv('agendada', 1);
-    if (ag2) notas.push({ tipo: 'agendamento', titulo: `${atendentes[0]?.nome.split(' ')[0] ?? 'A equipe'} agendou ${M.servicos.selagem.nome}`, texto: `${ag2.nome} · ${(M.unidades[ag2.unidade as "norte" | "sumare"] ?? UNIDADES[ag2.unidade].nome)}`, conversaId: ag2.id, ha: DIA, lida: true });
-    const em = conv('em_conversa', 2);
-    if (em) notas.push({ tipo: 'espera', titulo: `${em.nome} está esperando`, texto: 'Sem resposta há 12 minutos.', conversaId: em.id, ha: 1.5 * DIA, lida: true });
-    notas.push({ tipo: 'teste', titulo: 'Dados de demonstração prontos', texto: 'Conversas, CRM, Dashboard, Relatórios e Agenda preenchidos. Apague em Mais › Dados de demonstração.', ha: MIN, lida: false });
     const ids: string[] = [];
     for (const n of notas) {
       const quando = new Date(agora.getTime() - n.ha);

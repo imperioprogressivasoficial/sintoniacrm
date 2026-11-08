@@ -95,7 +95,7 @@ for (const amb of ambientes) {
       await notif.tick();
       for (const u of await g.contas.listarUsuarios('imperio')) {
         const ls = await g.notificacoes.listar(u.id, g.relogio.t, 500);
-        expect(ls.filter((n) => n.tipo === 'espera' && n.conversaId && demos.some((d) => d.id === n.conversaId) && n.titulo.endsWith('está esperando') && n.texto !== 'Sem resposta há 12 minutos.').length).toBe(0);
+        expect(ls.filter((n) => n.tipo === 'espera' && n.conversaId && demos.some((d) => d.id === n.conversaId) && n.titulo.endsWith('está esperando') && n.chave).length).toBe(0); // as da demonstração não têm chave; as do relógio, sim
       }
       expect(g.enviados.slice(enviadosAntes).filter((e) => ehDemo(e.telefone)).length).toBe(0);
       expect((await g.automacoes.execucoes(parada.id)).filter((e) => demos.some((d) => d.id === e.conversaId)).length).toBe(0);
