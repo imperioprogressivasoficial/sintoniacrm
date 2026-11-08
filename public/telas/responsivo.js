@@ -1,5 +1,4 @@
 /* Responsividade: o comportamento que acompanha o /responsivo.css.
- * - topo da conversa no celular: CRM/tag e IA à vista; ficha, agendar e ligar num menu ⋯
  * - ficha da cliente em seções que abrem e fecham (principal aberta; no celular as outras recolhidas)
  * - CRM no celular: filtros recolhidos num botão "Filtros"
  * - faixas roláveis (chips, números) esmaecem na borda quando há mais conteúdo
@@ -8,42 +7,9 @@
   const $ = (id) => document.getElementById(id);
   const celular = matchMedia('(max-width: 760px)');
   const SVG = {
-    pontos: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
-    ficha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
-    agendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>',
-    ligar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>',
     filtro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>',
   };
   const criar = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (html) e.innerHTML = html; return e; };
-
-  // ---------- topo da conversa: menu ⋯ ----------
-  function montarTopo() {
-    const pilula = document.querySelector('.chat-topo .pilula-topo');
-    if (!pilula || $('rs-topo-mais')) return;
-    const botao = criar('button', { class: 'icone', id: 'rs-topo-mais', type: 'button', title: 'Mais ações', 'aria-label': 'Mais ações da conversa', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, SVG.pontos);
-    const menu = criar('div', { class: 'rs-menu-topo', id: 'rs-menu-topo', role: 'menu', hidden: '' });
-    const itens = [['topo-ficha', 'Dados da cliente', SVG.ficha], ['topo-agendar', 'Agendar', SVG.agendar], ['topo-ligar', 'Ligar', SVG.ligar]];
-    for (const [alvo, rotulo, icone] of itens) {
-      const b = criar('button', { type: 'button', role: 'menuitem', 'data-alvo': alvo }, icone);
-      b.append(document.createTextNode(rotulo));
-      b.addEventListener('click', () => { fechar(); $(alvo)?.click(); });
-      menu.append(b);
-    }
-    const fechar = () => { menu.hidden = true; botao.setAttribute('aria-expanded', 'false'); };
-    botao.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // "Ligar" só aparece se a conversa tem telefone (o link do topo traz o href)
-      const ligar = menu.querySelector('[data-alvo="topo-ligar"]');
-      ligar.hidden = !$('topo-ligar')?.getAttribute('href');
-      menu.hidden = !menu.hidden;
-      botao.setAttribute('aria-expanded', String(!menu.hidden));
-      if (!menu.hidden) menu.querySelector('button:not([hidden])')?.focus();
-    });
-    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) fechar(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { fechar(); botao.focus(); } });
-    pilula.append(botao);
-    pilula.closest('.chat-topo').append(menu);
-  }
 
   // ---------- ficha: seções que abrem e fecham ----------
   function secao(titulo, filhos, { classe = '', aberta = true } = {}) {
@@ -131,7 +97,6 @@
   function varrerFaixas() { document.querySelectorAll(SELETOR_FAIXAS).forEach(marcarFaixa); }
 
   function iniciar() {
-    montarTopo();
     montarFicha();
     montarCrm();
     varrerFaixas();

@@ -331,6 +331,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const visivel = () => s.caixa && s.caixa.isConnected && s.caixa.offsetParent !== null;
 
   window.SintoniaTelas.agenda = {
+    /** Novo agendamento (escolhe a cliente e abre o Agendar). Precisa da tela já desenhada uma vez (s.ui). */
+    novo: () => { if (s.ui) novo(); },
     async desenhar(caixa, ui) {
       estilo();
       const hoje = isoBahia(new Date());

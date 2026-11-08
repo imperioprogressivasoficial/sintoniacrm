@@ -182,6 +182,33 @@
 .ar-ic svg { width: 24px; height: 24px; }
 .ar-item.ativo .ar-ic { background: var(--marca-menta); color: #071d33; box-shadow: 0 0 16px rgba(15,252,190,.55); }
 .ar-rot { font-size: 12px; font-weight: 600; line-height: 1.2; max-width: 92px; }
+.ar-cab { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 0 2px 0 8px; color: rgba(255,255,255,.72); }
+.ar-tit { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.ar-editar { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+.ar-editar svg { width: 17px; height: 17px; }
+.ar-editar:hover, .ar-editar:focus-visible { background: rgba(255,255,255,.22); }
+.ar-pronto { all: unset; cursor: pointer; padding: 7px 14px; border-radius: 999px; font-size: 14px; font-weight: 700; color: #071d33; background: var(--marca-menta); }
+.ar-pronto:focus-visible, .ar-restaurar:focus-visible, .ar-marca:focus-visible, .ar-ordem button:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+.ar-painel.editando { display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 24px)); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; color: #fff; }
+.ar-dica { margin: 0 8px; font-size: 13px; line-height: 18px; color: rgba(255,255,255,.72); }
+.ar-sub { margin: 6px 8px 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.ar-lista { display: grid; gap: 2px; padding: 4px; border-radius: 18px; background: rgba(255,255,255,.06); }
+.ar-linha { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 2px 6px 2px 8px; border-radius: 14px; }
+.ar-linha .ar-ic { width: 36px; height: 36px; flex: none; }
+.ar-linha .ar-ic svg { width: 20px; height: 20px; }
+.ar-linha.fora .ar-ic, .ar-linha.fora .ar-nome { opacity: .62; }
+.ar-nome { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ar-ordem { display: flex; gap: 2px; flex: none; }
+.ar-ordem button { all: unset; cursor: pointer; width: 32px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: rgba(255,255,255,.85); }
+.ar-ordem button:hover { background: rgba(255,255,255,.1); }
+.ar-ordem button[disabled] { opacity: .25; cursor: default; }
+.ar-ordem svg { width: 18px; height: 18px; }
+.ar-marca { all: unset; cursor: pointer; flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 2px rgba(255,255,255,.45); color: #071d33; margin: 0 4px; }
+.ar-marca.sim { background: var(--marca-menta); box-shadow: 0 0 10px rgba(15,252,190,.45); }
+.ar-marca svg { width: 15px; height: 15px; }
+.ar-aviso { margin: 0 8px; padding: 9px 12px; border-radius: 12px; font-size: 13.5px; background: rgba(245,184,0,.18); color: #ffe08a; }
+.ar-restaurar { all: unset; cursor: pointer; align-self: center; padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,.85); }
+.ar-restaurar:hover { background: rgba(255,255,255,.1); }
 @media (prefers-reduced-motion: reduce) { .ar-painel, .ar-fundo, .ar { transition: none; } }
 
 

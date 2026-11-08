@@ -2,17 +2,48 @@
  * Bolinha de acesso rápido da Sintonia (como o AssistiveTouch do iPhone).
  * Fica na borda da tela, dá para arrastar para onde quiser e, ao tocar, abre um painel de vidro
  * com os atalhos em grade (3 colunas). Fora de uso, fica meio apagada.
+ * A canetinha no canto do painel deixa cada pessoa escolher e ordenar os atalhos (1 a 9), guardados neste aparelho.
  *
- *   AcessoRapido.criar({ itens: [{ rotulo, icone: '<svg…>', acao, ativo?: () => bool, visivel?: () => bool }] })
+ *   AcessoRapido.criar({
+ *     catalogo: [{ id, rotulo, icone: '<svg…>', acao, ativo?: () => bool, disponivel?: () => bool }],
+ *     padrao: ['id', …],            // atalhos de fábrica, em ordem
+ *     chaveItens: () => 'chave',    // onde guardar a escolha (por pessoa)
+ *   })
  */
 (() => {
   const TAM = 56;
   const MARGEM = 10;
+  const MAX = 9;
   const CHAVE = 'sintonia.acessoRapido.posicao';
-  const ler = () => { try { return JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch { return null; } };
-  const guardar = (p) => { try { localStorage.setItem(CHAVE, JSON.stringify(p)); } catch { /* sem armazenamento: só não lembra */ } };
+  const lerJson = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
+  const gravarJson = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch { /* sem armazenamento: só não lembra */ } };
+  const SVG = {
+    lapis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10.5-10.5a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/><path d="M13.5 7.5l3 3"/></svg>',
+    cima: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
+    baixo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></svg>',
+  };
+  const el = (tag, attrs = {}, ...filhos) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === 'text') e.textContent = v; else if (k === 'html') e.innerHTML = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+    }
+    e.append(...filhos.filter(Boolean));
+    return e;
+  };
 
-  function criar({ itens = [], rotulo = 'Acesso rápido' } = {}) {
+  function criar({ catalogo = [], padrao = [], chaveItens = () => 'sintonia.acessoRapido.itens', rotulo = 'Acesso rápido' } = {}) {
+    const porId = new Map(catalogo.map((c) => [c.id, c]));
+    const disponivel = (c) => Boolean(c) && (!c.disponivel || c.disponivel());
+    /** Ids escolhidos (na ordem), só os que existem e que a pessoa pode usar. */
+    function escolhidos() {
+      const salvo = lerJson(chaveItens());
+      const base = Array.isArray(salvo) && salvo.length ? salvo : padrao;
+      const ids = base.filter((id, i) => base.indexOf(id) === i && disponivel(porId.get(id))).slice(0, MAX);
+      return ids.length ? ids : padrao.filter((id) => disponivel(porId.get(id))).slice(0, MAX);
+    }
+
     const raiz = document.createElement('div');
     raiz.className = 'ar ociosa';
     const botao = document.createElement('button');
@@ -26,20 +57,68 @@
     painel.className = 'ar-painel'; painel.setAttribute('role', 'dialog'); painel.setAttribute('aria-label', rotulo); painel.hidden = true;
     document.body.append(fundo, painel, raiz);
 
+    let editando = null; // lista de ids durante a edição
+    let aviso = '';
+
     function desenharPainel() {
+      painel.classList.toggle('editando', Boolean(editando));
       painel.replaceChildren();
-      for (const it of itens) {
-        if (it.visivel && !it.visivel()) continue;
+      if (editando) return desenharEditor();
+      painel.append(el('div', { class: 'ar-cab' },
+        el('span', { class: 'ar-tit', text: rotulo }),
+        el('button', { type: 'button', class: 'ar-editar', 'aria-label': 'Editar atalhos', title: 'Editar atalhos', html: SVG.lapis, onclick: (e) => { e.stopPropagation(); editando = escolhidos(); aviso = ''; desenharPainel(); painel.querySelector('.ar-pronto')?.focus({ preventScroll: true }); } })));
+      for (const id of escolhidos()) {
+        const it = porId.get(id);
         const b = document.createElement('button');
-        b.type = 'button'; b.className = 'ar-item' + (it.ativo?.() ? ' ativo' : '');
+        b.type = 'button'; b.className = 'ar-item' + (it.ativo?.() ? ' ativo' : ''); b.dataset.id = id;
         b.innerHTML = `<span class="ar-ic">${it.icone || ''}</span>`;
-        const s = document.createElement('span'); s.className = 'ar-rot'; s.textContent = typeof it.rotulo === 'function' ? it.rotulo() : it.rotulo; b.append(s);
+        const s = document.createElement('span'); s.className = 'ar-rot'; s.textContent = it.rotulo; b.append(s);
         b.addEventListener('click', (e) => { e.stopPropagation(); fechar(); setTimeout(() => it.acao?.(), 60); });
         painel.append(b);
       }
     }
 
-    let pos = ler() || { lado: 'dir', y: 0.62 };
+    function desenharEditor() {
+      const todos = catalogo.filter(disponivel);
+      const ligados = editando.filter((id) => porId.has(id));
+      const desligados = todos.map((c) => c.id).filter((id) => !ligados.includes(id));
+      const salvar = () => gravarJson(chaveItens(), editando);
+      const mudar = (fn) => { fn(); aviso = ''; salvar(); desenharPainel(); };
+      const linha = (id, ligado, pos) => {
+        const it = porId.get(id);
+        const marcar = el('button', { type: 'button', class: 'ar-marca' + (ligado ? ' sim' : ''), role: 'switch', 'aria-checked': String(ligado), 'aria-label': `${ligado ? 'Tirar' : 'Mostrar'} ${it.rotulo}`, html: ligado ? SVG.ok : '',
+          onclick: (e) => {
+            e.stopPropagation();
+            if (ligado) {
+              if (editando.length <= 1) { aviso = 'Deixe pelo menos 1 atalho.'; desenharPainel(); return; }
+              mudar(() => { editando = editando.filter((x) => x !== id); });
+            } else {
+              if (editando.length >= MAX) { aviso = `Cabem até ${MAX} atalhos. Tire um para pôr este.`; desenharPainel(); return; }
+              mudar(() => { editando = [...editando, id]; });
+            }
+          } });
+        const mover = (d) => mudar(() => { const i = editando.indexOf(id); const j = i + d; [editando[i], editando[j]] = [editando[j], editando[i]]; });
+        return el('div', { class: 'ar-linha' + (ligado ? '' : ' fora') },
+          el('span', { class: 'ar-ic', html: it.icone || '' }),
+          el('span', { class: 'ar-nome', text: it.rotulo }),
+          ligado ? el('span', { class: 'ar-ordem' },
+            el('button', { type: 'button', 'aria-label': `Subir ${it.rotulo}`, html: SVG.cima, disabled: pos === 0 ? '' : null, onclick: (e) => { e.stopPropagation(); mover(-1); } }),
+            el('button', { type: 'button', 'aria-label': `Descer ${it.rotulo}`, html: SVG.baixo, disabled: pos === ligados.length - 1 ? '' : null, onclick: (e) => { e.stopPropagation(); mover(1); } })) : null,
+          marcar);
+      };
+      painel.append(
+        el('div', { class: 'ar-cab' },
+          el('span', { class: 'ar-tit', text: 'Editar atalhos' }),
+          el('button', { type: 'button', class: 'ar-pronto', text: 'Pronto', onclick: (e) => { e.stopPropagation(); editando = null; desenharPainel(); } })),
+        el('p', { class: 'ar-dica', text: `Escolha de 1 a ${MAX} atalhos e a ordem deles. ${ligados.length} de ${MAX} na bolinha.` }),
+        el('div', { class: 'ar-lista', role: 'group', 'aria-label': 'Na bolinha' }, ...ligados.map((id, i) => linha(id, true, i))),
+        desligados.length ? el('div', { class: 'ar-sub', text: 'Mais atalhos' }) : null,
+        desligados.length ? el('div', { class: 'ar-lista', role: 'group', 'aria-label': 'Mais atalhos' }, ...desligados.map((id) => linha(id, false))) : null,
+        aviso ? el('p', { class: 'ar-aviso', role: 'alert', text: aviso }) : null,
+        el('button', { type: 'button', class: 'ar-restaurar', text: 'Restaurar padrão', onclick: (e) => { e.stopPropagation(); gravarJson(chaveItens(), null); editando = escolhidos(); aviso = ''; desenharPainel(); } }));
+    }
+
+    let pos = lerJson(CHAVE) || { lado: 'dir', y: 0.62 };
     let aberta = false;
     let ocioso;
     function aplicar(animar) {
@@ -54,21 +133,21 @@
       ocioso = setTimeout(() => !aberta && raiz.classList.add('ociosa'), 3000);
     }
     function abrir() {
-      aberta = true; acordar(); desenharPainel();
+      aberta = true; editando = null; acordar(); desenharPainel();
       painel.hidden = false; fundo.classList.add('ver'); raiz.classList.add('aberta');
       requestAnimationFrame(() => painel.classList.add('ver'));
       botao.setAttribute('aria-expanded', 'true');
-      painel.querySelector('button')?.focus({ preventScroll: true });
+      painel.querySelector('.ar-item')?.focus({ preventScroll: true });
     }
     function fechar() {
       if (!aberta) return;
-      aberta = false; painel.classList.remove('ver'); fundo.classList.remove('ver'); raiz.classList.remove('aberta');
+      aberta = false; editando = null; painel.classList.remove('ver'); fundo.classList.remove('ver'); raiz.classList.remove('aberta');
       botao.setAttribute('aria-expanded', 'false');
       setTimeout(() => { if (!aberta) painel.hidden = true; }, 200);
       acordar();
     }
     fundo.addEventListener('click', fechar);
-    addEventListener('keydown', (e) => { if (e.key === 'Escape' && aberta) { fechar(); botao.focus(); } });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && aberta) { if (editando) { editando = null; desenharPainel(); } else { fechar(); botao.focus(); } } });
 
     // arrastar (dedo ou mouse); toque curto abre/fecha
     let arrasto = null; let soltouArrastando = 0;
@@ -91,17 +170,17 @@
         soltouArrastando = Date.now();
         const cx = raiz.offsetLeft + TAM / 2;
         pos = { lado: cx > innerWidth / 2 ? 'dir' : 'esq', y: (raiz.offsetTop + TAM / 2) / innerHeight };
-        guardar(pos); aplicar(true);
+        gravarJson(CHAVE, pos); aplicar(true);
       }
     };
     botao.addEventListener('pointerup', soltar);
     botao.addEventListener('pointercancel', soltar);
     botao.addEventListener('click', () => { if (Date.now() - soltouArrastando < 350) return; aberta ? fechar() : abrir(); });
 
-    addEventListener('resize', () => { fechar(); aplicar(false); });
+    addEventListener('resize', () => { if (!editando) fechar(); aplicar(false); });
     aplicar(false); acordar();
-    return { abrir, fechar, mostrar(sim) { raiz.hidden = !sim; if (!sim) fechar(); }, elemento: raiz };
+    return { abrir, fechar, editar() { abrir(); editando = escolhidos(); desenharPainel(); }, escolhidos, mostrar(sim) { raiz.hidden = !sim; if (!sim) fechar(); }, elemento: raiz, painel };
   }
 
-  window.AcessoRapido = { criar };
+  window.AcessoRapido = { criar, MAX };
 })();

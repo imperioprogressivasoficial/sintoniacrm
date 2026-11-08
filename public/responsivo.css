@@ -104,14 +104,6 @@ html[data-tema="claro"] { --sub: #4f6073; }
 .chat-topo .quem { min-width: 0; }
 .chat-topo .quem b { font-weight: 600; }
 .chat-topo .pilula-topo .icone { width: var(--rs-toque); height: var(--rs-toque); }
-.chat-topo .pilula-topo .ia-topo { width: 38px; height: 38px; margin: 0 4px; }
-#rs-topo-mais { display: none; }
-.rs-menu-topo { position: absolute; z-index: 30; right: 10px; top: calc(100% + 6px); min-width: 230px; padding: 8px; border-radius: 22px; display: grid; gap: 2px;
-  background: color-mix(in srgb, var(--fundo) 92%, transparent); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho), 0 24px 60px rgba(0,0,0,.30);
-  -webkit-backdrop-filter: blur(30px) saturate(1.6); backdrop-filter: blur(30px) saturate(1.6); }
-.rs-menu-topo button { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 14px; min-height: 48px; padding: 0 14px; border-radius: 14px; font-size: 15.5px; font-weight: 500; color: var(--texto); }
-.rs-menu-topo button:hover, .rs-menu-topo button:focus-visible { background: var(--vidro-item); }
-.rs-menu-topo svg { width: 22px; height: 22px; flex: none; color: var(--icone); }
 .chat-topo { position: relative; }
 @media (max-width: 760px) {
   .chat-topo { gap: 8px; padding: 6px 8px 6px 6px; min-height: 60px; }
@@ -121,12 +113,7 @@ html[data-tema="claro"] { --sub: #4f6073; }
   .chat-topo .quem span { font-size: 12.5px; }
   .pilula-topo { padding: 0 2px; gap: 0; }
   .chat-topo .pilula-topo .icone { width: 42px; height: var(--rs-toque); }
-  .chat-topo .pilula-topo .ia-topo { width: 40px; height: 40px; margin: 0 2px; }
-  /* no celular ficam à vista CRM/tag e IA; ficha, agendar e ligar vão para o ⋯ */
-  #topo-agendar, #topo-ligar, #topo-ficha { display: none !important; }
-  #rs-topo-mais { display: grid; }
-  .dono { min-height: 36px; }
-  .dono button { min-height: 32px; padding: 4px 8px; }
+  /* no celular, como no WhatsApp: só Agendar e Ligar à direita; o nome e a foto abrem a ficha */
   .bal { max-width: 86%; }
 }
 /* composer: botões alinhados e com 44px */

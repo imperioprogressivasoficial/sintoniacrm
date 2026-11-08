@@ -1,6 +1,8 @@
 /* Tela de conversa, recursos a mais (window.SintoniaConversa):
  * - respostas rápidas: "/" no campo abre a lista; "Gerenciar respostas rápidas" cria, edita e apaga;
- * - bolinha "IA" no topo da conversa: sugerir, melhorar o texto, resumir, próximo passo, explicar áudio;
+ * - chip de baixo (quem atende): folha única com "Quem atende" (IA atende, Eu assumo, Transferir, Iniciar bot)
+ *   e "Ajuda para escrever" (sugestão pronta, sugerir, melhorar, resumir, próximo passo, explicar áudio);
+ * - "Respostas rápidas" do +: escolher uma e pôr no campo;
  * - áudios: velocidade 1x / 1,5x / 2x e "Transcrever" (guardado no servidor);
  * - balões de texto: "Ouvir" (voz do navegador, pt-BR) e "Copiar";
  * - "+" do topo da lista: nova conversa por número.
@@ -30,16 +32,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   };
 
   const CSS = `
-  /* ---------- bolinha IA no topo ---------- */
-  .pilula-topo .ia-topo { position: relative; width: 34px; height: 34px; margin: 0 4px; border-radius: 50%; color: #fff; font-size: 12.5px; font-weight: 800; letter-spacing: .02em;
-    background: var(--marca-gradiente); box-shadow: 0 0 0 1.5px rgba(15,252,190,.55), 0 0 14px rgba(15,252,190,.55); display: grid; place-items: center; font-family: var(--fonte); }
-  .pilula-topo .ia-topo::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(15,252,190,.0); animation: iaPulso 2.8s ease-out infinite; pointer-events: none; }
-  .pilula-topo .ia-topo:hover { background: var(--marca-gradiente); filter: brightness(1.08); }
-  .pilula-topo .ia-topo[aria-busy="true"]::after { animation-duration: 1s; }
-  @keyframes iaPulso { 0% { box-shadow: 0 0 0 0 rgba(15,252,190,.55); } 70% { box-shadow: 0 0 0 7px rgba(15,252,190,0); } 100% { box-shadow: 0 0 0 0 rgba(15,252,190,0); } }
-  @media (prefers-reduced-motion: reduce) { .pilula-topo .ia-topo::after { animation: none; } }
-  @media (max-width: 760px) { .pilula-topo .icone { width: 38px; } .pilula-topo .ia-topo { width: 32px; height: 32px; margin: 0 3px; } }
-
   /* ---------- folhas (sobem de baixo no celular) ---------- */
   dialog.cx-folha { padding-bottom: calc(16px + env(safe-area-inset-bottom)); max-height: min(88vh, 760px); overflow: auto; overscroll-behavior: contain; }
   dialog.cx-folha .folha-lista button { min-height: 30px; }
@@ -49,6 +41,24 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .cx-op small, .cx-sub { color: var(--sub); font-size: 13px; line-height: 17px; }
   .cx-op b { font-size: 15.5px; font-weight: 700; }
   .cx-op[aria-disabled="true"] { opacity: .55; }
+  .cx-op.pessoa i { background: linear-gradient(135deg, #1a8be0 0%, #0a4c86 100%); color: #fff; }
+  .cx-op.neutra i { background: var(--sel); color: var(--icone); }
+  .cx-op[aria-pressed="true"] { background: color-mix(in srgb, var(--marca-menta) 14%, transparent); }
+  .cx-op[aria-pressed="true"] b::after { content: " ✓"; color: var(--marca-menta); }
+  .cx-op .cx-ok { margin-left: auto; flex: none; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--marca-menta) 30%, transparent); color: var(--texto); }
+  .cx-secao { margin: 16px 4px 8px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
+  .cx-secao:first-child { margin-top: 2px; }
+  .cx-status { display: flex; align-items: center; gap: 10px; margin: 0 2px 10px; padding: 12px 14px; border-radius: 16px; font-size: 15px; line-height: 20px; background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); }
+  .cx-status i { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--marca-azul); }
+  .cx-status.ia i { background: var(--marca-menta); box-shadow: 0 0 10px var(--marca-menta); }
+  .cx-status small { display: block; color: var(--sub); font-size: 13px; }
+  .cx-sug-txt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cx-chave { margin-left: auto; flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--linha); position: relative; transition: background .15s ease; }
+  .cx-chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s ease; }
+  .cx-chave.ligada { background: var(--marca-azul); }
+  .cx-chave.ligada::after { transform: translateX(18px); }
+  #modo[aria-busy="true"] i { animation: cxPulso 1s ease-in-out infinite; }
+  @keyframes cxPulso { 50% { opacity: .3; } }
   .cx-aviso { margin: 10px 2px 0; padding: 12px 14px; border-radius: 14px; background: var(--aviso); color: var(--aviso-txt); font-size: 14px; line-height: 19px; }
   .cx-aviso a { color: inherit; font-weight: 700; }
   .cx-resultado { display: grid; gap: 12px; }
@@ -322,7 +332,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     corpo.replaceChildren(caixaLista, form);
   }
 
-  // ------------------------------------------------------------ bolinha IA
+  // ------------------------------------------------------------ chip de baixo: quem atende + ajuda para escrever
   const OPCOES_IA = [
     { acao: 'sugerir', titulo: 'Sugerir resposta', sub: 'A IA escreve a próxima mensagem para você revisar', ic: SVG.brilho },
     { acao: 'melhorar', titulo: 'Melhorar meu texto', sub: 'Reescreve o que está no campo, mais claro e gentil', ic: SVG.lapis },
@@ -330,26 +340,96 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     { acao: 'proximo', titulo: 'Próximo passo', sub: 'O que fazer agora com essa cliente', ic: SVG.passo },
     { acao: 'explicar_audio', titulo: 'Explicar último áudio', sub: 'Transcreve e explica o que ela disse', ic: SVG.audio },
   ];
-  const botaoIa = el('button', { class: 'icone ia-topo', id: 'topo-ia', type: 'button', title: 'Ajuda da IA', 'aria-label': 'Ajuda da IA', 'aria-haspopup': 'dialog', text: 'IA', onclick: () => abrirMenuIa() });
-  const agendar = $('topo-agendar');
-  agendar?.parentElement?.insertBefore(botaoIa, agendar);
+  const chip = $('modo');
+  const SVG_ATENDE = {
+    ia: SVG.brilho,
+    eu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    transferir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg>',
+    bot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg>',
+    sugestao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 7.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z" fill="currentColor"/></svg>',
+  };
+  const opcao = (classe, ic, titulo, sub, onclick, extra = {}) => el('button', { type: 'button', class: `cx-op ${classe}`, onclick, ...extra }, el('i', { html: ic }), el('span', {}, el('b', { text: titulo }), sub ? el('small', { text: sub, class: extra.subClasse || '' }) : null));
 
+  /** Folha única do chip "quem atende": seção Quem atende + seção Ajuda para escrever. */
   function abrirMenuIa() {
     const c = conversa(); if (!c) return;
     carregarRecursos();
-    const { d, corpo } = folha('d-ia', 'Ajuda da IA');
-    const temAudio = (estado.detalhe?.mensagens || []).some((m) => m.autor === 'cliente' && m.anexo?.tipo === 'audio');
+    const det = estado.detalhe || {};
+    const perm = det.permissoes || {};
+    const eu = estado.eu || {};
+    const minha = c.responsavelId && c.responsavelId === eu.id;
+    const { d, corpo } = folha('d-ia', 'Atendimento e IA');
+
+    // ---- quem atende
+    const quem = c.modo === 'ia' ? 'Atendida pela IA' : minha ? 'Atendida por você' : c.responsavelId ? `Atendida por ${c.responsavelNome || 'outra pessoa'}` : 'Sem dona';
+    const detalhe = c.modo === 'ia'
+      ? (c.responsavelId ? `A IA responde sozinha · dona: ${minha ? 'você' : c.responsavelNome || 'outra pessoa'}` : 'A IA responde e agenda sozinha')
+      : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
+    const status = el('div', { class: 'cx-status' + (c.modo === 'ia' ? ' ia' : ''), role: 'status' }, el('i'), el('span', {}, el('b', { text: quem }), el('small', { text: detalhe })));
+    const fechar = () => d.close();
+    const quemLista = el('div', { class: 'folha-lista' },
+      opcao('ia', SVG_ATENDE.ia, 'IA atende', c.modo === 'ia' ? 'A IA já está atendendo' : 'A IA responde, tira dúvidas e agenda sozinha', async () => {
+        if (c.modo === 'ia') { fechar(); return; }
+        fechar(); await ui.mudarModo('ia'); toast('A IA está atendendo esta conversa.');
+      }, { 'aria-pressed': String(c.modo === 'ia') }),
+      (() => {
+        const jaEu = minha && c.modo !== 'ia';
+        const bloqueado = !minha && c.responsavelId && !perm.assumir;
+        return opcao('pessoa', SVG_ATENDE.eu, 'Eu assumo', jaEu ? 'Você já atende esta conversa' : bloqueado ? 'Já tem dona: peça para a gerente transferir para você' : 'Você responde; a IA para de enviar e só sugere', async () => {
+          if (jaEu) { fechar(); return; }
+          if (bloqueado) { toast('Esta conversa já tem dona. Peça para a gerente transferir para você.'); return; }
+          fechar();
+          if (!minha && perm.assumir && !(await ui.assumirConversa())) return;
+          if (c.modo === 'ia') await ui.mudarModo('copiloto');
+          else if (minha) toast('A conversa é sua.');
+        }, { 'aria-pressed': String(jaEu), 'aria-disabled': String(Boolean(bloqueado)) });
+      })(),
+      perm.transferir ? opcao('neutra', SVG_ATENDE.transferir, 'Transferir conversa', 'Passar para outra pessoa da equipe', () => { fechar(); ui.abrirTransferir(); }) : null,
+      window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', SVG_ATENDE.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null);
+
+    // ---- ajuda para escrever
+    const temAudio = (det.mensagens || []).some((m) => m.autor === 'cliente' && m.anexo?.tipo === 'audio');
     const temTexto = campo.value.trim().length > 0;
-    const lista = el('div', { class: 'folha-lista' }, ...OPCOES_IA.filter((o) => o.acao !== 'explicar_audio' || temAudio).map((o) => {
-      const sub = o.acao === 'melhorar' && !temTexto ? 'Escreva algo no campo primeiro' : o.sub;
-      return el('button', { type: 'button', class: 'cx-op ia', 'aria-disabled': String(o.acao === 'melhorar' && !temTexto), onclick: () => {
-        if (o.acao === 'melhorar' && !campo.value.trim()) { toast('Escreva sua mensagem no campo; a IA melhora o que estiver lá.'); d.close(); campo.focus(); return; }
-        pedirIa(o.acao, o.titulo);
-      } }, el('i', { html: o.ic }), el('span', {}, el('b', { text: o.titulo }), el('small', { text: sub })));
-    }));
-    corpo.replaceChildren(lista);
+    const pronta = det.sugestao && c.modo !== 'humano' ? det.sugestao : null;
+    const ajuda = el('div', { class: 'folha-lista' },
+      pronta ? opcao('ia', SVG_ATENDE.sugestao, 'Usar sugestão pronta', pronta, () => { fechar(); ui.usarTexto(pronta); }, { subClasse: 'cx-sug-txt' }) : null,
+      ...OPCOES_IA.filter((o) => o.acao !== 'explicar_audio' || temAudio).map((o) => {
+        const sub = o.acao === 'melhorar' && !temTexto ? 'Escreva algo no campo primeiro' : o.sub;
+        return opcao('ia', o.ic, o.titulo, sub, () => {
+          if (o.acao === 'melhorar' && !campo.value.trim()) { toast('Escreva sua mensagem no campo; a IA melhora o que estiver lá.'); fechar(); campo.focus(); return; }
+          pedirIa(o.acao, o.titulo);
+        }, { 'aria-disabled': String(o.acao === 'melhorar' && !temTexto) });
+      }),
+      c.modo !== 'ia' ? (() => {
+        const ligadas = c.modo === 'copiloto';
+        const b = opcao('neutra', SVG.brilho, 'Sugestões automáticas', ligadas ? 'A IA deixa uma resposta pronta acima do campo' : 'Desligadas: a IA não sugere sozinha', async () => {
+          fechar(); await ui.mudarModo(ligadas ? 'humano' : 'copiloto'); toast(ligadas ? 'Sugestões automáticas desligadas.' : 'Sugestões automáticas ligadas.');
+        }, { role: 'switch', 'aria-checked': String(ligadas) });
+        b.append(el('span', { class: 'cx-chave' + (ligadas ? ' ligada' : ''), 'aria-hidden': 'true' }));
+        return b;
+      })() : null);
+
+    corpo.replaceChildren(el('div', { class: 'cx-secao', text: 'Quem atende' }), status, quemLista, el('div', { class: 'cx-secao', text: 'Ajuda para escrever' }), ajuda);
     if (!recursos.ia && !estado.situacao?.iaLigada) corpo.append(el('p', { class: 'cx-aviso' }, document.createTextNode('A IA ainda está desligada: falta configurar a chave da IA (Anthropic) em Conexões. '), linkConexoes()));
     abrirFolha(d);
+  }
+
+  /** "Respostas rápidas" do +: escolher uma e pôr no campo (onde estiver o cursor). */
+  async function escolherResposta() {
+    const { d, corpo } = folha('d-escolher-resposta', 'Respostas rápidas', 'rr-gestao');
+    corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Carregando…' }));
+    abrirFolha(d);
+    const lista = await carregarRespostas(true);
+    const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => { d.close(); abrirGestao(); } });
+    if (!lista.length) { corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
+    corpo.replaceChildren(el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
+      d.close();
+      const t = preencher(r.texto);
+      const i = campo.selectionStart ?? campo.value.length, f = campo.selectionEnd ?? i;
+      campo.value = campo.value.slice(0, i) + t + campo.value.slice(f);
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+      campo.focus(); campo.setSelectionRange(i + t.length, i + t.length);
+    } }, el('span', {}, el('b', { class: 'rr-at', text: '/' + r.atalho }), el('small', { text: preencher(r.texto) }))))), el('p', { class: 'cx-sub', style: 'margin:10px 4px 0', text: 'Dica: digite / no campo para achar uma resposta pelo atalho.' }), gerenciar);
   }
 
   let pedidoIa = 0;
@@ -358,7 +438,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { d, corpo } = folha('d-ia', titulo);
     const meu = ++pedidoIa;
     corpo.replaceChildren(el('div', { class: 'cx-resultado' }, el('div', { class: 'cx-pensando', 'aria-label': 'A IA está pensando' }, el('i'), el('i'), el('i')), el('span', { class: 'cx-sub', text: 'A IA está lendo a conversa…' })));
-    abrirFolha(d); botaoIa.setAttribute('aria-busy', 'true');
+    abrirFolha(d); chip?.setAttribute('aria-busy', 'true');
     try {
       const r = await post(`/api/conversas/${c.id}/ia`, { acao, texto: acao === 'melhorar' ? campo.value : undefined });
       if (meu !== pedidoIa || conversa()?.id !== c.id) return;
@@ -377,7 +457,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (meu !== pedidoIa) return;
       corpo.replaceChildren(el('div', { class: 'cx-resultado' }, el('p', { class: 'cx-aviso' }, document.createTextNode(x.message + ' '), /Conexões/.test(x.message) ? linkConexoes() : null),
         el('div', { class: 'cx-botoes' }, el('button', { class: 'botao leve', type: 'button', text: 'Voltar', onclick: abrirMenuIa }), el('button', { class: 'botao', type: 'button', text: 'Tentar de novo', onclick: () => pedirIa(acao, titulo) }))));
-    } finally { if (meu === pedidoIa) botaoIa.removeAttribute('aria-busy'); }
+    } finally { if (meu === pedidoIa) chip?.removeAttribute('aria-busy'); }
   }
 
   // ------------------------------------------------------------ áudios: velocidade e transcrição
@@ -564,5 +644,5 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     setTimeout(() => tel.focus(), 60);
   }
 
-  window.SintoniaConversa = { novaConversa, abrirMenuIa, abrirRespostas: abrirGestao, preencher };
+  window.SintoniaConversa = { novaConversa, abrirMenuIa, abrirRespostas: abrirGestao, escolherResposta, preencher };
 })();

@@ -343,3 +343,56 @@ describe.runIf(temPostgres)('Conversa no Postgres', () => {
     expect(rel.agendamentos).toMatchObject({ total: 1, valorTotal: 180, proximo: { servico: 'Progressiva' } });
   });
 });
+
+describe('Chat "Ajuda da IA" (bolinha)', () => {
+  it('exige login, responde com o contexto do que a pessoa vê e manda a conversa alternada', async () => {
+    const { app, repo, norte, sumare, carla, ia } = await montar({ textoIa: 'Hoje a **Juliana** está esperando resposta.' });
+    expect((await app.inject({ method: 'POST', url: '/api/ia/chat', payload: { mensagens: [{ papel: 'usuario', texto: 'Oi' }] } })).statusCode).toBe(401);
+    // As duas clientes mandaram mensagem e ninguém respondeu ainda.
+    for (const c of [norte, sumare]) await repo.salvarConversa({ ...c, ultimaMensagemCliente: new Date(Date.now() - 12 * 60_000) });
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/ia/chat',
+      headers: { cookie: carla },
+      payload: { mensagens: [{ papel: 'ia', texto: 'Olá! Como posso ajudar?' }, { papel: 'usuario', texto: 'Quem está esperando resposta?' }] },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ texto: 'Hoje a **Juliana** está esperando resposta.' });
+    const pedido = ia.pedidos.at(-1)! as unknown as { system: Array<{ text: string }>; messages: Array<{ role: string; content: string }> };
+    // A saudação da IA no começo sai: a conversa da API começa pela pessoa.
+    expect(pedido.messages).toEqual([{ role: 'user', content: 'Quem está esperando resposta?' }]);
+    const sistema = pedido.system.map((s) => s.text).join('\n');
+    expect(sistema).toContain('Progressiva: R$ 180.');
+    expect(sistema).toContain('Nunca invente números');
+    expect(sistema).toContain('<esperando_resposta total="1">');
+    expect(sistema).toMatch(/- Juliana Lima · .*esperando há 12 min/);
+    // Carla só atende a unidade Norte: a cliente do Sumaré não entra no contexto dela.
+    expect(sistema).not.toContain('Bia');
+    expect(sistema).toContain('Quem pergunta: Carla Souza');
+  });
+
+  it('guarda só as últimas 20 mensagens e limita o tamanho do texto', async () => {
+    const { app, carla, ia } = await montar();
+    const mensagens = Array.from({ length: 31 }, (_, i) => ({ papel: i % 2 === 0 ? 'usuario' : 'ia', texto: `msg ${i}` }));
+    const r = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens } });
+    expect(r.statusCode).toBe(200);
+    const enviadas = (ia.pedidos.at(-1)! as unknown as { messages: Array<{ role: string; content: string }> }).messages;
+    // Janela das últimas 20 (msg 11 a msg 30); a primeira (da IA) sai para a conversa começar pela pessoa.
+    expect(enviadas).toHaveLength(19);
+    expect(enviadas[0]).toEqual({ role: 'user', content: 'msg 12' });
+    expect(enviadas.at(-1)).toEqual({ role: 'user', content: 'msg 30' });
+    const longa = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'x'.repeat(4001) }] } });
+    expect(longa.statusCode).toBe(400);
+    const deIa = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'oi' }, { papel: 'ia', texto: 'oi!' }] } });
+    expect(deIa.statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [] } })).statusCode).toBe(400);
+  });
+
+  it('sem a chave da IA dá erro claro apontando Conexões', async () => {
+    const { app, carla, ia } = await montar({ iaLigada: false });
+    const r = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'Como está o dia?' }] } });
+    expect(r.statusCode).toBe(501);
+    expect(r.json().erro).toMatch(/chave da IA \(Anthropic\) em Conexões/);
+    expect(ia.pedidos).toHaveLength(0);
+  });
+});

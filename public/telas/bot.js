@@ -5,7 +5,7 @@
  *   desfazer/refazer, validação visual, mini-mapa, salvar rascunho, publicar, ligar e testar numa conversa de teste
  *   mostrando o caminho percorrido. No celular há também a visão em lista.
  * - escolherDaEtapa: o raio ⚡ da etapa no CRM oferece "Automação simples" ou "Bot (fluxo)".
- * - iniciarNaConversa: o "Iniciar bot" do menu + da conversa.
+ * - iniciarNaConversa: o "Iniciar bot" da folha "Quem atende" da conversa (chip de baixo).
  * Todo texto que vem do servidor entra por textContent, nunca como HTML. */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
@@ -477,7 +477,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       ehGestao() ? el('button', { class: 'bt-botao', type: 'button', onclick: () => novoBot() }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Novo bot' })) : null));
     tela.append(abasAutomacoes('bots'));
     tela.append(el('p', { class: 'bt-sub', text: 'Bots são conversas guiadas: menu de opções, perguntas, condições e ações, desenhadas como um fluxo. O bot responde antes da IA e para quando alguém da equipe responde.' }));
-    if (!ehGestao()) { tela.append(el('div', { class: 'bt-vazio' }, el('b', { text: 'Só a gestão mexe nos bots.' }), el('span', { text: 'Para iniciar um bot numa conversa, use o + da conversa → “Iniciar bot”.' }))); return; }
+    if (!ehGestao()) { tela.append(el('div', { class: 'bt-vazio' }, el('b', { text: 'Só a gestão mexe nos bots.' }), el('span', { text: 'Para iniciar um bot numa conversa, toque no chip de quem atende (embaixo, na conversa) → “Iniciar bot”.' }))); return; }
     const corpo = el('div', { class: 'bt-lista' }, el('p', { class: 'bt-dica', text: 'Carregando…' }));
     tela.append(corpo);
     let lista;
@@ -1354,19 +1354,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     requestAnimationFrame(() => { ajustar(); desenharLinhas(); });
     return ed;
   }
-
-  // ---------- integração: "Iniciar bot" no + da conversa ----------
-  function plugarConversa() {
-    const menu = document.getElementById('menu-mais');
-    if (!menu || document.getElementById('m-bot')) return;
-    const b = document.createElement('button');
-    b.id = 'm-bot';
-    b.innerHTML = `<i style="background:#0a8f7a">${SVG.robo}</i>`;
-    b.append(document.createTextNode('Iniciar bot'));
-    b.addEventListener('click', () => { menu.hidden = true; iniciarNaConversa(UI()?.estado?.aberta); });
-    menu.append(b);
-  }
-  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', plugarConversa); else plugarConversa();
 
   window.SintoniaTelas.bot = { desenhar, abrirEditor, escolherDaEtapa, iniciarNaConversa, novoBot, abasAutomacoes: (a) => abasAutomacoes(a) };
 })();

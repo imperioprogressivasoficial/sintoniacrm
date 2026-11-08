@@ -4,12 +4,16 @@ import type { Conversa, ModoAtendimento, UnidadeId } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Sintonia } from '../app/sintonia.js';
 import type { ClienteClaude } from '../ai/agente.js';
-import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
+import { ehGestor, escopoDe, podeVer, veTudo } from '../auth/acesso.js';
 import { normalizarCelular } from '../util/telefone.js';
 import { DadosResposta, ErroAtalhoRepetido, type ArmazemRespostas, type RespostaRapida } from './respostas.js';
 import { ErroTranscricao, type ArmazemTranscricoes, type Transcritor } from './transcricao.js';
 import { ACOES_IA, ajudarComIa, ErroAssistente } from './assistente.js';
 import { relatorioDaConversa } from './relatorio.js';
+import { conversarComIa, LIMITE_TEXTO } from './chat-ia.js';
+import { iaHoje } from '../painel/ia-hoje.js';
+import { agendamentosEntre } from '../agenda/agenda-dia.js';
+import { bahia, DIA, partesBahia } from '../util/tempo.js';
 
 /**
  * Recursos da tela de conversa:
@@ -17,7 +21,8 @@ import { relatorioDaConversa } from './relatorio.js';
  * - ajuda da IA no topo da conversa (/api/conversas/:id/ia);
  * - transcrição dos áudios (/api/conversas/:id/transcricoes, .../midias/:mensagemId/transcrever);
  * - nova conversa por número (/api/conversas/nova);
- * - relatório do cliente na ficha (/api/conversas/:id/relatorio).
+ * - relatório do cliente na ficha (/api/conversas/:id/relatorio);
+ * - chat "Ajuda da IA" da bolinha de acesso rápido (/api/ia/chat).
  * Registradas depois de criarServidor (src/index.ts): valem o login e o tratamento de erros de lá.
  * Sem login (teste local) tudo fica liberado, como no resto da API.
  */
@@ -180,6 +185,51 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
         rascunho: b.texto?.trim(),
         atendente: req.usuario?.nome,
         agora: agora(),
+      });
+    } catch (e) {
+      if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
+      const status = (e as { status?: number }).status;
+      if (status === 401) throw erro('A chave da IA foi recusada. Confira em Conexões.', 501, { codigo: 'sem_chave' });
+      if (status === 429 || (status && status >= 500)) throw erro('A IA está ocupada agora. Tente de novo em instantes.', 424);
+      throw e;
+    }
+  });
+
+  // ------------------------------------------------------------ chat "Ajuda da IA" (bolinha de acesso rápido)
+  const PedidoChat = z.object({
+    mensagens: z
+      .array(z.object({ papel: z.enum(['usuario', 'ia']), texto: z.string().max(LIMITE_TEXTO * 3) }))
+      .min(1)
+      .max(200),
+  });
+  app.post('/api/ia/chat', async (req) => {
+    const b = PedidoChat.parse(req.body);
+    const ultima = b.mensagens.at(-1)!;
+    if (ultima.papel !== 'usuario' || !ultima.texto.trim()) throw erro('Escreva sua pergunta.', 400);
+    if (ultima.texto.length > LIMITE_TEXTO) throw erro(`A pergunta ficou longa demais (máximo ${LIMITE_TEXTO} letras).`, 400);
+    if (!o.ia || !o.ia.ligada()) throw erro('A IA está desligada: configure a chave da IA (Anthropic) em Conexões.', 501, { codigo: 'sem_chave' });
+    const ag = agora();
+    const ve = (c: Conversa) => c.empresaId === o.empresaId && visivel(req, c);
+    const p = partesBahia(ag);
+    const inicioHoje = bahia(p.ano, p.mes, p.dia);
+    const [baseConhecimento, hoje, todas, agenda] = await Promise.all([
+      o.ia.base().catch(() => ''),
+      iaHoje(o.repo, ag, ve),
+      o.repo.listarConversas(),
+      agendamentosEntre(o.repo, inicioHoje, new Date(inicioHoje.getTime() + 2 * DIA), { ...escopoDe(req.usuario), empresaId: o.empresaId }).catch(() => []),
+    ]);
+    const esperando = todas.filter(ve).filter((c) => {
+      const cli = c.ultimaMensagemCliente?.getTime() ?? 0;
+      return cli > 0 && cli > Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
+    });
+    try {
+      return await conversarComIa(o.ia.claude, { modelo: o.ia.modelo }, b.mensagens, {
+        agora: ag,
+        pessoa: req.usuario ? { nome: req.usuario.nome, papel: req.usuario.papel } : undefined,
+        baseConhecimento,
+        hoje,
+        esperando,
+        agenda,
       });
     } catch (e) {
       if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
