@@ -724,9 +724,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         if (email.value.trim()) await api(`/api/conversas/${r.id}/contato`, { method: 'PUT', body: JSON.stringify({ email: email.value.trim() }) }).catch(() => {});
         await ui.atualizar();
         const c = (estado.conversas || []).find((x) => x.id === r.id) || { id: r.id, telefone: r.telefone, nome: nome.value.trim(), unidade: r.unidade };
-        window.SintoniaPainel.fechar();
-        toast(r.nova ? 'Contato criado ✓' : 'Ela já tinha conversa: abrindo ✓');
-        aoEscolher(c);
+        toast(r.nova ? 'Contato criado ✓' : 'Ela já tinha esta conversa ✓');
+        aoEscolher(c); // quem chamou decide: abrir a conversa, escolher a etapa, ligar…
       } catch (x) { erro.textContent = x.message; }
       finally { salvar.disabled = false; }
     });

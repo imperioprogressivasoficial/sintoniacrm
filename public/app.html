@@ -1051,10 +1051,10 @@
     </section>
 
     <section class="vista coluna-vista" id="v-funil">
-      <div class="cabeca-vista fn-cabeca"><h1 class="titulo-grande">CRM</h1><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div>
-        <div class="filtros" id="funil-abas" role="group" aria-label="Quadro ou Ligar hoje"><button class="chip" data-a="quadro" aria-pressed="true">Quadro</button><button class="chip" data-a="ligar" aria-pressed="false">📞 Ligar hoje <span class="qtd" id="qtd-ligar"></span></button></div></div>
+      <div class="cabeca-vista fn-cabeca">
+        <div class="crm-barra"><button class="icone redondo" id="crm-menu" type="button" title="Mais opções do CRM" aria-label="Mais opções do CRM"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button class="icone redondo branco" id="crm-novo" type="button" title="Novo lead" aria-label="Novo lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <h1 class="titulo-grande">CRM</h1><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div></div>
       <div class="funil" id="funil"></div>
-      <div class="ligar" id="ligar" hidden></div>
     </section>
     <section class="vista" id="v-automacoes"><div class="painel" id="automacoes"></div></section>
     <section class="vista" id="v-bot"><div class="painel" id="bot"></div></section>
@@ -1384,7 +1384,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.vista = v;
     document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
-    if (v === 'funil') { desenharFunil(); carregarLigacoes(); }
+    if (v === 'funil') desenharFunil();
     if (v === 'automacoes' && window.SintoniaTelas?.automacoes) window.SintoniaTelas.automacoes.desenhar($('automacoes'), window.Sintonia.ui);
     if (v === 'bot' && window.SintoniaTelas?.bot) window.SintoniaTelas.bot.desenhar($('bot'), window.Sintonia.ui);
     if (v === 'ia') carregarIA();
@@ -2323,22 +2323,16 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
   }
 
-  // funil: Quadro | Ligar hoje
-  estado.abaFunil = 'quadro';
-  $('funil-abas').addEventListener('click', (e) => {
-    const b = e.target.closest('.chip'); if (!b) return;
-    estado.abaFunil = b.dataset.a;
-    document.querySelectorAll('#funil-abas .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
-    $('funil').hidden = estado.abaFunil !== 'quadro'; $('ligar').hidden = estado.abaFunil !== 'ligar';
-    if (estado.abaFunil === 'ligar') carregarLigacoes(); else desenharFunil();
-  });
+  // CRM: ⋯ (funis, etapas, automações) e + (Novo lead) no topo. "Ligar hoje" saiu do CRM (vai para Ligações).
+  estado.abaFunil = 'ligar';
+  $('crm-menu').addEventListener('click', () => window.SintoniaTelas?.funil?.menu?.());
+  $('crm-novo').addEventListener('click', () => window.SintoniaTelas?.funil?.novoLead?.());
   const MOTIVO = { faltou: 'Faltou', interessada_sem_agendar: 'Interessada', nao_responde: 'Sumiu' };
   const RESULTADO = { atendeu: 'atendeu', agendou: 'agendou', nao_atendeu: 'não atendeu', caixa_postal: 'caixa postal' };
   async function carregarLigacoes() {
     let r; try { r = await api('/api/ligacoes'); } catch { return; }
-    $('qtd-ligar').textContent = r.sugestoes.length ? String(r.sugestoes.length) : '';
-    if (estado.abaFunil !== 'ligar') return;
-    const caixa = $('ligar'); caixa.replaceChildren();
+    if ($('qtd-ligar')) $('qtd-ligar').textContent = r.sugestoes.length ? String(r.sugestoes.length) : '';
+    const caixa = $('ligar'); if (!caixa) return r; caixa.replaceChildren();
     if (!r.sugestoes.length) caixa.append(el('div', { class: 'vazio' }, el('b', { text: 'Ninguém para ligar agora.', style: 'color:var(--texto);font-weight:600' }), el('span', { text: 'Aqui aparecem quem faltou, quem se interessou e não agendou e quem parou de responder.' })));
     for (const s of r.sugestoes) {
       const c = estado.conversas.find((x) => x.id === s.conversaId) || { id: s.conversaId, nome: s.cliente, telefone: s.telefone };

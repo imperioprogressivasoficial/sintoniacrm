@@ -108,19 +108,48 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
     unidade: UNIDADE.optional(),
     busca: z.string().trim().max(80).optional(),
     etapaId: z.string().min(1).optional(),
+    dona: z.string().min(1).max(60).optional(),
+    /** Cursor "atualizadaEm|conversaId" do último cartão carregado (carregar mais sem OFFSET). */
+    apos: z
+      .string()
+      .max(120)
+      .regex(/^[^|]+\|[0-9a-f-]{36}$/i)
+      .optional(),
     offset: z.coerce.number().int().min(0).max(100_000).default(0),
     limite: z.coerce.number().int().min(1).max(200).default(50),
   });
   app.get('/api/funis/:id/quadro', async (req) => {
     const q = QuadroQ.parse(req.query);
-    const r = await funis.quadro(param(req, 'id'), { ...q, busca: q.busca || undefined, escopo: escopoDe(req.usuario) });
+    const [em, id] = q.apos ? q.apos.split('|') : [];
+    const apos = em && id && !Number.isNaN(Date.parse(em)) ? { em: new Date(em), id } : undefined;
+    const r = await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario) });
     if (!o.origens) return r;
     const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
     return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
   });
 
+  // Busca do quadro: lista debaixo do campo (nome ou dígitos do telefone), sem esconder os outros cartões.
+  const BuscaQ = z.object({ q: z.string().trim().max(80).default(''), limite: z.coerce.number().int().min(1).max(50).default(20) });
+  app.get('/api/funis/:id/buscar', async (req) => {
+    const { q, limite } = BuscaQ.parse(req.query);
+    const achados = await funis.buscar(param(req, 'id'), q, escopoDe(req.usuario), limite);
+    if (!o.origens || !achados.length) return achados;
+    const mapa = await o.origens(achados.map((a) => a.conversaId)).catch(() => ({}) as Record<string, { icone: string }>);
+    return achados.map((a) => ({ ...a, origem: mapa[a.conversaId] ?? { icone: 'desconhecido' } }));
+  });
+
   // ------------------------------------------------------------ cartões
   app.get('/api/conversas/:id/funis', async (req) => funis.daConversa(await conversaVisivel(req, param(req, 'id'))));
+
+  // Valor do negócio (R$) que aparece no cartão do CRM. Quem vê a conversa e pode mover no CRM, edita.
+  const Valor = z.object({ valor: z.number().min(0).max(10_000_000).nullable() });
+  app.get('/api/conversas/:id/valor', async (req) => ({ valor: await funis.valor(await conversaVisivel(req, param(req, 'id'))) }));
+  app.put('/api/conversas/:id/valor', async (req) => {
+    if (!pode(req, 'crm_mover')) throw proibido('Você não pode mudar o CRM. Fale com a gestão.');
+    const { valor } = Valor.parse(req.body);
+    const c = await conversaVisivel(req, param(req, 'id'));
+    return { valor: await funis.definirValor(c, valor, quem(req)) };
+  });
 
   const Mover = z.object({ etapaId: z.string().min(1).nullable() });
   app.post('/api/conversas/:id/funis/:funilId', async (req) => {

@@ -65,6 +65,19 @@ export interface Cartao {
   /** Desde quando está nesta etapa. */
   desde: Date;
   atualizadaEm: Date;
+  /** Valor do negócio (R$), quando alguém preencheu. */
+  valor: number | null;
+}
+
+/** Resultado da busca do quadro (lista que aparece debaixo do campo). */
+export interface AchadoQuadro {
+  conversaId: string;
+  nome: string | null;
+  telefone: string;
+  unidade: UnidadeId;
+  modo: ModoAtendimento;
+  dona: { id: string; nome: string | null } | null;
+  etapa: { id: string; nome: string; cor: string };
 }
 
 export interface FiltroQuadro {
@@ -73,6 +86,12 @@ export interface FiltroQuadro {
   busca?: string;
   /** Só esta coluna (para "carregar mais"). */
   etapaId?: string;
+  /** Só desta atendente ('sem' = sem atendente). */
+  dona?: string;
+  /** Cursor do "carregar mais" (o último cartão já carregado): mais rápido que offset em colunas enormes. */
+  apos?: { em: Date; id: string };
+  /** Conta como "parada" quem está na etapa desde antes disto (padrão: 3 dias antes de agora). */
+  paradaAntes?: Date;
   offset: number;
   limite: number;
 }
@@ -92,7 +111,12 @@ export interface ArmazemFunis {
   /** Conversas visíveis em cada etapa do funil. */
   contar(funilId: string, escopo: EscopoVisao): Promise<Map<string, number>>;
   /** Totais por coluna (com os filtros) e a página de cartões de cada coluna. */
-  quadro(funilId: string, f: FiltroQuadro): Promise<{ totais: Map<string, number>; linhas: LinhaQuadro[] }>;
+  quadro(funilId: string, f: FiltroQuadro): Promise<{ totais: Map<string, number>; paradas: Map<string, number>; linhas: LinhaQuadro[] }>;
+  /** Busca no quadro por nome ou dígitos do telefone (no máximo `limite`). */
+  buscarCartoes(funilId: string, termo: string, escopo: EscopoVisao, limite: number): Promise<AchadoQuadro[]>;
+  /** Valor do negócio (R$) de uma conversa; null apaga. */
+  definirValor(conversaId: string, valor: number | null, por: string): Promise<void>;
+  valor(conversaId: string): Promise<number | null>;
   /**
    * Funil do sistema ⇄ conversa.etapa: a etapa da conversa manda. Põe no funil quem está fora e corrige
    * quem está na etapa errada. Devolve quantas marcações mudaram.
@@ -104,6 +128,7 @@ const nomeRepetido = (e: unknown) => (e as { code?: string }).code === '23505';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const resumir = (texto: string) => (texto.length > 120 ? `${texto.slice(0, 119)}…` : texto);
 const soDigitos = (s: string) => s.replace(/\D/g, '');
+const DIA_MS = 24 * 3600_000;
 /** Busca por telefone só quando o texto parece telefone (sem letras e com pelo menos 3 dígitos). */
 const digitosDaBusca = (busca: string) => (/\p{L}/u.test(busca) ? '' : soDigitos(busca).length >= 3 ? soDigitos(busca) : '');
 
@@ -158,22 +183,35 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     }
     return r;
   }
+  private readonly valores = new Map<string, number>();
+  async definirValor(conversaId: string, valor: number | null) {
+    if (valor === null) this.valores.delete(conversaId);
+    else this.valores.set(conversaId, valor);
+  }
+  async valor(conversaId: string) {
+    return this.valores.get(conversaId) ?? null;
+  }
   async quadro(funilId: string, f: FiltroQuadro) {
     const [conversas, ultimas] = await Promise.all([this.conversasPorId(), this.repo.ultimasMensagens()]);
     const busca = f.busca?.trim().toLowerCase();
     const digitos = busca ? digitosDaBusca(busca) : '';
     const porColuna = new Map<string, LinhaQuadro[]>();
+    const paradas = new Map<string, number>();
+    const limiteParada = (f.paradaAntes ?? new Date(Date.now() - 3 * DIA_MS)).getTime();
     for (const m of await this.tags.etapasDoFunil(funilId)) {
       const c = conversas.get(m.conversaId);
       if (!c || !noEscopo(f.escopo, c)) continue;
       if (f.unidade && c.unidade !== f.unidade) continue;
       if (f.etapaId && m.tagId !== f.etapaId) continue;
+      if (f.dona && (f.dona === 'sem' ? c.responsavelId : c.responsavelId !== f.dona)) continue;
       if (busca && !(c.nome ?? '').toLowerCase().includes(busca) && !(digitos && c.telefone.includes(digitos))) continue;
+      if (m.desde.getTime() < limiteParada) paradas.set(m.tagId, (paradas.get(m.tagId) ?? 0) + 1);
       const u = ultimas.get(c.id);
       const l: LinhaQuadro = {
         ...cartaoBase(c, m.desde),
         tagId: m.tagId,
         ultima: u ? { autor: u.autor, autorNome: u.autorNome ?? null, texto: resumir(u.texto), em: u.em } : null,
+        valor: this.valores.get(c.id) ?? null,
       };
       porColuna.set(m.tagId, [...(porColuna.get(m.tagId) ?? []), l]);
     }
@@ -182,9 +220,31 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     for (const [tagId, lista] of porColuna) {
       totais.set(tagId, lista.length);
       lista.sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime() || a.conversaId.localeCompare(b.conversaId));
-      linhas.push(...lista.slice(f.offset, f.offset + f.limite));
+      const depois = f.apos ? lista.filter((l) => l.atualizadaEm.getTime() < f.apos!.em.getTime() || (l.atualizadaEm.getTime() === f.apos!.em.getTime() && l.conversaId > f.apos!.id)) : lista.slice(f.offset);
+      linhas.push(...depois.slice(0, f.limite));
     }
-    return { totais, linhas };
+    return { totais, paradas, linhas };
+  }
+  async buscarCartoes(funilId: string, termo: string, escopo: EscopoVisao, limite: number) {
+    const conversas = await this.conversasPorId();
+    const etapas = new Map((await this.tags.listar(this.empresaDoFunil(funilId) ?? '')).map((t) => [t.id, t]));
+    const busca = termo.trim().toLowerCase();
+    const digitos = digitosDaBusca(busca);
+    const achados: Array<AchadoQuadro & { atualizadaEm: Date; prefixo: boolean }> = [];
+    for (const m of await this.tags.etapasDoFunil(funilId)) {
+      const c = conversas.get(m.conversaId);
+      const t = etapas.get(m.tagId);
+      if (!c || !t || !noEscopo(escopo, c)) continue;
+      const nome = (c.nome ?? '').toLowerCase();
+      if (!nome.includes(busca) && !(digitos && c.telefone.includes(digitos))) continue;
+      achados.push({ conversaId: c.id, nome: c.nome ?? null, telefone: c.telefone, unidade: c.unidade, modo: c.modo, dona: c.responsavelId ? { id: c.responsavelId, nome: c.responsavelNome ?? null } : null,
+        etapa: { id: t.id, nome: t.nome, cor: t.cor }, atualizadaEm: c.atualizadaEm, prefixo: nome.startsWith(busca) });
+    }
+    achados.sort((a, b) => Number(b.prefixo) - Number(a.prefixo) || b.atualizadaEm.getTime() - a.atualizadaEm.getTime());
+    return achados.slice(0, limite).map(({ atualizadaEm: _a, prefixo: _p, ...x }) => x);
+  }
+  private empresaDoFunil(funilId: string) {
+    return this.funis.get(funilId)?.empresaId;
   }
   async sincronizarSistema(empresaId: string, funilId: string, em: Date) {
     const porChave = new Map((await this.tags.listar(empresaId)).filter((t) => t.funilId === funilId && t.chaveSistema).map((t) => [t.chaveSistema!, t.id]));
@@ -198,7 +258,7 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
   }
 }
 
-function cartaoBase(c: Conversa, desde: Date): Omit<Cartao, 'tags' | 'ultima'> {
+function cartaoBase(c: Conversa, desde: Date): Omit<Cartao, 'tags' | 'ultima' | 'valor'> {
   return {
     conversaId: c.id,
     nome: c.nome ?? null,
@@ -285,17 +345,21 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
     );
     return new Map(rows.map((r) => [r.tag_id, r.n]));
   }
-  async quadro(funilId: string, f: FiltroQuadro) {
-    const params: unknown[] = [funilId];
-    const partes = [`ct.funil_id = $1`, sqlEscopo(f.escopo, 'c', params)];
+  /** Filtros do quadro em SQL (conversa_tags ct + conversas c). */
+  private filtrosQuadro(funilId: string, f: Pick<FiltroQuadro, 'escopo' | 'unidade' | 'busca' | 'dona'>, params: unknown[]): string {
+    params.push(funilId);
+    const partes = [`ct.funil_id = $${params.length}`, sqlEscopo(f.escopo, 'c', params)];
     if (f.unidade) {
       params.push(f.unidade);
       partes.push(`c.unidade = $${params.length}`);
     }
-    if (f.etapaId) {
-      if (!UUID.test(f.etapaId)) return { totais: new Map(), linhas: [] };
-      params.push(f.etapaId);
-      partes.push(`ct.tag_id = $${params.length}`);
+    if (f.dona === 'sem') partes.push('c.responsavel_id is null');
+    else if (f.dona) {
+      if (!UUID.test(f.dona)) partes.push('false');
+      else {
+        params.push(f.dona);
+        partes.push(`c.responsavel_id = $${params.length}::uuid`);
+      }
     }
     const busca = f.busca?.trim();
     if (busca) {
@@ -307,15 +371,44 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
         partes.push(`(c.nome ilike $${iNome} or c.telefone like $${params.length})`);
       } else partes.push(`c.nome ilike $${iNome}`);
     }
-    const onde = partes.join(' and ');
-    const totais = await this.pool.query<{ tag_id: string; n: number }>(
-      `select ct.tag_id::text as tag_id, count(*)::int as n
+    return partes.join(' and ');
+  }
+  /**
+   * Quadro em escala: totais e paradas por coluna num só agregado; os cartões vêm por coluna
+   * (lateral + limit), nunca o funil inteiro. "Carregar mais" usa cursor (atualizada_em, id) quando vem.
+   */
+  async quadro(funilId: string, f: FiltroQuadro) {
+    if (f.etapaId && !UUID.test(f.etapaId)) return { totais: new Map(), paradas: new Map(), linhas: [] };
+    const pAgg: unknown[] = [];
+    let ondeAgg = this.filtrosQuadro(funilId, f, pAgg);
+    if (f.etapaId) {
+      pAgg.push(f.etapaId);
+      ondeAgg += ` and ct.tag_id = $${pAgg.length}::uuid`;
+    }
+    pAgg.push(f.paradaAntes ?? new Date(Date.now() - 3 * DIA_MS));
+    const iParada = pAgg.length;
+    const agg = await this.pool.query<{ tag_id: string; n: number; paradas: number }>(
+      `select ct.tag_id::text as tag_id, count(*)::int as n, (count(*) filter (where ct.marcada_em < $${iParada}))::int as paradas
          from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
-        where ${onde} group by ct.tag_id`,
-      params,
+        where ${ondeAgg} group by ct.tag_id`,
+      pAgg,
     );
-    params.push(f.offset, f.limite);
-    const iOff = params.length - 1;
+    const totais = new Map(agg.rows.map((r) => [r.tag_id, r.n]));
+    const paradas = new Map(agg.rows.map((r) => [r.tag_id, r.paradas]));
+    const etapas = agg.rows.filter((r) => r.n > 0).map((r) => r.tag_id);
+    if (!etapas.length) return { totais, paradas, linhas: [] };
+
+    const params: unknown[] = [];
+    const onde = this.filtrosQuadro(funilId, f, params);
+    params.push(etapas);
+    const iEtapas = params.length;
+    let cursor = '';
+    if (f.apos && UUID.test(f.apos.id)) {
+      params.push(f.apos.em, f.apos.id);
+      cursor = ` and (c.atualizada_em < $${params.length - 1} or (c.atualizada_em = $${params.length - 1} and c.id > $${params.length}::uuid))`;
+    }
+    params.push(f.limite, f.apos ? 0 : f.offset);
+    const iLim = params.length - 1;
     const { rows } = await this.pool.query<{
       tag_id: string;
       marcada_em: Date;
@@ -328,30 +421,34 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
       responsavel_id: string | null;
       responsavel_nome: string | null;
       atualizada_em: Date;
+      valor: string | null;
       um_autor: string | null;
       um_autor_nome: string | null;
       um_texto: string | null;
       um_em: Date | null;
     }>(
-      `with base as (
-         select ct.tag_id::text as tag_id, ct.marcada_em, c.id::text as id, c.nome, c.telefone, c.unidade, c.modo, c.etapa,
-                c.responsavel_id::text as responsavel_id, c.responsavel_nome, c.atualizada_em,
-                row_number() over (partition by ct.tag_id order by c.atualizada_em desc, c.id) as rn
-           from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
-          where ${onde}
-       )
-       select b.*, um.autor as um_autor, um.autor_nome as um_autor_nome, left(um.texto, 200) as um_texto, um.em as um_em
-         from base b
+      `select e.tag_id::text as tag_id, x.*, v.valor::text as valor,
+              um.autor as um_autor, um.autor_nome as um_autor_nome, left(um.texto, 200) as um_texto, um.em as um_em
+         from unnest($${iEtapas}::uuid[]) as e(tag_id)
+         cross join lateral (
+           select ct.marcada_em, c.id::text as id, c.nome, c.telefone, c.unidade, c.modo, c.etapa,
+                  c.responsavel_id::text as responsavel_id, c.responsavel_nome, c.atualizada_em
+             from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
+            where ${onde} and ct.tag_id = e.tag_id${cursor}
+            order by c.atualizada_em desc, c.id
+            limit $${iLim} offset $${iLim + 1}
+         ) x
+         left join sintonia.cartao_valores v on v.conversa_id = x.id::uuid
          left join lateral (
            select m.autor, m.autor_nome, m.texto, m.em from sintonia.mensagens m
-            where m.conversa_id = b.id::uuid order by m.em desc, m.id desc limit 1
+            where m.conversa_id = x.id::uuid order by m.em desc, m.id desc limit 1
          ) um on true
-        where b.rn > $${iOff} and b.rn <= $${iOff} + $${iOff + 1}
-        order by b.tag_id, b.rn`,
+        order by e.tag_id, x.atualizada_em desc, x.id`,
       params,
     );
     return {
-      totais: new Map(totais.rows.map((r) => [r.tag_id, r.n])),
+      totais,
+      paradas,
       linhas: rows.map(
         (r): LinhaQuadro => ({
           tagId: r.tag_id,
@@ -365,9 +462,41 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
           ultima: r.um_em ? { autor: r.um_autor!, autorNome: r.um_autor_nome, texto: resumir(r.um_texto ?? ''), em: r.um_em } : null,
           desde: r.marcada_em,
           atualizadaEm: r.atualizada_em,
+          valor: r.valor === null ? null : Number(r.valor),
         }),
       ),
     };
+  }
+  async buscarCartoes(funilId: string, termo: string, escopo: EscopoVisao, limite: number) {
+    const params: unknown[] = [];
+    const onde = this.filtrosQuadro(funilId, { escopo, busca: termo }, params);
+    params.push(termo.trim().replace(/[\\%_]/g, (x) => `\\${x}`) + '%', limite);
+    const { rows } = await this.pool.query<{ id: string; nome: string | null; telefone: string; unidade: UnidadeId; modo: ModoAtendimento; responsavel_id: string | null; responsavel_nome: string | null; tag_id: string; tag_nome: string; tag_cor: string }>(
+      `select c.id::text as id, c.nome, c.telefone, c.unidade, c.modo, c.responsavel_id::text as responsavel_id, c.responsavel_nome,
+              t.id::text as tag_id, t.nome as tag_nome, t.cor as tag_cor
+         from sintonia.conversa_tags ct
+         join sintonia.conversas c on c.id = ct.conversa_id
+         join sintonia.tags t on t.id = ct.tag_id
+        where ${onde}
+        order by (c.nome ilike $${params.length - 1}) desc, c.atualizada_em desc, c.id
+        limit $${params.length}`,
+      params,
+    );
+    return rows.map((r): AchadoQuadro => ({ conversaId: r.id, nome: r.nome, telefone: r.telefone, unidade: r.unidade, modo: r.modo, dona: r.responsavel_id ? { id: r.responsavel_id, nome: r.responsavel_nome } : null, etapa: { id: r.tag_id, nome: r.tag_nome, cor: r.tag_cor } }));
+  }
+  async definirValor(conversaId: string, valor: number | null, por: string) {
+    if (valor === null) await this.pool.query('delete from sintonia.cartao_valores where conversa_id = $1', [conversaId]);
+    else {
+      await this.pool.query(
+        `insert into sintonia.cartao_valores (conversa_id, valor, atualizado_em, atualizado_por) values ($1, $2, now(), $3)
+         on conflict (conversa_id) do update set valor = excluded.valor, atualizado_em = excluded.atualizado_em, atualizado_por = excluded.atualizado_por`,
+        [conversaId, valor, por],
+      );
+    }
+  }
+  async valor(conversaId: string) {
+    const { rows } = await this.pool.query<{ valor: string }>('select valor::text as valor from sintonia.cartao_valores where conversa_id = $1', [conversaId]);
+    return rows[0] ? Number(rows[0].valor) : null;
   }
   async sincronizarSistema(empresaId: string, funilId: string, em: Date) {
     const r = await this.pool.query(
@@ -673,7 +802,7 @@ export class Funis implements DelegadoEtapas {
   async quadro(funilId: string, filtro: FiltroQuadro) {
     const funil = await this.exigir(funilId);
     const etapas = (await this.etapas(funilId)).filter((e) => !filtro.etapaId || e.id === filtro.etapaId);
-    const { totais, linhas } = await this.o.armazem.quadro(funilId, filtro);
+    const { totais, paradas, linhas } = await this.o.armazem.quadro(funilId, filtro);
     const tags = await this.o.tags.dasConversas(linhas.map((l) => l.conversaId));
     return {
       funil,
@@ -682,15 +811,35 @@ export class Funis implements DelegadoEtapas {
           .filter((l) => l.tagId === e.id)
           .map(({ tagId: _t, ...l }): Cartao => ({ ...l, tags: (tags.get(l.conversaId) ?? []).filter((t) => !t.funilId) }));
         const total = totais.get(e.id) ?? 0;
+        const ultimo = cartoes.at(-1);
         return {
           etapa: { id: e.id, nome: e.nome, cor: e.cor, ordem: e.ordem, chaveSistema: e.chaveSistema },
           total,
+          /** Na etapa há mais de 3 dias (contado no servidor, com os filtros). */
+          paradas: paradas.get(e.id) ?? 0,
           cartoes,
           offset: filtro.offset,
-          mais: filtro.offset + cartoes.length < total,
+          mais: filtro.apos ? cartoes.length === filtro.limite : filtro.offset + cartoes.length < total,
+          /** Cursor para o "carregar mais" desta coluna. */
+          proximo: ultimo ? `${new Date(ultimo.atualizadaEm).toISOString()}|${ultimo.conversaId}` : null,
         };
       }),
     };
+  }
+
+  /** Busca no quadro do funil (nome ou telefone), para a lista que aparece debaixo do campo. */
+  async buscar(funilId: string, termo: string, escopo: EscopoVisao, limite = 20): Promise<AchadoQuadro[]> {
+    await this.exigir(funilId);
+    if (termo.trim().length < 2) return [];
+    return this.o.armazem.buscarCartoes(funilId, termo, escopo, limite);
+  }
+  async definirValor(c: Conversa, valor: number | null, por: string): Promise<number | null> {
+    if (valor !== null && (!Number.isFinite(valor) || valor < 0 || valor > 10_000_000)) throw new ErroFunil('Valor inválido.', 400);
+    await this.o.armazem.definirValor(c.id, valor === null ? null : Math.round(valor * 100) / 100, por);
+    return this.o.armazem.valor(c.id);
+  }
+  valor(c: Conversa): Promise<number | null> {
+    return this.o.armazem.valor(c.id);
   }
 
   /**
