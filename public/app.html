@@ -392,6 +392,38 @@
   .perfil-conta > span:not(.avatar) { color: var(--sub); font-size: 14.5px; }
   dialog input:disabled { color: var(--sub); }
   .opcoes-conta { background: var(--fundo); border-radius: 10px; overflow: hidden; }
+  /* ---------- Mais (como as Configurações do WhatsApp) ---------- */
+  .mais { max-width: 720px; margin: 0 auto; width: 100%; padding-bottom: 90px; }
+  .mais-barra { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+  .mais-barra .icone.redondo { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+  .mais-barra .icone.redondo svg { width: 21px; height: 21px; }
+  .mais h1.titulo-grande { margin: 6px 0 14px; }
+  .mais > input[type="search"] { width: 100%; box-sizing: border-box; height: 44px; margin: 0 0 14px; padding: 0 14px; border-radius: 12px; border: 0; font: inherit; font-size: 16px; color: var(--texto); background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--linha); }
+  .mais-perfil { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); margin-bottom: 18px; }
+  .mais-perfil .avatar { width: 58px; height: 58px; font-size: 20px; flex: none; }
+  .mais-perfil .mais-txt b { font-size: 18px; }
+  .mais-grupo { margin-bottom: 18px; }
+  .mais-grupo h2 { margin: 0 6px 8px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
+  .mais-lista { border-radius: 18px; overflow: hidden; background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); }
+  .mais-item { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 8px 14px; }
+  .mais-item[hidden] { display: none; }
+  .mais-item + .mais-item { border-top: 1px solid var(--linha); }
+  .mais-item:hover, .mais-perfil:hover { background: var(--sel); }
+  .mais-item:focus-visible, .mais-perfil:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: -2px; }
+  .mais-ic { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; color: #fff; background: var(--cor, var(--marca-azul)); }
+  .mais-ic.escuro { color: #06263f; }
+  .mais-ic svg { width: 18px; height: 18px; }
+  .mais-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
+  .mais-txt b { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mais-txt small { font-size: 13px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mais-valor { font-size: 14.5px; color: var(--sub); flex: none; }
+  .mais-seta { flex: none; color: var(--sub); display: grid; } .mais-seta svg { width: 18px; height: 18px; }
+  .mais-item.perigo b { color: #dc2626; } [data-tema="escuro"] .mais-item.perigo b { color: #f87171; }
+  .mais-marca { color: var(--marca-azul); font-weight: 800; } [data-tema="escuro"] .mais-marca { color: var(--marca-menta); }
+  .mais-chave { width: 46px; height: 28px; border-radius: 999px; background: var(--linha); position: relative; flex: none; }
+  .mais-chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s ease; }
+  .mais-chave.ligada { background: var(--marca-azul); } .mais-chave.ligada::after { transform: translateX(18px); }
+  .mais-nada { color: var(--sub); text-align: center; }
   .opcoes-conta .linha { display: flex; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--linha); font-size: 15px; }
   .opcoes-conta .linha span:first-child { color: var(--sub); }
   .opcoes-conta .linha span:last-child { text-align: right; }
@@ -1012,7 +1044,7 @@
       <aside class="ficha" id="ficha" hidden>
         <div class="topo"><button class="icone" id="fechar-ficha" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>Dados da cliente</div>
         <div class="bloco perfil"><span class="avatar" id="f-avatar"></span><b id="f-nome"></b><span id="f-tel"></span><small class="f-chegou" id="f-chegou"></small>
-          <div class="acoes-perfil"><a class="acao-perfil" id="f-ligar" target="_blank" rel="noopener" title="Abre a conversa no WhatsApp; toque em ligar lá"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>Ligar pelo WhatsApp</a><button class="acao-perfil" id="f-copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar número</button></div>
+          <div class="acoes-perfil"><a class="acao-perfil" id="f-ligar" target="_blank" rel="noopener" title="Abre a conversa no WhatsApp; toque em ligar lá"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>Ligar pelo WhatsApp</a><button class="acao-perfil" id="f-copiar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar número</button><button class="acao-perfil" id="f-favorito" type="button" aria-pressed="false" title="Favorito nas Ligações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/></svg><span>Favorito</span></button></div>
         </div>
         <button type="button" class="bloco f-crm" id="f-crm"><span class="f-crm-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span><span class="f-crm-txt"><b>Etapa e etiquetas</b><small id="f-crm-resumo"></small></span><svg class="f-crm-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <section class="bloco relatorio" id="f-relatorio" aria-label="Relatório do cliente" hidden></section>
@@ -1067,6 +1099,7 @@
     <section class="vista" id="v-transmissoes"><div class="painel" id="transmissoes"></div></section>
     <section class="vista" id="v-email"><div class="painel" id="email"></div></section>
     <section class="vista" id="v-agenda"><div class="painel" id="agenda"></div></section>
+    <section class="vista" id="v-ligacoes"><div class="painel" id="ligacoes"></div></section>
     <section class="vista" id="v-clientes"><div class="painel" id="clientes"></div></section>
     <section class="vista" id="v-respostas"><div class="painel" id="respostas"></div></section>
     <section class="vista" id="v-links"><div class="painel" id="links"></div></section>
@@ -1391,7 +1424,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
     window.SintoniaMenu?.vistaMudou?.(v);
   }
@@ -1746,8 +1779,22 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const fecharFicha = () => { if (window.SintoniaPainel?.aberto('ficha') || window.SintoniaPainel?.atual()?.id === 'etiquetas') window.SintoniaPainel.fechar(); $('ficha').hidden = true; };
   const TIPO_CAMPO = { texto: 'Texto', lista: 'Lista', sim_nao: 'Sim ou não', numero: 'Número', data: 'Data' };
   estado.ficha = null;
+  // Estrela de favorito (tela Ligações › Favoritos), por pessoa.
+  async function desenharFavorito(c) {
+    const b = $('f-favorito'); if (!b) return;
+    let favs = []; try { favs = await api('/api/ligacoes/favoritos'); } catch { b.hidden = true; return; }
+    const sim = favs.some((f) => f.conversaId === c.id);
+    b.setAttribute('aria-pressed', String(sim)); b.querySelector('span').textContent = sim ? 'Favorita' : 'Favorito';
+    b.querySelector('svg').setAttribute('fill', sim ? 'currentColor' : 'none');
+  }
+  $('f-favorito')?.addEventListener('click', async () => {
+    const c = estado.detalhe?.conversa; if (!c) return;
+    const sim = $('f-favorito').getAttribute('aria-pressed') !== 'true';
+    try { await post('/api/ligacoes/favoritos', { conversaId: c.id, favorito: sim }); toast(sim ? 'Nos favoritos ⭐' : 'Saiu dos favoritos'); desenharFavorito(c); } catch (x) { toast(x.message); }
+  });
   async function carregarContato() {
     const c = estado.detalhe?.conversa; if (!c) return;
+    desenharFavorito(c);
     $('f-erro').textContent = ''; $('f-salvo').textContent = '';
     $('f-ligar').href = linkLigacao(c.telefone);
     carregarRelatorio(c);
@@ -2349,15 +2396,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       for (const l of r.hoje) caixa.append(el('div', { class: 'linha-ligacao' }, el('b', { text: l.cliente || 'Cliente' }), el('span', { text: ` · ${RESULTADO[l.resultado] || l.resultado} · ${l.atendente} · ${hm(l.em)}${l.nota ? ' · ' + l.nota : ''}` })));
     }
   }
-  function abrirRegistroLigacao(conversaId, nome) {
-    estado.ligacaoDe = conversaId;
+  function abrirRegistroLigacao(conversaId, nome, chamadaId) {
+    estado.ligacaoDe = conversaId; estado.chamadaDe = chamadaId || null;
     $('f-ligacao').reset(); $('lg-quem').textContent = nome || '';
     $('d-ligacao').showModal();
   }
   $('f-ligacao').addEventListener('submit', async (e) => {
     if (e.submitter?.value !== 'ok' || !estado.ligacaoDe) return;
     const f = Object.fromEntries(new FormData(e.target));
-    try { await post(`/api/conversas/${estado.ligacaoDe}/ligacao`, { resultado: f.resultado, nota: f.nota || undefined }); toast('Ligação registrada ✓'); carregarLigacoes(); atualizar(); }
+    try { await post(`/api/conversas/${estado.ligacaoDe}/ligacao`, { resultado: f.resultado, nota: f.nota || undefined, chamadaId: estado.chamadaDe || undefined }); toast('Ligação registrada ✓'); carregarLigacoes(); atualizar(); window.SintoniaTelas?.ligacoes?.recarregar?.(); }
     catch (x) { toast(x.message); }
   });
 
@@ -2572,31 +2619,132 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const ICONE_LINK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
     const ICONE_RELATORIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"/></svg>';
     const ICONE_AGENDA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg>', ICONE_RAIO = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg>', ICONE_LEADS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
-    const botao = (icone, texto, acao, classe = '') => { const b = el('button', { class: classe, onclick: acao }); b.insertAdjacentHTML('beforeend', icone); b.append(texto); return b; };
-    $('configuracoes').replaceChildren(
-      el('div', { class: 'cab' }, el('h1', { class: 'titulo-grande', text: 'Mais' })),
-      el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, '', eu.id), el('b', { text: eu.nome }), el('span', { text: eu.email }),
-        el('span', { class: 'acoes-foto' }, el('button', { class: 'link', type: 'button', text: window.SintoniaFotos.url(eu.id) ? 'Trocar foto' : 'Pôr foto', onclick: () => escolherFoto(eu.id) }),
-          ...(window.SintoniaFotos.url(eu.id) ? [el('button', { class: 'link perigo', type: 'button', text: 'Tirar foto', onclick: () => tirarFoto(eu.id) })] : []))),
-      el('div', { class: 'opcoes-conta' },
-        linha('Papel', PAPEL[eu.papel] || eu.papel),
-        linha('Unidades', nomesUnidades(eu.unidades) || (['admin', 'direcao'].includes(eu.papel) ? 'Todas' : 'Nenhuma ainda')),
-        el('div', { class: 'linha' }, el('span', { class: 'info', style: 'color:var(--sub)', text: SOBRE_PAPEL[eu.papel] || '' }))),
-      el('div', { class: 'opcoes-conta' },
-        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_EMPRESA, 'Empresa', abrirEmpresa)] : []),
-        botao(ICONE_AGENDA, 'Agenda', () => mostrar('agenda')),
-        botao(ICONE_EQUIPE, 'Clientes', () => mostrar('clientes')),
-        botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg>', 'Respostas rápidas', () => mostrar('respostas')),
-        botao(ICONE_IA, 'Inteligência Artificial', () => mostrar('ia')),
-        ...(ehGestor(eu) ? [botao(ICONE_RAIO, 'Automações', () => mostrar('automacoes')), botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>', 'Transmissões', () => mostrar('transmissoes')), botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>', 'E-mail marketing', () => mostrar('email')), botao(ICONE_RELATORIO, 'Relatórios', () => mostrar('relatorios')), botao(ICONE_RELATORIO, 'Desempenho do atendimento', () => mostrar('desempenho')), botao(ICONE_LEADS, 'Importar e exportar leads', () => mostrar('leads')), botao(ICONE_TAG, 'Tags', abrirTags), botao(ICONE_EQUIPE, 'Atendentes', () => mostrar('equipe'))] : []),
-        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_IA, 'Plano e uso da IA', () => window.SintoniaPlanos?.abrir())] : []),
-        ...(['admin', 'direcao'].includes(eu.papel) ? [botao(ICONE_LINK, 'Conexões', () => { location.href = '/conexoes'; }), botao(ICONE_CAMPOS, 'Dados de demonstração', abrirDemo)] : [])),
-      el('div', { class: 'opcoes-conta' },
-        botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', 'Notificações', () => window.SintoniaTelas?.notificacoes?.preferencias()),
-        (() => { const lig = window.Sintonia.acessoRapido?.ligada?.() ?? true; return botao('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="4"/></svg>', lig ? 'Bolinha de acesso rápido: ligada' : 'Bolinha de acesso rápido: desligada', () => { window.Sintonia.acessoRapido?.definir(!lig); desenharConfiguracoes(); }); })(),
-        botao(ICONE_CHAVE, 'Trocar senha', () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); }),
-        botao(ICONE_SAIR, 'Sair', async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; }, 'perigo')),
-    );
+    const I = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    const IC = {
+      agenda: ICONE_AGENDA, clientes: ICONE_EQUIPE, leads: ICONE_LEADS, relatorio: ICONE_RELATORIO, ia: ICONE_IA, raio: ICONE_RAIO, tag: ICONE_TAG, empresa: ICONE_EMPRESA, link: ICONE_LINK, campos: ICONE_CAMPOS, chave: ICONE_CHAVE, sair: ICONE_SAIR,
+      ligacoes: I('<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/>'),
+      respostas: I('<path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/>'),
+      transmissoes: I('<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>'),
+      email: I('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>'),
+      funil: I('<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>'),
+      desempenho: I('<path d="M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-1v-6h3M4 12v4a2 2 0 0 0 2 2h1v-6H4"/>'),
+      equipe: I('<rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+      plano: I('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/>'),
+      conta: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+      sino: I('<path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
+      aparencia: I('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/>'),
+      bolinha: I('<rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="4"/>'),
+      ajuda: I('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/>'),
+      busca: I('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+      seta: I('<path d="m9 6 6 6-6 6"/>'),
+    };
+    const gestor = ehGestor(eu), adm = ['admin', 'direcao'].includes(eu.papel), pode = (k) => Boolean(eu.permissoes?.[k]);
+    const temaTxt = { claro: 'Claro', escuro: 'Escuro', auto: 'Automático' }[window.SintoniaTema?.get?.() || 'auto'] || 'Automático';
+    const bolinhaLigada = window.Sintonia.acessoRapido?.ligada?.() ?? true;
+    // Grupos como as Configurações do WhatsApp: só o que existe e o que o perfil pode usar.
+    const grupos = [
+      { titulo: 'Trabalho', itens: [
+        { nome: 'Agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('agenda') },
+        { nome: 'Ligações', ic: IC.ligacoes, cor: '#16a34a', acao: () => mostrar('ligacoes') },
+        { nome: 'Clientes', ic: IC.clientes, cor: '#6366f1', acao: () => mostrar('clientes') },
+        { nome: 'Respostas rápidas', ic: IC.respostas, cor: '#0a8f7a', acao: () => mostrar('respostas') },
+        gestor && { nome: 'Importar e exportar leads', ic: IC.leads, cor: '#64748b', acao: () => mostrar('leads') },
+        gestor && pode('transmissoes') && { nome: 'Transmissões', ic: IC.transmissoes, cor: '#f97316', acao: () => mostrar('transmissoes') },
+        gestor && pode('email_marketing') && { nome: 'E-mail marketing', ic: IC.email, cor: '#ea4335', acao: () => mostrar('email') },
+      ] },
+      gestor && { titulo: 'Gestão', itens: [
+        pode('relatorios') && { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
+        pode('relatorios') && { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
+        { nome: 'Inteligência (IA)', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
+        pode('automacoes') && { nome: 'Automações e bots', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
+        { nome: 'Funis e etapas', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.menu?.(), 300); } },
+        { nome: 'Etiquetas', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
+        { nome: 'Rastreamento e links', ic: IC.link, cor: '#0369a1', acao: () => mostrar('links') },
+        { nome: 'Equipe e acessos', ic: IC.equipe, cor: '#334155', acao: () => mostrar('equipe') },
+        adm && { nome: 'Empresa e unidades', ic: IC.empresa, cor: '#475569', acao: abrirEmpresa },
+        adm && { nome: 'Conexões', sub: 'WhatsApp, Instagram, chave da IA, agenda', ic: IC.link, cor: '#25d366', acao: () => { location.href = '/conexoes'; } },
+        adm && { nome: 'Plano e uso da IA', ic: IC.plano, cor: '#0f766e', acao: () => window.SintoniaPlanos?.abrir() },
+      ] },
+      { titulo: 'Você', itens: [
+        { nome: 'Conta', sub: 'Foto, senha e dados', ic: IC.conta, cor: '#106ebe', acao: abrirConta },
+        { nome: 'Notificações', ic: IC.sino, cor: '#ef4444', acao: () => window.SintoniaTelas?.notificacoes?.preferencias() },
+        { nome: 'Aparência', valor: temaTxt, ic: IC.aparencia, cor: '#1e293b', acao: abrirAparencia },
+        { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
+        adm && { nome: 'Dados de demonstração', ic: IC.campos, cor: '#94a3b8', acao: abrirDemo },
+      ] },
+      { titulo: '', itens: [
+        { nome: 'Ajuda da IA', sub: 'Tire dúvidas sobre o dia e o app', ic: IC.ajuda, cor: '#1a8be0', acao: () => window.SintoniaChatIa?.abrir() },
+        { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } },
+      ] },
+    ].filter(Boolean).map((g) => ({ ...g, itens: g.itens.filter(Boolean) })).filter((g) => g.itens.length);
+
+    const linhaItem = (it) => {
+      const b = el('button', { class: 'mais-item' + (it.perigo ? ' perigo' : ''), type: 'button', 'data-nome': it.nome.toLowerCase(), onclick: it.acao },
+        el('i', { class: 'mais-ic' + (it.escuroIc ? ' escuro' : ''), html: it.ic }),
+        el('span', { class: 'mais-txt' }, el('b', { text: it.nome }), it.sub ? el('small', { text: it.sub }) : null),
+        it.valor ? el('span', { class: 'mais-valor', text: it.valor }) : null,
+        it.perigo ? null : el('span', { class: 'mais-seta', html: IC.seta }));
+      b.querySelector('.mais-ic').style.setProperty('--cor', it.cor);
+      return b;
+    };
+    const caixaGrupos = el('div', { class: 'mais-grupos' }, ...grupos.map((g) => el('section', { class: 'mais-grupo' }, g.titulo ? el('h2', { text: g.titulo }) : null, el('div', { class: 'mais-lista' }, ...g.itens.map(linhaItem)))));
+    const busca = el('input', { type: 'search', placeholder: 'Buscar', 'aria-label': 'Buscar nas opções', hidden: '' });
+    const semNada = el('p', { class: 'mais-nada', text: 'Nada com esse nome.', hidden: '' });
+    busca.addEventListener('input', () => {
+      const q = busca.value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      let algum = false;
+      caixaGrupos.querySelectorAll('.mais-grupo').forEach((g) => {
+        let n = 0;
+        g.querySelectorAll('.mais-item').forEach((b) => { const ok = !q || b.dataset.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q); b.hidden = !ok; if (ok) n++; });
+        g.hidden = !n; if (n) algum = true;
+      });
+      semNada.hidden = algum;
+    });
+    const btBusca = el('button', { class: 'icone redondo', type: 'button', title: 'Buscar nas opções', 'aria-label': 'Buscar nas opções', html: IC.busca, onclick: () => { busca.hidden = !busca.hidden; if (!busca.hidden) busca.focus(); else { busca.value = ''; busca.dispatchEvent(new Event('input')); } } });
+    const papelUnidade = [PAPEL[eu.papel] || eu.papel, nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : '')].filter(Boolean).join(' · ');
+    const perfil = el('button', { class: 'mais-perfil', type: 'button', onclick: abrirConta }, avatarPessoa(eu.nome, '', eu.id),
+      el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: papelUnidade })), el('span', { class: 'mais-seta', html: IC.seta }));
+    $('configuracoes').replaceChildren(el('div', { class: 'mais' },
+      el('div', { class: 'mais-barra' }, btBusca),
+      el('h1', { class: 'titulo-grande', text: 'Mais' }),
+      busca, perfil, caixaGrupos, semNada));
+
+    // ---- páginas do painel lateral (Conta, Aparência, Acesso rápido)
+    function abrirConta() {
+      window.SintoniaPainel.abrir({ id: 'conta', titulo: 'Conta', montar: (corpo) => corpo.append(
+        el('div', { class: 'perfil-conta' }, avatarPessoa(eu.nome, '', eu.id), el('b', { text: eu.nome }), el('span', { text: eu.email }),
+          el('span', { class: 'acoes-foto' }, el('button', { class: 'link', type: 'button', text: window.SintoniaFotos.url(eu.id) ? 'Trocar foto' : 'Pôr foto', onclick: () => escolherFoto(eu.id) }),
+            ...(window.SintoniaFotos.url(eu.id) ? [el('button', { class: 'link perigo', type: 'button', text: 'Tirar foto', onclick: () => tirarFoto(eu.id) })] : []))),
+        el('div', { class: 'opcoes-conta' },
+          linha('Papel', PAPEL[eu.papel] || eu.papel),
+          linha('Unidades', nomesUnidades(eu.unidades) || (adm ? 'Todas' : 'Nenhuma ainda')),
+          el('div', { class: 'linha' }, el('span', { class: 'info', style: 'color:var(--sub)', text: SOBRE_PAPEL[eu.papel] || '' }))),
+        el('div', { class: 'mais-lista', style: 'margin-top:14px' }, linhaItem({ nome: 'Trocar senha', ic: IC.chave, cor: '#64748b', acao: () => { $('f-trocar-senha').reset(); $('t-erro').textContent = ''; $('d-trocar-senha').showModal(); } }))) });
+    }
+    function abrirAparencia() {
+      window.SintoniaPainel.abrir({ id: 'aparencia', titulo: 'Aparência', montar: (corpo) => {
+        const desenhar = () => {
+          const atual = window.SintoniaTema?.get?.() || 'auto';
+          corpo.replaceChildren(el('div', { class: 'mais-lista', role: 'radiogroup', 'aria-label': 'Tema' }, ...[['claro', 'Claro'], ['escuro', 'Escuro'], ['auto', 'Automático (igual ao aparelho)']].map(([v, n]) =>
+            el('button', { class: 'mais-item', type: 'button', role: 'radio', 'aria-checked': String(atual === v), onclick: () => { window.SintoniaTema.definir(v); desenhar(); desenharConfiguracoes(); } },
+              el('span', { class: 'mais-txt' }, el('b', { text: n })), el('span', { class: 'mais-marca', text: atual === v ? '✓' : '' })))));
+        };
+        desenhar();
+      } });
+    }
+    function abrirAcessoRapido() {
+      window.SintoniaPainel.abrir({ id: 'acesso-rapido', titulo: 'Acesso rápido', montar: (corpo) => {
+        const desenhar = () => {
+          const lig = window.Sintonia.acessoRapido?.ligada?.() ?? true;
+          corpo.replaceChildren(el('p', { class: 'info', style: 'margin:0 2px 12px', text: 'A bolinha que fica na borda da tela, com os seus atalhos (some com uma conversa aberta no celular).' }),
+            el('div', { class: 'mais-lista' },
+              el('button', { class: 'mais-item', type: 'button', role: 'switch', 'aria-checked': String(lig), onclick: () => { window.Sintonia.acessoRapido?.definir(!lig); desenhar(); desenharConfiguracoes(); } },
+                el('span', { class: 'mais-txt' }, el('b', { text: 'Mostrar a bolinha' })), el('span', { class: 'mais-chave' + (lig ? ' ligada' : '') })),
+              linhaItem({ nome: 'Escolher e ordenar os atalhos', ic: IC.bolinha, cor: '#0891b2', acao: () => window.Sintonia.acessoRapido?.editar?.() })));
+        };
+        desenhar();
+      } });
+    }
   }
   // Dados de demonstração (só administração e direção): preencher e apagar, com o estado atual.
   async function abrirDemo() {
@@ -2800,7 +2948,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
   window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
-  Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar });
+  Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -2844,6 +2992,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/alertas.js" defer></script>
 <script src="/telas/chat-ia.js" defer></script>
+<script src="/telas/ligacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>
 <script>
 // Bolinha de acesso rápido (AssistiveTouch): atalhos do dia a dia num toque. Liga/desliga em Mais.
@@ -2860,6 +3009,7 @@ addEventListener('load', () => {
     { id: 'nova', rotulo: 'Nova conversa', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 8.5v6M9 11.5h6"/></svg>', acao: () => { irConversas(); window.SintoniaConversa?.novaConversa ? window.SintoniaConversa.novaConversa() : $('nova-teste-cel')?.click(); } },
     { id: 'naolidas', rotulo: 'Não lidas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg>', ativo: () => ui.estado.filtro === 'esperando', acao: () => { irConversas(); const alvo = ui.estado.filtro === 'esperando' ? 'todas' : 'esperando'; document.querySelector(`[data-f="${alvo}"]`)?.click(); } },
     { id: 'agendar', rotulo: 'Agendar', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M12 13v5M9.5 15.5h5"/></svg>', acao: () => { ui.mostrar('agenda'); setTimeout(() => window.SintoniaTelas?.agenda?.novo?.(), 120); } },
+    { id: 'ligacoes', rotulo: 'Ligações', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>', acao: () => ui.mostrar('ligacoes') },
     { id: 'agenda', rotulo: 'Agenda', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg>', acao: () => ui.mostrar('agenda') },
     { id: 'crm', rotulo: 'CRM', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>', disponivel: () => pode('crm_ver'), acao: () => ui.mostrar('funil') },
     { id: 'respostas', rotulo: 'Respostas rápidas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/></svg>', acao: () => ui.mostrar('respostas') },

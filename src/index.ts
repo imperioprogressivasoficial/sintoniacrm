@@ -19,6 +19,7 @@ import { CanalEvolution } from './channels/evolution.js';
 import { CanalMeta } from './channels/meta.js';
 import { numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
 import { contaDaRede, numerosSociais } from './conexoes/sociais.js';
+import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/chamadas.js';
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
@@ -218,6 +219,8 @@ await conexoes.carregar();
 
 // Notificações (sino e push): cada evento registrado vira aviso para quem pode ver a conversa.
 const armazemNotificacoes = pool ? new ArmazemNotificacoesPostgres(pool) : new ArmazemNotificacoesMemoria();
+// Histórico da tela Ligações (efetuadas pelo app; recebidas/perdidas pelo evento CALL do WhatsApp).
+const armazemChamadas = pool ? new ArmazemChamadasPostgres(pool) : new ArmazemChamadasMemoria();
 const chavesPush = new ChavesPush(armazemNotificacoes, cofre);
 const notificador = new Notificador({
   armazem: armazemNotificacoes,
@@ -480,6 +483,7 @@ const app = criarServidor({
   }),
   midias,
   notificacoes: { notificador, armazem: armazemNotificacoes, chaves: chavesPush },
+  chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   gestao: {
     tags,
@@ -645,6 +649,7 @@ const demo = new Demo({
   respostas: armazemRespostas,
   automacoes,
   notificacoes: armazemNotificacoes,
+  chamadas: armazemChamadas,
   empresa,
   segmento: process.env.DEMO_SEGMENTO === 'estetica' ? 'estetica' : undefined,
   log,

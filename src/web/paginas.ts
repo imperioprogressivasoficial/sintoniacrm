@@ -83,6 +83,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/agentes-ia.js': { arquivo: 'telas/agentes-ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/conversa-extras.js': { arquivo: 'telas/conversa-extras.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/chat-ia.js': { arquivo: 'telas/chat-ia.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/ligacoes.js': { arquivo: 'telas/ligacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/funil.js': { arquivo: 'telas/funil.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/automacoes.js': { arquivo: 'telas/automacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/bot.js': { arquivo: 'telas/bot.js', tipo: 'text/javascript; charset=utf-8' },

@@ -79,7 +79,8 @@ export class EvolutionAdmin {
       headers: { 'x-sintonia-token': webhook.token },
       byEvents: false,
       base64: false,
-      events: ['MESSAGES_UPSERT'],
+      // CALL: ligação de voz recebida no número (vira "recebida"/"perdida" na tela Ligações).
+      events: ['MESSAGES_UPSERT', 'CALL'],
     };
     if (atual.estado === 'inexistente') {
       const criada = await this.chamar<{ qrcode?: { base64?: string } }>('POST', '/instance/create', {

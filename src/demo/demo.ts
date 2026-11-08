@@ -6,6 +6,7 @@ import type { ArmazemRespostas } from '../conversa/respostas.js';
 import type { Etapa } from '../domain.js';
 import type { Empresa } from '../empresa/empresa.js';
 import type { Funis } from '../funis/funis.js';
+import type { ArmazemChamadas } from '../ligacoes/chamadas.js';
 import type { ArmazemNotificacoes } from '../notificacoes/armazem.js';
 import type { TipoNotificacao } from '../notificacoes/tipos.js';
 import type { ArmazemTags, Tags } from '../tags/tags.js';
@@ -34,6 +35,8 @@ export interface OpcoesDemo {
   automacoes: Automacoes;
   notificacoes: ArmazemNotificacoes;
   empresa: Empresa;
+  /** Histórico da tela Ligações (as da demonstração somem junto com as conversas). */
+  chamadas?: ArmazemChamadas;
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
   /** Quantas conversas (padrão 140). */
@@ -259,6 +262,23 @@ export class Demo {
       ids.push(criada.id);
     }
     await reg('notificacao', ids);
+
+    // Ligações (tela Ligações): as registradas hoje (efetuadas) e algumas recebidas/perdidas dos últimos dias.
+    if (o.chamadas) {
+      for (const e of plano.eventos.filter((x) => x.tipo === 'ligacao')) {
+        const c = plano.conversas.find((x) => x.id === e.conversaId);
+        if (!c) continue;
+        await o.chamadas.registrar({ empresaId: E, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: String(e.dados?.resultado ?? '') || null, atendenteId: String(e.dados?.atendenteId ?? '') || null, atendenteNome: String(e.dados?.atendente ?? '') || null, unidade: c.unidade, em: e.em, origem: 'demo' });
+      }
+      const outras = plano.conversas.filter((c) => c.etapa !== 'perdida').slice(5, 16);
+      for (const [i, c] of outras.entries()) {
+        const direcao = i % 3 === 0 ? 'perdida' : i % 3 === 1 ? 'recebida' : 'efetuada';
+        const quem = atendentes.find((a) => a.id === c.responsavelId) ?? atendentes[i % Math.max(1, atendentes.length)];
+        const em = new Date(agora.getTime() - (i * 7 + 2) * HORA - i * 11 * MIN);
+        await o.chamadas.registrar({ empresaId: E, conversaId: c.id, telefone: c.telefone, direcao, resultado: direcao === 'efetuada' ? (i % 2 ? 'atendeu' : 'nao_atendeu') : null,
+          atendenteId: direcao === 'perdida' ? null : (quem?.id ?? null), atendenteNome: direcao === 'perdida' ? null : (quem?.nome ?? null), unidade: c.unidade, em, origem: 'demo' });
+      }
+    }
 
     // Meta do mês: só se a empresa ainda não definiu uma.
     let meta: number | null = null;

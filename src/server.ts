@@ -15,6 +15,8 @@ import type { Conversa } from './domain.js';
 import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
 import { ligacoesDoDia, quemLigar, registrarLigacao } from './app/ligacoes.js';
+import { direcaoDoAviso, lerChamadasEvolution, type ArmazemChamadas } from './ligacoes/chamadas.js';
+import { registrarLigacoes } from './ligacoes/rotas.js';
 import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarContatos } from './contatos/rotas.js';
 import type { ArmazemContatos } from './contatos/contatos.js';
@@ -31,6 +33,8 @@ export interface DependenciasServidor {
   sintonia: Sintonia;
   repo: Repositorio;
   evolution?: { canal: CanalWhatsApp; token?: string };
+  /** Histórico de ligações (tela Ligações) e o evento CALL do WhatsApp (Evolution). */
+  chamadas?: { armazem: ArmazemChamadas; empresaId: string; canalDaInstancia?: (instancia: string) => string | undefined };
   /** WhatsApp oficial (Meta). Lido a cada webhook: as unidades podem mudar pela tela de Conexões. */
   meta?: OpcoesWebhookMeta;
   /** Facebook Messenger, Instagram Direct e leads do TikTok (lido a cada webhook). */
@@ -126,6 +130,26 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return mensagens.length;
   }
 
+  /** Ligação de voz avisada pelo WhatsApp: perdida (offer/timeout/reject) ou recebida (accept), na conversa da cliente. */
+  async function registrarChamadasWhatsapp(corpo: unknown): Promise<number> {
+    const ch = d.chamadas!;
+    let n = 0;
+    for (const a of lerChamadasEvolution(corpo)) {
+      const direcao = direcaoDoAviso(a.status);
+      const ja = await ch.armazem.porIdExterno(ch.empresaId, a.idExterno);
+      if (ja) {
+        if (ja.direcao !== direcao && direcao === 'recebida') await ch.armazem.atualizar(ja.id, { direcao, resultado: a.status });
+        continue;
+      }
+      const canalId = ch.canalDaInstancia?.(a.instancia) ?? a.instancia;
+      const conversas = (await d.repo.listarConversas()).filter((c) => c.empresaId === ch.empresaId && c.telefone === a.telefone);
+      const c = conversas.find((x) => x.canalId === canalId) ?? conversas[0];
+      await ch.armazem.registrar({ empresaId: ch.empresaId, conversaId: c?.id ?? null, telefone: a.telefone, direcao, resultado: a.status, atendenteId: null, atendenteNome: null, unidade: c?.unidade ?? null, em: a.em ?? agora(), origem: 'whatsapp', idExterno: a.idExterno });
+      n++;
+    }
+    return n;
+  }
+
   app.get('/saude', async () => ({ ok: true, fila: d.fila ? await d.fila.fila.situacao() : undefined }));
 
   // ---------- WhatsApp não oficial (Evolution) ----------
@@ -133,7 +157,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     if (!d.evolution) return reply.code(404).send();
     if (d.evolution.token && req.headers['x-sintonia-token'] !== d.evolution.token) return reply.code(401).send();
     const mensagens = d.evolution.canal.lerWebhook(req.body);
-    return { recebidas: await entregar('evolution', mensagens) };
+    const chamadas = d.chamadas ? await registrarChamadasWhatsapp(req.body).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
+    return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}) };
   });
 
   // ---------- WhatsApp oficial (Meta) ----------
@@ -449,13 +474,21 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     resultado: z.enum(['atendeu', 'nao_atendeu', 'agendou', 'caixa_postal']),
     nota: z.string().max(500).optional(),
     atendente: z.string().min(1).optional(),
+    /** A ligação que o app já registrou ao tocar em Ligar (tela Ligações): só recebe o resultado. */
+    chamadaId: z.string().max(64).optional(),
   });
   app.post('/api/conversas/:id/ligacao', async (req) => {
     const c = await conversaVisivel(req);
     const b = Ligacao.parse(req.body);
     await registrarLigacao(d.repo, c, { resultado: b.resultado, nota: b.nota, atendente: nomeDe(req, b.atendente), atendenteId: req.usuario?.id, agora: agora() });
+    if (d.chamadas) {
+      const ja = b.chamadaId ? await d.chamadas.armazem.buscar(b.chamadaId) : undefined;
+      if (ja && ja.conversaId === c.id) await d.chamadas.armazem.atualizar(ja.id, { resultado: b.resultado });
+      else await d.chamadas.armazem.registrar({ empresaId: c.empresaId, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: b.resultado, atendenteId: req.usuario?.id ?? null, atendenteNome: nomeDe(req, b.atendente), unidade: c.unidade, em: agora(), origem: 'app' });
+    }
     return { ok: true };
   });
+  if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
 
   // ---------- Tags, aba IA, painel completo e empresa ----------
   registrarGestao(app, {

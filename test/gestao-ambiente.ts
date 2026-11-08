@@ -4,6 +4,7 @@ import { ArmazemBaseMemoria, ArmazemBasePostgres, BaseConhecimento } from '../sr
 import { Sintonia } from '../src/app/sintonia.js';
 import { ContasMemoria, ContasPostgres, type Contas, type Papel, type Usuario } from '../src/auth/contas.js';
 import { gerarHash } from '../src/auth/senha.js';
+import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from '../src/ligacoes/chamadas.js';
 import type { CanalWhatsApp } from '../src/channels/tipos.js';
 import type { Conversa } from '../src/domain.js';
 import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from '../src/empresa/empresa.js';
@@ -71,6 +72,8 @@ export async function montarGestao(
     inicio?: Date;
     /** Relógio compartilhado (ex.: com um agente falso que "pensa" alguns segundos). */
     relogio?: { t: Date };
+    /** Liga a tela Ligações (histórico) e o webhook da Evolution. */
+    chamadas?: boolean;
   } = {},
 ) {
   const { repo, contas, pool } = await amb.criar();
@@ -109,6 +112,9 @@ export async function montarGestao(
     agora,
     auth: { contas, agora },
     gestao: { tags, empresa, base, simularIa: opcoes.simularIa, iaLigada: opcoes.iaLigada, tagsDaIa: () => tagsDaIa.nomes() },
+    ...(opcoes.chamadas
+      ? { chamadas: { armazem: pool ? new ArmazemChamadasPostgres(pool) : new ArmazemChamadasMemoria(), empresaId: 'imperio' }, evolution: { canal } }
+      : {}),
   });
 
   const h = await hashPadrao;

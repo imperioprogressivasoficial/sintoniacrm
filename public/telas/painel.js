@@ -87,6 +87,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-painel-pessoa .pn-num-r { white-space: normal; }
   button.pn-pessoa { font: inherit; color: inherit; text-align: left; border: 0; width: 100%; box-sizing: border-box; cursor: pointer; }
   button.pn-pessoa:hover { background: var(--vidro-item); }
+  .pn-comp { margin: -4px 2px 0; font-size: 12px; color: var(--sub); }
+  @media (min-width: 1180px) { .pn-comp { grid-column: 1 / -1; text-align: right; } }
   .pn-selo.pn-igual { background: var(--vidro-item); color: var(--sub); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
 
   /* ---------- painéis de vidro ---------- */
@@ -382,8 +384,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const r = Math.round(valor * 10) / 10;
     const bom = menorMelhor ? r < 0 : r > 0;
     const cls = r === 0 ? 'pn-igual' : bom ? 'pn-bom' : 'pn-ruim';
-    const txt = `${r > 0 ? '+' : r < 0 ? '−' : ''}${fmtDec(Math.abs(r))}${sufixo} ${comparacao}`;
-    return ui.el('span', { class: 'pn-selo ' + cls, html: (r > 0 ? IC.sobe : r < 0 ? IC.desce : '') + esc(txt) });
+    // Curto no selo; o "vs ontem…" vai uma vez só, abaixo dos números (e no title de cada selo).
+    const txt = `${r > 0 ? '+' : r < 0 ? '−' : ''}${fmtDec(Math.abs(r))}${sufixo}`;
+    return ui.el('span', { class: 'pn-selo ' + cls, title: `${txt} ${comparacao}`, 'aria-label': `${txt} ${comparacao}`, html: (r > 0 ? IC.sobe : r < 0 ? IC.desce : '') + esc(txt) });
   }
 
   function numero(ui, icone, valor, rotulo, seloEl, opcoes = {}) {
@@ -415,7 +418,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (s.carregando) rec.classList.add('pn-girando');
     const titulo = el('div', { class: 'pn-titulo' }, el('div', {}, el('h1', { class: 'titulo-grande', text: 'Dashboard' }), sub), rec);
     const cab = el('header', { class: 'pn-cab' }, titulo);
-    if (d) cab.append(d.escopo === 'pessoal' && d.pessoa ? numerosPessoa(ui, d) : numeros(ui, d));
+    if (d) cab.append(d.escopo === 'pessoal' && d.pessoa ? numerosPessoa(ui, d) : numeros(ui, d), el('p', { class: 'pn-comp', text: `Selos: ${COMPARA[d.periodo] || 'vs período anterior'}` }));
     return cab;
   }
 
