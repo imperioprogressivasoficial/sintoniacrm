@@ -7,7 +7,8 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7d', '7 dias'], ['30d', '30 dias']];
-  const COMPARA = { hoje: 'vs ontem', ontem: 'vs anteontem', '7d': 'vs 7 dias antes', '30d': 'vs 30 dias antes' };
+  // Hoje compara com ontem até a mesma hora (o servidor corta o período anterior no mesmo horário).
+  const COMPARA = { hoje: 'vs ontem, mesma hora', ontem: 'vs anteontem', '7d': 'vs 7 dias antes', '30d': 'vs 30 dias antes' };
   const NO_PERIODO = { hoje: 'hoje', ontem: 'ontem', '7d': 'nos últimos 7 dias', '30d': 'nos últimos 30 dias' };
   const ROTULO_LEADS = { hoje: 'Leads hoje', ontem: 'Leads ontem', '7d': 'Leads em 7 dias', '30d': 'Leads em 30 dias' };
   const CHAVE = 'sintonia.painel.periodo';
@@ -56,7 +57,36 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-num-r { font-size: 12.5px; color: var(--sub); white-space: nowrap; }
   .pn-selo { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .pn-selo.pn-bom { background: color-mix(in srgb, var(--pn-apoio) 30%, transparent); color: var(--pn-bom-txt); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pn-apoio) 70%, transparent); }
-  .pn-selo.pn-ruim { background: var(--marca-menta); color: var(--pn-sobre); box-shadow: 0 0 12px color-mix(in srgb, var(--marca-menta) 45%, transparent); }
+  .pn-selo.pn-bom { background: color-mix(in srgb, #16a34a 16%, transparent); color: #15803d; box-shadow: inset 0 0 0 1px color-mix(in srgb, #16a34a 45%, transparent); }
+  [data-tema="escuro"] .pn-selo.pn-bom { color: #86efac; background: color-mix(in srgb, #22c55e 20%, transparent); }
+  .pn-selo.pn-ruim { background: color-mix(in srgb, #dc2626 13%, transparent); color: #b91c1c; box-shadow: inset 0 0 0 1px color-mix(in srgb, #dc2626 40%, transparent); }
+  [data-tema="escuro"] .pn-selo.pn-ruim { color: #fca5a5; background: color-mix(in srgb, #ef4444 20%, transparent); }
+  /* KPIs no celular: 2 por linha, sem cortar à direita */
+  @media (max-width: 760px) {
+    .pn-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 4px 0 6px; overflow: visible; }
+    .pn-num { padding: 12px; gap: 10px; align-items: flex-start; }
+    .pn-num-ic { width: 34px; height: 34px; } .pn-num-ic svg { width: 17px; height: 17px; }
+    .pn-num-l1 { flex-wrap: wrap; gap: 4px 8px; }
+    .pn-num-r { white-space: normal; line-height: 1.25; }
+    .pn-selo { white-space: normal; }
+  }
+  /* visão individual (atendente, ou pessoa aberta pela gestão no painel lateral) */
+  .pn-agora { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pn-agora button, .pn-agora div { all: unset; box-sizing: border-box; display: grid; gap: 2px; padding: 14px; border-radius: 18px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .pn-agora button { cursor: pointer; }
+  .pn-agora b { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+  .pn-agora span { font-size: 13px; color: var(--sub); }
+  .pn-agora .pn-alerta b { color: #b45309; } [data-tema="escuro"] .pn-agora .pn-alerta b { color: #fcd34d; }
+  .pn-pessoa-cab { display: flex; align-items: center; gap: 12px; }
+  .pn-pessoa-cab .pn-ini { width: 48px; height: 48px; font-size: 16px; }
+  .pn-pessoa-cab b { font-size: 18px; } .pn-pessoa-cab small { display: block; color: var(--sub); font-size: 13px; }
+  .pn-painel-pessoa { display: grid; gap: 14px; }
+  .pn-painel-pessoa .pn-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; overflow: visible; }
+  .pn-painel-pessoa .pn-num { padding: 12px; background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 18px; align-items: flex-start; }
+  .pn-painel-pessoa .pn-num-l1 { flex-wrap: wrap; gap: 4px 8px; }
+  .pn-painel-pessoa .pn-num-r { white-space: normal; }
+  button.pn-pessoa { font: inherit; color: inherit; text-align: left; border: 0; width: 100%; box-sizing: border-box; cursor: pointer; }
+  button.pn-pessoa:hover { background: var(--vidro-item); }
   .pn-selo.pn-igual { background: var(--vidro-item); color: var(--sub); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
 
   /* ---------- painéis de vidro ---------- */
@@ -200,7 +230,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-ini.pn-robo svg { width: 18px; height: 18px; }
   .pn-luz { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: var(--marca-menta); box-shadow: 0 0 8px color-mix(in srgb, var(--marca-menta) 90%, transparent); border: 2px solid var(--fundo); }
   .pn-rank { display: grid; gap: 8px; }
-  .pn-rank-cab, .pn-pessoa { display: grid; grid-template-columns: 22px minmax(0, 1fr) 76px 76px 88px; gap: 10px; align-items: center; }
+  .pn-rank-cab, .pn-pessoa { display: grid; grid-template-columns: 22px minmax(0, 1fr) 72px 64px 76px 84px; gap: 10px; align-items: center; }
   .pn-rank-cab { font-size: 12px; color: var(--sub); font-weight: 600; padding: 0 12px; }
   .pn-rank-cab span:nth-child(n+3) { text-align: right; }
   .pn-pessoa { padding: 8px 12px; border-radius: 18px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
@@ -216,7 +246,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-rank-p { container-type: inline-size; }
   @container (max-width: 560px) {
     .pn-rank-cab { display: none; }
-    .pn-pessoa { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; padding: 12px; }
+    .pn-pessoa { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
     .pn-pos { display: none; }
     .pn-quem { grid-column: 1 / -1; }
     .pn-m { text-align: left; display: grid; gap: 1px; padding: 6px 10px; border-radius: 12px; background: var(--vidro-item); }
@@ -348,7 +378,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /** Selo de variação: menta se bom, coral se ruim. `menorMelhor` inverte (tempo). */
   function selo(ui, valor, sufixo, comparacao, menorMelhor = false) {
-    if (valor == null || !isFinite(valor)) return null;
+    if (valor == null || !isFinite(valor)) return ui.el('span', { class: 'pn-selo pn-igual', title: `Sem base para comparar (${comparacao})`, text: 'sem base' });
     const r = Math.round(valor * 10) / 10;
     const bom = menorMelhor ? r < 0 : r > 0;
     const cls = r === 0 ? 'pn-igual' : bom ? 'pn-bom' : 'pn-ruim';
@@ -385,16 +415,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (s.carregando) rec.classList.add('pn-girando');
     const titulo = el('div', { class: 'pn-titulo' }, el('div', {}, el('h1', { class: 'titulo-grande', text: 'Dashboard' }), sub), rec);
     const cab = el('header', { class: 'pn-cab' }, titulo);
-    if (d) cab.append(numeros(ui, d));
+    if (d) cab.append(d.escopo === 'pessoal' && d.pessoa ? numerosPessoa(ui, d) : numeros(ui, d));
     return cab;
   }
 
   function numeros(ui, d) {
     const comp = COMPARA[d.periodo] || 'vs período anterior';
     const L = d.leads || {}, A = d.agendamentos || {}, PR = d.primeiraResposta || {};
-    const sL = L.variacaoPct != null ? selo(ui, L.variacaoPct, '%', comp) : null;
+    const sL = selo(ui, L.variacaoPct, '%', comp);
     const tot = A.total || 0;
-    const sA = A.anterior ? selo(ui, ((tot - A.anterior) / A.anterior) * 100, '%', comp) : null;
+    const sA = selo(ui, A.anterior ? ((tot - A.anterior) / A.anterior) * 100 : null, '%', comp);
     const conv = A.conversaoPct, convAnt = A.conversaoAnteriorPct;
     const sC = conv != null && convAnt != null ? selo(ui, conv - convAnt, ' p.p.', comp) : null;
     const tempo = PR.geral?.mediaSeg;
@@ -403,6 +433,50 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       numero(ui, IC.agenda, fmtN(tot), 'Agendamentos', sA),
       numero(ui, IC.alvo, fmtPct(conv), 'Conversão em agendamento', sC, { nada: conv == null }),
       numero(ui, IC.relogio, valorTempo(tempo), 'Tempo da 1ª resposta', null, { nada: tempo == null, aria: fmtTempo(tempo) }));
+  }
+
+  // ---------- visão individual: a atendente (só os números dela) ou uma pessoa aberta pela gestão ----------
+  const variacao = (c) => (c && c.anterior ? ((c.total - c.anterior) / c.anterior) * 100 : null);
+  function numerosPessoa(ui, d) {
+    const comp = COMPARA[d.periodo] || 'vs período anterior';
+    const T = d.tempoMedioRespostaSeg || {}, C = d.conversaoPct || {};
+    const sT = T.atual != null && T.anterior != null ? selo(ui, T.anterior ? ((T.atual - T.anterior) / T.anterior) * 100 : null, '%', comp, true) : null;
+    return ui.el('div', { class: 'pn-nums', role: 'list', 'aria-label': 'Números do período' },
+      numero(ui, IC.pessoas, fmtN(d.conversas?.total || 0), d.pessoa?.ia ? 'Conversas que respondeu' : 'Conversas atendidas', selo(ui, variacao(d.conversas), '%', comp)),
+      numero(ui, IC.agenda, fmtN(d.agendamentos?.total || 0), 'Agendamentos', selo(ui, variacao(d.agendamentos), '%', comp)),
+      numero(ui, IC.alvo, fmtPct(C.atual), 'Conversão em agendamento', C.atual != null && C.anterior != null ? selo(ui, C.atual - C.anterior, ' p.p.', comp) : null, { nada: C.atual == null }),
+      numero(ui, IC.relogio, valorTempo(T.atual), 'Tempo médio de resposta', sT, { nada: T.atual == null, aria: fmtTempo(T.atual) }),
+      ...(d.pessoa?.ia ? [] : [numero(ui, IC.telefone, fmtN(d.ligacoes?.total || 0), 'Ligações', null)]));
+  }
+  function blocoAgora(ui, d, { abrirConversas = false } = {}) {
+    const el = ui.el;
+    if (d.pessoa?.ia || !d.agora) return null;
+    const esperando = d.agora.esperando || 0;
+    const irEsperando = () => { window.SintoniaPainel?.fechar(); ui.mostrar('conversas'); document.querySelector('[data-f="esperando"]')?.click(); };
+    return el('section', { class: 'pn-p', 'aria-labelledby': 'pn-t-agora' },
+      el('div', { class: 'pn-p-cab' }, el('h2', { id: 'pn-t-agora', text: 'Agora' })),
+      el('div', { class: 'pn-agora' },
+        el('div', {}, el('b', { text: fmtN(d.agora.conversasDela || 0) }), el('span', { text: abrirConversas ? 'conversas suas' : 'conversas dela' })),
+        abrirConversas
+          ? el('button', { type: 'button', class: esperando ? 'pn-alerta' : '', onclick: irEsperando, title: 'Ver quem está esperando' }, el('b', { text: fmtN(esperando) }), el('span', { text: 'esperando sua resposta' }))
+          : el('div', { class: esperando ? 'pn-alerta' : '' }, el('b', { text: fmtN(esperando) }), el('span', { text: 'esperando resposta dela' }))));
+  }
+  /** Gestão: toca numa pessoa da equipe (ou na IA) e os números dela abrem no painel lateral. */
+  async function abrirPessoa(ui, p) {
+    const el = ui.el;
+    const P = window.SintoniaPainel; if (!P) return;
+    const periodo = s.periodo;
+    P.abrir({ id: 'painel-pessoa', titulo: p.nome, montar: async (corpo) => {
+      corpo.append(el('div', { class: 'pn pn-painel-pessoa' }, el('p', { class: 'pn-vazio', text: 'Carregando os números…' })));
+      try {
+        const d = await ui.api(`/api/painel/pessoa?periodo=${encodeURIComponent(periodo)}&usuarioId=${encodeURIComponent(p.usuarioId)}`);
+        const av = d.pessoa.ia ? el('span', { class: 'pn-ini pn-robo', html: IC.brilho }) : el('span', { class: 'pn-ini', text: iniciais(d.pessoa.nome) });
+        if (!d.pessoa.ia) window.SintoniaFotos?.aplicar(av, d.pessoa.id);
+        corpo.replaceChildren(el('div', { class: 'pn pn-painel-pessoa' },
+          el('div', { class: 'pn-pessoa-cab' }, av, el('span', {}, el('b', { text: d.pessoa.nome }), el('small', { text: `${(PERIODOS.find(([k]) => k === periodo) || [])[1] || ''} · atualizado às ${ui.hm(new Date())}` }))),
+          numerosPessoa(ui, d), blocoAgora(ui, d)));
+      } catch (x) { corpo.replaceChildren(el('p', { class: 'pn-vazio', text: x.message || 'Não deu para carregar.' })); }
+    } });
   }
 
   // ---------- curva (SVG puro) ----------
@@ -654,19 +728,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!opcoes.ia && p.online) av.append(el('i', { class: 'pn-luz', title: 'online agora' }));
     const papel = opcoes.ia ? 'responde e agenda sozinha' : [primeiro ? '1º lugar' : null, eu ? 'você' : null, p.online ? 'online agora' : null].filter(Boolean).join(' · ') || (p.papel === 'recepcionista' ? 'Recepção' : 'Atendente');
     const m = (v, rot, txt) => el('span', { class: 'pn-m' + (!v ? ' pn-zero' : '') }, el('small', { text: rot }), txt ?? fmtN(v));
-    return el('div', { class: 'pn-pessoa' + (eu && !opcoes.pessoal ? ' pn-eu' : ''), role: 'row' },
+    const podeAbrir = !opcoes.pessoal && p.usuarioId;
+    return el(podeAbrir ? 'button' : 'div', { class: 'pn-pessoa' + (eu && !opcoes.pessoal ? ' pn-eu' : ''), role: 'row', ...(podeAbrir ? { type: 'button', title: `Ver os números de ${p.nome}`, onclick: () => abrirPessoa(ui, p) } : {}) },
       el('span', { class: 'pn-pos', role: 'cell', text: opcoes.ia ? '' : `${pos}º` }),
       el('span', { class: 'pn-quem', role: 'cell' }, av, el('span', {}, el('b', { text: p.nome }), el('small', { text: papel }))),
-      m(p.respostas, 'respostas'), m(p.agendamentos, 'agendamentos'),
+      m(p.conversas, 'conversas'), m(p.agendamentos, 'agendamentos'),
+      m(p.conversaoPct != null ? 1 : 0, 'conversão', fmtPct(p.conversaoPct)),
       m(p.tempoMedioRespostaSeg != null ? 1 : 0, 'tempo médio', fmtTempo(p.tempoMedioRespostaSeg)));
   }
 
   function blocoRanking(ui, d) {
     const el = ui.el;
     const pessoal = d.escopo === 'pessoal';
-    const rk = (Array.isArray(d.ranking) ? d.ranking.slice() : []).sort((a, b) => (b.agendamentos || 0) - (a.agendamentos || 0) || (b.respostas || 0) - (a.respostas || 0) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+    const ia = (d.ranking || []).find((p) => p.ia);
+    const rk = (Array.isArray(d.ranking) ? d.ranking.filter((p) => !p.ia) : []).sort((a, b) => (b.agendamentos || 0) - (a.agendamentos || 0) || (b.respostas || 0) - (a.respostas || 0) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
     const eq = d.equipe;
-    const cab = el('div', { class: 'pn-p-cab' }, el('h2', { id: 'pn-t-rank', text: pessoal ? 'Seu desempenho' : 'Ranking da equipe' }),
+    const cab = el('div', { class: 'pn-p-cab' }, el('h2', { id: 'pn-t-rank', text: pessoal ? 'Seu desempenho' : 'Equipe (toque para ver cada pessoa)' }),
       el('span', { class: 'pn-dica', text: eq ? `${fmtN(eq.online)} de ${fmtN(eq.ativas)} online` : NO_PERIODO[d.periodo] }));
     if (!pessoal && ui.ehGestor?.(ui.estado.eu)) cab.append(botaoRedondo(ui, IC.abrir, 'Abrir a equipe', () => ui.mostrar('equipe')));
     // Atalho para o Desempenho do atendimento (quem vê relatórios).
@@ -683,8 +760,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       return bloco;
     }
     const tab = el('div', { class: 'pn-rank', role: 'table', 'aria-label': pessoal ? 'Seus números' : 'Ranking da equipe' },
-      el('div', { class: 'pn-rank-cab', role: 'row' }, ...['#', pessoal ? 'Você' : 'Atendente', 'Respostas', 'Agend.', 'Tempo méd.'].map((t) => el('span', { role: 'columnheader', text: t }))));
+      el('div', { class: 'pn-rank-cab', role: 'row' }, ...['#', pessoal ? 'Você' : 'Atendente', 'Conversas', 'Agend.', 'Conversão', 'Tempo méd.'].map((t) => el('span', { role: 'columnheader', text: t }))));
     rk.forEach((p, i) => tab.append(linhaPessoa(ui, p, i + 1, { pessoal, sozinha: pessoal || rk.length < 2 })));
+    if (ia) tab.append(linhaPessoa(ui, ia, 0, { ia: true, sozinha: true }));
     bloco.append(tab);
     if (!pessoal && rk.every((p) => !p.respostas && !p.agendamentos)) bloco.append(el('div', { class: 'pn-vazio', text: `Ninguém da equipe respondeu ${NO_PERIODO[d.periodo]} ainda. Cada resposta e cada agendamento entram aqui, com o tempo que a cliente esperou.` }));
     return bloco;
@@ -752,7 +830,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return bloco;
   }
 
-  const vazio = (d) => !d.leads?.total && !d.agendamentos?.total && !(d.funil || []).some((x) => x.conversas) && !(d.ranking || []).some((p) => p.respostas || p.agendamentos) && !d.tempoResposta?.geral?.n;
+  const vazio = (d) => (d.escopo === 'pessoal' && d.pessoa ? !d.conversas?.total && !d.agendamentos?.total && !d.respostas?.total : !d.leads?.total) && !d.agendamentos?.total && !(d.funil || []).some((x) => x.conversas) && !(d.ranking || []).some((p) => p.respostas || p.agendamentos) && !d.tempoResposta?.geral?.n;
 
   function esqueleto(ui) {
     const el = ui.el, b = (st) => el('div', { class: 'pn-esq', style: st });
@@ -781,8 +859,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (vazio(d)) raiz.append(el('div', { class: 'pn-aviso' }, el('span', { class: 'pn-ic', html: IC.grafico, 'aria-hidden': 'true' }),
         el('div', {}, el('b', { text: d.escopo === 'pessoal' ? `Seus números ${NO_PERIODO[d.periodo]} ainda estão zerados` : `Ainda sem movimento ${NO_PERIODO[d.periodo]}` }),
           d.escopo === 'pessoal' ? 'Quando as clientes começarem a chamar e você responder, seus leads, tempo de resposta e agendamentos aparecem aqui.' : 'Os números aparecem aqui assim que as clientes começarem a chamar no WhatsApp: leads, tempo de resposta, agendamentos e o ranking da equipe.')));
+      if (d.escopo === 'pessoal' && d.pessoa) {
+        // Atendente: só os números dela (o servidor já manda só isso).
+        raiz.append(blocoAgora(ui, d, { abrirConversas: true }));
+        caixa.replaceChildren(raiz); caixa.scrollTop = rolagem; return;
+      }
       raiz.append(blocoCurva(ui, d));
-      raiz.append(el('div', { class: 'pn-grade' }, blocoMeta(ui, d), blocoFunil(ui, d), blocoRanking(ui, d), blocoIaEquipe(ui, d), blocoHoje(ui, s.extra)));
+      raiz.append(el('div', { class: 'pn-grade' }, s.meta?.oculta ? null : blocoMeta(ui, d), blocoFunil(ui, d), blocoRanking(ui, d), blocoIaEquipe(ui, d), blocoHoje(ui, s.extra)));
       // Comercial (/telas/comercial.js): minha meta, ranking por período, serviços, metas e comissão, Painel na TV.
       const comercial = window.SintoniaComercial?.bloco(ui);
       if (comercial) raiz.append(comercial);
@@ -802,7 +885,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const [painel, atualizacoes, ligacoes, meta] = await Promise.allSettled([
       ui.api(`/api/painel/completo?periodo=${encodeURIComponent(periodo)}`),
       ui.api('/api/atualizacoes'),
-      ui.api('/api/ligacoes'),
+      ui.estado.eu && !ui.ehGestor(ui.estado.eu) ? Promise.resolve(null) : ui.api('/api/ligacoes'),
       ui.api('/api/painel/meta'),
     ]);
     if (g !== s.geracao) return; // chegou resposta de um pedido mais antigo

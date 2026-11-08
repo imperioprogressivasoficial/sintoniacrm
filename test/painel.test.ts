@@ -81,7 +81,7 @@ type Painel = {
   agendamentos: { ia: number; equipe: number; total: number; anterior: number; conversaoPct: number | null };
   leadsPorHora: number[];
   funil: Array<{ etapa: string; conversas: number }>;
-  ranking: Array<{ nome: string; respostas: number; agendamentos: number; tempoMedioRespostaSeg: number | null; conversasDona: number; ligacoes: number; online: boolean }>;
+  ranking: Array<{ usuarioId?: string | null; nome: string; respostas: number; agendamentos: number; tempoMedioRespostaSeg: number | null; conversasDona: number; ligacoes: number; online: boolean }>;
   equipe: { ativas: number; online: number; onlineNomes: string[] } | null;
 };
 type Serie = { unidade: 'hora' | 'dia'; pontos: Array<{ chave: string; rotulo: string; leads: number; agendamentos: number }> };
@@ -114,8 +114,10 @@ describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
     expect(p.funil.find((f) => f.etapa === 'agendada')!.conversas).toBe(2);
     for (const f of p.funil) expect(f.conversas).toBe(esperado(f.etapa));
 
-    expect(p.ranking.map((x) => x.nome)).toEqual(['Carla Lima', 'Rita Recepção', 'Bia Souza']);
-    expect(p.ranking[0]).toEqual({ usuarioId: g.gente.carla.id, nome: 'Carla Lima', papel: 'atendente', respostas: 1, agendamentos: 1, tempoMedioRespostaSeg: 300, conversasDona: 1, ligacoes: 0, online: false });
+    // A IA entra no fim, como mais uma linha da equipe.
+    expect(p.ranking.map((x) => x.nome)).toEqual(['Carla Lima', 'Rita Recepção', 'Bia Souza', 'IA da Sintonia']);
+    expect(p.ranking[0]).toEqual({ usuarioId: g.gente.carla.id, nome: 'Carla Lima', papel: 'atendente', ia: false, conversas: 1, conversaoPct: 100, respostas: 1, agendamentos: 1, tempoMedioRespostaSeg: 300, conversasDona: 1, ligacoes: 0, online: false });
+    expect(p.ranking[3]).toMatchObject({ usuarioId: 'ia', ia: true, agendamentos: 1 });
     expect(p.ranking[1]).toMatchObject({ respostas: 1, agendamentos: 0, tempoMedioRespostaSeg: 600, conversasDona: 1, ligacoes: 1 });
     expect(p.ranking[2]).toMatchObject({ respostas: 0, tempoMedioRespostaSeg: null, online: true });
     expect(p.equipe).toEqual({ ativas: 3, online: 1, onlineNomes: ['Bia Souza'] });
@@ -128,7 +130,7 @@ describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
     expect(ontem.leadsPorHora).toEqual(horas({ 11: 1, 19: 1 }));
     expect(ontem.agendamentos.conversaoPct).toBe(0);
     expect(ontem.primeiraResposta.ia).toEqual({ mediaSeg: 930, n: 2 }); // 15 min de prazo + 30 s pensando
-    expect(ontem.ranking.every((x) => x.respostas === 0)).toBe(true);
+    expect(ontem.ranking.filter((x) => x.usuarioId !== 'ia').every((x) => x.respostas === 0)).toBe(true);
     const sete = (await g.como(g.gente.admin, 'GET', '/api/painel/completo?periodo=7d')).json() as Painel;
     expect(sete.leads.total).toBe(6);
     expect(sete.leadsPorHora).toEqual(horas({ 9: 1, 11: 1, 14: 1, 15: 1, 16: 1, 19: 1 }));
@@ -155,25 +157,40 @@ describe.each(ambientes)('Painel da gestão ($nome)', (amb) => {
     expect(norte.escopo).toBe('unidades');
     expect(norte.leads).toEqual({ total: 3, anterior: 1, variacaoPct: 200 });
     expect(norte.agendamentos).toMatchObject({ ia: 1, equipe: 1 });
-    expect(norte.ranking.map((x) => x.nome)).toEqual(['Carla Lima', 'Bia Souza']);
+    expect(norte.ranking.map((x) => x.nome)).toEqual(['Carla Lima', 'Bia Souza', 'IA da Sintonia']);
     expect(norte.equipe).toEqual({ ativas: 2, online: 1, onlineNomes: ['Bia Souza'] });
 
-    const carla = (await g.como(g.gente.carla, 'GET', '/api/painel/completo')).json() as Painel;
-    expect(carla.escopo).toBe('pessoal');
-    expect(carla.leads.total).toBe(3); // a dela (Joana) e as sem dona da unidade
-    expect(carla.ranking.map((x) => x.nome)).toEqual(['Carla Lima']);
-    expect(carla.equipe).toBeNull();
+    // A IA entra como uma linha da equipe.
+    expect(norte.ranking.find((x) => x.nome === 'IA da Sintonia')).toMatchObject({ usuarioId: 'ia', agendamentos: 1 });
 
-    const rita = (await g.como(g.gente.rita, 'GET', '/api/painel/completo')).json() as Painel;
-    expect(rita.leads.total).toBe(1);
-    expect(rita.primeiraResposta.equipe).toEqual({ mediaSeg: 600, n: 1 });
-    expect(rita.ranking).toEqual([expect.objectContaining({ nome: 'Rita Recepção', ligacoes: 1, respostas: 1 })]);
-    expect(rita.funil.reduce((s, f) => s + f.conversas, 0)).toBe(1);
+    // Atendente: só os números dela, decidido no servidor (nada da equipe, nada da unidade).
+    type Pessoa = { escopo: string; pessoa: { id: string; nome: string }; conversas: { total: number }; respostas: { total: number }; agendamentos: { total: number }; ligacoes: { total: number }; tempoMedioRespostaSeg: { atual: number | null }; conversaoPct: { atual: number | null }; agora: { conversasDela: number | null; esperando: number | null } };
+    const carla = (await g.como(g.gente.carla, 'GET', '/api/painel/completo')).json() as Pessoa & Record<string, unknown>;
+    expect(carla.escopo).toBe('pessoal');
+    expect(carla.pessoa).toMatchObject({ id: g.gente.carla.id, nome: 'Carla Lima' });
+    expect(carla).toMatchObject({ conversas: { total: 1 }, respostas: { total: 1 }, agendamentos: { total: 1 }, conversaoPct: { atual: 100 }, agora: { conversasDela: 1 } });
+    expect(carla.tempoMedioRespostaSeg.atual).toBe(300);
+    expect(carla.ranking).toBeUndefined();
+    expect(carla.leads).toBeUndefined();
+    expect(carla.funil).toBeUndefined();
+
+    const rita = (await g.como(g.gente.rita, 'GET', '/api/painel/completo')).json() as Pessoa;
+    expect(rita).toMatchObject({ escopo: 'pessoal', conversas: { total: 1 }, respostas: { total: 1 }, ligacoes: { total: 1 }, agendamentos: { total: 0 } });
+    expect(rita.tempoMedioRespostaSeg.atual).toBe(600);
+
+    // A atendente não pega os números de outra pessoa nem da IA; a gestão pega os de quem é do alcance dela.
+    expect((await g.como(g.gente.carla, 'GET', `/api/painel/pessoa?usuarioId=${g.gente.bia.id}`)).statusCode).toBe(403);
+    expect((await g.como(g.gente.carla, 'GET', '/api/painel/pessoa?usuarioId=ia')).statusCode).toBe(403);
+    expect((await g.como(g.gente.carla, 'GET', `/api/painel/pessoa?usuarioId=${g.gente.carla.id}`)).json()).toMatchObject({ agendamentos: { total: 1 } });
+    expect((await g.como(g.gente.gerenteNorte, 'GET', `/api/painel/pessoa?usuarioId=${g.gente.carla.id}`)).json()).toMatchObject({ pessoa: { nome: 'Carla Lima' }, agendamentos: { total: 1 } });
+    expect((await g.como(g.gente.gerenteNorte, 'GET', `/api/painel/pessoa?usuarioId=${g.gente.rita.id}`)).statusCode).toBe(403); // Sumaré
+    expect((await g.como(g.gente.admin, 'GET', `/api/painel/pessoa?usuarioId=${g.gente.rita.id}`)).json()).toMatchObject({ ligacoes: { total: 1 } });
+    expect((await g.como(g.gente.admin, 'GET', '/api/painel/pessoa?usuarioId=ia')).json()).toMatchObject({ pessoa: { id: 'ia' }, agendamentos: { total: 1 } });
   });
 });
 
 describe.each(ambientes)('Meta do mês do Dashboard ($nome)', (amb) => {
-  it('começa sem meta, a gestão define, todos veem o progresso do seu alcance', async () => {
+  it('começa sem meta, a gestão define e vê o progresso do seu alcance; a atendente não vê o cartão', async () => {
     const g = await cenario(amb);
     const vazia = await g.como(g.gente.admin, 'GET', '/api/painel/meta');
     expect(vazia.statusCode).toBe(200);
@@ -190,10 +207,9 @@ describe.each(ambientes)('Meta do mês do Dashboard ($nome)', (amb) => {
     // A gerente do Norte vê o progresso só da unidade dela (os 2 agendamentos são do Norte).
     expect(ok.json()).toMatchObject({ meta: 8, agendamentos: 2, progressoPct: 25, faltam: 6, atualizadaPor: 'Gil Norte' });
 
-    const carla = (await g.como(g.gente.carla, 'GET', '/api/painel/meta')).json();
-    expect(carla).toMatchObject({ meta: 8, podeEditar: false });
-    const rita = (await g.como(g.gente.rita, 'GET', '/api/painel/meta')).json();
-    expect(rita).toMatchObject({ meta: 8, agendamentos: 0, progressoPct: 0, faltam: 8 });
+    // A meta é da empresa: a atendente não vê esse cartão (não há meta por pessoa).
+    expect((await g.como(g.gente.carla, 'GET', '/api/painel/meta')).json()).toEqual({ oculta: true });
+    expect((await g.como(g.gente.rita, 'GET', '/api/painel/meta')).json()).toEqual({ oculta: true });
 
     // Tirar a meta.
     expect((await g.como(g.gente.direcao, 'PUT', '/api/painel/meta', { agendamentosMes: null })).json()).toMatchObject({ meta: null, progressoPct: null });

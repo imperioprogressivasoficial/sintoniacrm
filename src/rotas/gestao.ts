@@ -8,7 +8,7 @@ import { PALETA_TAGS, type Tags } from '../tags/tags.js';
 import { AlteracaoConfigIA, AlteracaoMeta, type Empresa } from '../empresa/empresa.js';
 import type { BaseConhecimento } from '../ai/base.js';
 import type { PedidoSimulacao, RespostaSimulacao } from '../ai/simulacao.js';
-import { mesDe, montarPainel, PERIODOS, type FontePainel } from '../painel/painel.js';
+import { mesDe, montarPainel, montarPessoa, PERIODOS, type FontePainel } from '../painel/painel.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 
 /**
@@ -212,11 +212,31 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
 
   // ------------------------------------------------------------ painel completo
   const PainelQ = z.object({ periodo: z.enum(PERIODOS).default('hoje') });
+  // Atendente (sem gestão): só os números dela, decidido aqui no servidor. Gestão: a equipe toda do seu alcance.
+  const soOsDela = (u: FastifyRequest['usuario']) => Boolean(u && !ehGestor(u));
   app.get('/api/painel/completo', async (req) => {
     const { periodo } = PainelQ.parse(req.query);
     const u = req.usuario;
+    if (u && soOsDela(u)) return montarPessoa(o.painel, { periodo, agora: o.agora(), escopo: { empresaId: u.empresaId }, pessoa: { id: u.id, nome: u.nome } });
     const equipe = u && o.contas ? await o.contas.listarUsuarios(u.empresaId) : undefined;
     return montarPainel(o.painel, { periodo, agora: o.agora(), escopo: escopoDe(u), usuario: u, equipe });
+  });
+
+  // Visão individual de uma pessoa da equipe (ou da IA): a gestão abre tocando na pessoa; a atendente só a própria.
+  const PessoaQ = z.object({ periodo: z.enum(PERIODOS).default('hoje'), usuarioId: z.string().min(1).max(64).optional() });
+  app.get('/api/painel/pessoa', async (req) => {
+    const { periodo, usuarioId } = PessoaQ.parse(req.query);
+    const u = req.usuario;
+    const alvoId = usuarioId ?? u?.id ?? 'ia';
+    if (u && soOsDela(u) && alvoId !== u.id) throw proibido('Você vê só os seus números.');
+    if (alvoId === 'ia') return montarPessoa(o.painel, { periodo, agora: o.agora(), escopo: escopoDe(u), pessoa: 'ia' });
+    const pessoas = u && o.contas ? await o.contas.listarUsuarios(u.empresaId) : [];
+    const alvo = pessoas.find((p) => p.id === alvoId) ?? (u?.id === alvoId ? u : undefined);
+    if (!alvo) throw Object.assign(new Error('Pessoa não encontrada.'), { statusCode: 404 });
+    // Gerente vê só quem atende as unidades dela.
+    if (u && ehGestor(u) && !veTudo(u) && !alvo.unidades.some((x) => u.unidades.includes(x))) throw proibido('Essa pessoa não é da sua unidade.');
+    const escopo = u && soOsDela(u) ? { empresaId: u.empresaId } : escopoDe(u);
+    return montarPessoa(o.painel, { periodo, agora: o.agora(), escopo, pessoa: { id: alvo.id, nome: alvo.nome } });
   });
 
   // ---- meta do mês (agendamentos): todos veem o progresso do seu alcance; só a gestão muda o número
@@ -243,7 +263,8 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
       podeEditar: !req.usuario || ehGestor(req.usuario),
     };
   };
-  app.get('/api/painel/meta', async (req) => progressoMeta(req));
+  // Meta é da empresa (não há meta por pessoa): a atendente não vê o cartão.
+  app.get('/api/painel/meta', async (req) => (soOsDela(req.usuario) ? { oculta: true } : progressoMeta(req)));
   app.put('/api/painel/meta', async (req) => {
     exigeGestao(req, 'Só a gerência, a direção e a administração mudam a meta do mês.');
     await exige(o.empresa, 'A empresa').alterarMeta(AlteracaoMeta.parse(req.body), quem(req));

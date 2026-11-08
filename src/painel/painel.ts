@@ -31,6 +31,8 @@ export interface AtividadeAtendente {
   agendamentos: number;
   ligacoes: number;
   tempo: Soma;
+  /** Conversas diferentes em que respondeu no período. */
+  conversas: number;
 }
 
 export interface DadosPeriodo {
@@ -46,6 +48,8 @@ export interface DadosPeriodo {
   resposta: { equipe: Soma; ia: Soma };
   agendamentos: { ia: number; equipe: number };
   atendentes: AtividadeAtendente[];
+  /** A IA como "atendente": respostas e conversas diferentes em que respondeu. */
+  ia: { respostas: number; conversas: number };
 }
 
 export interface DadosAgora {
@@ -54,6 +58,8 @@ export interface DadosAgora {
   donas: Map<string, number>;
   /** Quem deu sinal de vida (digitando ou respondeu) desde o instante pedido. */
   online: Set<string>;
+  /** usuarioId → conversas dela em que a última mensagem é da cliente (esperando resposta). */
+  esperando: Map<string, number>;
 }
 
 export interface FontePainel {
@@ -67,13 +73,16 @@ const horaBahia = (d: Date) => partesBahia(d).hora;
 const tempoDe = (e: Pick<Evento, 'dados'>) => (typeof e.dados?.tempoRespostaMs === 'number' ? e.dados.tempoRespostaMs : undefined);
 const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 const chaveAtendente = (id: string | null, nome: string) => id ?? `nome:${nome.toLowerCase()}`;
+/** A última mensagem da conversa é da cliente (ninguém respondeu depois). */
+const esperandoResposta = (c: Pick<Conversa, 'ultimaMensagemCliente' | 'ultimaMensagemEquipe' | 'ultimaMensagemIa'>) =>
+  Boolean(c.ultimaMensagemCliente) && c.ultimaMensagemCliente!.getTime() > Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
 const funilVazio = () => Object.fromEntries(ETAPAS.map((e) => [e, 0])) as Record<Etapa, number>;
 
 function juntarAtendente(mapa: Map<string, AtividadeAtendente>, id: string | null, nome: string): AtividadeAtendente {
   const k = chaveAtendente(id, nome);
   let a = mapa.get(k);
   if (!a) {
-    a = { id, nome, respostas: 0, agendamentos: 0, ligacoes: 0, tempo: zero() };
+    a = { id, nome, respostas: 0, agendamentos: 0, ligacoes: 0, tempo: zero(), conversas: 0 };
     mapa.set(k, a);
   }
   return a;
@@ -103,8 +112,11 @@ export class PainelMemoria implements FontePainel {
       resposta: { equipe: zero(), ia: zero() },
       agendamentos: { ia: 0, equipe: 0 },
       atendentes: [],
+      ia: { respostas: 0, conversas: 0 },
     };
     const atendentes = new Map<string, AtividadeAtendente>();
+    const conversasDe = new Map<AtividadeAtendente, Set<string>>();
+    const conversasIa = new Set<string>();
     for (const e of dentro) {
       if (e.tipo === 'conversa_nova') {
         r.leads++;
@@ -118,6 +130,10 @@ export class PainelMemoria implements FontePainel {
       }
       const t = tempoDe(e);
       if (e.tipo === 'ia_respondeu' && t !== undefined) r.resposta.ia = somar(r.resposta.ia, { somaMs: t, n: 1 });
+      if (e.tipo === 'ia_respondeu') {
+        r.ia.respostas++;
+        conversasIa.add(e.conversaId!);
+      }
       if (e.tipo === 'equipe_respondeu' && t !== undefined) r.resposta.equipe = somar(r.resposta.equipe, { somaMs: t, n: 1 });
       if (e.tipo === 'agendamento_ia') r.agendamentos.ia++;
       if (e.tipo === 'agendamento_equipe') r.agendamentos.equipe++;
@@ -134,11 +150,15 @@ export class PainelMemoria implements FontePainel {
         if (e.tipo === 'equipe_respondeu') {
           a.respostas++;
           if (t !== undefined) a.tempo = somar(a.tempo, { somaMs: t, n: 1 });
+          if (!conversasDe.has(a)) conversasDe.set(a, new Set());
+          conversasDe.get(a)!.add(e.conversaId!);
         }
         if (e.tipo === 'agendamento_equipe') a.agendamentos++;
         if (e.tipo === 'ligacao') a.ligacoes++;
       }
     }
+    for (const [a, cs] of conversasDe) a.conversas = cs.size;
+    r.ia.conversas = conversasIa.size;
     r.atendentes = [...atendentes.values()];
     return r;
   }
@@ -147,9 +167,11 @@ export class PainelMemoria implements FontePainel {
     const conversas = await this.conversasNoEscopo(escopo);
     const funil = funilVazio();
     const donas = new Map<string, number>();
+    const esperando = new Map<string, number>();
     for (const c of conversas.values()) {
       funil[c.etapa]++;
       if (c.responsavelId) donas.set(c.responsavelId, (donas.get(c.responsavelId) ?? 0) + 1);
+      if (c.responsavelId && esperandoResposta(c)) esperando.set(c.responsavelId, (esperando.get(c.responsavelId) ?? 0) + 1);
     }
     // "Online" olha a empresa toda (quem está trabalhando), não só as conversas visíveis.
     const online = new Set<string>();
@@ -160,7 +182,7 @@ export class PainelMemoria implements FontePainel {
       const id = texto(e.dados?.atendenteId);
       if (e.tipo === 'equipe_respondeu' && id && e.conversaId && ids.has(e.conversaId)) online.add(id);
     }
-    return { funil, donas, online };
+    return { funil, donas, online, esperando };
   }
 }
 
@@ -177,8 +199,8 @@ export class PainelPostgres implements FontePainel {
     };
     const ehNumero = `jsonb_typeof(e.dados->'tempoRespostaMs') = 'number'`;
     const [porTipo, porHora, primeira, atend] = await Promise.all([
-      consulta<{ tipo: string; n: number; nt: number; st: number }>(
-        (onde) => `select e.tipo, count(*)::int as n,
+      consulta<{ tipo: string; n: number; nt: number; st: number; nc: number }>(
+        (onde) => `select e.tipo, count(*)::int as n, count(distinct e.conversa_id)::int as nc,
                           count(*) filter (where ${ehNumero})::int as nt,
                           coalesce(sum((e.dados->>'tempoRespostaMs')::float8) filter (where ${ehNumero}), 0)::float8 as st
                      from sintonia.eventos e join sintonia.conversas c on c.id = e.conversa_id
@@ -207,9 +229,9 @@ export class PainelPostgres implements FontePainel {
                     group by r.tipo`,
         [ate],
       ),
-      consulta<{ id: string | null; nome: string; tipo: string; n: number; nt: number; st: number }>(
+      consulta<{ id: string | null; nome: string; tipo: string; n: number; nt: number; st: number; nc: number }>(
         (onde) => `select nullif(btrim(e.dados->>'atendenteId'), '') as id, coalesce(btrim(e.dados->>'atendente'), '') as nome, e.tipo,
-                          count(*)::int as n,
+                          count(*)::int as n, count(distinct e.conversa_id)::int as nc,
                           count(*) filter (where ${ehNumero})::int as nt,
                           coalesce(sum((e.dados->>'tempoRespostaMs')::float8) filter (where ${ehNumero}), 0)::float8 as st
                      from sintonia.eventos e join sintonia.conversas c on c.id = e.conversa_id
@@ -243,6 +265,7 @@ export class PainelPostgres implements FontePainel {
       if (x.tipo === 'equipe_respondeu') {
         a.respostas += x.n;
         a.tempo = somar(a.tempo, { somaMs: x.st, n: x.nt });
+        a.conversas += x.nc;
       }
       if (x.tipo === 'agendamento_equipe') a.agendamentos += x.n;
       if (x.tipo === 'ligacao') a.ligacoes += x.n;
@@ -260,6 +283,7 @@ export class PainelPostgres implements FontePainel {
       },
       agendamentos: { ia: tipo('agendamento_ia')?.n ?? 0, equipe: tipo('agendamento_equipe')?.n ?? 0 },
       atendentes: [...atendentes.values()],
+      ia: { respostas: tipo('ia_respondeu')?.n ?? 0, conversas: tipo('ia_respondeu')?.nc ?? 0 },
     };
   }
 
@@ -268,7 +292,7 @@ export class PainelPostgres implements FontePainel {
     const onde = sqlEscopo(escopo, 'c', p1);
     const p2: unknown[] = [onlineDesde];
     const daEmpresa = sqlEscopo({ empresaId: escopo.empresaId }, 'c', p2);
-    const [etapas, donas, online] = await Promise.all([
+    const [etapas, donas, online, esperando] = await Promise.all([
       this.pool.query<{ etapa: Etapa; n: number }>(`select c.etapa, count(*)::int as n from sintonia.conversas c where ${onde} group by c.etapa`, p1),
       this.pool.query<{ id: string; n: number }>(
         `select c.responsavel_id::text as id, count(*)::int as n from sintonia.conversas c where c.responsavel_id is not null and ${onde} group by 1`,
@@ -282,10 +306,17 @@ export class PainelPostgres implements FontePainel {
           where e.em >= $1 and e.tipo = 'equipe_respondeu' and nullif(e.dados->>'atendenteId', '') is not null and ${daEmpresa}`,
         p2,
       ),
+      this.pool.query<{ id: string; n: number }>(
+        `select c.responsavel_id::text as id, count(*)::int as n from sintonia.conversas c
+          where c.responsavel_id is not null and c.ultima_mensagem_cliente is not null
+            and c.ultima_mensagem_cliente > greatest(coalesce(c.ultima_mensagem_equipe, '-infinity'), coalesce(c.ultima_mensagem_ia, '-infinity'))
+            and ${onde} group by 1`,
+        p1,
+      ),
     ]);
     const funil = funilVazio();
     for (const x of etapas.rows) funil[x.etapa] = x.n;
-    return { funil, donas: new Map(donas.rows.map((x) => [x.id, x.n])), online: new Set(online.rows.map((x) => x.id)) };
+    return { funil, donas: new Map(donas.rows.map((x) => [x.id, x.n])), online: new Set(online.rows.map((x) => x.id)), esperando: new Map(esperando.rows.map((x) => [x.id, x.n])) };
   }
 }
 
@@ -378,6 +409,7 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
     agendamentos: number;
     ligacoes: number;
     tempo: Soma;
+    conversas: number;
   }
   const linhas = new Map<string, Linha>();
   const linha = (id: string | null, nome: string) => {
@@ -385,7 +417,7 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
     const k = pessoa ? pessoa.id : `nome:${nome.toLowerCase()}`;
     let l = linhas.get(k);
     if (!l) {
-      l = { usuarioId: pessoa?.id ?? null, nome: pessoa?.nome ?? nome, papel: pessoa?.papel ?? null, respostas: 0, agendamentos: 0, ligacoes: 0, tempo: zero() };
+      l = { usuarioId: pessoa?.id ?? null, nome: pessoa?.nome ?? nome, papel: pessoa?.papel ?? null, respostas: 0, agendamentos: 0, ligacoes: 0, tempo: zero(), conversas: 0 };
       linhas.set(k, l);
     }
     return l;
@@ -397,11 +429,15 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
     l.agendamentos += a.agendamentos;
     l.ligacoes += a.ligacoes;
     l.tempo = somar(l.tempo, a.tempo);
+    l.conversas += a.conversas;
   }
   let ranking = [...linhas.values()].map((l) => ({
-    usuarioId: l.usuarioId,
+    usuarioId: l.usuarioId as string | null,
     nome: l.nome,
     papel: l.papel,
+    ia: false,
+    conversas: l.conversas,
+    conversaoPct: pct(l.agendamentos, l.conversas),
     respostas: l.respostas,
     agendamentos: l.agendamentos,
     tempoMedioRespostaSeg: media(l.tempo).mediaSeg,
@@ -411,6 +447,11 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
   }));
   if (pessoal) ranking = ranking.filter((r) => r.usuarioId === u!.id || r.nome.toLowerCase() === u!.nome.toLowerCase());
   ranking.sort((a, b) => b.agendamentos - a.agendamentos || b.respostas - a.respostas || a.nome.localeCompare(b.nome, 'pt-BR'));
+  // A IA entra como mais uma "atendente" na tabela da equipe (gestão).
+  if (!pessoal && (atual.ia.respostas || atual.agendamentos.ia)) {
+    ranking.push({ usuarioId: 'ia', nome: 'IA da Sintonia', papel: 'ia', ia: true, conversas: atual.ia.conversas, conversaoPct: pct(atual.agendamentos.ia, atual.ia.conversas), respostas: atual.ia.respostas,
+      agendamentos: atual.agendamentos.ia, tempoMedioRespostaSeg: media(atual.resposta.ia).mediaSeg, conversasDona: 0, ligacoes: 0, online: true });
+  }
 
   const totalAg = atual.agendamentos.ia + atual.agendamentos.equipe;
   const totalAgAnterior = anterior.agendamentos.ia + anterior.agendamentos.equipe;
@@ -452,5 +493,56 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
             onlineNomes: atendentesEquipe.filter((p) => agora.online.has(p.id)).map((p) => p.nome),
           }
         : null,
+  };
+}
+
+// ---------------------------------------------------------------- números de uma pessoa (ou da IA)
+
+export interface OpcoesPessoa {
+  periodo: Periodo;
+  agora: Date;
+  /** Onde contar (o alcance de quem pede; para a própria atendente, a empresa toda: são os atos dela). */
+  escopo: EscopoVisao;
+  /** A pessoa ou 'ia'. */
+  pessoa: { id: string; nome: string } | 'ia';
+}
+
+/**
+ * A visão individual do Dashboard: o que a pessoa fez no período (conversas atendidas, respostas, agendamentos,
+ * tempo médio, ligações, conversão) comparado com o período anterior, e o agora (conversas dela, esperando por ela).
+ * É a tela da atendente e a que a gestão abre ao tocar numa pessoa da equipe.
+ */
+export async function montarPessoa(fonte: FontePainel, o: OpcoesPessoa) {
+  const j = janela(o.periodo, o.agora);
+  const [atual, anterior, agora] = await Promise.all([
+    fonte.periodo(j.inicio, j.fim, o.escopo, o.agora),
+    fonte.periodo(j.anterior.inicio, j.anterior.fim, o.escopo, o.agora),
+    fonte.agora(o.escopo, new Date(o.agora.getTime() - ONLINE_MIN * MIN)),
+  ]);
+  const p = o.pessoa;
+  const dela = (d: DadosPeriodo) => {
+    if (p === 'ia') return { conversas: d.ia.conversas, respostas: d.ia.respostas, agendamentos: d.agendamentos.ia, ligacoes: 0, tempo: d.resposta.ia };
+    const as = d.atendentes.filter((a) => a.id === p.id || (!a.id && a.nome.toLowerCase() === p.nome.toLowerCase()));
+    return as.reduce((t, a) => ({ conversas: t.conversas + a.conversas, respostas: t.respostas + a.respostas, agendamentos: t.agendamentos + a.agendamentos, ligacoes: t.ligacoes + a.ligacoes, tempo: somar(t.tempo, a.tempo) }),
+      { conversas: 0, respostas: 0, agendamentos: 0, ligacoes: 0, tempo: zero() });
+  };
+  const a = dela(atual);
+  const b = dela(anterior);
+  const comparar = (x: number, y: number) => ({ total: x, anterior: y });
+  return {
+    periodo: o.periodo,
+    escopo: 'pessoal' as const,
+    pessoa: p === 'ia' ? { id: 'ia', nome: 'IA da Sintonia', ia: true } : { id: p.id, nome: p.nome, ia: false },
+    inicio: j.inicio,
+    fim: j.fim,
+    anterior: j.anterior,
+    atualizadoEm: o.agora,
+    conversas: comparar(a.conversas, b.conversas),
+    respostas: comparar(a.respostas, b.respostas),
+    agendamentos: comparar(a.agendamentos, b.agendamentos),
+    ligacoes: comparar(a.ligacoes, b.ligacoes),
+    tempoMedioRespostaSeg: { atual: media(a.tempo).mediaSeg, anterior: media(b.tempo).mediaSeg },
+    conversaoPct: { atual: pct(a.agendamentos, a.conversas), anterior: pct(b.agendamentos, b.conversas) },
+    agora: p === 'ia' ? { conversasDela: null, esperando: null } : { conversasDela: agora.donas.get(p.id) ?? 0, esperando: agora.esperando.get(p.id) ?? 0 },
   };
 }
