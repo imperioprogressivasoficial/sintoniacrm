@@ -26,7 +26,7 @@
   .pl-pagina.entrando { transform: translateX(100%); }
   .pl-pagina.atras { transform: translateX(-24%); opacity: 0; pointer-events: none; }
   .pl-pagina.saindo { transform: translateX(100%); }
-  .pl-topo { flex: none; display: flex; align-items: center; gap: 6px; min-height: 58px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top)); border-bottom: 1px solid var(--linha); }
+  .pl-topo { flex: none; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top)); border-bottom: 1px solid var(--linha); }
   .pl-topo h2 { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pl-bt { all: unset; cursor: pointer; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); }
   .pl-bt:hover { background: var(--sel); }

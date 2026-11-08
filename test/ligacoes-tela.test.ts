@@ -28,6 +28,8 @@ describe.each(ambientes)('Tela Ligações ($nome)', (amb) => {
     const r = await g.como(g.gente.carla, 'POST', '/api/ligacoes/efetuada', { conversaId: marina.id });
     expect(r.statusCode).toBe(201);
     expect((await g.como(g.gente.carla, 'POST', `/api/conversas/${marina.id}/ligacao`, { resultado: 'atendeu', chamadaId: r.json().id })).statusCode).toBe(200);
+    const passa = () => { g.relogio.t = new Date(g.relogio.t.getTime() + 60_000); };
+    passa();
     // Número digitado (Teclado): sem conversa, só quem ligou e a gestão veem.
     expect((await g.como(g.gente.carla, 'POST', '/api/ligacoes/efetuada', { telefone: '(71) 3333-4444' })).statusCode).toBe(201);
     expect((await g.como(g.gente.carla, 'POST', '/api/ligacoes/efetuada', { telefone: '12' })).statusCode).toBe(400);
@@ -36,8 +38,10 @@ describe.each(ambientes)('Tela Ligações ($nome)', (amb) => {
 
     // O WhatsApp avisa: Paula ligou e ninguém atendeu; depois, outra que foi atendida.
     const aviso = (id: string, from: string, status: string) => g.app.inject({ method: 'POST', url: '/webhooks/evolution', payload: { event: 'call', instance: 'imperio-sumare', data: { id, from: `${from}@s.whatsapp.net`, status } } });
+    passa();
     expect((await aviso('W1', paula.telefone, 'offer')).json()).toMatchObject({ chamadas: 1 });
     await aviso('W1', paula.telefone, 'timeout'); // mesma chamada: não duplica
+    passa();
     await aviso('W2', marina.telefone, 'offer');
     await aviso('W2', marina.telefone, 'accept'); // atendeu no celular da loja
 
@@ -56,6 +60,7 @@ describe.each(ambientes)('Tela Ligações ($nome)', (amb) => {
     expect((await lista(g.gente.admin)).length).toBe(4);
 
     // Limpar histórico: some só para quem limpou.
+    passa();
     expect((await g.como(g.gente.carla, 'POST', '/api/ligacoes/limpar', {})).statusCode).toBe(200);
     expect(await lista()).toEqual([]);
     expect((await lista(g.gente.admin)).length).toBe(4);
