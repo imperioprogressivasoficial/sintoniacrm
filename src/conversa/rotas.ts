@@ -248,6 +248,48 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     texto: z.string().trim().min(1, 'Escreva a primeira mensagem.').max(4000),
     atendente: z.string().min(1).max(120).optional(),
   });
+  // ---- "Novo contato" (Nova conversa como no WhatsApp): cria a conversa vazia, sem mandar mensagem.
+  // A unidade (número que fala) é escolhida sozinha: a da conversa que a cliente já tem, senão a da pessoa,
+  // senão a primeira com WhatsApp conectado.
+  const NovoContato = z.object({
+    telefone: z.string().max(40),
+    nome: z.string().trim().max(80).optional(),
+    canal: z.enum(['whatsapp']).default('whatsapp'),
+    unidade: UNIDADE.optional(),
+  });
+  app.post('/api/conversas/contato', async (req, reply) => {
+    const b = NovoContato.parse(req.body);
+    const u = req.usuario;
+    const telefone = normalizarCelular(b.telefone);
+    if (!telefone) throw erro('Número inválido. Use DDD + celular, por exemplo (71) 98812-4471.', 400);
+    const todas = (await o.repo.listarConversas()).filter((c) => c.empresaId === o.empresaId && c.telefone === telefone);
+    const minhas = todas.filter((c) => visivel(req, c)).sort((a, x) => x.atualizadaEm.getTime() - a.atualizadaEm.getTime());
+    if (minhas.length && !b.unidade) return reply.code(200).send({ ok: true, id: minhas[0]!.id, nova: false, telefone });
+    if (todas.length && !minhas.length) {
+      const dona = todas[0]!;
+      throw erro(`Essa cliente já conversa com ${dona.responsavelNome ?? 'outra pessoa'}. Peça para a gerente transferir para você.`, 409);
+    }
+    const podeUnidade = (x: UnidadeId) => !u || veTudo(u) || u.unidades.includes(x);
+    const conectada = (x: UnidadeId) => !('erro' in o.canalDa(x));
+    const candidatas: UnidadeId[] = [
+      ...(b.unidade ? [b.unidade] : []),
+      ...(u && !veTudo(u) ? (u.unidades as UnidadeId[]) : []),
+      ...(UNIDADE.options as UnidadeId[]),
+    ];
+    const unidade = candidatas.find((x) => podeUnidade(x) && conectada(x));
+    if (!unidade) {
+      const motivo = candidatas.find(podeUnidade);
+      throw erro(motivo ? (o.canalDa(motivo) as { erro: string }).erro : 'Você ainda não tem unidade. Peça para a gestão liberar.', 400);
+    }
+    const canal = o.canalDa(unidade) as { canalId: string };
+    const { conversa, nova } = await o.repo.buscarOuCriarConversa({ empresaId: o.empresaId, unidade, canalId: canal.canalId, telefone, nome: b.nome || undefined, agora: agora() });
+    if (nova) {
+      await o.repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade: conversa.unidade, em: agora() });
+      if (o.modoInicial) await o.sintonia.mudarModo(conversa.id, await o.modoInicial());
+    }
+    return reply.code(nova ? 201 : 200).send({ ok: true, id: conversa.id, nova, telefone, unidade });
+  });
+
   app.post('/api/conversas/nova', async (req, reply) => {
     const b = Nova.parse(req.body);
     const u = req.usuario;

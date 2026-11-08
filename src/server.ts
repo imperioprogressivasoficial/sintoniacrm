@@ -51,7 +51,7 @@ export interface DependenciasServidor {
   /** Fotos de perfil das clientes. */
   fotos?: { da(c: import('./domain.js').Conversa): Promise<{ conteudo: Buffer; tipo: string } | null> };
   /** O que está ligado, para a tela avisar (IA, agenda, números). */
-  situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean; sistema?: string; sistemaNome?: string | null; falta?: string[]; pronta?: boolean }> } };
+  situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; canais?: Record<string, boolean>; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean; sistema?: string; sistemaNome?: string | null; falta?: string[]; pronta?: boolean }> } };
   /** Simulador: uma "cliente" escreve pelo WhatsApp de teste (texto e, se quiser, uma mídia de teste). */
   clienteTeste?: (p: {
     unidade: 'norte' | 'sumare';

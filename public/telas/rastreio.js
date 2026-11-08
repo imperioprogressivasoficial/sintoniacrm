@@ -120,7 +120,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function passa(id, _origem, filtro = s.filtro) {
     if (!filtro) return true;
     const x = s.selos[id];
-    if (filtro === 'sem') return !x;
+    // "Sem origem" junta a origem desconhecida e a sem selo nenhum.
+    if (filtro === 'sem') return !x || (x.icone || 'desconhecido') === 'desconhecido';
     const [tipo, ...resto] = filtro.split(':');
     const v = resto.join(':');
     if (tipo === 'icone') return (x?.icone || 'desconhecido') === v;
@@ -132,10 +133,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     for (const x of Object.values(s.selos)) { canais.add(x.canal); if (x.campanha) campanhas.add(x.campanha); }
     return [
       { nome: 'Todas as origens', valor: '' },
-      ...Object.keys(NOME_ICONE).map((ic) => ({ nome: NOME_ICONE[ic], valor: `icone:${ic}`, icone: ic })),
+      ...Object.keys(NOME_ICONE).filter((ic) => ic !== 'desconhecido').map((ic) => ({ nome: NOME_ICONE[ic], valor: `icone:${ic}`, icone: ic })),
       ...[...canais].map((c) => ({ nome: `${ICONE[c] || ''} ${NOME_CANAL[c] || c}`, valor: `canal:${c}` })),
       ...[...campanhas].sort().map((c) => ({ nome: `📣 Campanha: ${c}`, valor: `campanha:${c}` })),
-      { nome: 'Sem origem identificada', valor: 'sem' },
+      { nome: 'Sem origem', valor: 'sem', icone: 'desconhecido' },
     ];
   }
   /** Botão de filtro (lista de Conversas e CRM). */

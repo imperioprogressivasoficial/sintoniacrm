@@ -18,19 +18,13 @@
   };
 
   const CSS = `
-  dialog.cia { padding: 0; width: min(760px, calc(100vw - 48px)); height: min(86vh, 860px); max-height: none; border-radius: 28px; overflow: hidden; display: none; flex-direction: column; color: var(--texto); background: var(--fundo); }
-  dialog.cia[open] { display: flex; }
-  dialog.cia::backdrop { background: rgba(4, 18, 31, .45); }
-  @media (max-width: 760px) { dialog.cia { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border-radius: 0; border: 0; } }
-  .cia-topo { display: flex; align-items: center; gap: 10px; padding: 10px 12px; padding-top: calc(10px + env(safe-area-inset-top)); border-bottom: 1px solid var(--linha); flex: none; }
-  .cia-topo h2 { flex: 1; margin: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; min-width: 0; }
   .cia-marca { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #06263f; background: linear-gradient(135deg, #0ffcbe 0%, #1a8be0 100%); box-shadow: 0 0 12px rgba(15,252,190,.35); }
   .cia-marca svg { width: 18px; height: 18px; }
   .cia-bt { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--texto); background: var(--sel); }
   .cia-bt.redondo { width: 40px; padding: 0; justify-content: center; }
   .cia-bt svg { width: 18px; height: 18px; }
   .cia-bt:focus-visible, .cia-enviar:focus-visible, .cia-inicio:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
-  .cia-msgs { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+  .cia-msgs { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
   .cia-vazio { margin: auto 0; display: grid; justify-items: center; gap: 14px; text-align: center; padding: 10px 4px 20px; }
   .cia-vazio .cia-marca { width: 56px; height: 56px; } .cia-vazio .cia-marca svg { width: 30px; height: 30px; }
   .cia-vazio h3 { margin: 0; font-size: 21px; }
@@ -104,25 +98,19 @@
     return caixa;
   }
 
-  // ---------- tela ----------
-  let d, msgs, campo, enviar;
+  // ---------- tela (uma página do painel lateral) ----------
+  let msgs, campo, enviar, compor, novaBt, pronto = false;
   function montar() {
-    if (d) return;
+    if (pronto) return;
+    pronto = true;
     document.head.append(el('style', { id: 'chat-ia-css', text: CSS }));
     campo = el('textarea', { rows: '1', maxlength: String(MAX_TEXTO), placeholder: 'Pergunte à IA…', 'aria-label': 'Pergunta para a IA', enterkeyhint: 'send' });
     enviar = el('button', { type: 'button', class: 'cia-enviar', 'aria-label': 'Enviar', html: SVG.enviar, onclick: () => mandar(campo.value) });
     msgs = el('div', { class: 'cia-msgs', role: 'log', 'aria-live': 'polite' });
-    d = el('dialog', { class: 'cia', id: 'd-chat-ia', 'aria-label': 'Ajuda da IA' },
-      el('div', { class: 'cia-topo' },
-        el('button', { type: 'button', class: 'cia-bt redondo', 'aria-label': 'Fechar', html: SVG.fechar, onclick: fechar }),
-        el('h2', {}, el('span', { class: 'cia-marca', html: SVG.brilho }), el('span', { text: 'Ajuda da IA' })),
-        el('button', { type: 'button', class: 'cia-bt', html: SVG.nova, title: 'Começar uma conversa nova', onclick: limpar }, el('span', { text: 'Nova conversa' }))),
-      msgs,
-      el('div', { class: 'cia-compor' }, campo, enviar));
-    d.addEventListener('click', (e) => { if (e.target === d) fechar(); });
+    compor = el('div', { class: 'cia-compor' }, campo, enviar);
+    novaBt = el('button', { type: 'button', class: 'cia-bt', html: SVG.nova, title: 'Começar uma conversa nova', onclick: limpar }, el('span', { text: 'Nova' }));
     campo.addEventListener('input', () => { ajustarCampo(); atualizarBotao(); });
     campo.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(min-width: 761px)').matches) { e.preventDefault(); mandar(campo.value); } });
-    document.body.append(d);
   }
   const ajustarCampo = () => { campo.style.height = 'auto'; campo.style.height = Math.min(campo.scrollHeight + 2, 160) + 'px'; };
   const atualizarBotao = () => { enviar.disabled = enviando || !campo.value.trim(); };
@@ -160,7 +148,7 @@
       gravar();
     } catch (x) {
       falha = { texto: x.message || 'Não deu certo agora.', semChave: x.status === 501 || /chave da IA/i.test(x.message || '') };
-    } finally { enviando = false; if (d?.open) desenhar(); }
+    } finally { enviando = false; if (msgs?.isConnected) desenhar(); }
   }
   function mandar(texto) {
     const t = String(texto || '').trim().slice(0, MAX_TEXTO);
@@ -175,11 +163,10 @@
 
   function abrir() {
     montar();
-    if (!d.open) d.showModal();
+    window.SintoniaPainel.abrir({ id: 'chat-ia', titulo: 'Ajuda da IA', larga: true, semMargem: true, acoes: [novaBt], montar: (corpo) => corpo.append(msgs, compor) });
     desenhar(); ajustarCampo();
-    if (matchMedia('(min-width: 761px)').matches) campo.focus({ preventScroll: true });
   }
-  function fechar() { d?.close(); }
+  function fechar() { if (window.SintoniaPainel.aberto('chat-ia')) window.SintoniaPainel.fechar(); }
 
   window.SintoniaChatIa = { abrir, fechar, limpar };
 })();

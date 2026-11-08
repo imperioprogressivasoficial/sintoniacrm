@@ -541,17 +541,23 @@
   #filtros .chip .luz { margin-right: -1px; }
   .qtd-filtros { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-azul); color: #fff; }
   .qtd-filtros:empty { display: none; }
-  .painel-filtros { position: absolute; z-index: 35; right: 12px; left: 12px; top: calc(100% - 4px); max-width: 380px; margin-left: auto; padding: 14px; border-radius: 20px; display: grid; gap: 14px;
-    background: var(--painel); border: 1px solid var(--vidro-borda, var(--linha)); box-shadow: 0 18px 44px rgba(7, 29, 51, .22); max-height: 70dvh; overflow-y: auto; }
-  .painel-filtros[hidden] { display: none; }
-  .painel-filtros h4 { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--sub); }
-  .painel-filtros .grupo { display: flex; flex-wrap: wrap; gap: 6px; }
-  .painel-filtros .chip { box-shadow: inset 0 0 0 1px var(--linha); }
-  .painel-filtros .sel-origem { width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 12px; border-radius: 12px; font: inherit; font-size: 14px; color: var(--texto); background: var(--vidro-item, var(--entrada)); border: 1px solid var(--vidro-borda, var(--linha)); }
-  html[data-tema="escuro"] .painel-filtros .sel-origem option { background: #0d3050; }
-  .painel-filtros .rodape-filtros { display: flex; justify-content: space-between; align-items: center; }
-  .painel-filtros .rodape-filtros button { all: unset; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--marca-azul); padding: 6px 4px; }
-  html[data-tema="escuro"] .painel-filtros .rodape-filtros button { color: var(--marca-menta); }
+  /* filtros da lista: página do painel lateral */
+  .painel-filtros { display: flex; flex-direction: column; gap: 4px; padding-bottom: 0 !important; }
+  .painel-filtros .grupo-filtro { padding: 6px 0 14px; border-bottom: 1px solid var(--linha); scroll-margin-top: 8px; }
+  .painel-filtros .grupo-filtro:last-of-type { border-bottom: 0; }
+  .painel-filtros h4 { margin: 8px 2px 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
+  .painel-filtros .grupo { display: flex; flex-wrap: wrap; gap: 8px; }
+  .painel-filtros .chip { box-shadow: inset 0 0 0 1px var(--linha); min-height: 36px; display: inline-flex; align-items: center; gap: 6px; }
+  .painel-filtros .chip .ra-ic, .painel-filtros .chip svg { width: 16px; height: 16px; }
+  .painel-filtros .rodape-filtros { position: sticky; bottom: 0; margin: auto -16px 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--fundo); border-top: 1px solid var(--linha); }
+  .painel-filtros .rodape-filtros .limpar { all: unset; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--marca-azul); padding: 10px 4px; }
+  .painel-filtros .rodape-filtros .limpar[disabled] { opacity: .4; cursor: default; }
+  html[data-tema="escuro"] .painel-filtros .rodape-filtros .limpar { color: var(--marca-menta); }
+  .painel-filtros .rodape-filtros .mostrar { padding: 12px 22px; font-size: 15px; font-weight: 700; }
+  .filtros-ativos { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 16px 8px; }
+  .filtros-ativos[hidden] { display: none; }
+  .pilula-filtro { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--texto); background: color-mix(in srgb, var(--marca-azul) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 40%, transparent); }
+  .pilula-filtro i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; line-height: 1; background: color-mix(in srgb, var(--texto) 10%, transparent); }
   /* ficha: relatório do cliente */
   .ficha .perfil .f-chegou { display: block; margin-top: 4px; font-size: 13px; color: var(--sub); }
   .ficha .perfil .f-chegou:empty { display: none; }
@@ -937,10 +943,7 @@
           <div class="menu-lista" id="menu-lista" hidden role="menu">
             <button role="menuitem" data-acao="selecionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Selecionar conversas</span></button>
             <button role="menuitem" data-acao="lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><path d="m8.5 12.5 2.3 2.3 4.7-4.8"/></svg><span>Marcar tudo como lido</span></button>
-            <button role="menuitem" data-acao="so-nao-lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><circle cx="18" cy="6" r="3" fill="currentColor" stroke="none"/></svg><span id="ml-so-txt">Mostrar só não lidas</span></button>
-            <button role="menuitem" data-acao="listas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Listas (tags)</span></button>
-            <button role="menuitem" data-acao="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Abrir CRM</span></button>
-            <button role="menuitem" data-acao="nova"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Nova conversa</span></button>
+            <button role="menuitem" data-acao="etapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Filtrar por etapa do CRM</span></button>
           </div>
           <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
           <h1 class="titulo-grande">Conversas</h1>
@@ -953,7 +956,7 @@
             <button class="chip" data-f="esperando" aria-pressed="false">Não lidas <span class="qtd" id="qtd-nao-lidas"></span></button>
             <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA atendendo</button>
           </div>
-          <div class="painel-filtros" id="painel-filtros" hidden role="dialog" aria-label="Filtros da lista"></div>
+          <div class="filtros-ativos" id="filtros-ativos" hidden></div>
         </div>
         <div class="itens" id="itens"></div>
       </div>
@@ -1400,6 +1403,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.quem === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if (estado.quem === 'sem' && c.responsavelId) return false;
     if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
+    if (estado.etapasFiltro.size && !estado.etapasFiltro.has(c.etapa)) return false;
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
@@ -1449,57 +1453,75 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function carregarTags() {
     try { estado.tags = await api('/api/tags'); } catch { return; }
     if (estado.tagFiltro && !estado.tags.some((t) => t.id === estado.tagFiltro)) estado.tagFiltro = null;
-    if (!$('painel-filtros').hidden) desenharPainelFiltros();
+    if (window.SintoniaPainel?.aberto('filtros')) desenharPainelFiltros();
     contarFiltros();
   }
 
-  // ---------- botão "Filtros" da lista: atendente, unidade, etiqueta e origem ----------
-  estado.quem = ''; estado.unidadeFiltro = '';
-  const filtrosLigados = () => [estado.quem, estado.unidadeFiltro, estado.tagFiltro, window.SintoniaRastreio?.filtro?.()].filter(Boolean).length;
+  // ---------- botão "Filtros" da lista: painel lateral com quem atende, etapa do CRM, unidade, etiqueta e origem ----------
+  estado.quem = ''; estado.unidadeFiltro = ''; estado.etapasFiltro = new Set();
+  const filtrosLigados = () => [estado.quem, estado.unidadeFiltro, estado.tagFiltro, window.SintoniaRastreio?.filtro?.()].filter(Boolean).length + estado.etapasFiltro.size;
+  /** Filtros ligados como pílulas removíveis: [{ rotulo, tirar }]. */
+  function pilulasFiltro() {
+    const ps = [];
+    if (estado.quem) ps.push({ rotulo: estado.quem === 'minhas' ? 'Minhas' : 'Sem atendente', tirar: () => { estado.quem = ''; } });
+    for (const e of estado.etapasFiltro) ps.push({ rotulo: NOME_ETAPA[e] || e, tirar: () => { estado.etapasFiltro.delete(e); } });
+    if (estado.unidadeFiltro) ps.push({ rotulo: UNIDADE[estado.unidadeFiltro] || estado.unidadeFiltro, tirar: () => { estado.unidadeFiltro = ''; } });
+    if (estado.tagFiltro) { const t = estado.tags.find((x) => x.id === estado.tagFiltro); ps.push({ rotulo: t?.nome || 'Etiqueta', tirar: () => { estado.tagFiltro = null; } }); }
+    const ra = window.SintoniaRastreio; const fo = ra?.filtro?.();
+    if (fo) { const o = (ra.opcoesFiltro?.() || []).find((x) => x.valor === fo); ps.push({ rotulo: (o?.nome || 'Origem').trim(), tirar: () => ra.definirFiltro('') }); }
+    return ps;
+  }
   function contarFiltros() {
     const n = filtrosLigados();
     $('qtd-filtros').textContent = n ? String(n) : '';
     $('bt-filtros').classList.toggle('ligado', n > 0);
+    const caixa = $('filtros-ativos');
+    const ps = pilulasFiltro();
+    caixa.hidden = !ps.length;
+    caixa.replaceChildren(...ps.map((p) => el('button', { type: 'button', class: 'pilula-filtro', 'aria-label': `Tirar filtro ${p.rotulo}`, onclick: () => { p.tirar(); contarFiltros(); desenharLista(); if (window.SintoniaPainel?.aberto('filtros')) desenharPainelFiltros(); } },
+      el('span', { text: p.rotulo }), el('i', { 'aria-hidden': 'true', text: '×' }))));
   }
   function limparFiltros() {
-    estado.quem = ''; estado.unidadeFiltro = ''; estado.tagFiltro = null; window.SintoniaRastreio?.definirFiltro?.('');
-    contarFiltros(); if (!$('painel-filtros').hidden) desenharPainelFiltros(); desenharLista();
+    estado.quem = ''; estado.unidadeFiltro = ''; estado.tagFiltro = null; estado.etapasFiltro.clear(); window.SintoniaRastreio?.definirFiltro?.('');
+    contarFiltros(); if (window.SintoniaPainel?.aberto('filtros')) desenharPainelFiltros(); desenharLista();
   }
+  let corpoFiltros = null;
   function desenharPainelFiltros() {
-    const p = $('painel-filtros');
+    const p = corpoFiltros; if (!p) return;
+    const rolagem = p.scrollTop;
     const mudar = (fn) => () => { fn(); contarFiltros(); desenharPainelFiltros(); desenharLista(); };
     const chip = (rotulo, ligado, fn, extra) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(ligado), onclick: mudar(fn) }, ...(extra ? [extra] : []), document.createTextNode(rotulo));
-    const grupo = (titulo, ...filhos) => el('div', {}, el('h4', { text: titulo }), el('div', { class: 'grupo' }, ...filhos));
-    const partes = [grupo('Quem atende',
+    const grupo = (id, titulo, ...filhos) => el('section', { class: 'grupo-filtro', 'data-grupo': id }, el('h4', { text: titulo }), el('div', { class: 'grupo' }, ...filhos));
+    const partes = [grupo('quem', 'Quem atende',
       chip('Todas', !estado.quem, () => { estado.quem = ''; }),
       chip('Minhas', estado.quem === 'minhas', () => { estado.quem = estado.quem === 'minhas' ? '' : 'minhas'; }),
       chip('Sem atendente', estado.quem === 'sem', () => { estado.quem = estado.quem === 'sem' ? '' : 'sem'; }))];
+    partes.push(grupo('etapa', 'Etapa do CRM', ...ETAPAS.map(([id, nome]) => chip(nome, estado.etapasFiltro.has(id), () => { estado.etapasFiltro.has(id) ? estado.etapasFiltro.delete(id) : estado.etapasFiltro.add(id); }))));
     const unidades = [...new Set(estado.conversas.map((c) => c.unidade))];
-    if (unidades.length > 1) partes.push(grupo('Unidade', chip('Todas', !estado.unidadeFiltro, () => { estado.unidadeFiltro = ''; }),
+    if (unidades.length > 1) partes.push(grupo('unidade', 'Unidade', chip('Todas', !estado.unidadeFiltro, () => { estado.unidadeFiltro = ''; }),
       ...unidades.map((u) => chip(UNIDADE[u] || u, estado.unidadeFiltro === u, () => { estado.unidadeFiltro = estado.unidadeFiltro === u ? '' : u; }))));
-    if (estado.tags.length || ehGestor(estado.eu)) partes.push(grupo('Etiqueta',
-      ...estado.tags.map((t) => { const i = el('i', { class: 'ponto-tag' }); i.style.setProperty('--cor', t.cor); const b = chip(t.nome, estado.tagFiltro === t.id, () => { estado.tagFiltro = estado.tagFiltro === t.id ? null : t.id; }, i); b.classList.add('chip-tag'); b.style.setProperty('--cor', t.cor); return b; }),
-      ...(ehGestor(estado.eu) ? [el('button', { class: 'chip chip-nova', type: 'button', text: '+ Etiqueta', onclick: () => { fecharPainelFiltros(); abrirTags(); } })] : [])));
+    if (estado.tags.length) partes.push(grupo('etiqueta', 'Etiqueta',
+      ...estado.tags.map((t) => { const i = el('i', { class: 'ponto-tag' }); i.style.setProperty('--cor', t.cor); const b = chip(t.nome, estado.tagFiltro === t.id, () => { estado.tagFiltro = estado.tagFiltro === t.id ? null : t.id; }, i); b.classList.add('chip-tag'); b.style.setProperty('--cor', t.cor); return b; })));
     const ra = window.SintoniaRastreio;
     if (ra?.opcoesFiltro) {
-      const sel = el('select', { class: 'sel-origem', 'aria-label': 'Origem' }, ...ra.opcoesFiltro().map((o) => el('option', { value: o.valor, text: o.nome.trim() })));
-      sel.value = ra.filtro();
-      sel.addEventListener('change', () => { ra.definirFiltro(sel.value); contarFiltros(); desenharLista(); });
-      partes.push(el('div', {}, el('h4', { text: 'Origem' }), sel));
+      const atual = ra.filtro();
+      partes.push(grupo('origem', 'Origem', ...ra.opcoesFiltro().map((o) => chip(o.nome.trim(), atual === o.valor, () => { ra.definirFiltro(atual === o.valor ? '' : o.valor); }, o.icone ? ra.iconeEl({ icone: o.icone }) : null))));
     }
-    partes.push(el('div', { class: 'rodape-filtros' }, el('button', { type: 'button', text: 'Limpar filtros', onclick: limparFiltros }), el('button', { type: 'button', text: 'Pronto', onclick: fecharPainelFiltros })));
+    const n = filtradas().length;
+    partes.push(el('div', { class: 'rodape-filtros' },
+      el('button', { type: 'button', class: 'limpar', text: 'Limpar filtros', disabled: filtrosLigados() ? null : '', onclick: limparFiltros }),
+      el('button', { type: 'button', class: 'botao mostrar', text: n === 1 ? 'Mostrar 1 conversa' : `Mostrar ${n} conversas`, onclick: () => window.SintoniaPainel.fechar() })));
     p.replaceChildren(...partes);
+    p.scrollTop = rolagem;
   }
-  function fecharPainelFiltros() { $('painel-filtros').hidden = true; $('bt-filtros').setAttribute('aria-expanded', 'false'); }
-  $('bt-filtros').addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const p = $('painel-filtros');
-    if (!p.hidden) return fecharPainelFiltros();
-    desenharPainelFiltros(); p.hidden = false; $('bt-filtros').setAttribute('aria-expanded', 'true');
-    await window.SintoniaRastreio?.carregarSelos?.(true); if (!p.hidden) desenharPainelFiltros();
-  });
-  document.addEventListener('click', (e) => { const p = $('painel-filtros'); if (!p.hidden && !p.contains(e.target) && !e.target.closest?.('#bt-filtros')) fecharPainelFiltros(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('painel-filtros').hidden) { fecharPainelFiltros(); $('bt-filtros').focus(); } });
+  async function abrirFiltros(foco) {
+    window.SintoniaPainel.abrir({ id: 'filtros', titulo: 'Filtros', montar: (corpo) => { corpo.classList.add('painel-filtros'); corpoFiltros = corpo; desenharPainelFiltros(); },
+      aoFechar: () => { corpoFiltros = null; $('bt-filtros').setAttribute('aria-expanded', 'false'); } });
+    $('bt-filtros').setAttribute('aria-expanded', 'true');
+    if (foco) setTimeout(() => { const g = corpoFiltros?.querySelector(`[data-grupo="${foco}"]`); g?.scrollIntoView({ block: 'start' }); g?.querySelector('button')?.focus({ preventScroll: true }); }, 260);
+    await window.SintoniaRastreio?.carregarSelos?.(true); desenharPainelFiltros();
+  }
+  $('bt-filtros').addEventListener('click', (e) => { e.stopPropagation(); abrirFiltros(); });
   document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
   document.querySelectorAll('dialog.folha').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
 
@@ -1540,7 +1562,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       return el('section', { class: 'et-funil' }, el('h3', { class: 'et-titulo', text: f.sistema ? 'CRM · ' + f.nome : f.nome }), linha);
     }));
   }
-  async function abrirCrmRapido() { await carregarTags(); desenharEtiquetar(); $('et-crm').replaceChildren(); $('d-etiquetar').showModal(); desenharCrmRapido(); }
+  // Etapa e etiquetas: página do painel lateral (empilha sobre a ficha quando ela está aberta).
+  async function abrirCrmRapido() {
+    await carregarTags(); desenharEtiquetar(); $('et-crm').replaceChildren();
+    const P = window.SintoniaPainel; const casa = $('d-etiquetar');
+    const partes = ['et-crm', 'et-titulo-tags', 'et-lista', 'et-vazio'].map((id) => $(id));
+    const op = { id: 'etiquetas', titulo: 'Etapa e etiquetas', montar: (corpo) => corpo.append(...partes), aoSair: () => casa.append(...partes) };
+    if (P.aberto('ficha') || P.atual()?.id === 'ficha') P.empurrar(op); else P.abrir(op);
+    desenharCrmRapido();
+  }
   $('f-crm').addEventListener('click', abrirCrmRapido);
 
   // gestão das tags (Conta › Tags)
@@ -1603,7 +1633,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!$('ficha').hidden) carregarContato();
     dicaFicha();
   }
-  $('voltar').addEventListener('click', () => { $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa'); $('ficha').hidden = true; });
+  $('voltar').addEventListener('click', () => { $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa'); fecharFicha(); });
 
   async function carregarConversa() {
     if (!estado.aberta) return;
@@ -1701,7 +1731,17 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         el('ol', {}, ...etapas.map((e) => el('li', {}, el('b', { text: e.nome }), el('span', { text: dataCurta(e.em) }))))) : null].filter(Boolean));
     caixa.hidden = false;
   }
-  const abrirFicha = () => { $('ficha').hidden = false; $('menu-mais').hidden = true; carregarContato(); };
+  // Ficha da cliente: abre no painel lateral (a <aside> muda de lugar e volta ao fechar).
+  const abrirFicha = () => {
+    $('menu-mais').hidden = true;
+    const f = $('ficha'), casa = $('v-conversas');
+    if (window.SintoniaPainel?.aberto('ficha')) { carregarContato(); return; }
+    window.SintoniaPainel.abrir({ id: 'ficha', titulo: 'Dados da cliente', semMargem: true,
+      montar: (corpo) => { corpo.append(f); f.hidden = false; },
+      aoSair: () => { f.hidden = true; casa.append(f); } });
+    carregarContato();
+  };
+  const fecharFicha = () => { if (window.SintoniaPainel?.aberto('ficha') || window.SintoniaPainel?.atual()?.id === 'etiquetas') window.SintoniaPainel.fechar(); $('ficha').hidden = true; };
   const TIPO_CAMPO = { texto: 'Texto', lista: 'Lista', sim_nao: 'Sim ou não', numero: 'Número', data: 'Data' };
   estado.ficha = null;
   async function carregarContato() {
@@ -1785,7 +1825,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     setTimeout(() => document.addEventListener('pointerdown', sumir, true), 50);
     setTimeout(sumir, 7000);
   }
-  $('fechar-ficha').addEventListener('click', () => { $('ficha').hidden = true; });
+  $('fechar-ficha').addEventListener('click', fecharFicha);
 
   // quem responde: o chip de baixo abre a folha "IA" (quem atende + ajuda para escrever), em conversa-extras.js
   $('modo').addEventListener('click', () => window.SintoniaConversa?.abrirMenuIa?.());
@@ -2121,9 +2161,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // simulador
   $('nova-teste').addEventListener('click', () => $('d-teste').showModal());
   $('nova-teste-cel').addEventListener('click', () => (window.SintoniaConversa?.novaConversa ? window.SintoniaConversa.novaConversa() : $('d-teste').showModal()));
-  // Menu ⋯ da lista (como o do WhatsApp): selecionar, marcar tudo como lido, só não lidas, listas…
+  // Menu ⋯ da lista (como o do WhatsApp): selecionar, marcar tudo como lido e filtrar por etapa do CRM.
   const menuLista = $('menu-lista');
-  $('mais-lista').addEventListener('click', (e) => { e.stopPropagation(); $('ml-so-txt').textContent = estado.filtro === 'esperando' ? 'Mostrar todas' : 'Mostrar só não lidas'; menuLista.hidden = !menuLista.hidden; });
+  $('mais-lista').addEventListener('click', (e) => { e.stopPropagation(); menuLista.hidden = !menuLista.hidden; });
   document.addEventListener('click', (e) => { if (!menuLista.hidden && !menuLista.contains(e.target)) menuLista.hidden = true; });
   menuLista.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-acao]'); if (!b) return; menuLista.hidden = true;
@@ -2133,10 +2173,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       try { const r = await post('/api/conversas/lidas', { todas: true }); await atualizar(); toast(r.marcadas ? 'Tudo marcado como lido ✓' : 'Nada para marcar.'); } catch (x) { toast(x.message); }
       return;
     }
-    if (a === 'so-nao-lidas') { const alvo = estado.filtro === 'esperando' ? 'todas' : 'esperando'; document.querySelector(`[data-f="${alvo}"]`).click(); return; }
-    if (a === 'listas') { if (ehGestor(estado.eu)) return abrirTags(); setTimeout(() => $('bt-filtros').click(), 0); return; }
-    if (a === 'crm') return mostrar('funil');
-    if (a === 'nova') return $('nova-teste-cel').click();
+    if (a === 'etapa') return abrirFiltros('etapa');
   });
   // Seleção de várias conversas
   function entrarSelecao() { estado.selecao = new Set(); $('barra-selecao').hidden = false; $('acoes-selecao').hidden = false; $('casca').classList.add('em-selecao'); atualizarSelecao(); desenharLista(); }
@@ -2401,7 +2438,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   function fecharConversa(aviso) {
     estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
-    $('chat-aberto').style.display = 'none'; $('sem-conversa').hidden = false; $('ficha').hidden = true;
+    $('chat-aberto').style.display = 'none'; $('sem-conversa').hidden = false; fecharFicha();
     $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa');
     desenharLista();
     if (aviso) toast(aviso);
@@ -2790,6 +2827,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   })();
 })();
 </script>
+<script src="/painel-lateral.js" defer></script>
 <script src="/telas/comercial.js" defer></script>
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>

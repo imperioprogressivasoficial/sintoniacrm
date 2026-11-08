@@ -2,7 +2,8 @@
  * Bolinha de acesso rápido da Sintonia (como o AssistiveTouch do iPhone).
  * Fica na borda da tela, dá para arrastar para onde quiser e, ao tocar, abre um painel de vidro
  * com os atalhos em grade (3 colunas). Fora de uso, fica meio apagada.
- * A canetinha no canto do painel deixa cada pessoa escolher e ordenar os atalhos (1 a 9), guardados neste aparelho.
+ * A canetinha no canto do painel abre, no painel lateral, o editor: cada pessoa escolhe e ordena os atalhos (1 a 9),
+ * guardados neste aparelho.
  *
  *   AcessoRapido.criar({
  *     catalogo: [{ id, rotulo, icone: '<svg…>', acao, ativo?: () => bool, disponivel?: () => bool }],
@@ -61,12 +62,10 @@
     let aviso = '';
 
     function desenharPainel() {
-      painel.classList.toggle('editando', Boolean(editando));
       painel.replaceChildren();
-      if (editando) return desenharEditor();
       painel.append(el('div', { class: 'ar-cab' },
         el('span', { class: 'ar-tit', text: rotulo }),
-        el('button', { type: 'button', class: 'ar-editar', 'aria-label': 'Editar atalhos', title: 'Editar atalhos', html: SVG.lapis, onclick: (e) => { e.stopPropagation(); editando = escolhidos(); aviso = ''; desenharPainel(); painel.querySelector('.ar-pronto')?.focus({ preventScroll: true }); } })));
+        el('button', { type: 'button', class: 'ar-editar', 'aria-label': 'Editar atalhos', title: 'Editar atalhos', html: SVG.lapis, onclick: (e) => { e.stopPropagation(); fechar(); abrirEditor(); } })));
       for (const id of escolhidos()) {
         const it = porId.get(id);
         const b = document.createElement('button');
@@ -78,44 +77,53 @@
       }
     }
 
+    /** Editor dos atalhos: uma página do painel lateral (window.SintoniaPainel). */
+    let corpoEditor = null;
+    function abrirEditor() {
+      editando = escolhidos(); aviso = '';
+      const P = window.SintoniaPainel;
+      if (!P) return;
+      P.abrir({ id: 'atalhos', titulo: 'Atalhos da bolinha', montar: (corpo) => { corpoEditor = corpo; corpo.classList.add('are'); desenharEditor(); },
+        aoFechar: () => { editando = null; corpoEditor = null; } });
+    }
     function desenharEditor() {
+      const corpo = corpoEditor; if (!corpo) return;
       const todos = catalogo.filter(disponivel);
       const ligados = editando.filter((id) => porId.has(id));
       const desligados = todos.map((c) => c.id).filter((id) => !ligados.includes(id));
       const salvar = () => gravarJson(chaveItens(), editando);
-      const mudar = (fn) => { fn(); aviso = ''; salvar(); desenharPainel(); };
+      const mudar = (fn) => { fn(); aviso = ''; salvar(); desenharEditor(); };
       const linha = (id, ligado, pos) => {
         const it = porId.get(id);
-        const marcar = el('button', { type: 'button', class: 'ar-marca' + (ligado ? ' sim' : ''), role: 'switch', 'aria-checked': String(ligado), 'aria-label': `${ligado ? 'Tirar' : 'Mostrar'} ${it.rotulo}`, html: ligado ? SVG.ok : '',
-          onclick: (e) => {
-            e.stopPropagation();
+        const marcar = el('button', { type: 'button', class: 'are-marca' + (ligado ? ' sim' : ''), role: 'switch', 'aria-checked': String(ligado), 'aria-label': `${ligado ? 'Tirar' : 'Mostrar'} ${it.rotulo}`, html: ligado ? SVG.ok : '',
+          onclick: () => {
             if (ligado) {
-              if (editando.length <= 1) { aviso = 'Deixe pelo menos 1 atalho.'; desenharPainel(); return; }
+              if (editando.length <= 1) { aviso = 'Deixe pelo menos 1 atalho.'; desenharEditor(); return; }
               mudar(() => { editando = editando.filter((x) => x !== id); });
             } else {
-              if (editando.length >= MAX) { aviso = `Cabem até ${MAX} atalhos. Tire um para pôr este.`; desenharPainel(); return; }
+              if (editando.length >= MAX) { aviso = `Cabem até ${MAX} atalhos. Tire um para pôr este.`; desenharEditor(); return; }
               mudar(() => { editando = [...editando, id]; });
             }
           } });
         const mover = (d) => mudar(() => { const i = editando.indexOf(id); const j = i + d; [editando[i], editando[j]] = [editando[j], editando[i]]; });
-        return el('div', { class: 'ar-linha' + (ligado ? '' : ' fora') },
-          el('span', { class: 'ar-ic', html: it.icone || '' }),
-          el('span', { class: 'ar-nome', text: it.rotulo }),
-          ligado ? el('span', { class: 'ar-ordem' },
-            el('button', { type: 'button', 'aria-label': `Subir ${it.rotulo}`, html: SVG.cima, disabled: pos === 0 ? '' : null, onclick: (e) => { e.stopPropagation(); mover(-1); } }),
-            el('button', { type: 'button', 'aria-label': `Descer ${it.rotulo}`, html: SVG.baixo, disabled: pos === ligados.length - 1 ? '' : null, onclick: (e) => { e.stopPropagation(); mover(1); } })) : null,
+        return el('div', { class: 'are-linha' + (ligado ? '' : ' fora') },
+          el('span', { class: 'are-ic', html: it.icone || '' }),
+          el('span', { class: 'are-nome', text: it.rotulo }),
+          ligado ? el('span', { class: 'are-ordem' },
+            el('button', { type: 'button', 'aria-label': `Subir ${it.rotulo}`, html: SVG.cima, disabled: pos === 0 ? '' : null, onclick: () => mover(-1) }),
+            el('button', { type: 'button', 'aria-label': `Descer ${it.rotulo}`, html: SVG.baixo, disabled: pos === ligados.length - 1 ? '' : null, onclick: () => mover(1) })) : null,
           marcar);
       };
-      painel.append(
-        el('div', { class: 'ar-cab' },
-          el('span', { class: 'ar-tit', text: 'Editar atalhos' }),
-          el('button', { type: 'button', class: 'ar-pronto', text: 'Pronto', onclick: (e) => { e.stopPropagation(); editando = null; desenharPainel(); } })),
-        el('p', { class: 'ar-dica', text: `Escolha de 1 a ${MAX} atalhos e a ordem deles. ${ligados.length} de ${MAX} na bolinha.` }),
-        el('div', { class: 'ar-lista', role: 'group', 'aria-label': 'Na bolinha' }, ...ligados.map((id, i) => linha(id, true, i))),
-        desligados.length ? el('div', { class: 'ar-sub', text: 'Mais atalhos' }) : null,
-        desligados.length ? el('div', { class: 'ar-lista', role: 'group', 'aria-label': 'Mais atalhos' }, ...desligados.map((id) => linha(id, false))) : null,
-        aviso ? el('p', { class: 'ar-aviso', role: 'alert', text: aviso }) : null,
-        el('button', { type: 'button', class: 'ar-restaurar', text: 'Restaurar padrão', onclick: (e) => { e.stopPropagation(); gravarJson(chaveItens(), null); editando = escolhidos(); aviso = ''; desenharPainel(); } }));
+      corpo.replaceChildren(
+        el('p', { class: 'are-dica', text: `Escolha de 1 a ${MAX} atalhos e a ordem em que aparecem. ${ligados.length} de ${MAX} na bolinha.` }),
+        el('div', { class: 'are-sub', text: 'Na bolinha' }),
+        el('div', { class: 'are-lista', role: 'group', 'aria-label': 'Na bolinha' }, ...ligados.map((id, i) => linha(id, true, i))),
+        desligados.length ? el('div', { class: 'are-sub', text: 'Mais atalhos' }) : null,
+        desligados.length ? el('div', { class: 'are-lista', role: 'group', 'aria-label': 'Mais atalhos' }, ...desligados.map((id) => linha(id, false))) : null,
+        aviso ? el('p', { class: 'are-aviso', role: 'alert', text: aviso }) : null,
+        el('div', { class: 'are-rodape' },
+          el('button', { type: 'button', class: 'are-restaurar', text: 'Restaurar padrão', onclick: () => { gravarJson(chaveItens(), null); editando = escolhidos(); aviso = ''; desenharEditor(); } }),
+          el('button', { type: 'button', class: 'are-pronto', text: 'Pronto', onclick: () => window.SintoniaPainel.fechar() })));
     }
 
     let pos = lerJson(CHAVE) || { lado: 'dir', y: 0.62 };
@@ -133,7 +141,7 @@
       ocioso = setTimeout(() => !aberta && raiz.classList.add('ociosa'), 3000);
     }
     function abrir() {
-      aberta = true; editando = null; acordar(); desenharPainel();
+      aberta = true; acordar(); desenharPainel();
       painel.hidden = false; fundo.classList.add('ver'); raiz.classList.add('aberta');
       requestAnimationFrame(() => painel.classList.add('ver'));
       botao.setAttribute('aria-expanded', 'true');
@@ -141,13 +149,13 @@
     }
     function fechar() {
       if (!aberta) return;
-      aberta = false; editando = null; painel.classList.remove('ver'); fundo.classList.remove('ver'); raiz.classList.remove('aberta');
+      aberta = false; painel.classList.remove('ver'); fundo.classList.remove('ver'); raiz.classList.remove('aberta');
       botao.setAttribute('aria-expanded', 'false');
       setTimeout(() => { if (!aberta) painel.hidden = true; }, 200);
       acordar();
     }
     fundo.addEventListener('click', fechar);
-    addEventListener('keydown', (e) => { if (e.key === 'Escape' && aberta) { if (editando) { editando = null; desenharPainel(); } else { fechar(); botao.focus(); } } });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && aberta) { fechar(); botao.focus(); } });
 
     // arrastar (dedo ou mouse); toque curto abre/fecha
     let arrasto = null; let soltouArrastando = 0;
@@ -177,9 +185,9 @@
     botao.addEventListener('pointercancel', soltar);
     botao.addEventListener('click', () => { if (Date.now() - soltouArrastando < 350) return; aberta ? fechar() : abrir(); });
 
-    addEventListener('resize', () => { if (!editando) fechar(); aplicar(false); });
+    addEventListener('resize', () => { fechar(); aplicar(false); });
     aplicar(false); acordar();
-    return { abrir, fechar, editar() { abrir(); editando = escolhidos(); desenharPainel(); }, escolhidos, mostrar(sim) { raiz.hidden = !sim; if (!sim) fechar(); }, elemento: raiz, painel };
+    return { abrir, fechar, editar: abrirEditor, escolhidos, mostrar(sim) { raiz.hidden = !sim; if (!sim) fechar(); }, elemento: raiz, painel };
   }
 
   window.AcessoRapido = { criar, MAX };

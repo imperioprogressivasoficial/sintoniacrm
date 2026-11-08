@@ -5,7 +5,7 @@
  * - "Respostas rápidas" do +: escolher uma e pôr no campo;
  * - áudios: velocidade 1x / 1,5x / 2x e "Transcrever" (guardado no servidor);
  * - balões de texto: "Ouvir" (voz do navegador, pt-BR) e "Copiar";
- * - "+" do topo da lista: nova conversa por número.
+ * - "+" do topo da lista: Nova conversa = escolher contato (busca, Novo contato com canal) no painel lateral.
  * Usa window.Sintonia.ui (app.html). Texto que vem do servidor entra sempre por textContent. */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
@@ -33,8 +33,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   const CSS = `
   /* ---------- folhas (sobem de baixo no celular) ---------- */
-  dialog.cx-folha { padding-bottom: calc(16px + env(safe-area-inset-bottom)); max-height: min(88vh, 760px); overflow: auto; overscroll-behavior: contain; }
-  dialog.cx-folha .folha-lista button { min-height: 30px; }
+  .cx-folha .folha-lista button { min-height: 30px; }
   .cx-op i { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; color: #fff; background: var(--marca-gradiente); }
   .cx-op i svg { width: 21px; height: 21px; }
   .cx-op.ia i { background: linear-gradient(135deg, #0ffcbe 0%, #1a8be0 100%); color: #06263f; box-shadow: 0 0 12px rgba(15,252,190,.35); }
@@ -166,22 +165,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ehAdmin = () => ['admin', 'direcao'].includes(estado.eu?.papel);
   const linkConexoes = () => (ehAdmin() ? el('a', { href: '/conexoes', text: 'Abrir Conexões' }) : null);
 
-  /** Folha de vidro (sobe de baixo no celular). Devolve { d, corpo, titulo }. */
-  function folha(id, tituloTxt, classe = '') {
-    let d = $(id);
-    if (!d) {
-      const titulo = el('h2');
-      const fechar = el('button', { class: 'icone fechar-folha', type: 'button', 'aria-label': 'Fechar', html: SVG.fechar, onclick: () => d.close() });
-      const corpo = el('div', { class: 'cx-corpo' });
-      d = el('dialog', { id, class: `folha cx-folha ${classe}` }, el('div', { class: 'folha-topo' }, el('span'), titulo, fechar), corpo);
-      d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
-      document.body.append(d);
-      d._corpo = corpo; d._titulo = titulo;
+  /**
+   * Página no painel lateral (window.SintoniaPainel). Devolve { d, corpo, titulo } para o código de antes:
+   * d.close() fecha o painel; d.voltar() volta uma página; titulo.textContent troca o título.
+   * Com { empurrar: true } e o painel aberto, a página entra por cima da atual (seta de voltar).
+   */
+  function folha(id, tituloTxt, classe = '', { empurrar = false } = {}) {
+    const P = window.SintoniaPainel;
+    const atual = P.atual();
+    let pagina;
+    if (P.aberto() && atual?.id === id) { pagina = atual; pagina.titulo(tituloTxt); }
+    else {
+      const op = { id, titulo: tituloTxt, montar: (c) => { c.classList.add('cx-corpo', 'cx-folha', ...String(classe).split(/\s+/).filter(Boolean)); } };
+      pagina = empurrar && P.aberto() ? P.empurrar(op) : P.abrir(op);
     }
-    d._titulo.textContent = tituloTxt;
-    return { d, corpo: d._corpo, titulo: d._titulo };
+    const titulo = { set textContent(t) { pagina.titulo(t); } };
+    const d = { close: () => P.fechar(), voltar: () => P.voltar(), get open() { return P.aberto(); }, _titulo: titulo, pagina };
+    return { d, corpo: pagina.corpo, titulo };
   }
-  const abrirFolha = (d) => { if (!d.open) d.showModal(); };
+  const abrirFolha = () => {};
   const copiar = async (t) => { try { await navigator.clipboard.writeText(t); toast('Copiado ✓'); } catch { toast('Não deu para copiar aqui.'); } };
 
   // ------------------------------------------------------------ respostas rápidas
@@ -280,8 +282,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   // Gerenciar (folha de vidro)
   let editando = null;
-  async function abrirGestao() {
-    const { d, corpo } = folha('d-respostas', 'Respostas rápidas', 'rr-gestao');
+  async function abrirGestao(op = {}) {
+    const { d, corpo } = folha('d-respostas', 'Respostas rápidas', 'rr-gestao', op);
     editando = null;
     await carregarRespostas(true);
     desenharGestao(corpo);
@@ -420,7 +422,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Carregando…' }));
     abrirFolha(d);
     const lista = await carregarRespostas(true);
-    const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => { d.close(); abrirGestao(); } });
+    const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => abrirGestao({ empurrar: true }) });
     if (!lista.length) { corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
     corpo.replaceChildren(el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
       d.close();
@@ -435,7 +437,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   let pedidoIa = 0;
   async function pedirIa(acao, titulo) {
     const c = conversa(); if (!c) return;
-    const { d, corpo } = folha('d-ia', titulo);
+    const { d, corpo } = folha('d-ia-resultado', titulo, '', { empurrar: true });
     const meu = ++pedidoIa;
     corpo.replaceChildren(el('div', { class: 'cx-resultado' }, el('div', { class: 'cx-pensando', 'aria-label': 'A IA está pensando' }, el('i'), el('i'), el('i')), el('span', { class: 'cx-sub', text: 'A IA está lendo a conversa…' })));
     abrirFolha(d); chip?.setAttribute('aria-busy', 'true');
@@ -450,13 +452,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const botoes = el('div', { class: 'cx-botoes' });
       botoes.append(el('button', { class: 'botao leve', type: 'button', html: SVG.copiar, onclick: () => copiar(r.mensagem || r.texto) }, document.createTextNode('Copiar')));
       if (r.mensagem) botoes.append(el('button', { class: 'botao', type: 'button', html: SVG.resposta, onclick: () => { d.close(); ui.usarTexto(r.mensagem); } }, document.createTextNode('Usar')));
-      blocos.push(botoes, el('button', { type: 'button', class: 'nc-teste', text: 'Pedir outra coisa à IA', onclick: abrirMenuIa }));
+      blocos.push(botoes, el('button', { type: 'button', class: 'nc-teste', text: 'Pedir outra coisa à IA', onclick: () => d.voltar() }));
       corpo.replaceChildren(el('div', { class: 'cx-resultado' }, ...blocos));
       if (acao === 'explicar_audio') carregarTranscricoes(true);
     } catch (x) {
       if (meu !== pedidoIa) return;
       corpo.replaceChildren(el('div', { class: 'cx-resultado' }, el('p', { class: 'cx-aviso' }, document.createTextNode(x.message + ' '), /Conexões/.test(x.message) ? linkConexoes() : null),
-        el('div', { class: 'cx-botoes' }, el('button', { class: 'botao leve', type: 'button', text: 'Voltar', onclick: abrirMenuIa }), el('button', { class: 'botao', type: 'button', text: 'Tentar de novo', onclick: () => pedirIa(acao, titulo) }))));
+        el('div', { class: 'cx-botoes' }, el('button', { class: 'botao leve', type: 'button', text: 'Voltar', onclick: () => d.voltar() }), el('button', { class: 'botao', type: 'button', text: 'Tentar de novo', onclick: () => pedirIa(acao, titulo) }))));
     } finally { if (meu === pedidoIa) chip?.removeAttribute('aria-busy'); }
   }
 
@@ -597,52 +599,141 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   }
-  function unidadesMinhas() {
-    const eu = estado.eu || {};
-    const todas = ['norte', 'sumare'];
-    return ['admin', 'direcao'].includes(eu.papel) || !Array.isArray(eu.unidades) ? todas : todas.filter((u) => eu.unidades.includes(u));
+  // ------------------------------------------------------------ Nova conversa: escolher contato (como no WhatsApp)
+  const CANAIS = [
+    { id: 'whatsapp', nome: 'WhatsApp', campo: 'tel', cor: '#25d366', ic: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a9.4 9.4 0 0 0-8.1 14.2L2.6 21.4l4.8-1.3A9.4 9.4 0 1 0 12 2.5Zm0 17.1a7.7 7.7 0 0 1-3.9-1.1l-.3-.2-2.8.8.8-2.7-.2-.3A7.7 7.7 0 1 1 12 19.6Zm4.3-5.8c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.3 6.3 0 0 1-3.1-2.7c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.5-.2Z"/></svg>' },
+    { id: 'instagram', nome: 'Instagram', campo: 'arroba', cor: '#e1306c', soResponde: true, ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>' },
+    { id: 'messenger', nome: 'Messenger', campo: 'nome', cor: '#0a7cff', soResponde: true, ic: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6C6.6 2.6 2.6 6.5 2.6 11.6c0 2.7 1.1 5 2.9 6.6v3.2l2.9-1.6c1.1.3 2.3.5 3.6.5 5.4 0 9.4-3.9 9.4-9S17.4 2.6 12 2.6Zm1 12.1-2.4-2.6-4.7 2.6 5.2-5.5 2.5 2.6 4.6-2.6-5.2 5.5Z"/></svg>' },
+    { id: 'email', nome: 'E-mail', campo: 'email', cor: '#ea4335', ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>' },
+    { id: 'tiktok', nome: 'TikTok', campo: 'arroba', cor: '#111', soResponde: true, ic: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 3c.3 2 1.6 3.6 3.6 3.9v3a7 7 0 0 1-3.6-1.1v6.1a5.6 5.6 0 1 1-5.6-5.6h.6v3.1a2.6 2.6 0 1 0 2 2.5V3h3Z"/></svg>' },
+  ];
+  /** Canal pode começar conversa daqui? Só WhatsApp (as outras redes só respondem quem chamou; e-mail não tem conversa aqui). */
+  function situacaoCanal(c) {
+    const lig = estado.situacao?.canais || { whatsapp: (estado.situacao?.numerosReais || 0) > 0 || Boolean(estado.situacao?.simulador) };
+    if (c.id === 'whatsapp') return lig.whatsapp ? { pode: true } : { pode: false, txt: 'não conectado' };
+    if (c.id === 'email') return { pode: false, txt: 'só no E-mail marketing' };
+    if (lig[c.id]) return { pode: false, txt: 'só responde quem chamou' };
+    return { pode: false, txt: 'não conectado' };
   }
-  function novaConversa() {
-    const { d, corpo } = folha('d-nova', 'Nova conversa');
-    const unidades = unidadesMinhas();
-    let unidade = unidades[0] || 'norte';
-    const tel = el('input', { class: 'nc-tel', type: 'tel', inputmode: 'tel', autocomplete: 'tel', placeholder: '(71) 98812-4471', required: '', 'aria-label': 'Telefone com DDD' });
-    tel.addEventListener('input', () => { const fim = tel.selectionStart === tel.value.length; tel.value = mascara(tel.value); if (fim) tel.setSelectionRange(tel.value.length, tel.value.length); });
-    tel.addEventListener('paste', (e) => { const t = e.clipboardData?.getData('text'); if (t) { e.preventDefault(); tel.value = mascara(t); tel.dispatchEvent(new Event('input')); } });
-    const nome = el('input', { autocomplete: 'off', maxlength: '80', placeholder: 'Como ela se chama (opcional)', autocapitalize: 'words' });
-    const msg = el('textarea', { rows: '4', maxlength: '4000', required: '', placeholder: 'Oi! Aqui é da Império Progressivas… (digite / para respostas rápidas)' });
-    const erro = el('div', { class: 'erro-txt' });
-    const botoesUnidade = unidades.map((u) => el('button', { type: 'button', 'aria-pressed': String(u === unidade), text: ui.UNIDADE[u] || u, onclick: (e) => {
-      unidade = u; botoesUnidade.forEach((b) => b.setAttribute('aria-pressed', String(b === e.currentTarget)));
-    } }));
-    const enviar = el('button', { class: 'botao', type: 'submit', html: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg>' }, document.createTextNode('Enviar e abrir'));
-    const caixaMsg = el('label', { class: 'nc-msg' }, document.createTextNode('Primeira mensagem'), msg);
-    const form = el('form', { class: 'nc-form' },
-      el('label', {}, document.createTextNode('Telefone com DDD'), tel),
-      el('label', {}, document.createTextNode('Nome'), nome),
-      unidades.length > 1 ? el('div', { style: 'display:grid;gap:6px' }, el('span', { class: 'cx-sub', text: 'Unidade (número que vai mandar a mensagem)' }), el('div', { class: 'nc-unidades' }, ...botoesUnidade)) : null,
-      caixaMsg, erro,
-      el('div', { class: 'cx-botoes' }, enviar));
-    if (!unidades.length) erro.textContent = 'Você ainda não tem unidade. Peça para a gestão liberar.';
-    ligarRespostas(msg, caixaMsg, { conversa: () => ({ unidade, nome: nome.value }), nome: () => nome.value });
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault(); erro.textContent = '';
-      const d11 = soDigitos(tel.value);
-      if (d11.length < 10) { erro.textContent = 'Digite o DDD e o número, por exemplo (71) 98812-4471.'; tel.focus(); return; }
-      if (!msg.value.trim()) { erro.textContent = 'Escreva a primeira mensagem.'; msg.focus(); return; }
-      enviar.disabled = true;
-      try {
-        const r = await post('/api/conversas/nova', { telefone: d11, nome: nome.value.trim() || undefined, unidade, texto: msg.value.trim(), atendente: estado.eu?.nome });
-        d.close();
-        toast(r.nova ? 'Conversa criada ✓' : 'Ela já tinha conversa: mensagem enviada nela ✓');
-        await ui.atualizar(); ui.abrir(r.id);
-      } catch (x) { erro.textContent = x.message; }
-      finally { enviar.disabled = false; }
-    });
-    corpo.replaceChildren(form);
-    abrirFolha(d);
-    setTimeout(() => tel.focus(), 60);
+  const CSS_NC = `
+  .nc-busca { position: sticky; top: -14px; z-index: 2; margin: -14px -16px 0; padding: 10px 16px; background: var(--fundo); }
+  .nc-busca input { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; height: 44px; padding: 0 14px 0 40px; border-radius: 14px; border: 0; color: var(--texto); background: var(--vidro-item, var(--painel)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 12px center / 18px; box-shadow: inset 0 0 0 1px var(--linha); }
+  .nc-busca input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--marca-azul); }
+  .nc-lista { display: grid; margin: 6px -16px 0; }
+  .nc-it { all: unset; cursor: pointer; box-sizing: border-box; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 8px 16px; }
+  .nc-it:hover, .nc-it:focus-visible { background: var(--sel); }
+  .nc-it .avatar { width: 44px; height: 44px; flex: none; }
+  .nc-it-txt { display: grid; min-width: 0; flex: 1; border-bottom: 1px solid var(--linha); padding: 10px 0; margin: -8px 0; }
+  .nc-it-txt b { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nc-it-txt small { font-size: 13.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nc-novo .nc-ic { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; background: var(--marca-azul, #106ebe); }
+  .nc-novo .nc-ic svg { width: 22px; height: 22px; }
+  .nc-novo b { font-size: 16px; font-weight: 700; }
+  .nc-letra { position: sticky; top: 50px; z-index: 1; padding: 6px 16px; font-size: 13px; font-weight: 800; color: var(--sub); background: var(--fundo); }
+  .nc-nada { display: grid; justify-items: center; gap: 12px; padding: 30px 10px; text-align: center; color: var(--sub); }
+  .nc-nada .botao { min-height: 46px; display: inline-flex; align-items: center; padding: 0 22px; font-size: 15px; font-weight: 700; }
+  .nc-canais { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .nc-canal { all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 4px; padding: 12px 6px 10px; border-radius: 16px; text-align: center; background: var(--vidro-item, var(--painel)); box-shadow: inset 0 0 0 1px var(--linha); }
+  .nc-canal i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--cor); }
+  .nc-canal i svg { width: 20px; height: 20px; }
+  .nc-canal b { font-size: 14px; font-weight: 700; color: var(--texto); }
+  .nc-canal small { font-size: 11.5px; color: var(--sub); line-height: 14px; }
+  .nc-canal[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--marca-azul), 0 4px 14px color-mix(in srgb, var(--marca-azul) 22%, transparent); }
+  .nc-canal[aria-disabled="true"] { cursor: default; opacity: .55; }
+  .nc-canal[aria-disabled="true"] i { filter: grayscale(1); }
+  .nc-canal a { font-size: 11.5px; font-weight: 700; color: var(--azul, var(--marca-azul)); }
+  `;
+  document.head.append(el('style', { id: 'nc-css', text: CSS_NC }));
+  const SVG_PESSOA_MAIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></svg>';
+
+  /**
+   * Escolher contato no painel lateral (Nova conversa, Nova ligação, Novo lead…).
+   * aoEscolher(conversa) recebe a conversa da cliente (existente ou criada pelo "Novo contato").
+   */
+  function escolherContato({ titulo = 'Nova conversa', aoEscolher = (c) => ui.abrir(c.id), rotuloNovo = 'Novo contato' } = {}) {
+    const busca = el('input', { type: 'search', placeholder: 'Pesquisar nome ou número', 'aria-label': 'Pesquisar nome ou número', autocomplete: 'off', enterkeyhint: 'search' });
+    const lista = el('div', { class: 'nc-lista', role: 'list' });
+    const contatos = () => [...(estado.conversas || [])].sort((a, b) => ui.nomeDe(a).localeCompare(ui.nomeDe(b), 'pt-BR', { sensitivity: 'base' }));
+    const linha = (c) => el('button', { type: 'button', class: 'nc-it', role: 'listitem', onclick: () => aoEscolher(c) },
+      ui.avatar(c, 'p'), el('span', { class: 'nc-it-txt' }, el('b', { text: ui.nomeDe(c) }), el('small', { text: `${ui.formatarTel(c.telefone)} · ${ui.UNIDADE[c.unidade] || c.unidade}` })));
+    function desenhar() {
+      const q = semAcento(busca.value.trim());
+      const dig = busca.value.replace(/\D/g, '');
+      const achados = contatos().filter((c) => !q || semAcento(ui.nomeDe(c)).includes(q) || (dig.length >= 2 && String(c.telefone).includes(dig)));
+      const novo = el('button', { type: 'button', class: 'nc-it nc-novo', onclick: () => novoContato({ aoEscolher, texto: busca.value.trim() }) }, el('span', { class: 'nc-ic', html: SVG_PESSOA_MAIS }), el('b', { text: rotuloNovo }));
+      const filhos = [novo];
+      if (!achados.length && q) {
+        const t = busca.value.trim();
+        filhos.push(el('div', { class: 'nc-nada' }, el('span', { text: 'Nenhum contato encontrado' }),
+          el('button', { type: 'button', class: 'botao', text: `Criar contato “${t.length > 28 ? t.slice(0, 27) + '…' : t}”`, onclick: () => novoContato({ aoEscolher, texto: t }) })));
+      } else if (!achados.length) {
+        filhos.push(el('p', { class: 'nc-nada', text: 'Nenhum contato ainda.' }));
+      } else {
+        let letra = '';
+        for (const c of achados.slice(0, 400)) {
+          const l = (semAcento(ui.nomeDe(c))[0] || '#').toUpperCase().replace(/[^A-Z]/, '#');
+          if (l !== letra && !q) { letra = l; filhos.push(el('div', { class: 'nc-letra', role: 'presentation', text: l })); }
+          filhos.push(linha(c));
+        }
+      }
+      lista.replaceChildren(...filhos);
+    }
+    busca.addEventListener('input', desenhar);
+    busca.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const p = lista.querySelectorAll('.nc-it:not(.nc-novo)'); if (p.length === 1) p[0].click(); } });
+    window.SintoniaPainel.abrir({ id: 'nova-conversa', titulo, montar: (corpo) => { corpo.append(el('div', { class: 'nc-busca' }, busca), lista); desenhar(); } });
   }
 
-  window.SintoniaConversa = { novaConversa, abrirMenuIa, abrirRespostas: abrirGestao, escolherResposta, preencher };
+  /** Página "Novo contato": nome, telefone (ou @/e-mail conforme o canal) e o canal. Sem escolher unidade: o servidor decide. */
+  function novoContato({ aoEscolher, texto = '' } = {}) {
+    const ehNumero = /^[\d\s()+-]{3,}$/.test(texto);
+    let canal = CANAIS.find((c) => situacaoCanal(c).pode) || CANAIS[0];
+    const nome = el('input', { autocomplete: 'off', maxlength: '80', placeholder: 'Nome da cliente', autocapitalize: 'words' });
+    const tel = el('input', { class: 'nc-tel', type: 'tel', inputmode: 'tel', autocomplete: 'tel', placeholder: '(71) 98812-4471', 'aria-label': 'Telefone com DDD' });
+    const email = el('input', { type: 'email', inputmode: 'email', autocomplete: 'off', maxlength: '200', placeholder: 'email@exemplo.com (opcional)' });
+    if (ehNumero) tel.value = mascara(texto); else nome.value = texto;
+    tel.addEventListener('input', () => { const fim = tel.selectionStart === tel.value.length; tel.value = mascara(tel.value); if (fim) tel.setSelectionRange(tel.value.length, tel.value.length); });
+    tel.addEventListener('paste', (e) => { const t = e.clipboardData?.getData('text'); if (t) { e.preventDefault(); tel.value = mascara(t); } });
+    const erro = el('div', { class: 'erro-txt', role: 'alert' });
+    const canais = el('div', { class: 'nc-canais', role: 'radiogroup', 'aria-label': 'Canal' });
+    const desenharCanais = () => canais.replaceChildren(...CANAIS.map((c) => {
+      const st = situacaoCanal(c);
+      const b = el('button', { type: 'button', class: 'nc-canal', role: 'radio', 'aria-checked': String(c === canal), 'aria-pressed': String(c === canal), 'aria-disabled': String(!st.pode),
+        title: st.pode ? c.nome : `${c.nome}: ${st.txt}`, onclick: () => { if (!st.pode) return; canal = c; desenharCanais(); } },
+        el('i', { html: c.ic }), el('b', { text: c.nome }), st.pode ? el('small', { text: 'conectado' }) : el('small', { text: st.txt }),
+        !st.pode && st.txt === 'não conectado' && ['admin', 'direcao'].includes(estado.eu?.papel) ? el('a', { href: '/conexoes', text: 'Conectar', onclick: (e) => e.stopPropagation() }) : null);
+      b.style.setProperty('--cor', c.cor); return b;
+    }));
+    desenharCanais();
+    const salvar = el('button', { class: 'botao', type: 'submit', text: 'Salvar e abrir conversa' });
+    const form = el('form', { class: 'nc-form' },
+      el('label', {}, document.createTextNode('Nome'), nome),
+      el('label', {}, document.createTextNode('Telefone com DDD'), tel),
+      el('label', {}, document.createTextNode('E-mail'), email),
+      el('div', { style: 'display:grid;gap:8px' }, el('span', { class: 'cx-sub', text: 'Canal' }), canais),
+      erro, el('div', { class: 'cx-botoes' }, salvar));
+    if (!CANAIS.some((c) => situacaoCanal(c).pode)) erro.textContent = 'Nenhum canal conectado para começar conversa. Conecte o WhatsApp em Conexões.';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault(); erro.textContent = '';
+      if (!situacaoCanal(canal).pode) { erro.textContent = 'Escolha um canal conectado.'; return; }
+      const d11 = soDigitos(tel.value);
+      if (d11.length < 10) { erro.textContent = 'Digite o DDD e o número, por exemplo (71) 98812-4471.'; tel.focus(); return; }
+      if (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { erro.textContent = 'Confira o e-mail.'; email.focus(); return; }
+      salvar.disabled = true;
+      try {
+        const r = await post('/api/conversas/contato', { telefone: d11, nome: nome.value.trim() || undefined, canal: canal.id });
+        if (email.value.trim()) await api(`/api/conversas/${r.id}/contato`, { method: 'PUT', body: JSON.stringify({ email: email.value.trim() }) }).catch(() => {});
+        await ui.atualizar();
+        const c = (estado.conversas || []).find((x) => x.id === r.id) || { id: r.id, telefone: r.telefone, nome: nome.value.trim(), unidade: r.unidade };
+        window.SintoniaPainel.fechar();
+        toast(r.nova ? 'Contato criado ✓' : 'Ela já tinha conversa: abrindo ✓');
+        aoEscolher(c);
+      } catch (x) { erro.textContent = x.message; }
+      finally { salvar.disabled = false; }
+    });
+    window.SintoniaPainel.empurrar({ id: 'novo-contato', titulo: 'Novo contato', montar: (corpo) => corpo.append(form) });
+    setTimeout(() => (ehNumero ? nome : tel).focus(), 260);
+  }
+  const novaConversa = () => escolherContato({ titulo: 'Nova conversa', aoEscolher: (c) => { window.SintoniaPainel.fechar(); ui.abrir(c.id); setTimeout(() => campo.focus(), 300); } });
+
+  window.SintoniaConversa = { novaConversa, escolherContato, novoContato, abrirMenuIa, abrirRespostas: abrirGestao, escolherResposta, preencher };
 })();

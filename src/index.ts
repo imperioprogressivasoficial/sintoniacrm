@@ -18,7 +18,7 @@ import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { CanalMeta } from './channels/meta.js';
 import { numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
-import { numerosSociais } from './conexoes/sociais.js';
+import { contaDaRede, numerosSociais } from './conexoes/sociais.js';
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
@@ -463,6 +463,13 @@ const app = criarServidor({
     iaLigada,
     agendaLigada,
     numerosReais: numeros.filter(ehReal).length,
+    // Canais para "Novo contato": quais estão conectados (Instagram e Messenger só respondem quem chamou).
+    canais: {
+      whatsapp: numeros.some((n) => !ehCanalSocial(n.canalId)),
+      instagram: Boolean(contaDaRede(conexoes, 'instagram')),
+      messenger: Boolean(contaDaRede(conexoes, 'messenger')),
+      tiktok: conexoes.get('tiktokLigado') === 'sim' || conexoes.get('tiktokLigado') === 'true',
+    },
     agenda: {
       chave: Boolean(conexoes.get('trinksApiKey')),
       unidades: UNIDADES_AGENDA.map((u) => {

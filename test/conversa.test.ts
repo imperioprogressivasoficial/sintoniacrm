@@ -283,6 +283,37 @@ describe('Nova conversa por número', () => {
   });
 });
 
+describe('Novo contato (Nova conversa sem primeira mensagem)', () => {
+  it('cria a conversa vazia, escolhe a unidade sozinho e reaproveita a que já existe', async () => {
+    const { app, repo, norte, carla, admin, duda, enviados } = await montar();
+    const post = (cookie: string, payload: object) => app.inject({ method: 'POST', url: '/api/conversas/contato', headers: { cookie }, payload });
+    expect((await post(carla, { telefone: '123' })).statusCode).toBe(400);
+    const r = await post(carla, { telefone: '(71) 99123-4567', nome: 'Rita' });
+    expect(r.statusCode).toBe(201);
+    expect(r.json()).toMatchObject({ nova: true, telefone: '5571991234567', unidade: 'norte' });
+    expect(enviados).toEqual([]);
+    expect(await repo.mensagens(r.json().id)).toHaveLength(0);
+    // Mesmo número: abre a mesma conversa.
+    expect((await post(carla, { telefone: '71991234567' })).json()).toMatchObject({ id: r.json().id, nova: false });
+    // A cliente que já conversa: devolve a conversa dela.
+    expect((await post(admin, { telefone: norte.telefone })).json()).toMatchObject({ id: norte.id, nova: false });
+    // Admin vê tudo, mas o Sumaré não tem WhatsApp: cai na primeira unidade conectada (Norte).
+    expect((await post(admin, { telefone: '71988880000' })).json()).toMatchObject({ nova: true, unidade: 'norte' });
+    // Só WhatsApp começa conversa por aqui.
+    expect((await post(carla, { telefone: '71991230000', canal: 'instagram' })).statusCode).toBe(400);
+    void duda;
+  });
+
+  it('cliente de outra atendente não abre por aqui', async () => {
+    const { app, carla, duda } = await montar();
+    const post = (cookie: string, payload: object) => app.inject({ method: 'POST', url: '/api/conversas/nova', headers: { cookie }, payload: { texto: 'Oi!', unidade: 'norte', ...payload } });
+    expect((await post(carla, { telefone: '71991234567' })).statusCode).toBe(201);
+    const dela = await app.inject({ method: 'POST', url: '/api/conversas/contato', headers: { cookie: duda }, payload: { telefone: '71991234567' } });
+    expect(dela.statusCode).toBe(409);
+    expect(dela.json().erro).toMatch(/Carla Souza/);
+  });
+});
+
 describe('Relatório do cliente', () => {
   it('conta conversas, mensagens, agendamentos, faltas, atendentes, tempo de resposta e etapas', async () => {
     const { app, repo, norte, admin, duda } = await montar();
