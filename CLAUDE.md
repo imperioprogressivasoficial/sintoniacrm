@@ -4,6 +4,9 @@ Mais de uma IA (de contas diferentes) mexe na Sintonia. Em 19/11/2026 uma public
 de outra, porque uma editou arquivos direto no servidor e a outra publicou a partir do GitHub.
 Estas regras existem para isso nunca mais acontecer. Siga todas, sempre.
 
+**Revezamento:** as duas IAs se revezam (quando acaba o crédito de uma, a outra continua). Leia também
+`PASSAGEM.md` ao começar e atualize-o ao parar.
+
 ## 1. O GitHub é a única fonte da verdade
 - Todo código, tela, configuração e receita de publicação fica neste repositório
   (`imperioprogressivasoficial/sintoniacrm`). O que não está aqui não existe.
