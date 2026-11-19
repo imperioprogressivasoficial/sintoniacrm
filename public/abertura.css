@@ -27,30 +27,26 @@
 
 .ab-simbolo { position: relative; width: 132px; height: 132px; display: grid; place-items: center; }
 .ab-simbolo img { position: relative; width: 64px; height: 64px; z-index: 2; animation: ab-pulso 1.8s ease-in-out infinite; filter: drop-shadow(0 6px 22px rgba(15, 252, 190, .45)); }
-.ab-anel {
-  position: absolute; inset: 0; border-radius: 50%; z-index: 1;
-  background: conic-gradient(from 0deg, transparent 0 55%, rgba(15, 252, 190, .15) 70%, var(--ab-menta) 96%, transparent 100%);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  animation: ab-gira 1.25s linear infinite;
+.ab-brilho { position: absolute; inset: 0; border-radius: 50%; z-index: 0; background: radial-gradient(circle, rgba(15, 252, 190, .38), rgba(15, 252, 190, 0) 68%); animation: ab-brilho 1.8s ease-in-out infinite; }
+
+.ab-marca { margin: -8px 0 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; color: var(--ab-texto); }
+
+.ab-balao {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 84px; height: 40px; box-sizing: border-box; border-radius: 20px;
+  background: rgba(233, 243, 255, .08); border: 1px solid rgba(233, 243, 255, .14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
 }
-.ab-anel::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(233, 243, 255, .1); }
-.ab-brilho { position: absolute; inset: 18px; border-radius: 50%; z-index: 0; background: radial-gradient(circle, rgba(15, 252, 190, .38), rgba(15, 252, 190, 0) 68%); animation: ab-brilho 1.8s ease-in-out infinite; }
+.ab-balao span { width: 8px; height: 8px; border-radius: 50%; background: var(--ab-menta); animation: ab-salta 1.2s ease-in-out infinite; }
+.ab-balao span:nth-child(2) { animation-delay: .15s; }
+.ab-balao span:nth-child(3) { animation-delay: .3s; }
 
 .ab-texto { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .01em; text-align: center; }
 .ab-texto small { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 400; color: var(--ab-sub); }
-.ab-barra { width: min(240px, 70vw); height: 4px; border-radius: 999px; background: rgba(233, 243, 255, .12); overflow: hidden; position: relative; }
-.ab-barra > span {
-  position: absolute; inset: 0 auto 0 0; width: calc(var(--ab-p, .08) * 100%); border-radius: inherit;
-  background: linear-gradient(90deg, var(--ab-azul), var(--ab-menta)); box-shadow: 0 0 12px rgba(15, 252, 190, .6);
-  transition: width .45s cubic-bezier(.2, .7, .2, 1);
-}
-.ab-barra > span::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); animation: ab-reflexo 1.3s ease-in-out infinite; }
 
-@keyframes ab-gira { to { transform: rotate(360deg); } }
 @keyframes ab-pulso { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
 @keyframes ab-brilho { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
-@keyframes ab-reflexo { to { transform: translateX(100%); } }
+@keyframes ab-salta { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-6px); opacity: 1; } }
 
 /* Login: o cartão sai com desfoque e escala antes da tela de abertura. */
 .cartao.saindo { animation: ab-cartao-sai .48s cubic-bezier(.4, 0, .2, 1) forwards; pointer-events: none; }
@@ -58,8 +54,7 @@
 @keyframes ab-cartao-sai { to { opacity: 0; transform: scale(.92) translateY(6px); filter: blur(10px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .ab-simbolo img, .ab-anel, .ab-brilho, .ab-barra > span::after { animation: none; }
-  .ab-anel { background: conic-gradient(rgba(15, 252, 190, .55), rgba(15, 252, 190, .55)); opacity: .5; }
+  .ab-simbolo img, .ab-brilho, .ab-balao span { animation: none; }
   .cartao.saindo { animation: ab-cartao-some .2s linear forwards; }
   .lado-azul.saindo { filter: none; }
   .abertura, .abertura.ab-saindo { transition-duration: .2s; }
