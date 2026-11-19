@@ -51,6 +51,12 @@
   .com-foto { position: relative; }
   .com-foto > img.foto-pessoa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .avatar.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  /* Conta de IA: selo azul-claro com estrelas no canto do avatar */
+  .conta-ia { position: relative; overflow: visible !important; }
+  .selo-ia { position: absolute; right: -3px; bottom: -3px; width: 42%; height: 42%; min-width: 12px; min-height: 12px; max-width: 22px; max-height: 22px; border-radius: 50%; display: grid; place-items: center;
+    background: #9fd4ff; color: #06263f; box-shadow: 0 0 0 2px var(--fundo); z-index: 1; font-style: normal; pointer-events: none; }
+  .selo-ia svg { width: 70%; height: 70%; }
+  .atende .selo-ia { right: -4px; bottom: -4px; width: 12px; height: 12px; min-width: 0; min-height: 0; box-shadow: 0 0 0 1.5px var(--fundo); }
 
   .area { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .topo-pc { display: none; }
@@ -462,10 +468,6 @@
   .badge, .contador { background: var(--badge) !important; color: var(--badge-txt) !important; box-shadow: 0 0 10px rgba(15, 252, 190, .5); }
   .item .hora.nova { color: var(--verde); }
 
-  /* aba IA no meio, com brilho */
-  .nav-ia .ia-bola { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: 0 0 0 1px rgba(15,252,190,.35), 0 0 18px rgba(15, 252, 190, .55); }
-  .nav-ia .ia-bola svg { width: 20px; height: 20px; }
-  .nav-ia[aria-current="page"] .ia-bola { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 24px rgba(15, 252, 190, .8); }
 
   /* topo da conversa */
   .voltar { all: unset; cursor: pointer; display: none; align-items: center; gap: 2px; height: 40px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--painel); color: var(--texto); font-size: 16px; font-weight: 600; flex: none; }
@@ -544,9 +546,6 @@
     .chat-topo .quem span { font-size: 12.5px; }
     .trilho { justify-content: space-between; }
     .nav { min-width: 0; }
-    .nav-ia { margin-top: -8px; }
-    .nav-ia .ia-bola { width: 40px; height: 40px; }
-    .nav-ia .ia-bola svg { width: 22px; height: 22px; }
     .menu-mais { bottom: 110px; }
   }
 
@@ -785,10 +784,61 @@
     .recolhida .lt-qtd { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; font-size: 10px; padding: 0 5px; }
     .recolhida .lt-eu { padding: 6px; }
   }
-  /* celular: barra de abas de vidro */
+  /* ===== Padrão dos ícones (aprovado em 19/11) =====
+     "Preenche quando ativo": contorno (traço 1,8) no normal; cheio com aria-current="page".
+     .ic-cheio = parte que enche; .ic-det = detalhe recortado por cima do ícone cheio (pintado na cor do fundo). */
+  :root {
+    --barra-fundo: #0b1726;            /* barra do celular: escura nos dois temas */
+    --barra-borda: rgba(255,255,255,.08);
+    --barra-sombra: 0 10px 30px rgba(4,12,22,.35);
+    --barra-raio: 999px;
+    --barra-altura: 64px;
+    --barra-folga: 6px;                /* espaço entre a borda da barra e as abas */
+    --barra-icone: 24px;
+    --barra-ic: rgba(255,255,255,.78); /* um só tom para os ícones */
+    --barra-rotulo-fs: 14px;
+    --barra-rotulo-peso: 700;
+    --capsula-pad: 0 16px 0 14px;
+    --capsula-fundo: #0a4c86;          /* claro: cápsula azul-escura */
+    --capsula-txt: #ffffff;
+    --capsula-ia-fundo: #106ebe;       /* IA ativa: cápsula azul */
+    --capsula-ia-txt: #ffffff;
+    --ia-cor: #0ffcbe;                 /* IA em menta */
+    --ic-recorte-lateral: #ffffff;     /* recorte do .ic-det no item ativo do menu lateral */
+  }
+  html[data-tema="escuro"] {
+    --barra-fundo: #0b1726;
+    --barra-borda: rgba(255,255,255,.12);
+    --capsula-fundo: #ffffff;          /* escuro: cápsula clara */
+    --capsula-txt: #071d33;
+    --ic-recorte-lateral: #1d3a57;
+  }
+  .ic-cheio { fill: none; }
+  [aria-current="page"] .ic-cheio { fill: currentColor; }
+  [aria-current="page"] .ic-det { stroke: var(--ic-recorte, var(--fundo)); }
+  .lt-item[aria-current="page"] { --ic-recorte: var(--ic-recorte-lateral); }
+
+  /* celular: barra escura flutuante; só a aba ativa mostra o nome, dentro da cápsula */
   @media (max-width: 760px) {
-    .trilho { background: var(--vidro-forte) !important; border: 1px solid var(--vidro-borda) !important; box-shadow: var(--vidro-brilho) !important; }
     .lista { border-right: 0; }
+    .trilho { background: var(--barra-fundo) !important; border: 1px solid var(--barra-borda) !important; box-shadow: var(--barra-sombra) !important;
+      -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: var(--barra-raio); height: var(--barra-altura); box-sizing: border-box;
+      padding: var(--barra-folga); gap: 4px; align-items: stretch; justify-content: space-between; }
+    .trilho .nav { flex: 1 1 0; min-width: 44px; height: auto; min-height: 44px; margin: 0; padding: 0; border-radius: var(--barra-raio); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
+      color: var(--barra-ic); background: transparent; font-size: var(--barra-rotulo-fs); font-weight: var(--barra-rotulo-peso); --ic-recorte: var(--barra-fundo); }
+    .trilho .nav[hidden] { display: none; }
+    .trilho .nav:hover { background: transparent; }
+    .trilho .nav > svg { width: var(--barra-icone); height: var(--barra-icone); flex: none; }
+    .trilho .nav .rotulo { display: none; }
+    .trilho .nav[aria-current="page"] { flex: 0 0 auto; padding: var(--capsula-pad); background: var(--capsula-fundo); color: var(--capsula-txt); --ic-recorte: var(--capsula-fundo); }
+    .trilho .nav[aria-current="page"] .rotulo { display: block; font-size: var(--barra-rotulo-fs); white-space: nowrap; }
+    .trilho .nav-ia { color: var(--ia-cor); }
+    .trilho .nav-ia[aria-current="page"] { background: var(--capsula-ia-fundo); color: var(--capsula-ia-txt); --ic-recorte: var(--capsula-ia-fundo); }
+    .trilho .nav-ia[aria-current="page"] > svg { color: var(--ia-cor); }
+    .trilho .nav[aria-current="page"] .ic-linhas { stroke-width: 2.4; }
+    .trilho .nav:focus-visible { outline: 2px solid var(--ia-cor); outline-offset: 2px; }
+    .trilho .contador { position: absolute; top: 4px; left: 50%; margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; font-size: 11px; border: 2px solid var(--barra-fundo); }
+    .trilho .nav[aria-current="page"] .contador { left: 28px; top: 2px; margin-left: 0; }
   }
 
   /* quem atende (ao lado do nome) */
@@ -877,20 +927,20 @@
     </div>
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
     <nav class="lt-grupos" id="lt-grupos" aria-label="Seções">
-      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
-      <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
-      <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
-      <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
+      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path class="ic-cheio" d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
+      <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="3" width="7" height="9" rx="2"/><rect class="ic-cheio" x="14" y="3" width="7" height="5" rx="2"/><rect class="ic-cheio" x="14" y="12" width="7" height="9" rx="2"/><rect class="ic-cheio" x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
+      <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
+      <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
 
       <div class="lt-grupo" data-grupo="crm">
-        <button class="lt-cab" type="button" aria-expanded="false" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="lt-cab" type="button" aria-expanded="false" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="lt-rot">CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in" id="lt-funis">
-          <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
+          <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
           <button class="so-gestao lt-item lt-novo" id="lt-novo-funil" type="button" title="Criar novo pipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lt-rot">Criar novo pipeline</span></button>
         </div></div>
       </div>
 
-      <button class="nav lt-item" data-vista="clientes" title="Clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Clientes</span></button>
+      <button class="nav lt-item" data-vista="clientes" title="Clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle class="ic-cheio" cx="9" cy="8" r="3.5"/><path class="ic-cheio" d="M2.5 20a6.5 6.5 0 0 1 13 0Z"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="lt-rot">Clientes</span></button>
 
       <div class="lt-grupo" data-grupo="marketing">
         <button class="lt-cab" type="button" aria-expanded="false" title="Marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span class="lt-rot">Marketing</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
@@ -941,13 +991,13 @@
   </aside>
   <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
-    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
-    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span class="rotulo">CRM</span></button>
-    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" opacity=".75"/></svg></span><span class="rotulo">IA</span></button>
-    <button class="nav" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="rotulo">Dashboard</span></button>
+    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
+    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="rotulo">CRM</span></button>
+    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path class="ic-cheio" d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="rotulo">IA</span></button>
+    <button class="nav" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="3" width="7" height="9" rx="2"/><rect class="ic-cheio" x="14" y="3" width="7" height="5" rx="2"/><rect class="ic-cheio" x="14" y="12" width="7" height="9" rx="2"/><rect class="ic-cheio" x="3" y="16" width="7" height="5" rx="2"/></svg><span class="rotulo">Dashboard</span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
-    <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg><span class="rotulo">Mais</span></button>
+    <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-linhas" d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Mais</span></button>
   </nav>
 
   <div class="area">
@@ -1334,7 +1384,28 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const post = (url, corpo) => api(url, { method: 'POST', body: JSON.stringify(corpo ?? {}) });
   const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('ver'), 2800); };
   const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k === 'html') e.innerHTML = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== undefined && v !== null) e.setAttribute(k, v); } for (const f of filhos) if (f != null) e.append(f); return e; };
-  const iniciais = (n) => (n || '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  // Iniciais sem parênteses nem símbolos: "Assia (integração)" vira AI.
+  const palavrasNome = (n) => String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean);
+  const iniciais = (n) => palavrasNome(n).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  // Conta de IA (como a Assia): o nome traz "(integração)", "(IA)", "(bot)"... ou é o nome de um agente de IA configurado.
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const nomesAgentesIa = new Set();
+  const ehContaIa = (nome) => {
+    const n = semAcento(nome); if (!n) return false;
+    if (/\((?:[^)]*\b)?(integracao|ia|ai|bot|robo|agente|servico|automacao)\b[^)]*\)/.test(n)) return true;
+    const base = n.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+    return nomesAgentesIa.has(base);
+  };
+  const SELO_IA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg>';
+  /** Selo azul-claro com estrelas no canto do avatar das contas de IA; pessoas ficam só com as iniciais ou a foto. */
+  const seloIa = (caixa, nome) => {
+    if (!caixa) return caixa;
+    caixa.querySelector(':scope > .selo-ia')?.remove();
+    const ia = ehContaIa(nome);
+    caixa.classList.toggle('conta-ia', ia);
+    if (ia) caixa.append(el('i', { class: 'selo-ia', 'aria-hidden': 'true', html: SELO_IA }));
+    return caixa;
+  };
   const cor = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CORES[h % CORES.length]; };
   const BONECO = '<svg viewBox="0 0 212 212"><path fill="currentColor" d="M106 106c19.9 0 36-16.1 36-36s-16.1-36-36-36-36 16.1-36 36 16.1 36 36 36Zm0 18c-33.4 0-90 16.7-90 50v24h180v-24c0-33.3-56.6-50-90-50Z" transform="translate(0 14)"/></svg>';
   const semFoto = new Set();
@@ -1450,8 +1521,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   function quemAtende(c) {
     if (c.modo === 'ia') return el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' });
     if (!c.responsavelId) return '';
-    const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
-    return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);
+    const n = palavrasNome(c.responsavelNome); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
+    return seloIa(fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId), c.responsavelNome);
   }
   function desenharLista() {
     const caixa = $('itens'); caixa.replaceChildren();
@@ -2477,7 +2548,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const ehGestor = (u) => ['gerente', 'direcao', 'admin'].includes(u?.papel);
   const nomesUnidades = (l) => (l && l.length ? l.map((u) => UNIDADE[u] || u).join(', ') : '');
   const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
-  const avatarPessoa = (nome, classe = 'p', id) => fotoPessoa(el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` }), id);
+  const avatarPessoa = (nome, classe = 'p', id) => seloIa(fotoPessoa(el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` }), id), nome);
 
   function fecharConversa(aviso) {
     estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
@@ -2851,7 +2922,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     // ---------- CRM: um item por pipeline (funil), vindos de /api/funis ----------
     const caixaFunis = $('lt-funis');
     let funis = [], funisEm = 0, assinatura = '';
-    const ICONE_FUNIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>';
+    const ICONE_FUNIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="4" width="5" height="16" rx="1.5"/><rect class="ic-cheio" x="10" y="4" width="5" height="11" rx="1.5"/><rect class="ic-cheio" x="17" y="4" width="4" height="7" rx="1.5"/></svg>'; // cada pipeline: quadro de colunas
     function marcarFunil() {
       const atual = estado.vista === 'funil' ? (window.SintoniaTelas?.funil?.atual?.() || funis[0]?.id) : null;
       for (const b of caixaFunis.querySelectorAll('[data-funil]')) {
@@ -2936,7 +3007,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   addEventListener('tema', sincronizarNoite); sincronizarNoite();
   function preencherLateral() {
     const eu = estado.eu; if (!eu) return;
-    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-avatar').querySelector('img')?.remove(); fotoPessoa($('lt-avatar'), eu.id); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
+    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-avatar').querySelector('img')?.remove(); fotoPessoa($('lt-avatar'), eu.id); seloIa($('lt-avatar'), eu.nome); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
     document.querySelectorAll('#lateral .so-relatorios').forEach((e) => { e.hidden = !eu.permissoes?.relatorios; });
     document.querySelectorAll('#lateral .so-gestao').forEach((e) => { e.hidden = !ehGestor(eu); });
     document.querySelectorAll('#lateral .so-admin').forEach((e) => { e.hidden = !['admin', 'direcao'].includes(eu.papel); });
@@ -2955,6 +3026,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('nav-config').title = `Conta · ${estado.eu.nome}`;
     preencherLateral();
     $('nav-equipe').hidden = true;
+    // Nomes dos agentes de IA (só a gestão lê): contas com esses nomes ganham o selo de IA no avatar.
+    if (ehGestor(estado.eu)) api('/api/agentes-ia').then((d) => { for (const a of d?.agentes || []) if (a?.nome) nomesAgentesIa.add(semAcento(a.nome)); seloIa($('lt-avatar'), estado.eu.nome); }).catch(() => {});
     estado.situacao = await api('/api/situacao').catch(() => ({}));
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');

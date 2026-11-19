@@ -355,7 +355,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const fmtPct = (v) => (v == null ? '—' : `${fmtDec(v)}%`);
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const horaBahia = () => Number(new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Bahia' }).format(new Date()));
-  const iniciais = (n) => (n || '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  const iniciais = (n) => String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
   const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
   const plural = (n, um, varios) => `${fmtN(n)} ${n === 1 ? um : varios}`;
   const diaSemana = (iso) => SEMANA[new Date(`${iso}T12:00:00Z`).getUTCDay()];

@@ -170,7 +170,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const hojeBahia = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bahia' }).format(new Date());
   const diaCurto = (iso) => { const [, m, d] = iso.split('-'); return `${Number(d)}/${Number(m)}`; };
   const dataLonga = (d) => new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Bahia' }).format(new Date(d)).replace('.', '');
-  const iniciais = (n) => String(n || '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  const iniciais = (n) => String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
   const addDias = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
   const lerFiltro = () => { try { return JSON.parse(sessionStorage.getItem(CHAVE) || 'null'); } catch { return null; } };

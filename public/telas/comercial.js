@@ -68,7 +68,7 @@
   const fmt = (v) => Number(v || 0).toLocaleString('pt-BR');
   const brl = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const tempo = (seg) => (seg == null ? '—' : seg < 60 ? `${seg}s` : seg < 3600 ? `${Math.round(seg / 60)} min` : `${Math.round(seg / 360) / 10} h`);
-  const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+  const iniciais = (n) => String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?';
   const eu = () => s.ui?.estado?.eu;
   const gestor = () => { const u = eu(); return !u || ['gerente', 'direcao', 'admin'].includes(u.papel); };
 

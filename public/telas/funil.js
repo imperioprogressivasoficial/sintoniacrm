@@ -412,7 +412,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // bolinhas das pessoas: tons claros de apoio com tinta azul-noite
   const TONS_PESSOA = ['#7cc4ff', '#C9D6FF', '#BFEFE3', '#FFE3A3', '#FFD0D0', '#E2D4FF', '#D6F0B8'];
   const tomPessoa = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return TONS_PESSOA[h % TONS_PESSOA.length]; };
-  const iniciais = (n) => { const p = String(n || '').trim().split(/\s+/).filter(Boolean); return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '?'; };
+  const iniciais = (n) => { const p = String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').trim().split(/\s+/).filter(Boolean); return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '?'; };
   function bolinha(dona, titulo) {
     const { el } = s.ui;
     if (!dona) return el('span', { class: 'fn-ini fn-sem', title: titulo || 'Sem dona', 'aria-label': titulo || 'Sem dona', html: SVG.pessoa });
