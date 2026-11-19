@@ -21,7 +21,8 @@ describe.skipIf(!pg)('CRM em escala (postgres)', () => {
   it(`quadro com ${N} cartões: páginas pequenas, totais certos, cursor, busca e valor — rápido`, { timeout: 60_000 }, async () => {
     const m = await montarFunis(pg!);
     const pool = m.pool!;
-    const agora = m.relogio.t;
+    // O servidor compara "paradas" com o relógio real: semeia a partir de agora, não do relógio fictício.
+    const agora = new Date();
     const etapas = [...m.etapasSistema.entries()];
     // Semeia direto no banco: N conversas espalhadas pelas etapas do funil do sistema; 1 em 5 está parada há 5 dias.
     await pool.query(
