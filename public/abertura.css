@@ -1,4 +1,4 @@
-/* Tela "abrindo o aplicativo": símbolo da Sintonia com pulso, anel girando e brilho menta + barra de progresso.
+/* Tela "abrindo suas conversas": nome Sintonia, balão com pontinhos animados e texto.
  * Usada no login (depois da senha certa) e na primeira carga do /app, com o mesmo visual para a passagem não piscar. */
 :root {
   --ab-fundo-1: #041427;
@@ -25,11 +25,8 @@
 .abertura.ab-entrando { opacity: 0; }
 .abertura.ab-saindo { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .5s ease, visibility 0s linear .5s; }
 
-.ab-simbolo { position: relative; width: 132px; height: 132px; display: grid; place-items: center; }
-.ab-simbolo img { position: relative; width: 64px; height: 64px; z-index: 2; animation: ab-pulso 1.8s ease-in-out infinite; filter: drop-shadow(0 6px 22px rgba(15, 252, 190, .45)); }
-.ab-brilho { position: absolute; inset: 0; border-radius: 50%; z-index: 0; background: radial-gradient(circle, rgba(15, 252, 190, .38), rgba(15, 252, 190, 0) 68%); animation: ab-brilho 1.8s ease-in-out infinite; }
 
-.ab-marca { margin: -8px 0 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; color: var(--ab-texto); }
+.ab-marca { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .02em; color: var(--ab-texto); }
 
 .ab-balao {
   display: flex; align-items: center; justify-content: center; gap: 7px;
@@ -44,8 +41,6 @@
 .ab-texto { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .01em; text-align: center; }
 .ab-texto small { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 400; color: var(--ab-sub); }
 
-@keyframes ab-pulso { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-@keyframes ab-brilho { 0%, 100% { opacity: .55; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.08); } }
 @keyframes ab-salta { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-6px); opacity: 1; } }
 
 /* Login: o cartão sai com desfoque e escala antes da tela de abertura. */
@@ -54,7 +49,7 @@
 @keyframes ab-cartao-sai { to { opacity: 0; transform: scale(.92) translateY(6px); filter: blur(10px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .ab-simbolo img, .ab-brilho, .ab-balao span { animation: none; }
+  .ab-balao span { animation: none; }
   .cartao.saindo { animation: ab-cartao-some .2s linear forwards; }
   .lado-azul.saindo { filter: none; }
   .abertura, .abertura.ab-saindo { transition-duration: .2s; }
