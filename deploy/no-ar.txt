@@ -1,0 +1,8 @@
+# O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
+data: 2026-11-19 22:01 UTC
+commit: 73997e9
+pacote sha256: 9668997ea59edc56c8a6e45bd4cf2bd2d6a80e596292a8670e843400a8e94cc5
+quem: Claude (conta do Bruno), sessão Sintonia CRM
+observação: este estado NÃO tem as mudanças que a IA da outra conta fez direto no servidor em 19/11
+  (app.html com barra/ícones, serviço chave-evolution e ligação com a Evolution). Elas devem voltar
+  pelo GitHub (ver CLAUDE.md) antes da próxima publicação.
