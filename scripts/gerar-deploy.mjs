@@ -86,6 +86,8 @@ try {
   const comPresenca = process.env.PRESENCA !== '0';
   // Transcrição de áudio grátis no próprio servidor (faster-whisper em CPU, modelo small). WHISPER=0 desliga.
   const comWhisper = process.env.WHISPER !== '0';
+  // Cópia do banco todo dia (pg_dump), um arquivo por dia da semana (sobrescreve: guarda 7 dias). COPIA=0 desliga.
+  const comCopia = process.env.COPIA !== '0';
   // SINTONIA_SEGREDO (chave das conexões salvas) fica sempre com o endereço original do banco, mesmo se o nome mudar.
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
@@ -201,6 +203,21 @@ ${comPresenca ? `
       - whisper:/modelos
     networks:
       - interna
+` : ''}${comCopia ? `
+  copia:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${senha}
+    command: ["sh", "-c", "while true; do d=$$(date +%u-%a); pg_dump -h db -U sintonia -d sintonia -Fc -f /copias/tmp.dump && mv /copias/tmp.dump /copias/sintonia-$$d.dump && echo copia ok $$d; sleep 86400; done"]
+    volumes:
+      - copias:/copias
+    networks:
+      - interna
 ` : ''}
 volumes:
   banco:
@@ -216,6 +233,8 @@ ${comEvolution ? `  chave:
     name: sintonia_presenca
 ` : ''}${comWhisper ? `  whisper:
     name: sintonia_whisper
+` : ''}${comCopia ? `  copias:
+    name: sintonia_copias
 ` : ''}
 networks:
   interna:
