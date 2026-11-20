@@ -42,6 +42,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
+- **20/11 19h45 (Bahia):** no ar a656716. Agentes rodando (juntar, testar, publicar quando voltarem): fluidez, grupos (410), equipe (420), layout-telas, clientes-tags (430), analises (440), marketing (450).
 - **20/11 19h25 (Bahia):** no ar a8ae1c1 — largura total, sem barra de rolagem, Conversas em cascata. Agentes `grupos` (migração 410) e `equipe` (migração 420) construindo as telas que aparecem na cascata.
 - **20/11 19h10 (Bahia):** no ar d058a19 — tempo sem contorno, foto da Serena quando a IA atende. Antes: 963e38f — cronômetro de espera na lista (espera-selo.js) e foto da Serena embutida. Agente `fluidez` (branch claude/fluidez) ainda trabalhando: juntar, testar e publicar.
 **Última atualização:** 20/11/2026, 02h10 (Bahia) — Claude da conta do Bruno (Max).

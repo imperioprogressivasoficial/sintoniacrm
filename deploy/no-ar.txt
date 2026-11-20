@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 22:25 UTC (20/11, 19h25 na Bahia)
-commit: a8ae1c1
-pacote sha256: d2e80a4652915840254466ba6bad0966f025c83da6efb336e0336d7a711fac18
+data: 2026-11-20 22:45 UTC (20/11, 19h45 na Bahia)
+commit: a656716
+pacote sha256: b0ecaa79c7a5225c24656bc530db67f1e2cf35b609eeb91268b032dad4a1710b
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-a8ae1c1.b64); pode apagar depois.
-observação: em cima do d058a19. Entra: telas em largura total no computador, sem barra de rolagem visível, Conversas em cascata (grupos e equipe ainda escondidos até os agentes terminarem).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-a656716.b64); pode apagar depois.
+observação: em cima do a8ae1c1. Entra: chave de disponível ao lado do nome, Automações reordenadas + Pesquisa de satisfação, Treinar a Serena no menu da Serena.
