@@ -6,7 +6,7 @@ import { telefoneDoJid } from '../util/telefone.js';
 import { referenciaDaEvolution } from '../rastreio/referencia.js';
 
 /**
- * Evolution API (v2), a que já roda no VPS da Império (fluxo "Sincronia" no n8n).
+ * Evolution API (v2), a que já roda no VPS da Império (fluxo "Serena" no n8n).
  * Webhook: evento `messages.upsert`. Envio: POST /message/sendText/{instancia}.
  * Mídia: baixada por POST /chat/getBase64FromMediaMessage/{instancia}; enviada por
  * POST /message/sendMedia/{instancia} (foto, vídeo, documento) e /message/sendWhatsAppAudio/{instancia} (nota de voz).
