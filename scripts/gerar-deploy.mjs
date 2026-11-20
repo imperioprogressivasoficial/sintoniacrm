@@ -96,7 +96,7 @@ ${comEvolution ? `  chave-evolution:
     volumes:
       - rainha_app:/rainha:ro
       - chave:/chave
-    command: ["sh", "-c", "cp /rainha/evolution/api.key /chave/evolution.key && chown 1000:1000 /chave/evolution.key && chmod 400 /chave/evolution.key"]
+    command: ["sh", "-c", "if [ -f /rainha/evolution/api.key ]; then cp /rainha/evolution/api.key /chave/evolution.key && chown 1000:1000 /chave/evolution.key && chmod 400 /chave/evolution.key; else echo sem chave da Evolution no volume; rm -f /chave/evolution.key; fi"]
 
 ` : ''}  app:
     image: node:22-alpine
