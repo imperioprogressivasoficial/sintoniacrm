@@ -29,7 +29,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - **No ar:** `producao` = 3b133f7 (Plump, puxar só com arco, tema com faíscas + esmaecer); antes dafa1b9 (ver `deploy/no-ar.txt`). Inclui Serena estilo ChatGPT, Radar, curto-circuito, agenda Google,
   puxar para atualizar, Ligações modelo 5, sino/lua novos. "Lista | Funil" foi removido a pedido do dono (CRM fica em Mais › CRM).
 - **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
-- **Em obra:** Dashboard estilo banco digital escuro (modelo 3 escolhido), em `public/telas/painel.js`.
+- **Em obra:** Dashboard claro e escuro, duas colunas no computador, "i"/lápis em cada bloco, Personalizar (arrastar, tirar) e Biblioteca de relatórios — branch `claude/dashboard-colunas` (layout por pessoa em `/api/painel/layout`, migração 300). Falta o ok do dono e publicar.
 - **Aguardando o dono:** qual dos 5 jeitos da barra encolher (ou nenhum); animações contínuas (Radar, foto da Serena):
   rodar só quando importa ou rodar 2–3 vezes e parar.
 - **Regras de design do dono:** 5 modelos antes de aplicar; cor "brilho" `#0ffcbe`→`#3aa0ff` em fio fino; ícones sempre no padrão
