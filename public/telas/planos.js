@@ -175,7 +175,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     try { d = await api('/api/planos'); } catch (e) { caixa.innerHTML = `<div class="pl"><div class="pl-c">${esc(e.message)}</div></div>`; return; }
     const p = d.plano;
     const k = d.calculadora;
-    const selo = !p.ia ? ['Sem IA neste plano', true] : d.agora.pode ? [d.agora.usandoCreditos ? 'IA usando créditos' : 'IA atendendo agora', false] : ['IA parada agora', true];
+    // O selo segue a IA de verdade (chave + agente ligado), não só o que o plano permite.
+    const iaReal = d.ia || null;
+    const selo = !p.ia ? ['Sem IA neste plano', true]
+      : !d.agora.pode ? ['IA parada agora', true]
+      : iaReal && !iaReal.atendendo ? ['IA desligada', true]
+      : [d.agora.usandoCreditos ? 'IA usando créditos' : 'IA atendendo agora', false];
     const raiz = document.createElement('div');
     raiz.className = 'pl';
     raiz.innerHTML = `
@@ -187,6 +192,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             <span class="pl-selo ${selo[1] ? 'pl-nao' : ''}">${selo[0]}</span></div>
           <p class="pl-sub">${esc(p.descricao)}</p>
           ${d.agora.pode || !p.ia ? '' : `<div class="pl-aviso">${esc(d.agora.texto)} Nada se perde: as mensagens ficam salvas e a conversa vai para a equipe com o motivo registrado.</div>`}
+          ${p.ia && d.agora.pode && iaReal && !iaReal.atendendo && iaReal.texto ? `<div class="pl-aviso">${esc(iaReal.texto)}</div>` : ''}
           <div class="pl-acoes" style="margin-top:12px">
             <button class="pl-bt" data-ac="plano">Mudar de plano</button>
             <button class="pl-bt pl-sec" data-ac="recarga">Comprar créditos</button>

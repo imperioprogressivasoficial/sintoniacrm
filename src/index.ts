@@ -78,6 +78,7 @@ import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type Po
 import { PagamentoManual } from './planos/pagamento.js';
 import { Planos } from './planos/porteiro.js';
 import { registrarPlanos } from './planos/rotas.js';
+import { estadoDaIa } from './planos/estado-ia.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
@@ -583,6 +584,12 @@ registrarPlanos(app, {
   fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
   armazemComercial,
   contas,
+  estadoIa: async () =>
+    estadoDaIa({
+      chaveGeral: (p) => (p === 'openai' ? Boolean(conexoes.get('openaiApiKey')) : iaLigada),
+      agentes: await agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID),
+      modoPadrao: (await empresa.configIa()).modoPadrao,
+    }),
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });

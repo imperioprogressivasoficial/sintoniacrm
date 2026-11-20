@@ -9,6 +9,7 @@ import { anotadorDe, comContexto, comPorteiro, IaBloqueada, medirCliente, portei
 import { PagamentoManual } from '../src/planos/pagamento.js';
 import { Planos, textoQuando } from '../src/planos/porteiro.js';
 import { registrarPlanos } from '../src/planos/rotas.js';
+import { estadoDaIa } from '../src/planos/estado-ia.js';
 import { bahia } from '../src/util/tempo.js';
 import { AgenteFalso, ambientes, montarBot, quinta } from './bot-ambiente.js';
 import { poolDeTeste, temPostgres } from './repos.js';
@@ -317,6 +318,33 @@ describe('comparativo IA × humano', () => {
     expect(c.economiaMensal).toBe(Math.round((3.8 * 3660 - 2745) * 100) / 100);
     expect(c.ia.custoPorAgendamento).toBeNull();
     expect(c.iaMaisBarataPorAgendamento).toBeNull();
+  });
+});
+
+describe('selo "IA atendendo agora" (estado real da IA)', () => {
+  const ag = (ativo: boolean, chaveCifrada: string | null = null) => ({ ativo, provedor: 'anthropic' as const, chaveCifrada });
+  it('só atende com chave e agente ligado', () => {
+    // sem chave nenhuma: desligada, mesmo com agente ativo e plano permitindo
+    expect(estadoDaIa({ chaveGeral: () => false, agentes: [ag(true)], modoPadrao: 'ia' })).toMatchObject({ atendendo: false, motivo: 'sem_chave' });
+    // agente ativo com a própria chave
+    expect(estadoDaIa({ chaveGeral: () => false, agentes: [ag(true, 'x')], modoPadrao: 'humano' }).atendendo).toBe(true);
+    // agente com chave, mas desligado: não conta
+    expect(estadoDaIa({ chaveGeral: () => false, agentes: [ag(false, 'x')], modoPadrao: 'ia' }).atendendo).toBe(false);
+    // chave geral e as conversas começando com a IA (copiloto ou IA)
+    expect(estadoDaIa({ chaveGeral: (p) => p === 'anthropic', agentes: [], modoPadrao: 'copiloto' }).atendendo).toBe(true);
+    // chave geral, mas tudo começa com a equipe e nenhum agente ligado
+    expect(estadoDaIa({ chaveGeral: (p) => p === 'anthropic', agentes: [ag(false)], modoPadrao: 'humano' })).toMatchObject({ atendendo: false, motivo: 'sem_agente' });
+  });
+
+  it('a rota /api/planos devolve o estado real', async () => {
+    const a = Fastify();
+    a.addHook('onRequest', async (req) => {
+      (req as { usuario?: unknown }).usuario = { id: 'u1', nome: 'Bruno', empresaId: 'imperio', papel: 'admin' };
+    });
+    registrarPlanos(a, { planos: planosCom(), pagamento: new PagamentoManual(), empresaId: 'imperio', agora: () => seg(10), estadoIa: async () => ({ atendendo: false, motivo: 'sem_chave', texto: 'Falta a chave da IA.' }) });
+    const j = (await a.inject({ method: 'GET', url: '/api/planos' })).json();
+    expect(j.agora.pode).toBe(true);
+    expect(j.ia).toMatchObject({ atendendo: false, motivo: 'sem_chave' });
   });
 });
 
