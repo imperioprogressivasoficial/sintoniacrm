@@ -1588,7 +1588,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const horaLista = (d) => { if (!d) return ''; const r = rotuloDia(d); return r === 'Hoje' ? hm(d) : r; };
   const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
   // Não lida = a cliente escreveu depois da última vez que ESTA pessoa abriu (e ainda espera resposta).
-  const naoLida = (c) => esperando(c) && (!c.lidaAte || new Date(c.ultimaMensagemCliente) > new Date(c.lidaAte));
+  /* conversas-gestos: ou a pessoa marcou como não lida à mão (arrastar/segurar a linha), como no WhatsApp. */
+  const naoLida = (c) => !!c.marcadaNaoLida || (esperando(c) && (!c.lidaAte || new Date(c.ultimaMensagemCliente) > new Date(c.lidaAte)));
   const esperando = (c) => { const cl = c.ultimaMensagemCliente && new Date(c.ultimaMensagemCliente).getTime(); if (!cl) return false; const resp = Math.max(new Date(c.ultimaMensagemEquipe || 0).getTime(), new Date(c.ultimaMensagemIa || 0).getTime()); return cl > resp; };
 
   // navegação
@@ -1662,6 +1663,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   const esperaTxt = (c) => { const m = Math.max(1, Math.round((Date.now() - new Date(c.ultimaMensagemCliente).getTime()) / 60000)); return 'Esperando ' + (m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`); };
   function desenharLista() {
+    if (window.SintoniaTelas?.conversasGestos?.segurar?.()) return; /* conversas-gestos: linha aberta/arrastando — redesenha quando fechar */
     const caixa = $('itens'); caixa.replaceChildren();
     contarRadar();
     const lista = filtradas();
@@ -1682,7 +1684,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       /* radar: no Radar, o que está vigiando (ou o que aconteceu); no Esperando, há quanto tempo. */
       if (estado.filtro === 'radar') { const m = window.SintoniaTelas?.radar?.etiqueta(c.id); if (m) l2.append(m); }
       if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
-      if (nova) l2.append(el('span', { class: 'badge', text: '1', 'aria-label': 'Não lida' }));
+      if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
         onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
@@ -1871,7 +1873,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   // conversa
   async function abrir(id) {
-    { const c = estado.conversas.find((x) => x.id === id); if (c) c.lidaAte = new Date().toISOString(); }
+    { const c = estado.conversas.find((x) => x.id === id); if (c) { c.lidaAte = new Date().toISOString(); c.marcadaNaoLida = false; } }
     if (grav.rec) pararGravacao(true);
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
@@ -3212,6 +3214,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   window.Sintonia.ui = { api, post, el, toast, atualizar, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
   Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
+  Object.assign(window.Sintonia.ui, { naoLida, esperando, textoPrevia }); /* conversas-gestos: arrastar e segurar a linha da lista */
 
   (async () => {
     estado.eu = await api('/api/auth/eu');
@@ -3256,6 +3259,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <!-- nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS), pós-venda pronto -->
 <script src="/telas/nps.js" defer></script>
 <script src="/telas/radar.js" defer></script>
+<!-- conversas-gestos: arrastar a linha (não lida, radar, mais, mover) e segurar o dedo (prévia), como no WhatsApp -->
+<script src="/telas/conversas-gestos.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/instalar.js" defer></script>

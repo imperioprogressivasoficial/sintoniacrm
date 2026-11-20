@@ -315,13 +315,15 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const lista = todas.filter(visivelPara(req));
     const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(lista.map((c) => c.id)) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
     const lidas = d.leituras && req.usuario ? await d.leituras.doUsuario(req.usuario.id) : new Map<string, Date>();
+    /* conversas-gestos: "marcar como não lida" feito à mão (arrastar a linha ou segurar o dedo) */
+    const marcadas = d.leituras && req.usuario ? await d.leituras.marcadasNaoLidas(req.usuario.id) : new Set<string>();
     const origens = d.origens ? await d.origens(lista.map((c) => c.id)).catch(() => ({}) as Record<string, never>) : undefined;
     return lista
       .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 
@@ -366,6 +368,15 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       // API oficial: até quando dá para escrever livremente (depois, só modelo aprovado).
       janela: d.sintonia.janelaDa(conversa),
     };
+  });
+
+  /* conversas-gestos: prévia da conversa (segurar o dedo na linha da lista). Só leitura: NÃO marca como lida. */
+  const PreviaQ = z.object({ limite: z.coerce.number().int().min(1).max(60).default(30) });
+  app.get('/api/conversas/:id/previa', async (req) => {
+    const { limite } = PreviaQ.parse(req.query);
+    const c = await conversaVisivel(req);
+    const mensagens = (await d.repo.mensagens(c.id, limite)).map((m) => ({ id: m.id, autor: m.autor, autorNome: m.autorNome, texto: m.texto, em: m.em, anexo: m.anexo ? { tipo: m.anexo.tipo, nomeArquivo: m.anexo.nomeArquivo, legenda: m.anexo.legenda, duracaoSeg: m.anexo.duracaoSeg, voz: m.anexo.voz } : undefined }));
+    return { conversa: { id: c.id, nome: c.nome, telefone: c.telefone }, mensagens };
   });
 
   app.get('/api/conversas/:id/foto', async (req, reply) => {
