@@ -11,6 +11,8 @@ export interface OpcoesFila {
   baseUrl: string;
   /** Pausa mínima entre chamadas (ms). */
   intervaloMs?: number;
+  /** Tempo máximo de cada chamada (ms). Sem isso, uma API travada seguraria a fila inteira. */
+  timeoutMs?: number;
   fetchFn?: typeof fetch;
   agora?: () => number;
   dormir?: (ms: number) => Promise<void>;
@@ -25,6 +27,7 @@ export interface PedidoHttp {
 export abstract class ClienteHttpFila {
   protected baseUrl: string;
   protected readonly intervaloMs: number;
+  protected readonly timeoutMs: number;
   protected readonly fetchFn: typeof fetch;
   protected readonly agora: () => number;
   protected readonly dormir: (ms: number) => Promise<void>;
@@ -37,6 +40,7 @@ export abstract class ClienteHttpFila {
   constructor(o: OpcoesFila) {
     this.baseUrl = o.baseUrl.replace(/\/$/, '');
     this.intervaloMs = o.intervaloMs ?? 1200;
+    this.timeoutMs = o.timeoutMs ?? 20_000;
     this.fetchFn = o.fetchFn ?? fetch;
     this.agora = o.agora ?? Date.now;
     this.dormir = o.dormir ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
@@ -88,6 +92,7 @@ export abstract class ClienteHttpFila {
           ...(op.corpo ? { 'content-type': 'application/json' } : {}),
         },
         body: op.corpo ? JSON.stringify(op.corpo) : undefined,
+        signal: AbortSignal.timeout(this.timeoutMs),
       });
 
       if (resp.status === 429 && tentativa < 3) {

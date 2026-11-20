@@ -326,3 +326,8 @@ dialog.ag-folha { position: fixed; }
 @media (prefers-reduced-motion: reduce) {
   .ag *, dialog.ag-dlg, dialog.ag-dlg * { animation: none !important; transition: none !important; }
 }
+
+/* Origem do horário (marcado direto no sistema do salão) e aviso quando o sistema não respondeu. Sem animação. */
+.ag-origem { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; line-height: 16px; vertical-align: 1px; color: var(--ag-sub); border: 1px solid var(--ag-linha-forte); }
+.ag-faixa { flex: none; font-size: 12px; line-height: 1.4; color: var(--ag-sub); padding: 4px 16px; border-bottom: 1px solid var(--ag-linha); }
+.ag-faixa[hidden] { display: none; }

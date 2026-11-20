@@ -13,6 +13,7 @@ import { pode } from '../auth/permissoes.js';
 import type { Contas } from '../auth/contas.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
+import { conversasDasClientes, mesclarAgenda, type AgendaExterna } from '../agenda/agenda-externa.js';
 import { ErroLeads, PedidoImportacao, UNIDADES_LEADS, type Leads } from '../leads/leads.js';
 import { PERIODOS_RELATORIO, RELATORIOS, type NomeRelatorio, type Relatorios } from '../relatorios/relatorios.js';
 import { nomeArquivo } from '../util/csv.js';
@@ -30,6 +31,8 @@ export interface OpcoesExtras {
   relatorios: Relatorios;
   leads: Leads;
   contas?: Contas;
+  /** A agenda do sistema do salão (Trinks…), para mostrar também o que a recepção marca direto lá. */
+  agendaExterna?: AgendaExterna;
   agora?: () => Date;
 }
 
@@ -175,21 +178,34 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
       if (esc.unidades && !esc.unidades.includes(q.unidade)) throw proibido('Você não vê a agenda dessa unidade.');
       esc.unidades = [q.unidade];
     }
-    const todos = await agendamentosEntre(o.repo, inicio, fim, esc);
+    const unidadesVistas = (esc.unidades ?? permitidas.map((x) => x.id)) as UnidadeId[];
+    // A Sintonia (banco) e o sistema do salão ao mesmo tempo; o sistema nunca derruba a agenda.
+    const [doBanco, externo] = await Promise.all([
+      agendamentosEntre(o.repo, inicio, fim, esc),
+      o.agendaExterna
+        ? o.agendaExterna.dasUnidades(unidadesVistas, de, dataISO(new Date(fim.getTime() - 1))).catch(() => ({ itens: [], aviso: undefined }))
+        : Promise.resolve({ itens: [], aviso: undefined }),
+    ]);
+    const externos = externo.itens.filter((i) => i.inicio >= inicio && i.inicio < fim);
+    const conversaDe = externos.length
+      ? await conversasDasClientes(o.repo as Parameters<typeof conversasDasClientes>[0], o.empresaId, externos).catch(() => () => undefined)
+      : () => undefined;
+    // Conversas que os horários (da Sintonia ou do sistema, casados pelo celular) podem abrir.
     const conversas = new Map<string, Conversa>();
-    for (const id of new Set(todos.map((i) => i.conversaId))) {
+    const ids = new Set([...doBanco.map((i) => i.conversaId), ...externos.map((e) => conversaDe(e)?.id).filter((x): x is string => Boolean(x))]);
+    for (const id of ids) {
       const c = await o.repo.buscarConversa(id).catch(() => undefined);
       if (c) conversas.set(id, c);
     }
+    const todos = mesclarAgenda(doBanco, externos, conversaDe, (id) => {
+      const c = conversas.get(id);
+      return Boolean(c && (!u || podeVer(u, c)));
+    });
     const profissionais = [...new Set(todos.map((i) => i.profissional).filter((p): p is string => Boolean(p)))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const itens = todos
-      .filter((i) => !q.profissional || (q.profissional === '-' ? !i.profissional : i.profissional === q.profissional))
-      .map((i) => {
-        const c = conversas.get(i.conversaId);
-        return { ...i, fim: new Date(i.inicio.getTime() + i.duracaoMin * 60_000), podeAbrir: Boolean(c && (!u || podeVer(u, c))) };
-      });
+    const itens = todos.filter((i) => !q.profissional || (q.profissional === '-' ? !i.profissional : i.profissional === q.profissional));
     return {
-      fonte: 'sintonia',
+      fontes: [...new Set(['sintonia', ...todos.map((i) => i.fonte)])],
+      ...(externo.aviso ? { aviso: externo.aviso } : {}),
       de,
       dias: q.dias,
       itens,

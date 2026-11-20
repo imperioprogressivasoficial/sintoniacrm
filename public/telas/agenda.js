@@ -3,7 +3,7 @@
  * busca e "hoje"; vistas Programação, Dia, 3 dias, Semana e Mês; arrastar para o lado troca o período; toque num
  * horário vazio começa um agendamento ali; toque num horário marcado abre a folha de detalhes.
  * No computador (≥ 900 px): coluna da esquerda com "Criar", mini calendário e filtros, como a versão web.
- * Fonte: /api/agenda/agendamentos (horários marcados pela Sintonia), lida em blocos de 14 dias — só o período à vista
+ * Fonte: /api/agenda/agendamentos (horários da Sintonia e do sistema do salão, como o Trinks), lida em blocos de 14 dias — só o período à vista
  * e um bloco de cada lado. Estilos em telas/agenda.css (prefixo .ag-). Texto do servidor entra sempre por textContent.
  */
 window.SintoniaTelas = window.SintoniaTelas || {};
@@ -160,9 +160,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           const a = inicioBahia(de), z = new Date(a.getTime() + BLOCO * 864e5);
           conf = (await s.ui.api(`/api/followup/confirmacoes?de=${encodeURIComponent(a.toISOString())}&ate=${encodeURIComponent(z.toISOString())}`)).status || {};
         } catch { /* a confirmação não segura a agenda */ }
-        const assin = JSON.stringify([r.itens, conf]);
+        const assin = JSON.stringify([r.itens, conf, r.aviso || '']);
         const antes = cache.get(b);
-        cache.set(b, { itens: r.itens || [], assin });
+        cache.set(b, { itens: r.itens || [], assin, aviso: r.aviso || '' });
         Object.assign(s.conf, conf);
         s.erro = null;
         return !antes || antes.assin !== assin;
@@ -197,9 +197,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         if (i.profissional) nomes.add(i.profissional);
       }
     }
+    desenharAviso();
     for (const l of porDia.values()) l.sort((a, b) => a._min - b._min || (a.cliente || '').localeCompare(b.cliente || '', 'pt-BR'));
     profs = [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     atribuirCores();
+  }
+
+  /** Aviso discreto quando o sistema do salão (Trinks…) não respondeu: a agenda segue com o que é da Sintonia. */
+  function desenharAviso() {
+    if (!s.avisoEl) return;
+    const textos = [...new Set([...cache.values()].map((c) => c.aviso).filter(Boolean))];
+    s.avisoEl.textContent = textos.join(' ');
+    s.avisoEl.hidden = !textos.length;
   }
 
   /** Cor de cada profissional: fixa no aparelho; a primeira escolha segue o nome (igual para a equipe toda), sem repetir enquanto houver cor livre. */
@@ -263,9 +272,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.barra = el('header', { class: 'ag-barra' });
     s.progresso = el('div', { class: 'ag-progresso', 'aria-hidden': 'true' });
     s.mini = el('div', { class: 'ag-mini-cel', hidden: '' });
+    s.avisoEl = el('div', { class: 'ag-faixa', role: 'status', hidden: '' });
     s.conteudo = el('div', { class: 'ag-conteudo' });
     s.fab = el('button', { class: 'ag-fab', type: 'button', 'aria-label': 'Novo agendamento', html: IC.mais, onclick: () => novo() });
-    s.raiz.append(s.lado, el('div', { class: 'ag-principal' }, s.barra, s.progresso, s.mini, s.conteudo, s.fab));
+    s.raiz.append(s.lado, el('div', { class: 'ag-principal' }, s.barra, s.progresso, s.avisoEl, s.mini, s.conteudo, s.fab));
     s.caixa.replaceChildren(s.raiz);
     ligarArrasto(s.conteudo);
     ligarArrasto(s.mini, true);
@@ -279,6 +289,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     desenharLado();
     desenharMini();
     desenharConteudo();
+    desenharAviso();
     marcarCarregando();
   }
 
@@ -399,7 +410,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!profs.length) lista.push(el('div', { class: 'ag-nota', text: 'As profissionais aparecem aqui conforme os horários carregam.' }));
     for (const p of profs) lista.push(chk(corDe(p), p, !s.offProf.has(p), (v) => { v ? s.offProf.delete(p) : s.offProf.add(p); aplicar(); }));
     lista.push(chk('ag-cx', 'Sem profissional', !s.offProf.has('-'), (v) => { v ? s.offProf.delete('-') : s.offProf.add('-'); aplicar(); }));
-    lista.push(el('div', { class: 'ag-nota', text: 'Mostra os horários marcados pela Sintonia (IA e botão Agendar). O que foi marcado direto no Trinks não aparece aqui.' }));
+    lista.push(el('div', { class: 'ag-nota', text: 'Mostra os horários marcados pela Sintonia (IA e botão Agendar) e os marcados direto no sistema do salão, como o Trinks.' }));
     return lista;
   }
 
@@ -782,22 +793,27 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const selo = !passou && conf && window.SintoniaTelas?.followup?.seloConfirmacao ? window.SintoniaTelas.followup.seloConfirmacao(s.ui, conf) : null;
     const linha = (ic, ...filhos) => el('div', { class: 'ag-linha' }, typeof ic === 'string' ? el('span', { html: ic, style: 'display:grid;justify-self:center;color:var(--ag-sub)' }) : ic, el('div', {}, ...filhos));
     const dur = i.duracaoMin >= 60 ? `${Math.floor(i.duracaoMin / 60)} h${i.duracaoMin % 60 ? ' ' + (i.duracaoMin % 60) + ' min' : ''}` : `${i.duracaoMin} min`;
-    const tel = s.ui.formatarTel?.(i.telefone) || i.telefone;
+    const tel = i.telefone ? s.ui.formatarTel?.(i.telefone) || i.telefone : '';
+    const doSistema = i.fonte && i.fonte !== 'sintonia';
     d.append(
       el('div', { class: 'ag-alca', 'aria-hidden': 'true' }),
       el('div', { class: 'ag-folha-topo' }, el('button', { class: 'ag-ic', type: 'button', 'aria-label': 'Fechar', html: IC.fechar, onclick: () => d.close() })),
       el('div', { class: 'ag-folha-tit ' + corDe(i.profissional) }, el('span', { class: 'ag-quad', 'aria-hidden': 'true' }),
-        el('div', {}, el('h2', { text: i.cliente || tel }), el('p', { text: `${diaLongo(i._dia)} · ${hm(ini)} – ${hm(fim)}` }))),
+        el('div', {}, el('h2', { text: i.cliente || tel || 'Cliente' }), el('p', { text: `${diaLongo(i._dia)} · ${hm(ini)} – ${hm(fim)}` }, doSistema ? el('span', { class: 'ag-origem', text: i.por || 'Sistema' }) : null))),
       i.servico ? linha(IC.tesoura, el('span', { text: i.servico }), el('small', { text: dur })) : linha(IC.relogio, el('span', { text: dur })),
       linha(el('i', { class: corDe(i.profissional), 'aria-hidden': 'true' }), el('span', { text: i.profissional || 'Sem profissional definida' }), el('small', { text: 'Profissional' })),
       linha(IC.local, el('span', { text: NOME_UNI[i.unidade] || s.ui.UNIDADE?.[i.unidade] || i.unidade }), el('small', { text: 'Unidade' })),
       linha(IC.check, selo || el('span', { text: passou ? 'Já aconteceu' : 'Marcado' }), el('small', { text: selo ? 'Confirmação pelo WhatsApp' : 'Situação' })),
-      linha(i.porIa ? IC.brilho : IC.pessoa, el('span', { text: i.porIa ? 'Agendado pela IA, sozinha, pelo WhatsApp' : `Agendado por ${i.por || 'equipe'}` }), el('small', { text: `Marcado em ${new Date(i.marcadoEm).toLocaleString('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` })),
-      linha(IC.tel, el('span', { text: tel })),
+      doSistema
+        ? linha(IC.pessoa, el('span', { text: `Marcado direto no ${i.por || 'sistema do salão'}` }), el('small', { text: 'Não foi pela Sintonia' }))
+        : linha(i.porIa ? IC.brilho : IC.pessoa, el('span', { text: i.porIa ? 'Agendado pela IA, sozinha, pelo WhatsApp' : `Agendado por ${i.por || 'equipe'}` }), el('small', { text: `Marcado em ${new Date(i.marcadoEm).toLocaleString('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` })),
+      tel ? linha(IC.tel, el('span', { text: tel })) : null,
       el('div', { class: 'ag-acoes' },
         i.podeAbrir ? el('button', { class: 'ag-bt ag-cheio', type: 'button', html: IC.conversa + '<span>Abrir conversa</span>', onclick: () => { d.close(); s.ui.abrir(i.conversaId); } }) : null,
         i.podeAbrir && s.ui.agendar ? el('button', { class: 'ag-bt ag-borda', type: 'button', html: IC.cal + '<span>Agendar outro horário</span>', onclick: () => { d.close(); s.ui.agendar(i.conversaId); } }) : null),
-      i.podeAbrir ? el('div', { class: 'ag-aviso', text: 'Para remarcar ou cancelar, combine com a cliente na conversa e ajuste no Trinks.' }) : el('div', { class: 'ag-aviso', text: 'Esta conversa é de outra atendente. Você vê o horário, mas não abre a conversa.' }));
+      el('div', { class: 'ag-aviso', text: i.podeAbrir
+        ? `Para remarcar ou cancelar, combine com a cliente na conversa e ajuste no ${doSistema ? i.por : 'Trinks'}.`
+        : !i.conversaId ? 'Esta cliente ainda não tem conversa na Sintonia.' : 'Esta conversa é de outra atendente. Você vê o horário, mas não abre a conversa.' }));
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     d.addEventListener('close', () => d.remove());
     ligarPuxarParaBaixo(d);

@@ -3,6 +3,7 @@ import { MIN, HORA } from '../util/tempo.js';
 import { ClienteHttpFila, type MetodoHttp } from './fila-http.js';
 import {
   ErroAgenda,
+  type AgendamentoDaAgenda,
   type AgendamentoDoSistema,
   type ClienteAgenda,
   type DadosNovoAgendamento,
@@ -132,6 +133,20 @@ export class ClienteTrinks extends ClienteHttpFila implements SistemaAgenda {
     const r = await this.pedir<Paginado<TrinksAgendamento>>(estabelecimentoId, 'GET', '/v1/agendamentos', { query });
     // Status 9 = cancelado no Trinks.
     return (r.data ?? []).map((a) => ({ ...a, cancelado: a.status?.id === 9 }));
+  }
+
+  /**
+   * A agenda inteira do estabelecimento no período (GET /v1/agendamentos com dataInicio/dataFim e sem clienteId),
+   * com o que a recepção marcou direto no Trinks. Sem cache aqui: quem chama (agenda-externa.ts) guarda por 1 minuto.
+   * Status 9 = cancelado no Trinks.
+   */
+  async listarAgendamentosDoPeriodo(estabelecimentoId: string, dataInicio: string, dataFim: string): Promise<AgendamentoDaAgenda[]> {
+    const lista = await this.todasAsPaginas<AgendamentoDaAgenda>(estabelecimentoId, '/v1/agendamentos', {
+      dataInicio,
+      dataFim,
+      pageSize: '50',
+    });
+    return lista.filter((a) => a && typeof a.id === 'number').map((a) => ({ ...a, cancelado: a.status?.id === 9 }));
   }
 
   // ---------- escrita ----------

@@ -3,6 +3,9 @@ import { ContatosMemoria, ContatosPostgres } from '../src/contatos/contatos.js';
 import { chaveTelefone, normalizarTelefoneBR } from '../src/leads/telefone-br.js';
 import { encontrarDuplicatas, nomesParecidos } from '../src/leads/duplicatas.js';
 import { montarExtras, registrarExtras } from '../src/rotas/extras.js';
+import { AgendaExterna } from '../src/agenda/agenda-externa.js';
+import { ErroAgendamento } from '../src/agenda/agendar.js';
+import type { AgendamentoDaAgenda } from '../src/agenda/sistema.js';
 import type { ArmazemTags } from '../src/tags/tags.js';
 import { ambientes, montarGestao, quinta } from './gestao-ambiente.js';
 
@@ -75,7 +78,7 @@ describe('Detecção de duplicatas', () => {
 
 for (const amb of ambientes) {
   describe(`Relatórios, leads e agenda (${amb.nome})`, () => {
-    async function montar() {
+    async function montar(agendaExterna?: AgendaExterna) {
       const g = await montarGestao(amb, { inicio: quinta(10) });
       const contatos = g.pool ? new ContatosPostgres(g.pool) : new ContatosMemoria();
       const armazemTags = (g.tags as unknown as { armazem: ArmazemTags }).armazem;
@@ -90,7 +93,7 @@ for (const amb of ambientes) {
         comConversa: (id, fn) => g.sintonia.comConversa(id, fn),
         agora: () => g.relogio.t,
       });
-      registrarExtras(g.app, { repo: g.repo, empresaId: 'imperio', relatorios: extras.relatorios, leads: extras.leads, contas: g.contas, agora: () => g.relogio.t });
+      registrarExtras(g.app, { repo: g.repo, empresaId: 'imperio', relatorios: extras.relatorios, leads: extras.leads, contas: g.contas, agendaExterna, agora: () => g.relogio.t });
       const mover = (d: Date) => (g.relogio.t = d);
       return { ...g, contatos, mover };
     }
@@ -295,6 +298,74 @@ for (const amb of ambientes) {
       const bia = (await g.como(g.gente.bia, 'GET', '/api/agenda/agendamentos?de=2026-11-05')).json();
       expect(bia.itens.map((i: { cliente: string; podeAbrir: boolean }) => [i.cliente, i.podeAbrir])).toEqual([['Joana', false]]);
       expect((await g.como(g.gente.bia, 'GET', '/api/agenda/agendamentos?unidade=sumare')).statusCode).toBe(403);
+    });
+
+    it('agenda: junta o que foi marcado direto no Trinks, sem repetir, e acha a conversa pelo celular', async () => {
+      const doTrinks: AgendamentoDaAgenda[] = [];
+      const pedidos: string[] = [];
+      const roteador = {
+        paraUnidade: (u: string) => {
+          if (u !== 'norte') throw new ErroAgendamento('sem_agenda', 'sem agenda');
+          return {
+            tipo: 'trinks' as const,
+            local: '240643',
+            sistema: {
+              listarAgendamentosDoPeriodo: async (_l: string, de: string, ate: string) => (pedidos.push(`${de}..${ate}`), doTrinks),
+              listarProfissionais: async () => [{ id: 7, nome: 'Liane Souza', apelido: 'Lia' }],
+            } as never,
+          };
+        },
+      };
+      const g = await montar(new AgendaExterna({ roteador }));
+      const joana = await g.conversa('norte', 'Joana');
+      const marta = await g.conversa('norte', 'Marta');
+      await g.sintonia.equipeAgendou(joana.id, { tipo: 'agendou', clienteTrinksId: 5, agendamento: { trinksId: 77, unidade: 'norte', servico: 'Progressiva', profissional: 'Lia', inicio: quinta(19), duracaoMin: 180 } }, 'Carla Lima', g.gente.carla);
+      const tel = marta.telefone;
+      doTrinks.push(
+        // o mesmo da Sintonia: aparece uma vez só, como da Sintonia
+        { id: 77, cliente: { id: 5, nome: 'Joana S.' }, profissional: { id: 7, nome: 'Liane Souza' }, servico: { nome: 'Progressiva' }, status: { id: 1, nome: 'Agendado' }, dataHoraInicio: '2026-11-05T19:00:00', duracaoEmMinutos: 180, valor: 320 },
+        // marcado na recepção, cliente com conversa (pelo celular)
+        { id: 90, cliente: { id: 8, nome: 'Marta Lima', telefones: [{ ddi: '55', ddd: tel.slice(2, 4), telefone: tel.slice(4) }] }, profissional: { id: 7, nome: 'Liane Souza' }, servico: { nome: 'Corte' }, status: { id: 1 }, dataHoraInicio: '2026-11-05T14:00:00', duracaoEmMinutos: 60, valor: 80 },
+        // marcado na recepção, cliente sem conversa
+        { id: 91, cliente: { id: 9, nome: 'Sônia' }, profissional: { id: 3, nome: 'Rafa' }, servico: { nome: 'Escova' }, status: { id: 1 }, dataHoraInicio: '2026-11-05T16:00:00', duracaoEmMinutos: 45, valor: 50 },
+        // cancelado no Trinks: não aparece
+        { id: 92, cliente: { id: 10, nome: 'Cancelada' }, status: { id: 9, nome: 'Cancelado' }, dataHoraInicio: '2026-11-05T17:00:00', duracaoEmMinutos: 60, valor: 1 },
+      );
+      const r = (await g.como(g.gente.admin, 'GET', '/api/agenda/agendamentos?de=2026-11-05&dias=1')).json();
+      expect(pedidos).toEqual(['2026-11-05..2026-11-05']); // só a unidade com Trinks, o período certo
+      expect(r.itens.map((i: { cliente: string; fonte: string; podeAbrir: boolean; profissional: string }) => [i.cliente, i.fonte, i.podeAbrir, i.profissional])).toEqual([
+        ['Marta Lima', 'trinks', true, 'Lia'],
+        ['Sônia', 'trinks', false, 'Rafa'],
+        ['Joana', 'sintonia', true, 'Lia'],
+      ]);
+      expect(r.itens[0]).toMatchObject({ id: 't90', conversaId: marta.id, por: 'Trinks', marcadoEm: null });
+      expect(r.itens[1]).toMatchObject({ id: 't91', conversaId: null, telefone: '' });
+      expect(r.profissionais).toEqual(['Lia', 'Rafa']);
+      expect(r.fontes).toEqual(['sintonia', 'trinks']);
+      expect(r.aviso).toBeUndefined();
+      // a segunda conferida (20 s depois) usa o cache: nenhuma chamada nova ao Trinks
+      await g.como(g.gente.admin, 'GET', '/api/agenda/agendamentos?de=2026-11-05&dias=1');
+      expect(pedidos).toHaveLength(1);
+      // Atendente do Norte vê os horários, mas só abre conversa que pode ver
+      const bia = (await g.como(g.gente.bia, 'GET', '/api/agenda/agendamentos?de=2026-11-05&dias=1')).json();
+      expect(bia.itens.map((i: { cliente: string }) => i.cliente)).toEqual(['Marta Lima', 'Sônia', 'Joana']);
+    });
+
+    it('agenda: se o Trinks falha, mostra o da Sintonia com um aviso', async () => {
+      const roteador = {
+        paraUnidade: () => ({
+          tipo: 'trinks' as const,
+          local: '240643',
+          sistema: { listarAgendamentosDoPeriodo: async () => { throw new Error('500'); }, listarProfissionais: async () => [] } as never,
+        }),
+      };
+      const g = await montar(new AgendaExterna({ roteador }));
+      const joana = await g.conversa('norte', 'Joana');
+      await g.sintonia.equipeAgendou(joana.id, { tipo: 'agendou', clienteTrinksId: 5, agendamento: { trinksId: 77, unidade: 'norte', servico: 'Progressiva', inicio: quinta(19), duracaoMin: 180 } }, 'Carla Lima', g.gente.carla);
+      const resp = await g.como(g.gente.admin, 'GET', '/api/agenda/agendamentos?de=2026-11-05&dias=1');
+      expect(resp.statusCode).toBe(200);
+      expect(resp.json().itens.map((i: { cliente: string }) => i.cliente)).toEqual(['Joana']);
+      expect(resp.json().aviso).toMatch(/Trinks não respondeu/);
     });
   });
 }

@@ -58,6 +58,12 @@ export interface AgendamentoDoSistema {
   valor: number;
 }
 
+/** Um horário da agenda inteira do salão (inclusive o que a recepção marcou direto no sistema). */
+export interface AgendamentoDaAgenda extends AgendamentoDoSistema {
+  /** A cliente como o sistema devolve (o telefone pode não vir). */
+  cliente?: ClienteAgenda | null;
+}
+
 export type DadosNovoAgendamento = {
   clienteId: number;
   servicoId: number;
@@ -87,6 +93,11 @@ export interface SistemaAgenda {
   criarAgendamento(local: string, dados: DadosNovoAgendamento): Promise<number>;
   cancelarAgendamento(local: string, agendamentoId: number): Promise<void>;
   listarAgendamentosDoCliente(local: string, clienteId: number, dataInicio?: string, dataFim?: string): Promise<AgendamentoDoSistema[]>;
+  /**
+   * Todos os horários do local entre duas datas (AAAA-MM-DD, as duas inclusas), de qualquer cliente:
+   * é o que a aba Agenda usa para mostrar o que a recepção marcou direto no sistema.
+   */
+  listarAgendamentosDoPeriodo(local: string, dataInicio: string, dataFim: string): Promise<AgendamentoDaAgenda[]>;
   /** Chamada barata para a tela de Conexões: devolve um resumo ("12 profissionais"). */
   testar(local: string): Promise<string>;
 }
@@ -105,7 +116,7 @@ export type AgendaBasica = Pick<
   | 'criarAgendamento'
   | 'listarAgendamentosDoCliente'
 > &
-  Partial<Pick<SistemaAgenda, 'sistema' | 'cancelarAgendamento' | 'testar'>>;
+  Partial<Pick<SistemaAgenda, 'sistema' | 'cancelarAgendamento' | 'testar' | 'listarAgendamentosDoPeriodo'>>;
 
 /** O sistema e o local que valem para uma unidade. */
 export interface AgendaDaUnidade {

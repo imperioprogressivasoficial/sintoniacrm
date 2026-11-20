@@ -3,6 +3,7 @@ import { ClienteHttpFila } from './fila-http.js';
 import {
   ErroAgenda,
   ErroIntegracaoPendente,
+  type AgendamentoDaAgenda,
   type AgendamentoDoSistema,
   type ClienteAgenda,
   type DadosNovoAgendamento,
@@ -106,5 +107,12 @@ export class AgendaAvec extends ClienteHttpFila implements SistemaAgenda {
   }
   async listarAgendamentosDoCliente(): Promise<AgendamentoDoSistema[]> {
     throw new ErroIntegracaoPendente('avec', 'agendamentos da cliente');
+  }
+  /**
+   * A documentação pública só cita relatórios (0051 "clientes com agendamentos", 0058 "agendamentos com filtro
+   * por serviço") sem dizer o formato da resposta: sem isso não dá para ler horário, profissional e cliente.
+   */
+  async listarAgendamentosDoPeriodo(): Promise<AgendamentoDaAgenda[]> {
+    throw new ErroIntegracaoPendente('avec', 'agenda do salão');
   }
 }

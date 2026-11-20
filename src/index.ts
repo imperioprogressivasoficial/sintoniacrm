@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
 import { AgendasDasUnidades, UNIDADES_AGENDA } from './agenda/unidades-agenda.js';
+import { AgendaExterna } from './agenda/agenda-externa.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
@@ -553,7 +554,9 @@ const extras = montarExtras({
   canalDa: (unidade) => (numeros.find((n) => n.unidade === unidade && ehReal(n)) ?? numeros.find((n) => n.unidade === unidade))?.canalId,
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
 });
-registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas });
+// A Agenda mostra também o que a recepção marca direto no sistema do salão (cache de 1 minuto por unidade e período).
+const agendaExterna = new AgendaExterna({ roteador: agendas, log });
+registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas, agendaExterna });
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
 const armazemComercial = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
 registrarComercial(app, {
