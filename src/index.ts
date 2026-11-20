@@ -608,6 +608,8 @@ const extras = montarExtras({
   // Conversa importada: pelo número real da unidade (se houver), senão pelo de teste.
   canalDa: (unidade) => (numeros.find((n) => n.unidade === unidade && ehReal(n)) ?? numeros.find((n) => n.unidade === unidade))?.canalId,
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
+  /* clientes-tags: origem de cada conversa no exportar (filtro e coluna) */
+  origens: (ids) => rastreio.selos(ids),
 });
 // A Agenda mostra também o que a recepção marca direto no sistema do salão (cache de 1 minuto por unidade e período).
 const agendaExterna = new AgendaExterna({ roteador: agendas, log });

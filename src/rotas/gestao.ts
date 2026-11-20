@@ -48,10 +48,14 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
   };
 
   // ------------------------------------------------------------ tags
-  const TagNova = z.object({ nome: z.string().max(60), cor: z.string().max(10).optional() });
+  const Grupo = z.string().max(60).nullable().optional();
+  const TagNova = z.object({ nome: z.string().max(60), cor: z.string().max(10).optional(), grupo: Grupo });
   const TagAlteracao = z
-    .object({ nome: z.string().max(60).optional(), cor: z.string().max(10).optional() })
-    .refine((v) => v.nome !== undefined || v.cor !== undefined, 'Informe o nome ou a cor.');
+    .object({ nome: z.string().max(60).optional(), cor: z.string().max(10).optional(), grupo: Grupo })
+    .refine((v) => v.nome !== undefined || v.cor !== undefined || v.grupo !== undefined, 'Informe o nome, a cor ou o grupo.');
+  /* clientes-tags: juntar duas tags e marcar/desmarcar uma tag em várias conversas de uma vez */
+  const Juntar = z.object({ paraId: z.string().min(1).max(60) });
+  const EmMassa = z.object({ ids: z.array(z.string().uuid()).min(1).max(2000), acao: z.enum(['marcar', 'desmarcar']).default('marcar') });
   const Ordem = z.object({ ids: z.array(z.string().min(1)).max(500) });
   const Marcar = z.object({ tagId: z.string().min(1) });
   const idDe = (req: FastifyRequest) => (req.params as { id: string }).id;
@@ -79,6 +83,36 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
   app.delete('/api/tags/:id', async (req) => {
     exigeGestao(req, 'Só a gerência, a direção e a administração apagam tags.');
     return { ok: true, removidaDe: await exige(o.tags, 'Tags').apagar(idDe(req)) };
+  });
+
+  app.post('/api/tags/:id/juntar', async (req) => {
+    exigeGestao(req, 'Só a gerência, a direção e a administração juntam tags.');
+    const { paraId } = Juntar.parse(req.body);
+    const r = await exige(o.tags, 'Tags').juntar(idDe(req), paraId, quem(req));
+    return { ok: true, tag: r.tag, movidas: r.movidas };
+  });
+
+  // Seleção em massa (Clientes, Conversas): só nas conversas que a pessoa vê; as outras são ignoradas.
+  app.post('/api/tags/:id/conversas', async (req) => {
+    const tags = exige(o.tags, 'Tags');
+    const b = EmMassa.parse(req.body);
+    const tag = await tags.exigir(idDe(req));
+    const ve = o.visivelPara(req);
+    let mudaram = 0;
+    let ignoradas = 0;
+    for (const id of new Set(b.ids)) {
+      const c = await o.repo.buscarConversa(id).catch(() => undefined);
+      if (!c || c.empresaId !== tags.empresaId || !ve(c)) {
+        ignoradas++;
+        continue;
+      }
+      const r = b.acao === 'marcar' ? await tags.marcar(c, tag.id, quem(req)) : await tags.desmarcar(c, tag.id, quem(req));
+      if (r.mudou) {
+        mudaram++;
+        await eventoTag(req, c, b.acao === 'marcar' ? 'tag_marcada' : 'tag_desmarcada', r.tag);
+      }
+    }
+    return { ok: true, mudaram, ignoradas };
   });
 
   const eventoTag = async (req: FastifyRequest, c: Conversa, tipo: 'tag_marcada' | 'tag_desmarcada', tag: { id: string; nome: string }) =>

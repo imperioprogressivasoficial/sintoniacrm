@@ -26,6 +26,8 @@ export interface OpcoesLeads {
   funis?: { garantirNoSistema(c: Conversa): Promise<void> };
   /** Número da loja por onde a conversa importada vai acontecer (o real da unidade, se houver). */
   canalDa: (unidade: UnidadeId) => string | undefined;
+  /** Origem de cada conversa (ícone do rastreamento): filtro e coluna "Origem" do exportar. */
+  origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
   /** Trava da conversa (a mesma da Sintonia): ninguém grava nela durante a mescla. */
   comConversa?: <T>(id: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
   agora: () => Date;
@@ -40,6 +42,32 @@ export interface FiltroLeads {
   /** Criados a partir de (inclusive) / antes de (exclusive). */
   de?: Date;
   ate?: Date;
+  /** Ícone da origem (instagram, facebook, whatsapp, google_ads, indicacao, estabelecimento, desconhecido). */
+  origem?: string;
+  /** Só estas conversas (exportar os selecionados). */
+  conversaIds?: string[];
+}
+
+/** Nome da origem no CSV, pelo ícone do rastreamento. */
+export const NOME_ORIGEM: Record<string, string> = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  whatsapp: 'WhatsApp',
+  google_ads: 'Google',
+  indicacao: 'Indicação',
+  estabelecimento: 'Estabelecimento',
+  desconhecido: 'Sem origem',
+};
+
+/** Empresa (pessoa jurídica) ligada aos contatos, montada a partir do campo "empresa" da ficha. */
+export interface EmpresaDosContatos {
+  chave: string;
+  nome: string;
+  razaoSocial: string | null;
+  cnpj: string | null;
+  site: string | null;
+  total: number;
+  contatos: Array<{ telefone: string; nome: string | null; email: string | null; cargo: string | null; conversaId: string | null; unidade: UnidadeId | null }>;
 }
 
 export interface LinhaLead {
@@ -53,6 +81,8 @@ export interface LinhaLead {
   criadoEm: Date | null;
   campos: Contato['campos'];
   conversaId: string | null;
+  /** Ícone da origem (só quando a Sintonia sabe as origens). */
+  origem?: string;
 }
 
 // ------------------------------------------------------------------ importação
@@ -206,14 +236,19 @@ export class Leads {
     const saida: LinhaLead[] = [];
     const comConversa = new Set<string>();
     const dentro = (d: Date | null) => (!f.de || (d && d >= f.de)) && (!f.ate || (d && d < f.ate));
+    const so = f.conversaIds ? new Set(f.conversaIds) : null;
+    const origens = this.o.origens ? await this.o.origens(b.conversas.filter((c) => noEscopo(escopo, c)).map((c) => c.id)).catch(() => ({}) as Record<string, { icone: string }>) : null;
     for (const c of b.conversas) {
       comConversa.add(c.telefone);
       if (!noEscopo(escopo, c)) continue;
+      if (so && !so.has(c.id)) continue;
       if (f.unidade && c.unidade !== f.unidade) continue;
       if (f.etapa && c.etapa !== f.etapa) continue;
       const tags = b.tags.get(c.id) ?? [];
       if (f.tagId && !tags.some((t) => t.id === f.tagId)) continue;
       if (!dentro(c.criadaEm)) continue;
+      const origem = origens ? (origens[c.id]?.icone ?? 'desconhecido') : undefined;
+      if (f.origem && (origem ?? 'desconhecido') !== f.origem) continue;
       const ficha = b.fichas.get(c.telefone);
       saida.push({
         telefone: c.telefone,
@@ -226,9 +261,10 @@ export class Leads {
         criadoEm: c.criadaEm,
         campos: ficha?.campos ?? {},
         conversaId: c.id,
+        ...(origem ? { origem } : {}),
       });
     }
-    if (!f.unidade && !f.etapa && !f.tagId) {
+    if (!f.unidade && !f.etapa && !f.tagId && !f.origem && !so) {
       for (const ficha of b.fichas.values()) {
         if (comConversa.has(ficha.telefone) || !dentro(ficha.criadoEm)) continue;
         saida.push({ telefone: ficha.telefone, nome: ficha.nome, email: ficha.email, unidade: null, etapa: null, tags: [], dona: null, criadoEm: ficha.criadoEm, campos: ficha.campos, conversaId: null });
@@ -241,8 +277,9 @@ export class Leads {
   async exportarCsv(escopo: EscopoVisao, f: FiltroLeads = {}): Promise<{ csv: string; total: number }> {
     const { linhas, campos } = await this.linhas(escopo, f);
     const valor = (c: CampoContato, v: unknown) => (v === null || v === undefined ? '' : c.tipo === 'data' && typeof v === 'string' ? v.split('-').reverse().join('/') : (v as string | number | boolean));
+    const comOrigem = Boolean(this.o.origens);
     const csv = gerarCsv(
-      ['Nome', 'Telefone', 'E-mail', 'Unidade', 'Etapa', 'Tags', 'Dona', 'Criado em', ...campos.map((c) => c.nome)],
+      ['Nome', 'Telefone', 'E-mail', 'Unidade', 'Etapa', 'Tags', 'Dona', 'Criado em', ...(comOrigem ? ['Origem'] : []), ...campos.map((c) => c.nome)],
       linhas.map((l) => [
         l.nome,
         l.telefone,
@@ -252,10 +289,48 @@ export class Leads {
         l.tags.join(', '),
         l.dona,
         l.criadoEm ? `${dataISO(l.criadoEm).split('-').reverse().join('/')} ${horaHHmm(l.criadoEm)}` : '',
+        ...(comOrigem ? [l.conversaId ? (NOME_ORIGEM[l.origem ?? 'desconhecido'] ?? l.origem ?? '') : ''] : []),
         ...campos.map((c) => valor(c, l.campos[c.id])),
       ]),
     );
     return { csv, total: linhas.length };
+  }
+
+  /**
+   * Empresas ligadas aos contatos (campo "empresa" da ficha: nome fantasia, razão social ou CNPJ), com os contatos
+   * de cada uma. Só contatos que a pessoa vê: com conversa no escopo, ou sem conversa quando ela vê todas as unidades.
+   */
+  async empresas(escopo: EscopoVisao): Promise<EmpresaDosContatos[]> {
+    const b = await this.base();
+    const conversasDoTel = new Map<string, Conversa[]>();
+    for (const c of b.conversas) conversasDoTel.set(c.telefone, [...(conversasDoTel.get(c.telefone) ?? []), c]);
+    const grupos = new Map<string, EmpresaDosContatos>();
+    const notaNome = new Map<string, number>();
+    for (const f of b.fichas.values()) {
+      const e = f.empresa ?? {};
+      const nome = (e.nomeFantasia || e.razaoSocial || '').trim();
+      const cnpj = (e.cnpj || '').replace(/\D/g, '');
+      if (!nome && !cnpj) continue;
+      const todas = conversasDoTel.get(f.telefone) ?? [];
+      const vistas = todas.filter((c) => noEscopo(escopo, c));
+      if (todas.length ? !vistas.length : Boolean(escopo.unidades || escopo.donaOuSemDona)) continue;
+      const chave = cnpj.length === 14 ? `cnpj:${cnpj}` : `nome:${semAcento(nome).replace(/\s+/g, ' ')}`;
+      const cnpjBonito = cnpj.length === 14 ? cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : e.cnpj?.trim() || null;
+      const g = grupos.get(chave) ?? { chave, nome: '', razaoSocial: null, cnpj: cnpjBonito, site: null, total: 0, contatos: [] };
+      // Nome do grupo: nome fantasia antes da razão social; entre iguais, o de quem tem conversa.
+      const nota = (e.nomeFantasia?.trim() ? 2 : e.razaoSocial?.trim() ? 1 : 0) * 2 + (vistas.length ? 1 : 0);
+      if (!g.nome || nota > (notaNome.get(chave) ?? -1)) {
+        g.nome = nome || cnpjBonito || '';
+        notaNome.set(chave, nota);
+      }
+      if (!g.razaoSocial && e.razaoSocial?.trim()) g.razaoSocial = e.razaoSocial.trim();
+      if (!g.site && e.site?.trim()) g.site = e.site.trim();
+      const c = vistas.sort((x, y) => y.atualizadaEm.getTime() - x.atualizadaEm.getTime())[0];
+      g.contatos.push({ telefone: f.telefone, nome: f.nome ?? c?.nome ?? null, email: f.email, cargo: e.cargo?.trim() || null, conversaId: c?.id ?? null, unidade: c?.unidade ?? null });
+      g.total = g.contatos.length;
+      grupos.set(chave, g);
+    }
+    return [...grupos.values()].sort((a, x) => x.total - a.total || a.nome.localeCompare(x.nome, 'pt-BR'));
   }
 
   /** Telefone já cadastrado com a mesma chave (com/sem 55, com/sem 9), ou undefined. */

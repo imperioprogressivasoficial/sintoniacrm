@@ -38,7 +38,16 @@ export interface Tag {
   funilId: string | null;
   /** Etapa fixa que esta tag espelha (só no funil do sistema "Atendimento"). */
   chaveSistema: string | null;
+  /** Grupo (categoria) da tag na tela Vendas › Tags, ex.: "Interesse". null = sem grupo. */
+  grupo?: string | null;
 }
+
+/** Uso de cada tag: em quantas conversas está e quando foi marcada pela última vez. */
+export interface UsoTag {
+  n: number;
+  ultimo: Date | null;
+}
+export type CamposTag = Partial<Pick<Tag, 'nome' | 'cor' | 'ordem' | 'grupo'>>;
 
 /** Marcação de uma etapa de funil numa conversa: desde quando ela está ali. */
 export interface MarcacaoEtapa {
@@ -65,7 +74,7 @@ export interface ArmazemTags {
   buscar(id: string): Promise<Tag | undefined>;
   /** Recusa (ErroTag 409) se já existe uma com o mesmo nome (sem diferenciar maiúsculas). */
   criar(t: Tag): Promise<void>;
-  atualizar(id: string, campos: Partial<Pick<Tag, 'nome' | 'cor' | 'ordem'>>): Promise<void>;
+  atualizar(id: string, campos: CamposTag): Promise<void>;
   /** Apaga a tag e tira de todas as conversas. Devolve de quantas conversas saiu. */
   apagar(id: string): Promise<number>;
   /** true se marcou agora (false se já estava). */
@@ -75,6 +84,13 @@ export interface ArmazemTags {
   marcacoes(empresaId: string, conversaIds?: string[]): Promise<Map<string, string[]>>;
   /** Quantas conversas dentro do escopo têm cada tag. */
   contar(empresaId: string, escopo: EscopoVisao): Promise<Map<string, number>>;
+  /** Quantas conversas dentro do escopo têm cada tag e quando ela foi marcada pela última vez. */
+  uso(empresaId: string, escopo: EscopoVisao): Promise<Map<string, UsoTag>>;
+  /**
+   * Junta a tag `deId` na `paraId` (as duas soltas, da mesma empresa): toda conversa com `deId` fica com `paraId`
+   * (sem repetir) e `deId` é apagada, tudo numa operação só. Devolve quantas conversas ganharam `paraId` agora.
+   */
+  juntar(deId: string, paraId: string, por: string, em: Date): Promise<number>;
 
   // ---------- etapas de funil (tags exclusivas dentro do funil) ----------
   /**
@@ -115,9 +131,9 @@ export class ArmazemTagsMemoria implements ArmazemTags {
   }
   async criar(t: Tag) {
     if (this.repetida(t.empresaId, t.funilId, t.nome)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
-    this.tags.set(t.id, { ...t, funilId: t.funilId ?? null, chaveSistema: t.chaveSistema ?? null });
+    this.tags.set(t.id, { ...t, funilId: t.funilId ?? null, chaveSistema: t.chaveSistema ?? null, grupo: t.grupo ?? null });
   }
-  async atualizar(id: string, campos: Partial<Pick<Tag, 'nome' | 'cor' | 'ordem'>>) {
+  async atualizar(id: string, campos: CamposTag) {
     const t = this.tags.get(id);
     if (!t) return;
     if (campos.nome !== undefined && this.repetida(t.empresaId, t.funilId, campos.nome, id)) {
@@ -160,6 +176,34 @@ export class ArmazemTagsMemoria implements ArmazemTags {
       for (const id of ids) r.set(id, (r.get(id) ?? 0) + 1);
     }
     return r;
+  }
+  async uso(empresaId: string, escopo: EscopoVisao) {
+    const vistas = new Set((await this.conversas()).filter((c) => c.empresaId === empresaId && noEscopo(escopo, c)).map((c) => c.id));
+    const daEmpresa = new Set((await this.listar(empresaId)).map((t) => t.id));
+    const r = new Map<string, UsoTag>();
+    for (const [c, s] of this.marcadas) {
+      if (!vistas.has(c)) continue;
+      for (const [id, em] of s) {
+        if (!daEmpresa.has(id)) continue;
+        const u = r.get(id) ?? { n: 0, ultimo: null };
+        u.n++;
+        if (!u.ultimo || em > u.ultimo) u.ultimo = em;
+        r.set(id, u);
+      }
+    }
+    return r;
+  }
+  async juntar(deId: string, paraId: string, _por: string, em: Date) {
+    let n = 0;
+    for (const s of this.marcadas.values()) {
+      if (!s.delete(deId)) continue;
+      if (!s.has(paraId)) {
+        s.set(paraId, em);
+        n++;
+      }
+    }
+    this.tags.delete(deId);
+    return n;
   }
   private etapaNoFunil(conversaId: string, funilId: string): string | null {
     for (const id of this.marcadas.get(conversaId)?.keys() ?? []) if (this.tags.get(id)?.funilId === funilId) return id;
@@ -223,8 +267,9 @@ interface LinhaTag {
   criada_em: Date;
   funil_id: string | null;
   chave_sistema: string | null;
+  grupo: string | null;
 }
-const COLUNAS_TAG = 'id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema';
+const COLUNAS_TAG = 'id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo';
 const paraTag = (l: LinhaTag): Tag => ({
   id: l.id,
   empresaId: l.empresa_id,
@@ -235,6 +280,7 @@ const paraTag = (l: LinhaTag): Tag => ({
   criadaEm: l.criada_em,
   funilId: l.funil_id,
   chaveSistema: l.chave_sistema,
+  grupo: l.grupo ?? null,
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const nomeRepetido = (e: unknown) => (e as { code?: string }).code === '23505';
@@ -260,20 +306,23 @@ export class ArmazemTagsPostgres implements ArmazemTags {
   async criar(t: Tag) {
     try {
       await this.pool.query(
-        `insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm, t.funilId ?? null, t.chaveSistema ?? null],
+        `insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm, t.funilId ?? null, t.chaveSistema ?? null, t.grupo ?? null],
       );
     } catch (e) {
       if (nomeRepetido(e)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
       throw e;
     }
   }
-  async atualizar(id: string, campos: Partial<Pick<Tag, 'nome' | 'cor' | 'ordem'>>) {
+  async atualizar(id: string, campos: CamposTag) {
     try {
+      // grupo: undefined = não mexe; null = tira do grupo.
       await this.pool.query(
-        `update sintonia.tags set nome = coalesce($2, nome), cor = coalesce($3, cor), ordem = coalesce($4, ordem) where id = $1`,
-        [id, campos.nome ?? null, campos.cor ?? null, campos.ordem ?? null],
+        `update sintonia.tags set nome = coalesce($2, nome), cor = coalesce($3, cor), ordem = coalesce($4, ordem),
+                grupo = case when $5 then $6 else grupo end
+          where id = $1`,
+        [id, campos.nome ?? null, campos.cor ?? null, campos.ordem ?? null, campos.grupo !== undefined, campos.grupo ?? null],
       );
     } catch (e) {
       if (nomeRepetido(e)) throw new ErroTag(`Já existe a tag "${campos.nome}".`, 409);
@@ -331,6 +380,43 @@ export class ArmazemTagsPostgres implements ArmazemTags {
       params,
     );
     return new Map(rows.map((r) => [r.tag_id, r.n]));
+  }
+  async uso(empresaId: string, escopo: EscopoVisao) {
+    const params: unknown[] = [empresaId];
+    const onde = sqlEscopo(escopo, 'c', params);
+    const { rows } = await this.pool.query<{ tag_id: string; n: number; ultimo: Date | null }>(
+      `select ct.tag_id::text as tag_id, count(*)::int as n, max(ct.marcada_em) as ultimo
+         from sintonia.conversa_tags ct
+         join sintonia.tags t on t.id = ct.tag_id
+         join sintonia.conversas c on c.id = ct.conversa_id
+        where t.empresa_id = $1 and ${onde}
+        group by ct.tag_id`,
+      params,
+    );
+    return new Map(rows.map((r) => [r.tag_id, { n: r.n, ultimo: r.ultimo }]));
+  }
+  async juntar(deId: string, paraId: string, por: string, em: Date) {
+    const cliente = await this.pool.connect();
+    try {
+      await cliente.query('begin');
+      // As duas tags travadas: ninguém marca nelas no meio da junção.
+      await cliente.query('select id from sintonia.tags where id = any($1::uuid[]) order by id for update', [[deId, paraId]]);
+      const r = await cliente.query(
+        `insert into sintonia.conversa_tags (conversa_id, tag_id, marcada_por, marcada_em, funil_id)
+         select conversa_id, $2, $3, $4, null from sintonia.conversa_tags where tag_id = $1
+         on conflict do nothing`,
+        [deId, paraId, por, em],
+      );
+      await cliente.query('delete from sintonia.conversa_tags where tag_id = $1', [deId]);
+      await cliente.query('delete from sintonia.tags where id = $1', [deId]);
+      await cliente.query('commit');
+      return r.rowCount ?? 0;
+    } catch (e) {
+      await cliente.query('rollback').catch(() => {});
+      throw e;
+    } finally {
+      cliente.release();
+    }
   }
   async marcarEtapa(conversaId: string, tagId: string, funilId: string, por: string, em: Date) {
     // Trava curta por conversa+funil dentro da transação: duas mudanças ao mesmo tempo nunca deixam duas etapas.
@@ -437,9 +523,10 @@ export class Tags {
     return (await this.listar()).filter((t) => !t.funilId);
   }
 
+  /** Tags soltas com em quantas conversas visíveis estão (`conversas`) e quando foram marcadas pela última vez. */
   async listarComContagem(escopo: EscopoVisao) {
-    const [lista, n] = await Promise.all([this.soltas(), this.armazem.contar(this.empresaId, escopo)]);
-    return lista.map((t) => ({ ...t, conversas: n.get(t.id) ?? 0 }));
+    const [lista, uso] = await Promise.all([this.soltas(), this.armazem.uso(this.empresaId, escopo)]);
+    return lista.map((t) => ({ ...t, grupo: t.grupo ?? null, conversas: uso.get(t.id)?.n ?? 0, ultimoUso: uso.get(t.id)?.ultimo ?? null }));
   }
 
   /** Tag da empresa (404 se não existe ou é de outra empresa). */
@@ -449,7 +536,7 @@ export class Tags {
     return t;
   }
 
-  async criar(dados: { nome: string; cor?: string }, por: string): Promise<Tag> {
+  async criar(dados: { nome: string; cor?: string; grupo?: string | null }, por: string): Promise<Tag> {
     const nome = validarNome(dados.nome);
     const lista = await this.soltas();
     const cor = dados.cor ? validarCor(dados.cor) : CORES_TAGS[lista.length % CORES_TAGS.length]!;
@@ -463,18 +550,32 @@ export class Tags {
       criadaEm: this.agora(),
       funilId: null,
       chaveSistema: null,
+      grupo: validarGrupo(dados.grupo),
     };
     await this.armazem.criar(t);
     return t;
   }
 
-  async alterar(id: string, campos: { nome?: string; cor?: string }): Promise<Tag> {
+  async alterar(id: string, campos: { nome?: string; cor?: string; grupo?: string | null }): Promise<Tag> {
     await this.exigir(id);
     await this.armazem.atualizar(id, {
       nome: campos.nome !== undefined ? validarNome(campos.nome) : undefined,
       cor: campos.cor !== undefined ? validarCor(campos.cor) : undefined,
+      grupo: campos.grupo !== undefined ? validarGrupo(campos.grupo) : undefined,
     });
     return this.exigir(id);
+  }
+
+  /**
+   * Junta duas tags: quem tinha `deId` passa a ter `paraId` e `deId` some (renomear para um nome que já existe,
+   * sem perder ninguém). Só tags soltas; etapas de funil se mudam pela tela do funil.
+   */
+  async juntar(deId: string, paraId: string, por: string): Promise<{ tag: Tag; movidas: number }> {
+    if (deId === paraId) throw new ErroTag('Escolha duas tags diferentes.', 400);
+    const [de, para] = await Promise.all([this.exigir(deId), this.exigir(paraId)]);
+    if (de.funilId || para.funilId) throw new ErroTag('Etapas de funil não se juntam por aqui: mude pela tela do funil.', 409);
+    const movidas = await this.armazem.juntar(de.id, para.id, por, this.agora());
+    return { tag: para, movidas };
   }
 
   /** Nova ordem: os ids na ordem desejada (os que faltarem vão para o fim, na ordem em que estavam). */
@@ -559,6 +660,15 @@ export function validarNome(bruto: string): string {
   if (nome.length < 1) throw new ErroTag('Dê um nome para a tag.', 400);
   if (nome.length > 30) throw new ErroTag('O nome da tag pode ter até 30 letras.', 400);
   return nome;
+}
+
+/** Grupo da tag: texto curto; vazio vira null (sem grupo). */
+export function validarGrupo(bruto: string | null | undefined): string | null {
+  if (bruto === null || bruto === undefined) return null;
+  const g = limparNome(bruto);
+  if (!g) return null;
+  if (g.length > 30) throw new ErroTag('O nome do grupo pode ter até 30 letras.', 400);
+  return g;
 }
 
 export function validarCor(bruto: string): string {
