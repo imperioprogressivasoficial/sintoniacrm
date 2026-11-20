@@ -18,6 +18,10 @@ const MensagemEvolution = z.object({
     // WhatsApp novo (LID): o remoteJid vira um código "@lid" e o número vem aqui.
     remoteJidAlt: z.string().nullish(),
     senderPn: z.string().nullish(),
+    // Grupo: quem mandou (pode ser "@lid"; o número vem em participantAlt/participantPn).
+    participant: z.string().nullish(),
+    participantAlt: z.string().nullish(),
+    participantPn: z.string().nullish(),
     fromMe: z.boolean().optional().default(false),
     id: z.string(),
   }),
@@ -102,15 +106,22 @@ export function eventoEvolution(corpo: unknown): string {
   return typeof e === 'string' ? e.toLowerCase().replace(/_/g, '.') : '';
 }
 
-export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
+/** Mensagens do corpo (messages.upsert ou messages.set), cada uma lida sozinha: as fora do formato ficam de fora. */
+function mensagensDoCorpo(corpo: unknown): { instancia: string; lista: Array<z.infer<typeof MensagemEvolution>> } | null {
   const evento = eventoEvolution(corpo);
-  if (evento !== 'messages.upsert' && evento !== 'messages.set') return [];
-  // Histórico pode vir com mensagens fora do formato: cada uma é lida sozinha, as ruins ficam de fora.
+  if (evento !== 'messages.upsert' && evento !== 'messages.set') return null;
   const bruto = corpo as { instance?: unknown; data?: unknown };
-  if (typeof bruto.instance !== 'string') return [];
+  if (typeof bruto.instance !== 'string') return null;
   const dados = Array.isArray(bruto.data) ? bruto.data : (bruto.data as { messages?: unknown } | undefined)?.messages ?? [bruto.data];
   const lista = (Array.isArray(dados) ? dados : []).map((x) => MensagemEvolution.safeParse(x)).filter((x) => x.success).map((x) => x.data);
-  const r = { data: { instance: bruto.instance } };
+  return { instancia: bruto.instance, lista };
+}
+
+export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
+  const lido = mensagensDoCorpo(corpo);
+  if (!lido) return [];
+  const { lista } = lido;
+  const r = { data: { instance: lido.instancia } };
   const saida: MensagemRecebida[] = [];
   for (const m of lista) {
     // Contato identificado por LID ("…@lid"): o número verdadeiro vem em remoteJidAlt (ou senderPn).
@@ -130,6 +141,60 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
       em: ts ? new Date(ts * 1000) : new Date(),
       ...(conteudo.anexo ? { anexo: conteudo.anexo } : {}),
       ...(referencia ? { referencia } : {}),
+    });
+  }
+  return saida;
+}
+
+/** Mensagem de um grupo do WhatsApp (Conversas de grupo). Nunca vira conversa de cliente. */
+export interface MensagemGrupoRecebida {
+  canalId: string;
+  /** "1203...@g.us" */
+  grupoJid: string;
+  /** Número de quem mandou (só dígitos), quando o WhatsApp informa. */
+  participante: string | null;
+  participanteJid: string | null;
+  /** Nome do perfil de quem mandou (pushName). */
+  participanteNome?: string;
+  texto: string;
+  deMim: boolean;
+  idExterno: string;
+  em: Date;
+  anexo?: AnexoRecebido;
+}
+
+const ehGrupo = (jid: string | null | undefined): jid is string => typeof jid === 'string' && jid.endsWith('@g.us');
+/** Número de um JID de pessoa ("5571...@s.whatsapp.net" ou "5571...:12@s.whatsapp.net"). "@lid" não é número. */
+const numeroDoJid = (jid: string | null | undefined): string | null => {
+  if (!jid || !/@(s\.whatsapp\.net|c\.us)$/.test(jid)) return null;
+  const d = (jid.split('@')[0] ?? '').split(':')[0]!.replace(/\D/g, '');
+  return d.length >= 8 ? d : null;
+};
+
+/** Só as mensagens de grupo do webhook (messages.upsert e o histórico messages.set). */
+export function lerGruposEvolution(corpo: unknown): MensagemGrupoRecebida[] {
+  const lido = mensagensDoCorpo(corpo);
+  if (!lido) return [];
+  const saida: MensagemGrupoRecebida[] = [];
+  for (const m of lido.lista) {
+    if (!ehGrupo(m.key.remoteJid)) continue;
+    const conteudo = lerConteudo(m.message);
+    if (!conteudo) continue;
+    const k = m.key;
+    const participanteJid = k.participant ?? null;
+    const participante = numeroDoJid(k.participantAlt) ?? numeroDoJid(k.participantPn) ?? numeroDoJid(k.senderPn) ?? numeroDoJid(k.participant);
+    const ts = Number(m.messageTimestamp ?? 0);
+    saida.push({
+      canalId: lido.instancia,
+      grupoJid: k.remoteJid,
+      participante: k.fromMe ? null : participante,
+      participanteJid: k.fromMe ? null : participanteJid,
+      ...(k.fromMe || !m.pushName ? {} : { participanteNome: m.pushName }),
+      texto: conteudo.texto,
+      deMim: k.fromMe,
+      idExterno: k.id,
+      em: ts ? new Date(ts * 1000) : new Date(),
+      ...(conteudo.anexo ? { anexo: conteudo.anexo } : {}),
     });
   }
   return saida;

@@ -25,6 +25,8 @@ export interface OpcoesConexoes {
   agendas?: AgendasDasUnidades;
   /** Grava conversas antigas puxadas do WhatsApp (sem IA nem avisos). */
   importarHistorico?: (mensagens: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number }>;
+  /* grupos: "Sincronizar conversas" também desliga o "ignorar grupos" e traz os grupos (Conversas de grupo). */
+  sincronizarGrupos?: () => Promise<unknown>;
   /** Quanto do histórico do WhatsApp já chegou depois de conectar. */
   progressoHistorico?: (canalId: string) => { mensagens: number; conversas: number; em: Date } | undefined;
   /** Saúde do WhatsApp não oficial (selo de cada canal, reconectar, avisos). */
@@ -437,6 +439,8 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     if (!o.importarHistorico) throw Object.assign(new Error('Sincronização indisponível'), { statusCode: 503 });
     const brutas = await evolution().historico(id);
     const mensagens = lerWebhookEvolution({ event: 'messages.upsert', instance: id, data: brutas });
+    // Grupos por trás: não atrasam a tela "Sincronizando".
+    o.sincronizarGrupos?.().catch(() => {});
     return o.importarHistorico(mensagens);
   });
 

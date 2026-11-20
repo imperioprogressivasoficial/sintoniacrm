@@ -44,6 +44,23 @@ function lerInfo(nome: string, i: Record<string, unknown>): InfoInstancia {
 
 export const PREFIXO_INSTANCIA = 'sintonia-';
 
+/** Grupo do WhatsApp como a Evolution descreve. */
+export interface InfoGrupo {
+  jid: string;
+  nome: string | null;
+  participantes: number | null;
+  fotoUrl: string | null;
+}
+
+function lerGrupo(g: Record<string, unknown>): InfoGrupo | null {
+  const jid = typeof g.id === 'string' ? g.id : typeof g.jid === 'string' ? g.jid : '';
+  if (!jid.endsWith('@g.us')) return null;
+  const size = Number(g.size ?? (Array.isArray(g.participants) ? g.participants.length : NaN));
+  const nome = typeof g.subject === 'string' && g.subject.trim() ? g.subject.trim() : null;
+  const foto = typeof g.pictureUrl === 'string' && /^https:\/\//.test(g.pictureUrl) ? g.pictureUrl : null;
+  return { jid, nome, participantes: Number.isFinite(size) && size > 0 ? size : null, fotoUrl: foto };
+}
+
 export class EvolutionAdmin {
   private readonly base: string;
   constructor(
@@ -143,6 +160,8 @@ export class EvolutionAdmin {
         instanceName: nome,
         integration: 'WHATSAPP-BAILEYS',
         qrcode: true,
+        // Conversas de grupo: os grupos do WhatsApp chegam à Sintonia (tela própria, sem IA nem funil).
+        groupsIgnore: false,
         number: numero,
         webhook: configWebhook,
       });
@@ -160,6 +179,8 @@ export class EvolutionAdmin {
         instanceName: nome,
         integration: 'WHATSAPP-BAILEYS',
         qrcode: true,
+        // Conversas de grupo: os grupos do WhatsApp chegam à Sintonia (tela própria, sem IA nem funil).
+        groupsIgnore: false,
         webhook: configWebhook,
       });
       // Algumas versões da v2 ignoram o webhook na criação: garante com a rota própria.
@@ -253,6 +274,62 @@ export class EvolutionAdmin {
       },
     });
     return true;
+  }
+
+  /**
+   * Conversas de grupo: se a instância está com "ignorar grupos" ligado, desliga, mantendo as outras opções.
+   * Só muda a configuração (POST /settings/set): o WhatsApp continua conectado, sem QR Code de novo.
+   */
+  async liberarGrupos(nome: string): Promise<'liberado' | 'ja_liberado'> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const atual = await this.chamar<Record<string, unknown> | null>('GET', `/settings/find/${encodeURIComponent(nome)}`);
+    if (!atual || atual.groupsIgnore !== true) return 'ja_liberado';
+    const campos = ['rejectCall', 'msgCall', 'alwaysOnline', 'readMessages', 'readStatus', 'syncFullHistory', 'wavoipToken'];
+    const corpo: Record<string, unknown> = { groupsIgnore: false };
+    for (const k of campos) if (atual[k] !== undefined && atual[k] !== null) corpo[k] = atual[k];
+    // A Evolution exige estes campos no /settings/set.
+    corpo.rejectCall ??= false;
+    corpo.alwaysOnline ??= false;
+    corpo.readMessages ??= false;
+    corpo.readStatus ??= false;
+    corpo.syncFullHistory ??= false;
+    await this.chamar('POST', `/settings/set/${encodeURIComponent(nome)}`, corpo);
+    return 'liberado';
+  }
+
+  /** Nome, quantas pessoas e a foto de um grupo (GET /group/findGroupInfos). */
+  async infoGrupo(nome: string, jid: string): Promise<InfoGrupo | null> {
+    const r = await this.chamar<Record<string, unknown>>('GET', `/group/findGroupInfos/${encodeURIComponent(nome)}?groupJid=${encodeURIComponent(jid)}`).catch((e) => {
+      if ((e as { status?: number }).status === 404 || (e as { status?: number }).status === 400) return null;
+      throw e;
+    });
+    return r ? lerGrupo(r) : null;
+  }
+
+  /** Todos os grupos em que o número está (GET /group/fetchAllGroups, sem a lista de pessoas). */
+  async listarGrupos(nome: string): Promise<InfoGrupo[]> {
+    const r = await this.chamar<unknown>('GET', `/group/fetchAllGroups/${encodeURIComponent(nome)}?getParticipants=false`);
+    return (Array.isArray(r) ? r : []).map((g) => lerGrupo(g as Record<string, unknown>)).filter((g): g is InfoGrupo => Boolean(g));
+  }
+
+  /** Mensagens recentes dos grupos guardadas na Evolution (formato do webhook): os `grupos` mais recentes. */
+  async historicoGrupos(nome: string, o: { grupos?: number; porGrupo?: number } = {}): Promise<unknown[]> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {});
+    const lista = (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>;
+    const quando = (c: Record<string, unknown>) => new Date(String(c.updatedAt ?? c.lastMessageAt ?? 0)).getTime() || Number((c.lastMessage as Record<string, unknown> | undefined)?.messageTimestamp ?? 0) * 1000;
+    const jids = lista
+      .filter((c) => typeof c.remoteJid === 'string' && (c.remoteJid as string).endsWith('@g.us'))
+      .sort((a, b) => quando(b) - quando(a))
+      .slice(0, o.grupos ?? 30)
+      .map((c) => c.remoteJid as string);
+    const saida: unknown[] = [];
+    for (const remoteJid of jids) {
+      const r = await this.chamar<Record<string, unknown>>('POST', `/chat/findMessages/${encodeURIComponent(nome)}`, { where: { key: { remoteJid } }, page: 1, offset: o.porGrupo ?? 20 }).catch(() => null);
+      const msgs = (r?.messages as Record<string, unknown> | undefined)?.records ?? r?.records ?? (Array.isArray(r) ? r : []);
+      if (Array.isArray(msgs)) saida.push(...msgs);
+    }
+    return saida;
   }
 
   async desconectar(nome: string): Promise<void> {

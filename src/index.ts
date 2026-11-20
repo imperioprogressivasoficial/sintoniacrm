@@ -28,6 +28,9 @@ import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/cham
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
+import { ArmazemGruposMemoria, ArmazemGruposPostgres } from './grupos/armazem.js';
+import { Grupos } from './grupos/grupos.js';
+import { registrarGrupos } from './grupos/rotas.js';
 import pg from 'pg';
 import { migrar } from './store/migrar.js';
 import { RepositorioPostgres } from './store/postgres.js';
@@ -457,6 +460,20 @@ const sintonia = new Sintonia({
   },
 });
 
+/* grupos: Conversas de grupo (grupos do WhatsApp pela API não oficial), em tabelas próprias. */
+const armazemGrupos = pool ? new ArmazemGruposPostgres(pool) : new ArmazemGruposMemoria();
+const grupos = new Grupos({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: armazemGrupos,
+  numeros: () => numeros,
+  admin: () => {
+    const url = conexoes.get('evolutionUrl');
+    const chave = conexoes.get('evolutionApiKey');
+    return url && chave ? new EvolutionAdmin(url, chave) : undefined;
+  },
+  log,
+});
+
 const trabalhador = new Trabalhador({ fila, processar: (m) => sintonia.receber(m), paralelo: cfg.SINTONIA_PARALELO, log });
 
 const app = criarServidor({
@@ -472,9 +489,11 @@ const app = criarServidor({
   get evolution() {
     return { canal: evolution, token: conexoes.get('webhookToken') };
   },
+  grupos,
   conexoes: {
     conexoes,
     agendas,
+    sincronizarGrupos: () => grupos.sincronizar(),
     testarIA: async (chave) => {
       await new Anthropic({ apiKey: chave }).models.list({ limit: 1 });
     },
@@ -654,6 +673,7 @@ registrarPlanos(app, {
     }),
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
+registrarGrupos(app, { grupos, armazem: armazemGrupos, empresaId: cfg.SINTONIA_EMPRESA_ID });
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
 
 // Transmissões: campanhas, público, modelos da Meta e a fila de envio com ritmo por número.
