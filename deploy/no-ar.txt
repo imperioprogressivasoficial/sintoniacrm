@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 23:05 UTC (20/11, 20h05 na Bahia)
-commit: c3c1a07
-pacote sha256: b39b3815f6847c5daf1ca390d8e8f9a7360f63f2a0b3657488e46b1b815eb2d0
+data: 2026-11-20 23:30 UTC (20/11, 20h30 na Bahia)
+commit: cece124
+pacote sha256: 9433a3f263f4aba8077fdf0c9bbd78a1d492b03e5cc6834edaa5642d66462c8b
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-c3c1a07.b64); pode apagar depois.
-observação: em cima do a656716. Entra: fluidez (claude/fluidez: transições tipo iPhone, voltar arrastando da borda, folhas com mola, lista que só refaz a linha que mudou, lista guardada no aparelho; docs/FLUIDEZ.md).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-cece124.b64); pode apagar depois.
+observação: em cima do c3c1a07. Entra: Conversas de equipe (claude/equipe, migração 420, vista chat-equipe — 'equipe' é Atendentes e acessos) e Conversas de grupo do WhatsApp (claude/grupos, migração 410, groupsIgnore desligado na instância ao abrir a tela).
