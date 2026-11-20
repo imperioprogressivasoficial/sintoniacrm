@@ -104,6 +104,9 @@ export interface OpcoesWebhookMeta {
   status?: (lista: StatusRecebido[]) => Promise<unknown>;
 }
 
+/** Identifica este início do servidor (muda a cada publicação/reinício). */
+const VERSAO_SERVIDOR = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const app = Fastify({ logger: false });
   const log = d.log ?? (() => {});
@@ -116,6 +119,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     } catch (e) {
       feito(e as Error, undefined);
     }
+  });
+
+  // Toda resposta do nosso servidor leva x-sintonia: 1. Assim o app e o service worker sabem que um 404/502 sem ele
+  // veio do proxy (servidor reiniciando numa publicação) e mostram "Estamos atualizando melhorias" (public/telas/atualizando.js).
+  // x-sintonia-versao muda a cada início do servidor: o app recarrega quando volta de uma atualização.
+  app.addHook('onSend', async (_req, reply, corpo) => {
+    reply.header('x-sintonia', '1').header('x-sintonia-versao', VERSAO_SERVIDOR);
+    return corpo;
   });
 
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
