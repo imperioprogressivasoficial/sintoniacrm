@@ -46,6 +46,9 @@
     background: var(--cx-bt); color: var(--cx-bt-txt); }
   .cx-bt.ok { background: transparent; color: #0b8f6a; box-shadow: inset 0 0 0 1.5px rgba(15,157,107,.35); }
   html[data-tema="escuro"] .cx-bt.ok { color: #0ffcbe; box-shadow: inset 0 0 0 1.5px rgba(15,252,190,.35); }
+  .cx-extras { margin: 18px 0 8px; font-size: 13.5px; color: var(--sub); line-height: 1.6; }
+  .cx-extras a { color: var(--marca-azul, #106ebe); font-weight: 600; text-decoration: none; }
+  html[data-tema="escuro"] .cx-extras a { color: #0ffcbe; }
   .cx-vazio { color: var(--sub); font-size: 14px; padding: 18px 0; }
   .cx-voltar { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14.5px; color: var(--marca-azul, #106ebe); margin: 2px 0 12px; }
   html[data-tema="escuro"] .cx-voltar { color: #0ffcbe; }
@@ -115,6 +118,10 @@
     const barra = document.createElement('div'); barra.id = 'cx-voltar-bar';
     barra.innerHTML = '<button type="button" class="cx-voltar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>Todas as conexões</button>';
     barra.querySelector('button').addEventListener('click', () => history.back());
+    const extras = document.createElement('div'); extras.className = 'cx-extras';
+    extras.innerHTML = '<span>Outras configurações:</span> <a href="#ia" data-sec="ia">Chave da IA (Serena)</a> · <a href="#transcricao" data-sec="transcricao">Transcrição de áudio</a>';
+    extras.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); abrirSecao(a.dataset.sec); }));
+    sec.append(extras);
     main.prepend(sec, barra);
     $('cx-q').addEventListener('input', (e) => desenhar(e.target.value));
     desenhar();

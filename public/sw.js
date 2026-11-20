@@ -12,13 +12,12 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { titulo: 'Sintonia', texto: e.data ? e.data.text() : '' }; }
   const titulo = d.titulo || 'Sintonia';
   e.waitUntil((async () => {
-    // Com o app aberto e visível, o próprio app mostra o aviso (toast): evita aviso em dobro.
+    // Com o app aberto e visível, o próprio app mostra o aviso (toast). Mesmo assim a notificação é sempre mostrada
+    // (em silêncio): o iPhone cancela a inscrição de quem recebe push sem mostrar nada.
     const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const visivel = janelas.some((c) => c.visibilityState === 'visible' && c.focused);
-    if (visivel) {
-      for (const c of janelas) c.postMessage({ tipo: 'sintonia:push', dados: d });
-      return;
-    }
+    if (visivel) for (const c of janelas) c.postMessage({ tipo: 'sintonia:push', dados: d });
+    if (visivel) d = { ...d, silenciosa: true };
     await self.registration.showNotification(titulo, {
       body: d.texto || '',
       icon: '/icone-192.png',
