@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 01:45 UTC (20/11, 22h45 na Bahia)
-commit: 9eb78e0
-pacote sha256: 9e7c594fb2c9f0077d7bbb7cd103ac195b9deb9f8868f577129e0fc643e8b2b4
+data: 2026-11-21 02:10 UTC (20/11, 23h10 na Bahia)
+commit: 7733d40
+pacote sha256: d433ff17f7920b049581d29ea7a3b1138b91d35700b35aae7b45aa86245d1cba
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-9eb78e0.b64); pode apagar depois.
-observação: em cima do da1e748. Entra: tela Atualizando sem o botão Tentar agora.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-7733d40.b64); pode apagar depois.
+observação: em cima do 9eb78e0. Entra: grupos v2 (todos os grupos via fetchAllGroups, Arquivadas, histórico dos grupos vazios; migração 411).
