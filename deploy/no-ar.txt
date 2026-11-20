@@ -1,10 +1,10 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 05:04 UTC (20/11, 02h04 na Bahia)
-commit: 34c49d0
-pacote sha256: 1bfd020642454fb4e4709b72443965b5846ba50eb5c1427e56de4dc37198fadf
+data: 2026-11-20 11:23 UTC (20/11, 08h23 na Bahia)
+commit: 855f49c
+pacote sha256: d2333ad4ac608427ce0365d866db9323ac487484f4b47b603ee8ee41e7e62499
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-34c49d0.b64); pode apagar depois.
-observação: em cima do 97e1592. Entra: Dashboard novo (duas colunas no computador, claro/escuro, personalizar com lápis/"i"/
-  arrastar, biblioteca de relatórios; tabela painel_layouts, migração 300) e consertos da auditoria (tela Empresa, link de
-  anúncios, chave da IA e transcrição em Conexões › Outras configurações, push no iPhone). Serviços extras (whisper, cópia,
-  status.n8nimperio.tech, estatisticas.n8nimperio.tech) seguem iguais. Conferido: /saude 200, /api/painel/layout 200.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-855f49c.b64); pode apagar depois.
+observação: em cima do 34c49d0. Entra o 2º lote da auditoria: presença dentro do app (tabela presencas, migração 310; o
+  serviço "presenca" saiu do compose, o volume sintonia_presenca ficou órfão no servidor), links rastreados aceitam DDD,
+  relatórios na mesma base, selo real da IA no Plano, ajustes de tela, "Instalar o app" e "Ativar notificações".
+  Conferido: /saude 200, /api/presenca 200 pelo app, /telas/instalar.js 200.
