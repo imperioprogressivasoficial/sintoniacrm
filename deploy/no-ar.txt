@@ -1,8 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 12:54 UTC (20/11, 09h54 na Bahia)
-commit: 44d749b
-pacote sha256: 3c90cdc98ca2c5ee5082dec8a848be709be6ebe2fe492bdbfdacf15f7da8e18f
+data: 2026-11-20 13:14 UTC (20/11, 10h14 na Bahia)
+commit: 2c191a9
+pacote sha256: 315a5b322a0cb9b1116997e29596f359813cf81446543203e0fc874c78e22d6a
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-44d749b.b64); pode apagar depois.
-observação: em cima do d619be0. Entra: Configurações em sanfona (estilo Kommo) + Minha conta pela foto; WhatsApp em 3 etapas (vidro), código de pareamento funcionando (recria a instância com o número), QR Code e novo código.
-  Conferido: /saude 200, /conexoes com o fluxo novo, código real gerado pela Evolution (canal Teste).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-2c191a9.b64); pode apagar depois.
+observação: em cima do 44d749b. Entra: Dashboard no celular no modelo 3 (banco): número centralizado, curva de ponta a ponta sem eixos, cartões sem lápis/i (só no modo de editar).
+  Conferido: /saude 200, painel.js novo servido, WhatsApp respondendo.
