@@ -1,8 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 11:56 UTC (20/11, 08h56 na Bahia)
-commit: d619be0
-pacote sha256: 5ae40ab6f5f505adc9d33922c2d6c0c5be78696b0752a5e23d571c9b70e7d67d
+data: 2026-11-20 12:54 UTC (20/11, 09h54 na Bahia)
+commit: 44d749b
+pacote sha256: 3c90cdc98ca2c5ee5082dec8a848be709be6ebe2fe492bdbfdacf15f7da8e18f
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-d619be0.b64); pode apagar depois.
-observação: em cima do 78d9777. Entra: "Mais" vira "Configurações" (barra e textos) e o rótulo da barra não corta mais g/ç.
-  Conferido: /saude 200, app servindo "Configurações".
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-44d749b.b64); pode apagar depois.
+observação: em cima do d619be0. Entra: Configurações em sanfona (estilo Kommo) + Minha conta pela foto; WhatsApp em 3 etapas (vidro), código de pareamento funcionando (recria a instância com o número), QR Code e novo código.
+  Conferido: /saude 200, /conexoes com o fluxo novo, código real gerado pela Evolution (canal Teste).

@@ -12,6 +12,13 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 **Ao parar (crédito acabando, fim do dia, troca de IA):**
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
+
+- **20/11 12:54 UTC — no ar o commit 44d749b** (branch `claude/paginas-vendas-login`, levado para `producao`).
+  Configurações em sanfona (categorias estilo Kommo; Minha conta pela foto). WhatsApp: lista de canais em linhas e
+  conexão em 3 etapas (autorizar › número › código, ou QR Code). Código de pareamento: a Evolution v2.3.7 ignora o número
+  se a instância já está "connecting", por isso `conectar(..., numero)` apaga e recria a instância com `number` e espera o
+  `pairingCode`; rota GET `/api/conexoes/whatsapp/canais/:id/codigo` devolve o código em vigor.
+  Falta: menu lateral do computador nas mesmas categorias da sanfona.
 3. Commit e push deste arquivo.
 
 **Regra de ouro:** só uma IA trabalha por vez. Se as duas estiverem ligadas, uma espera.
