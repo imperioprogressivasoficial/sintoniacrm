@@ -49,6 +49,33 @@ export class EvolutionAdmin {
     return { instancias: Array.isArray(lista) ? lista.length : 0 };
   }
 
+  /** Todas as instâncias da Sintonia (nome começa com "sintonia-"), com estado e número. */
+  async listar(): Promise<InfoInstancia[]> {
+    const lista = await this.chamar<Array<Record<string, unknown>>>('GET', '/instance/fetchInstances');
+    return (Array.isArray(lista) ? lista : [])
+      .map((i) => {
+        const nome = String(i.name ?? (i.instance as Record<string, unknown> | undefined)?.instanceName ?? '');
+        const status = String(i.connectionStatus ?? (i.instance as Record<string, unknown> | undefined)?.status ?? '');
+        const dono = String(i.ownerJid ?? (i.instance as Record<string, unknown> | undefined)?.owner ?? '');
+        return {
+          nome,
+          estado: (status === 'open' ? 'conectada' : status === 'connecting' ? 'conectando' : 'desconectada') as EstadoInstancia,
+          numero: dono ? dono.split('@')[0]!.replace(/\D/g, '') || null : null,
+          perfil: (i.profileName as string | undefined) ?? null,
+        };
+      })
+      .filter((i) => i.nome.startsWith(PREFIXO_INSTANCIA));
+  }
+
+  /** Apaga a instância da Sintonia na Evolution (sai do WhatsApp antes). */
+  async apagar(nome: string): Promise<void> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia podem ser apagadas por aqui');
+    await this.chamar('DELETE', `/instance/logout/${encodeURIComponent(nome)}`).catch(() => {});
+    await this.chamar('DELETE', `/instance/delete/${encodeURIComponent(nome)}`).catch((e) => {
+      if ((e as { status?: number }).status !== 404) throw e;
+    });
+  }
+
   async info(nome: string): Promise<InfoInstancia> {
     let lista: Array<Record<string, unknown>>;
     try {

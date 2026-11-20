@@ -127,8 +127,9 @@ export interface ContaMeta {
 
 export const novoVerifyToken = () => `sintonia-${randomBytes(16).toString('hex')}`;
 
-export const NumeroConectadoCfg = z.object({ canalId: z.string().min(1), unidade: z.enum(['norte', 'sumare', 'feira']) });
-export type NumeroCfg = { canalId: string; unidade: UnidadeId };
+export const NumeroConectadoCfg = z.object({ canalId: z.string().min(1), unidade: z.enum(['norte', 'sumare', 'feira']), nome: z.string().max(60).optional() });
+/** Canal de WhatsApp registrado. `nome` é o apelido que a pessoa deu (ex.: "Atendimento"); `unidade` é só interna. */
+export type NumeroCfg = { canalId: string; unidade: UnidadeId; nome?: string };
 
 export interface ArmazemConexoes {
   lerTudo(): Promise<Record<string, string>>;

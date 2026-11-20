@@ -76,6 +76,10 @@
   .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
 
   .oficial-trava .estado { flex: none; }
+  .vazio-canais { color: var(--sub); font-size: 14px; }
+  #lojas .linha { flex-wrap: nowrap; gap: 6px; }
+  #lojas .linha .botao:not(.leve) { flex: 1; }
+  #lojas .linha .botao.leve { flex: none; min-width: 0; padding: 0 12px; font-size: 13.5px; }
   .oficial-trava { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-size: 13.5px; color: var(--sub); margin: 6px 0 14px; }
   .avancado { margin-top: 18px; border-radius: 14px; padding: 10px 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .avancado summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; }
@@ -194,9 +198,9 @@
 
   <section id="nao-oficial" aria-labelledby="t-nao-oficial">
     <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>QR Code ou código, sem custo por mensagem</small></span></h2>
-    <p>Ligue o WhatsApp de cada loja lendo o <b>QR Code</b> ou digitando um <b>código</b> no celular da loja. Leva menos de um minuto.</p>
-    <div class="oficial-trava"><span class="estado">Bloqueado</span><span><b>WhatsApp oficial (Meta)</b> — fica para depois. Por enquanto, as lojas usam a conexão por QR Code ou código.</span></div>
-    <h3>Número de cada loja</h3>
+    <p>Cada canal é um número de WhatsApp. Crie quantos quiser, dê o nome que preferir e ligue lendo o <b>QR Code</b> ou digitando um <b>código</b> no celular. Leva menos de um minuto.</p>
+    <div class="oficial-trava"><span class="estado">Bloqueado</span><span><b>WhatsApp oficial (Meta)</b> — fica para depois. Por enquanto, os canais ligam por QR Code ou código.</span></div>
+    <div class="linha" style="justify-content:space-between;margin-top:6px"><h3 style="margin:0">Seus canais</h3><button class="botao" type="button" id="canal-novo">+ Novo canal</button></div>
     <p id="wa-sem-evolution">O servidor de WhatsApp ainda não está configurado. Abra "Servidor do WhatsApp" logo abaixo.</p>
     <div class="cartoes" id="lojas"></div>
     <details class="avancado" id="evo-servidor">
@@ -409,19 +413,19 @@
   <div id="modo-qr">
     <div id="qr-area" style="margin-top:14px"></div>
     <ol>
-      <li>Abra o WhatsApp no celular da loja</li>
+      <li>Abra o WhatsApp no celular</li>
       <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
       <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
     </ol>
   </div>
   <div id="modo-cod" hidden>
     <form id="cod-form">
-      <label style="font-size:13.5px;color:var(--sub)">Número do WhatsApp da loja (com DDD)<input id="cod-numero" inputmode="tel" autocomplete="off" placeholder="71 99999-9999"></label>
+      <label style="font-size:13.5px;color:var(--sub)">Número do WhatsApp (com DDD)<input id="cod-numero" inputmode="tel" autocomplete="off" placeholder="71 99999-9999"></label>
       <button class="botao" type="submit" id="cod-gerar">Gerar código</button>
     </form>
     <div id="cod-area" hidden><div class="codigo-pareamento" id="cod-valor"></div>
       <ol>
-        <li>Abra o WhatsApp no celular da loja › <b>Dispositivos conectados</b></li>
+        <li>Abra o WhatsApp no celular › <b>Dispositivos conectados</b></li>
         <li>Toque em <b>Conectar dispositivo</b> › <b>Conectar com número de telefone</b></li>
         <li>Digite este código</li>
       </ol>
@@ -607,26 +611,47 @@
   // ---------- não oficial: números por QR Code ----------
   async function carregarLojas() {
     const caixa = $('lojas');
-    let r; try { r = await api('/api/conexoes/whatsapp'); } catch (x) { caixa.textContent = x.message; return; }
+    let r; try { r = await api('/api/conexoes/whatsapp/canais'); } catch (x) { caixa.textContent = x.message; return; }
     $('wa-sem-evolution').hidden = r.configurada;
-    const eo = $('evo-ok'); if (eo) { eo.className = 'estado' + (r.configurada ? ' ok' : ' aviso'); eo.textContent = r.configurada ? 'Ligado' : 'Falta configurar'; }
+    const eo = $('evo-ok'); if (eo) { eo.className = 'estado' + (r.configurada && !r.erro ? ' ok' : ' aviso'); eo.textContent = !r.configurada ? 'Falta configurar' : r.erro ? 'Sem resposta' : 'Ligado'; }
     if (!r.configurada) $('evo-servidor').open = true;
-    caixa.replaceChildren(...r.unidades.map((u) => {
-      const ok = u.estado === 'conectada';
-      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando conexão' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado' });
-      const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar WhatsApp' });
-      b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade)));
-      const usaOficial = resumo?.canais?.[u.unidade] === 'meta';
+    if (!r.canais.length) { caixa.replaceChildren(el('p', { className: 'vazio-canais', textContent: 'Nenhum canal ainda. Toque em “+ Novo canal” para ligar o primeiro WhatsApp.' })); return; }
+    caixa.replaceChildren(...r.canais.map((k) => {
+      const ok = k.estado === 'conectada';
+      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : k.estado === 'conectando' ? 'Aguardando conexão' : k.estado === 'erro' ? 'Sem resposta' : 'Desconectado' });
+      const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar' });
+      b.addEventListener('click', () => (ok ? desconectar(k, b) : conectar(k)));
+      const ren = el('button', { className: 'botao leve', type: 'button', textContent: 'Renomear' });
+      ren.addEventListener('click', () => renomear(k));
+      const apg = el('button', { className: 'botao leve', type: 'button', textContent: 'Apagar' });
+      apg.addEventListener('click', () => apagarCanal(k, apg));
       return el('div', { className: 'cartao' },
-        el('div', { className: 'cab' }, el('b', { textContent: NOMES[u.unidade] || u.unidade }), est),
-        ok && u.numero ? el('p', { textContent: `${formatarTel(u.numero)}${u.perfil ? ' · ' + u.perfil : ''}` }) : null,
-        u.erro ? el('p', { className: 'res erro', textContent: u.erro }) : null,
-        usaOficial ? el('p', { textContent: 'Esta loja está usando a API oficial agora; o QR Code fica sem uso.' }) : null,
-        el('div', { className: 'linha' }, b));
+        el('div', { className: 'cab' }, el('b', { textContent: k.nome }), est),
+        ok && k.numero ? el('p', { textContent: `${formatarTel(k.numero)}${k.perfil ? ' · ' + k.perfil : ''}` }) : null,
+        el('div', { className: 'linha' }, b, ren, apg));
     }));
   }
+  $('canal-novo').addEventListener('click', async () => {
+    const nome = prompt('Nome do canal (opcional). Ex.: Atendimento, Vendas, Loja Centro', '');
+    if (nome === null) return;
+    try { const k = await api('/api/conexoes/whatsapp/canais', { method: 'POST', body: JSON.stringify(nome.trim() ? { nome: nome.trim() } : {}) }); await carregarLojas(); conectar(k); }
+    catch (x) { alert(x.message); }
+  });
+  async function renomear(k) {
+    const nome = prompt('Novo nome do canal', k.nome);
+    if (nome === null || !nome.trim() || nome.trim() === k.nome) return;
+    try { await api(`/api/conexoes/whatsapp/canais/${k.id}`, { method: 'PATCH', body: JSON.stringify({ nome: nome.trim() }) }); carregarLojas(); }
+    catch (x) { alert(x.message); }
+  }
+  async function apagarCanal(k, botao) {
+    if (!confirm(`Apagar o canal “${k.nome}”? Ele sai do WhatsApp e as mensagens desse número deixam de chegar na Sintonia. As conversas antigas continuam.`)) return;
+    botao.setAttribute('aria-busy', 'true');
+    try { await api(`/api/conexoes/whatsapp/canais/${k.id}`, { method: 'DELETE' }); resumo = await api('/api/conexoes'); carregarLojas(); }
+    catch (x) { alert(x.message); }
+    finally { botao.removeAttribute('aria-busy'); }
+  }
 
-  let espera = null, lojaAtual = null;
+  let espera = null, lojaAtual = null; const urlConectar = () => `/api/conexoes/whatsapp/canais/${lojaAtual}/conectar`;
   const modo = (m) => {
     $('aba-qr').setAttribute('aria-pressed', String(m === 'qr')); $('aba-cod').setAttribute('aria-pressed', String(m === 'cod'));
     $('modo-qr').hidden = m !== 'qr'; $('modo-cod').hidden = m !== 'cod';
@@ -637,14 +662,14 @@
   $('aba-cod').addEventListener('click', () => modo('cod'));
   async function pedirQr() {
     $('qr-area').textContent = 'Gerando o QR Code…';
-    try { const r = await api(`/api/conexoes/whatsapp/${lojaAtual}/conectar`, { method: 'POST', body: '{}' }); if (r.estado === 'conectada') return pronto(); mostrarQr(r.qr); }
+    try { const r = await api(urlConectar(), { method: 'POST', body: '{}' }); if (r.estado === 'conectada') return pronto(); mostrarQr(r.qr); }
     catch (x) { $('qr-area').textContent = x.message; }
   }
   $('cod-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const b = $('cod-gerar'); b.setAttribute('aria-busy', 'true');
     try {
-      const r = await api(`/api/conexoes/whatsapp/${lojaAtual}/conectar`, { method: 'POST', body: JSON.stringify({ numero: $('cod-numero').value }) });
+      const r = await api(urlConectar(), { method: 'POST', body: JSON.stringify({ numero: $('cod-numero').value }) });
       if (r.estado === 'conectada') return pronto();
       if (!r.codigo) { $('cod-area').hidden = true; $('qr-estado').textContent = 'O servidor não devolveu o código. Tente de novo ou use o QR Code.'; return; }
       $('cod-valor').textContent = r.codigo.length === 8 ? r.codigo.slice(0, 4) + '-' + r.codigo.slice(4) : r.codigo;
@@ -656,20 +681,20 @@
     clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓';
     setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas();
   }
-  async function conectar(unidade) {
-    lojaAtual = unidade;
-    $('qr-loja').textContent = NOMES[unidade]; $('qr-area').replaceChildren(); $('cod-area').hidden = true; $('cod-numero').value = '';
+  async function conectar(k) {
+    lojaAtual = k.id;
+    $('qr-loja').textContent = k.nome; $('qr-area').replaceChildren(); $('cod-area').hidden = true; $('cod-numero').value = '';
     $('qr-estado').textContent = 'Aguardando a leitura…';
     $('d-qr').showModal(); modo('qr');
     let voltas = 0;
     clearInterval(espera);
     espera = setInterval(async () => {
       voltas++;
-      const lista = await api('/api/conexoes/whatsapp').catch(() => null);
-      const u = lista?.unidades.find((x) => x.unidade === unidade);
+      const lista = await api('/api/conexoes/whatsapp/canais').catch(() => null);
+      const u = lista?.canais.find((x) => x.id === k.id);
       if (u?.estado === 'conectada') return pronto();
       // O QR Code vence em ~40 s: renova sozinho enquanto a aba QR estiver aberta.
-      if (voltas % 8 === 0 && !$('modo-qr').hidden) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
+      if (voltas % 8 === 0 && !$('modo-qr').hidden) { const n = await api(urlConectar(), { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
     }, 3000);
   }
   function mostrarQr(qr) {
@@ -678,13 +703,14 @@
     area.append(el('img', { alt: 'QR Code para conectar', src: qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr }));
   }
   $('qr-fechar').addEventListener('click', () => { clearInterval(espera); $('d-qr').close(); carregarLojas(); });
-  async function desconectar(unidade, botao) {
-    if (!confirm(`Desconectar o WhatsApp de ${NOMES[unidade]}? As mensagens deixam de chegar na Sintonia.`)) return;
+  async function desconectar(k, botao) {
+    if (!confirm(`Desconectar o WhatsApp do canal “${k.nome}”? As mensagens desse número deixam de chegar na Sintonia até conectar de novo.`)) return;
     botao.setAttribute('aria-busy', 'true');
-    try { await api(`/api/conexoes/whatsapp/${unidade}/desconectar`, { method: 'POST', body: '{}' }); resumo = await api('/api/conexoes'); await carregarLojas(); desenharEscolhas(); }
+    try { await api(`/api/conexoes/whatsapp/canais/${k.id}/desconectar`, { method: 'POST', body: '{}' }); resumo = await api('/api/conexoes'); await carregarLojas(); }
     catch (x) { alert(x.message); }
     finally { botao.removeAttribute('aria-busy'); }
   }
+
 
   // ---------- oficial: dados de cada loja ----------
   // ---------- Meta Ads: API de Conversões ----------

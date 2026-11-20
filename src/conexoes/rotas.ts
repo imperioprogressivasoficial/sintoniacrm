@@ -281,6 +281,98 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     return { configurada: true, unidades };
   });
 
+  // ---------------------------------------------------------------- canais de WhatsApp (sem loja fixa)
+  // Cada canal é uma instância da Evolution "sintonia-…". A pessoa cria quantos quiser e dá o nome que quiser.
+  const IdCanal = z.string().regex(/^sintonia-[a-z0-9-]{2,40}$/);
+  const NomeCanal = z.string().trim().min(1, 'Dê um nome ao canal.').max(40);
+  const ehCanalEvo = (n: NumeroCfg) => n.canalId.startsWith(PREFIXO_INSTANCIA);
+  const canaisSalvos = () => c.numeros().filter(ehCanalEvo);
+  const nomeDe = (n: NumeroCfg, i: number) => n.nome?.trim() || `WhatsApp ${i + 1}`;
+  async function salvarCanais(lista: NumeroCfg[], autor: string) {
+    await c.salvar({ numeros: JSON.stringify([...c.numeros().filter((n) => !ehCanalEvo(n)), ...lista]) }, autor);
+  }
+  const numeroDe = (req: FastifyRequest) => {
+    const bruto = String((req.body as { numero?: unknown } | undefined)?.numero ?? '').replace(/\D/g, '');
+    if (bruto && (bruto.length < 10 || bruto.length > 13)) throw Object.assign(new Error('Número inválido. Use DDD + número, ex.: 71 99999-9999.'), { statusCode: 400 });
+    return bruto ? (bruto.length <= 11 ? `55${bruto}` : bruto) : undefined;
+  };
+  const canalExistente = (id: string) => {
+    const n = canaisSalvos().find((x) => x.canalId === id);
+    if (!n) throw Object.assign(new Error('Canal não encontrado.'), { statusCode: 404 });
+    return n;
+  };
+
+  app.get('/api/conexoes/whatsapp/canais', async (req) => {
+    await quem(req);
+    const salvos = canaisSalvos();
+    const configurada = Boolean(c.get('evolutionUrl') && c.get('evolutionApiKey'));
+    let infos: Awaited<ReturnType<EvolutionAdmin['listar']>> = [];
+    let erro: string | null = null;
+    if (configurada) {
+      try { infos = await evolution().listar(); } catch (e) { erro = erroCurto(e).slice(0, 200); }
+    }
+    // Instâncias da Sintonia que já existem na Evolution mas não estão na lista (ex.: de antes) entram e ficam salvas com nome.
+    const novos = infos.filter((i) => !salvos.some((n) => n.canalId === i.nome)).map((i, k) => ({ canalId: i.nome, unidade: UNIDADES[0], nome: `WhatsApp ${salvos.length + k + 1}` }) as NumeroCfg);
+    const todos = [...salvos, ...novos];
+    if (novos.length) await salvarCanais(todos, 'sistema');
+    return {
+      configurada,
+      erro,
+      canais: todos.map((n, i) => {
+        const info = infos.find((x) => x.nome === n.canalId);
+        return { id: n.canalId, nome: nomeDe(n, i), estado: erro ? 'erro' : (info?.estado ?? 'inexistente'), numero: info?.numero ?? null, perfil: info?.perfil ?? null };
+      }),
+    };
+  });
+
+  app.post('/api/conexoes/whatsapp/canais', async (req) => {
+    const autor = await quem(req);
+    const salvos = canaisSalvos();
+    const pedido = (req.body as { nome?: unknown } | undefined)?.nome;
+    const nome = pedido === undefined || pedido === '' ? `WhatsApp ${salvos.length + 1}` : NomeCanal.parse(pedido);
+    let id: string;
+    do id = `${PREFIXO_INSTANCIA}c${Math.random().toString(36).slice(2, 8)}`; while (salvos.some((n) => n.canalId === id));
+    await salvarCanais([...salvos, { canalId: id, unidade: UNIDADES[0], nome }], autor);
+    return { id, nome };
+  });
+
+  app.patch('/api/conexoes/whatsapp/canais/:id', async (req) => {
+    const autor = await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    const nome = NomeCanal.parse((req.body as { nome?: unknown } | undefined)?.nome);
+    const salvos = canaisSalvos();
+    const ja = salvos.some((n) => n.canalId === id);
+    // Canal antigo que só existia na Evolution: passa a ficar salvo com o nome novo.
+    await salvarCanais(ja ? salvos.map((n) => (n.canalId === id ? { ...n, nome } : n)) : [...salvos, { canalId: id, unidade: UNIDADES[0], nome }], autor);
+    return { id, nome };
+  });
+
+  app.delete('/api/conexoes/whatsapp/canais/:id', async (req) => {
+    const autor = await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    if (c.get('evolutionUrl') && c.get('evolutionApiKey')) await evolution().apagar(id);
+    await salvarCanais(canaisSalvos().filter((n) => n.canalId !== id), autor);
+    return { ok: true };
+  });
+
+  app.post('/api/conexoes/whatsapp/canais/:id/conectar', async (req) => {
+    const autor = await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    const numero = numeroDe(req);
+    if (!canaisSalvos().some((n) => n.canalId === id)) await salvarCanais([...canaisSalvos(), { canalId: id, unidade: UNIDADES[0] }], autor);
+    return evolution().conectar(id, webhookDe(req), numero);
+  });
+
+  app.post('/api/conexoes/whatsapp/canais/:id/desconectar', async (req) => {
+    await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    canalExistente(id);
+    await evolution().desconectar(id).catch((e) => {
+      if ((e as { status?: number }).status !== 404) throw e;
+    });
+    return { ok: true };
+  });
+
   app.post('/api/conexoes/whatsapp/:unidade/conectar', async (req) => {
     const autor = await quem(req);
     const unidade = Unidade.parse((req.params as { unidade: string }).unidade);

@@ -89,6 +89,10 @@ function evolutionFalsa() {
     }
     if (u.pathname.startsWith('/webhook/set/')) return new Response('{}');
     if (u.pathname.startsWith('/instance/connect/')) return new Response(JSON.stringify(u.searchParams.get('number') ? { base64: 'data:image/png;base64,QR2', pairingCode: 'WZYEH1YY' } : { base64: 'data:image/png;base64,QR2' }));
+    if (u.pathname.startsWith('/instance/delete/')) {
+      instancias.delete(decodeURIComponent(u.pathname.split('/').pop()!));
+      return new Response('{}');
+    }
     if (u.pathname.startsWith('/instance/logout/')) {
       instancias.set(decodeURIComponent(u.pathname.split('/').pop()!), 'close');
       return new Response('{}');
@@ -199,5 +203,37 @@ describe('Rotas de Conexões', () => {
     expect(evo.pedidos.some((p) => p.url.includes('/instance/connect/sintonia-sumare?number=5571988887777'))).toBe(true);
     const ruim = await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/sumare/conectar', headers: { cookie }, payload: { numero: '123' } });
     expect(ruim.statusCode).toBe(400);
+  });
+  it('canais de WhatsApp: cria com nome livre, conecta por QR ou código, renomeia, desconecta e apaga', async () => {
+    const { app, entrar, evo } = await montar();
+    const cookie = await entrar('bruno@imperio.com');
+    await app.inject({ method: 'PUT', url: '/api/conexoes', headers: { cookie }, payload: { evolutionUrl: 'https://evo.exemplo', evolutionApiKey: 'chave-global' } });
+    // instância antiga (de antes dos canais) aparece sozinha na lista
+    evo.instancias.set('sintonia-norte', 'open');
+    let l = (await app.inject({ url: '/api/conexoes/whatsapp/canais', headers: { cookie } })).json();
+    expect(l).toMatchObject({ configurada: true, canais: [{ id: 'sintonia-norte', nome: 'WhatsApp 1', estado: 'conectada', numero: '5571988887777' }] });
+
+    const novo = (await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/canais', headers: { cookie }, payload: { nome: 'Atendimento' } })).json();
+    expect(novo.id).toMatch(/^sintonia-c[a-z0-9]{2,}$/);
+    expect(novo.nome).toBe('Atendimento');
+    const sem = (await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/canais', headers: { cookie }, payload: {} })).json();
+    expect(sem.nome).toBe('WhatsApp 3');
+
+    const qr = await app.inject({ method: 'POST', url: `/api/conexoes/whatsapp/canais/${novo.id}/conectar`, headers: { cookie, host: 'sintonia.n8nimperio.tech' }, payload: {} });
+    expect(qr.json()).toMatchObject({ qr: 'data:image/png;base64,QR', estado: 'conectando' });
+    const cod = await app.inject({ method: 'POST', url: `/api/conexoes/whatsapp/canais/${novo.id}/conectar`, headers: { cookie }, payload: { numero: '71 98888-7777' } });
+    expect(cod.json()).toMatchObject({ codigo: 'WZYEH1YY' });
+
+    expect((await app.inject({ method: 'PATCH', url: `/api/conexoes/whatsapp/canais/${novo.id}`, headers: { cookie }, payload: { nome: 'Vendas' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'PATCH', url: `/api/conexoes/whatsapp/canais/${novo.id}`, headers: { cookie }, payload: { nome: '' } })).statusCode).toBe(400);
+    l = (await app.inject({ url: '/api/conexoes/whatsapp/canais', headers: { cookie } })).json();
+    expect(l.canais.map((x: { nome: string }) => x.nome)).toEqual(['WhatsApp 1', 'Vendas', 'WhatsApp 3']);
+
+    await app.inject({ method: 'POST', url: `/api/conexoes/whatsapp/canais/${novo.id}/desconectar`, headers: { cookie }, payload: {} });
+    expect(evo.instancias.get(novo.id)).toBe('close');
+    await app.inject({ method: 'DELETE', url: `/api/conexoes/whatsapp/canais/${novo.id}`, headers: { cookie } });
+    expect(evo.instancias.has(novo.id)).toBe(false);
+    l = (await app.inject({ url: '/api/conexoes/whatsapp/canais', headers: { cookie } })).json();
+    expect(l.canais.some((x: { id: string }) => x.id === novo.id)).toBe(false);
   });
 });
