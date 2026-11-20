@@ -91,6 +91,8 @@ function evolutionFalsa() {
       return new Response(JSON.stringify({ instance: { instanceName: corpo.instanceName }, qrcode: corpo.number ? { pairingCode: null } : { base64: 'data:image/png;base64,QR' } }), { status: 201 });
     }
     if (u.pathname.startsWith('/webhook/set/')) return new Response('{}');
+    if (u.pathname.startsWith('/chat/findChats/')) return new Response(JSON.stringify([{ remoteJid: '120363@g.us', updatedAt: '2026-11-20T10:00:00Z' }, { remoteJid: '5571988887777@s.whatsapp.net', updatedAt: '2026-11-20T12:00:00Z' }]));
+    if (u.pathname.startsWith('/chat/findMessages/')) return new Response(JSON.stringify({ messages: { records: [{ key: { remoteJid: corpo.where.key.remoteJid, fromMe: false, id: 'H1' }, pushName: 'Ana', message: { conversation: 'Oi, tem horário?' }, messageTimestamp: 1795180000 }] } }));
     if (u.pathname.startsWith('/instance/connect/')) {
       const nome = decodeURIComponent(u.pathname.split('/').pop()!);
       return new Response(JSON.stringify(comNumero.has(nome) ? { base64: 'data:image/png;base64,QR2', pairingCode: 'WZYEH1YY' } : { base64: 'data:image/png;base64,QR2', pairingCode: null }));
@@ -110,6 +112,13 @@ function evolutionFalsa() {
 }
 
 describe('EvolutionAdmin', () => {
+  it('histórico: conversas recentes sem grupos, no formato do webhook', async () => {
+    const { f, pedidos } = evolutionFalsa();
+    const adm = new EvolutionAdmin('https://evo', 'k', f);
+    const r = await adm.historico('sintonia-norte');
+    expect(r).toHaveLength(1);
+    expect(pedidos.filter((p) => p.url.includes('/chat/findMessages/')).map((p) => (p.corpo as { where: { key: { remoteJid: string } } }).where.key.remoteJid)).toEqual(['5571988887777@s.whatsapp.net']);
+  });
   it('não mexe em instâncias que não são da Sintonia (ex.: Assia)', async () => {
     const { f, pedidos } = evolutionFalsa();
     const adm = new EvolutionAdmin('https://evo', 'k', f);

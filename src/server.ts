@@ -119,7 +119,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   registrarPaginas(app, d.auth);
   // Quando chegou o último webhook de cada número da API oficial (para a tela de Conexões mostrar se está chegando).
   const vistosMeta = new Map<string, Date>();
-  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), ...d.conexoes, auth: d.auth });
+  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).

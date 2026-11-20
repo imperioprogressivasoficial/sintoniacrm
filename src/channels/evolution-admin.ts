@@ -157,6 +157,29 @@ export class EvolutionAdmin {
     return { qr: r.base64 ?? null, estado: 'conectando' };
   }
 
+  /**
+   * Conversas recentes guardadas na Evolution (sem grupos), no formato do webhook: as últimas `porConversa`
+   * mensagens de cada uma das `conversas` mais recentes.
+   */
+  async historico(nome: string, o: { conversas?: number; porConversa?: number } = {}): Promise<unknown[]> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {});
+    const lista = (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>;
+    const quando = (c: Record<string, unknown>) => new Date(String(c.updatedAt ?? c.lastMessageAt ?? 0)).getTime() || Number((c.lastMessage as Record<string, unknown> | undefined)?.messageTimestamp ?? 0) * 1000;
+    const jids = lista
+      .filter((c) => typeof c.remoteJid === 'string' && /@(s\.whatsapp\.net|lid)$/.test(c.remoteJid as string))
+      .sort((a, b) => quando(b) - quando(a))
+      .slice(0, o.conversas ?? 60)
+      .map((c) => c.remoteJid as string);
+    const saida: unknown[] = [];
+    for (const remoteJid of jids) {
+      const r = await this.chamar<Record<string, unknown>>('POST', `/chat/findMessages/${encodeURIComponent(nome)}`, { where: { key: { remoteJid } }, page: 1, offset: o.porConversa ?? 15 }).catch(() => null);
+      const msgs = (r?.messages as Record<string, unknown> | undefined)?.records ?? r?.records ?? (Array.isArray(r) ? r : []);
+      if (Array.isArray(msgs)) saida.push(...msgs);
+    }
+    return saida;
+  }
+
   /** O código de 8 letras em vigor (a Evolution troca de tempos em tempos enquanto espera). */
   async codigoAtual(nome: string): Promise<string | null> {
     if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');

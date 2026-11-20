@@ -1,3 +1,5 @@
+import { lerWebhookEvolution } from '../channels/evolution.js';
+import type { MensagemRecebida } from '../channels/tipos.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { usuarioDaRequisicao, type OpcoesAuth } from '../auth/rotas.js';
@@ -20,6 +22,8 @@ export interface OpcoesConexoes {
   fetchFn?: typeof fetch;
   /** Agenda de cada unidade (Trinks, Avec ou AppBarber): status e "Testar" em Conexões › Agenda. */
   agendas?: AgendasDasUnidades;
+  /** Grava conversas antigas puxadas do WhatsApp (sem IA nem avisos). */
+  importarHistorico?: (mensagens: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number }>;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
 }
@@ -371,6 +375,16 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const numero = numeroDe(req);
     if (!canaisSalvos().some((n) => n.canalId === id)) await salvarCanais([...canaisSalvos(), { canalId: id, unidade: UNIDADES[0] }], autor);
     return evolution().conectar(id, webhookDe(req), numero);
+  });
+
+  // Puxa as conversas recentes do WhatsApp para a Sintonia (tela "Sincronizando" depois de conectar).
+  app.post('/api/conexoes/whatsapp/canais/:id/sincronizar', async (req) => {
+    await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    if (!o.importarHistorico) throw Object.assign(new Error('Sincronização indisponível'), { statusCode: 503 });
+    const brutas = await evolution().historico(id);
+    const mensagens = lerWebhookEvolution({ event: 'messages.upsert', instance: id, data: brutas });
+    return o.importarHistorico(mensagens);
   });
 
   // Código em vigor (a Evolution troca enquanto espera): a tela confere e atualiza o que mostra.

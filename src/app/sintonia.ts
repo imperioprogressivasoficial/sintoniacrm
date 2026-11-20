@@ -218,6 +218,39 @@ export class Sintonia {
     if (pensar) await this.processar(criada.conversa.id);
   }
 
+  /**
+   * Conversas antigas puxadas do WhatsApp logo depois de conectar: grava as mensagens e as datas,
+   * sem acionar a IA, follow-ups, avisos ou funil (é histórico, não mensagem nova).
+   */
+  async importarHistorico(mensagens: MensagemRecebida[]): Promise<{ conversas: number; mensagens: number }> {
+    const ids = new Set<string>();
+    let n = 0;
+    for (const msg of [...mensagens].sort((a, b) => a.em.getTime() - b.em.getTime())) {
+      const numero = this.d.numeros.find((x) => x.canalId === msg.canalId);
+      if (!numero) continue;
+      const criada = await this.d.repo.buscarOuCriarConversa({
+        empresaId: this.d.empresaId, unidade: numero.unidade, canalId: numero.canalId, telefone: msg.telefone,
+        nome: msg.deMim ? undefined : msg.nome, agora: this.agora(),
+      });
+      await this.mutar(criada.conversa.id, async (conversa) => {
+        const gravou = await this.d.repo.adicionarMensagem({
+          conversaId: conversa.id, autor: msg.deMim ? 'equipe' : 'cliente', autorNome: msg.deMim ? 'celular da loja' : undefined,
+          texto: msg.texto, em: msg.em, idExterno: msg.idExterno,
+        });
+        if (!gravou) return false;
+        n++;
+        ids.add(conversa.id);
+        const campo = msg.deMim ? 'ultimaMensagemEquipe' : 'ultimaMensagemCliente';
+        const atual = conversa[campo];
+        if (!atual || atual.getTime() < msg.em.getTime()) conversa[campo] = msg.em;
+        if (!conversa.atualizadaEm || conversa.atualizadaEm.getTime() < msg.em.getTime()) conversa.atualizadaEm = msg.em;
+        await this.d.repo.salvarConversa(conversa);
+        return false;
+      });
+    }
+    return { conversas: ids.size, mensagens: n };
+  }
+
   /** Arquivo que já veio no webhook é guardado na hora. Retorna true se ainda falta baixar. */
   private async guardarAnexoRecebido(mensagemId: string, recebido: AnexoRecebido, anexo: Anexo): Promise<boolean> {
     if (anexo.situacao !== 'pendente') return false;

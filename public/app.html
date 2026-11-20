@@ -957,6 +957,8 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
 #filtros .chip-radar::after { content: ""; position: absolute; inset: 1.5px; z-index: -1; border-radius: 999px; background: var(--fundo); }
 html[data-tema="escuro"] #filtros .chip-radar::after { background: var(--painel); }
 #filtros .chip-radar[aria-pressed="true"]::after { background: var(--chip-ativo); }
+html[data-tema="escuro"] #filtros .chip-radar[aria-pressed="true"]::after { background: var(--chip-ativo); }
+#filtros .chip-radar[aria-pressed="true"] { color: var(--chip-ativo-txt); }
 #filtros .chip-radar svg.rd { width: 17px; height: 17px; flex: none; }
 #filtros .chip-radar .feixe { transform-origin: 12px 12px; animation: radarGira 2.6s linear infinite; }
 @keyframes radarGira { to { transform: rotate(360deg); } }
