@@ -96,6 +96,10 @@ import { Radar } from './radar/radar.js';
 import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
 import { juizClaude } from './radar/juiz.js';
 import { registrarRadar } from './radar/rotas.js';
+/* equipe: conversas de equipe (chat interno da empresa, sem WhatsApp) */
+import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
+import { ChatEquipe } from './equipe/chat.js';
+import { avisoPorPush, registrarChatEquipe } from './equipe/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -234,6 +238,8 @@ function aplicarConexoes() {
 conexoes.aoMudar(aplicarConexoes);
 await conexoes.carregar();
 
+// Presença da equipe (online/offline): a mesma instância para o servidor e as Conversas de equipe.
+const presencas = pool ? new PresencasPostgres(pool) : new PresencasMemoria();
 // Notificações (sino e push): cada evento registrado vira aviso para quem pode ver a conversa.
 const armazemNotificacoes = pool ? new ArmazemNotificacoesPostgres(pool) : new ArmazemNotificacoesMemoria();
 // Histórico da tela Ligações (efetuadas pelo app; recebidas/perdidas pelo evento CALL do WhatsApp).
@@ -545,7 +551,7 @@ const app = criarServidor({
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
   ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
-  presencas: pool ? new PresencasPostgres(pool) : new PresencasMemoria(),
+  presencas,
   gestao: {
     tags,
     empresa,
@@ -755,6 +761,10 @@ registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
 registrarNps(app, { nps, repo, automacoes });
 registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
+/* equipe: conversas de equipe (src/equipe) — direta, grupos e o "Geral"; aviso pelo push que já existe. */
+registrarChatEquipe(app, {
+  chat: new ChatEquipe({ armazem: pool ? new ArmazemEquipePostgres(pool) : new ArmazemEquipeMemoria(), contas, repo, presencas, avisar: avisoPorPush(notificador), log }),
+});
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
