@@ -439,7 +439,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     else if (!r) raiz.append(el('div', { class: 'rl-esq' }), el('div', { class: 'rl-esq' }));
     else {
       if (s.erro) raiz.append(el('div', { class: 'rl-vazio', role: 'alert', text: s.erro }));
-      raiz.append(el('div', { class: 'rl-grade' }, painelDias(ui, r), painelOrigem(ui, r), painelConversao(ui, r), painelIaEquipe(ui, r), painelAtendentes(ui, r), painelPerdas(ui, r), painelTags(ui, r)));
+      raiz.append(el('div', { class: 'rl-grade' }, painelDias(ui, r), painelOrigem(ui, r), painelConversao(ui, r), painelIaEquipe(ui, r), painelAtendentes(ui, r), painelPerdas(ui, r), painelTags(ui, r),
+        /* nps-posvenda */ window.SintoniaTelas.nps ? window.SintoniaTelas.nps.painelRelatorio(ui, s.nps, `/api/nps/csv?${consulta()}`) : null));
     }
     caixa.replaceChildren(raiz);
     // Menu lateral (Relatórios › Origem e marketing, IA × equipe): rola até a parte pedida.
@@ -463,9 +464,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (s.f.periodo === 'personalizado' && (!s.f.de || !s.f.ate)) { desenharTudo(); return; }
     desenharTudo();
     try {
-      const r = await ui.api('/api/relatorios?' + consulta());
+      const [r, nps] = await Promise.all([ui.api('/api/relatorios?' + consulta()), window.SintoniaTelas.nps ? ui.api('/api/nps/resumo?' + consulta()).catch(() => null) : null]);
       if (g !== s.geracao) return;
       s.dados = r;
+      s.nps = nps; // nps-posvenda
       s.erro = null;
     } catch (x) {
       if (g !== s.geracao) return;

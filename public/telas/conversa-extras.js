@@ -347,6 +347,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const SVG_ATENDE = {
     ia: SVG.brilho,
     eu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    finalizar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg>',
     transferir: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg>',
     bot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg>',
     sugestao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M12 7.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z" fill="currentColor"/></svg>',
@@ -388,6 +389,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         }, { 'aria-pressed': String(jaEu), 'aria-disabled': String(Boolean(bloqueado)) });
       })(),
       perm.transferir ? opcao('neutra', SVG_ATENDE.transferir, 'Transferir conversa', 'Passar para outra pessoa da equipe', () => { fechar(); ui.abrirTransferir(); }) : null,
+      // nps-posvenda: encerra o atendimento (motivo) e, se ligado, manda a pesquisa de satisfação.
+      window.SintoniaTelas?.nps?.finalizarNaConversa ? opcao('neutra', SVG_ATENDE.finalizar, 'Finalizar atendimento', 'Registra o motivo e manda a pesquisa de satisfação', () => { fechar(); window.SintoniaTelas.nps.finalizarNaConversa(c.id, ui); }) : null,
       window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', SVG_ATENDE.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null);
 
     // ---- ajuda para escrever

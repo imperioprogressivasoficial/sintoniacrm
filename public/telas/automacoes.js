@@ -28,7 +28,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['tag_marcada', 'Tag marcada', 'Alguém (ou a IA) marca uma tag'],
     ['aniversario', 'Aniversário', 'No dia do aniversário da cliente (ficha)'],
     ['dias_apos_compareceu', 'Depois de comparecer', 'X dias depois de entrar em “Compareceu”'],
+    ['atendimento_finalizado', 'Atendimento finalizado', 'Alguém finalizou o atendimento (com o motivo)'],
+    ['nota_nps', 'Nota da pesquisa', 'A cliente deu uma nota de 0 a 10 na pesquisa de satisfação'],
   ];
+  const MOTIVOS_FINAL = { resolvido: 'Resolvido', venda_feita: 'Venda feita ou serviço realizado', agendado: 'Agendou', sem_interesse: 'Sem interesse', sem_resposta: 'A cliente não respondeu', outro: 'Outro motivo' };
   const PASSOS = [
     ['enviar_mensagem', '💬', 'Enviar mensagem', 'Manda uma mensagem no WhatsApp'],
     ['esperar', '⏳', 'Esperar', 'Aguarda minutos, horas ou dias'],
@@ -44,7 +47,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   ];
   const NOME_PASSO = Object.fromEntries(PASSOS.map(([t, i, n]) => [t, [i, n]]));
   const CONDICOES = [['cliente_respondeu', 'a cliente respondeu'], ['tem_tag', 'a conversa tem a tag'], ['modo', 'quem responde é'], ['horario_loja', 'a loja está aberta agora']];
-  const VARIAVEIS = [['{primeiro_nome}', 'primeiro nome'], ['{nome}', 'nome completo'], ['{unidade}', 'unidade'], ['{atendente}', 'atendente']];
+  const VARIAVEIS = [['{primeiro_nome}', 'primeiro nome'], ['{nome}', 'nome completo'], ['{unidade}', 'unidade'], ['{atendente}', 'atendente'], ['{link_avaliacao}', 'link de avaliação']];
   const STATUS = { pendente: 'Na fila', rodando: 'Rodando', concluida: 'Concluída', cancelada: 'Cancelada', erro: 'Erro' };
 
   const CSS = `
@@ -270,6 +273,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'tag_marcada': return `Quando marcarem a tag ${aspas(tagNome(g.tagId))}`;
       case 'aniversario': return 'No dia do aniversário da cliente';
       case 'dias_apos_compareceu': return `${g.dias || 0} dia(s) depois de a cliente comparecer`;
+      case 'atendimento_finalizado': return (g.motivos || []).length ? `Quando finalizarem o atendimento como ${(g.motivos || []).map((m) => aspas(MOTIVOS_FINAL[m] || m)).join(' ou ')}` : 'Quando finalizarem o atendimento';
+      case 'nota_nps': return g.min === g.max ? `Quando a cliente der nota ${g.min} na pesquisa` : `Quando a cliente der nota de ${g.min ?? 0} a ${g.max ?? 10} na pesquisa`;
       default: return 'Quando…';
     }
   }
@@ -380,6 +385,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         return;
       }
     }
+    // nps-posvenda: modelos prontos (pesquisa de satisfação, pós-venda, régua 1/3/7 dias).
+    if (window.SintoniaTelas.nps?.prontos) tela.append(window.SintoniaTelas.nps.prontos(ui, { aoMudar: () => desenhar(caixa, ui), abrirFollowup: fu ? () => { s.aba = 'followup'; desenhar(caixa, ui); } : null }));
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));
     const filtros = el('div', { class: 'au-filtros', role: 'group', 'aria-label': 'Filtrar por funil' });
     const config = el('div', { class: 'au-config' });
@@ -498,6 +505,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     tag_marcada: () => ({ tipo: 'tag_marcada', tagId: primeiraOpcao(opcoesTags()) }),
     aniversario: () => ({ tipo: 'aniversario' }),
     dias_apos_compareceu: () => ({ tipo: 'dias_apos_compareceu', dias: 30 }),
+    atendimento_finalizado: () => ({ tipo: 'atendimento_finalizado', motivos: [] }),
+    nota_nps: () => ({ tipo: 'nota_nps', min: 9, max: 10 }),
   };
 
   /** Deixa o passo no formato exato da API (sem campos vazios). */
@@ -524,6 +533,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'palavra_chave': return { tipo: g.tipo, palavras: (g.palavras || []).map((p) => String(p).trim()).filter(Boolean), modo: g.modo === 'exata' ? 'exata' : 'contem' };
       case 'tag_marcada': return { tipo: g.tipo, tagId: g.tagId };
       case 'dias_apos_compareceu': return { tipo: g.tipo, dias: Math.min(365, Math.max(0, Math.round(Number(g.dias) || 0))) };
+      case 'atendimento_finalizado': return { tipo: g.tipo, motivos: (g.motivos || []).filter((m) => MOTIVOS_FINAL[m]) };
+      case 'nota_nps': { const n = (v, p) => Math.min(10, Math.max(0, Math.round(Number.isFinite(Number(v)) ? Number(v) : p))); return { tipo: g.tipo, min: n(g.min, 0), max: n(g.max, 10) }; }
       default: return g;
     }
   }
@@ -534,6 +545,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if ((g.tipo === 'entrou_na_etapa' || g.tipo === 'parada_na_etapa') && !g.etapaId) return 'Escolha a etapa do “Quando”.';
     if (g.tipo === 'palavra_chave' && !(g.palavras || []).some((p) => String(p).trim())) return 'Escreva pelo menos uma palavra-chave.';
     if (g.tipo === 'tag_marcada' && !g.tagId) return 'Escolha a tag do “Quando”.';
+    if (g.tipo === 'nota_nps' && Number(g.min) > Number(g.max)) return 'A nota mínima não pode ser maior que a máxima.';
     if (!d.passos.length) return 'Adicione pelo menos um passo em “Então”.';
     if (contarPassos(d.passos) > 40) return 'No máximo 40 passos (contando os de dentro do “Se…”).';
     let erro = null, n = 0;
@@ -620,6 +632,19 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         const dias = el('input', { type: 'number', min: '0', max: '365', value: String(g.dias ?? 30), inputmode: 'numeric' });
         dias.addEventListener('input', () => { g.dias = Number(dias.value) || 0; marcarSujo(); });
         campos.append(rotulo('Quantos dias depois', dias), el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Conta a partir do dia em que a conversa entrou em “Compareceu”. Bom para pós-atendimento e manutenção.' }));
+      } else if (g.tipo === 'atendimento_finalizado') {
+        g.motivos = g.motivos || [];
+        const caixas = Object.entries(MOTIVOS_FINAL).map(([m, nome]) => {
+          const c = el('input', { type: 'checkbox' }); c.checked = g.motivos.includes(m);
+          c.addEventListener('change', () => { g.motivos = c.checked ? [...new Set([...g.motivos, m])] : g.motivos.filter((x) => x !== m); marcarSujo(); });
+          return el('label', { class: 'au-linha-chave' }, c, el('span', { text: nome }));
+        });
+        campos.append(el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Só com estes motivos (nenhum marcado = qualquer motivo). Quem atende finaliza pela conversa: chip de quem atende › Finalizar atendimento.' }), ...caixas);
+      } else if (g.tipo === 'nota_nps') {
+        const notas = Array.from({ length: 11 }, (_, i) => [String(i), String(i)]);
+        campos.append(rotulo('Nota de', selecao(notas, String(g.min ?? 0), (v) => { g.min = Number(v); marcarSujo(); }, { 'aria-label': 'Nota mínima' })),
+          rotulo('até', selecao(notas, String(g.max ?? 10), (v) => { g.max = Number(v); marcarSujo(); }, { 'aria-label': 'Nota máxima' })),
+          el('p', { class: 'au-info', style: 'grid-column:1/-1', text: '9 a 10 = promotores (bom para pedir avaliação no Google com {link_avaliacao}); 0 a 6 = detratores (bom para a gestão ligar).' }));
       }
       gatilhoCaixa.replaceChildren(ops, campos);
     }

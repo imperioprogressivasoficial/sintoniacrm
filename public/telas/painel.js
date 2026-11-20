@@ -1452,12 +1452,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       titulo: () => 'Transmissões', dica: () => 'últimas enviadas',
       explica: () => 'As 5 últimas transmissões que já saíram: quantas mensagens foram enviadas, lidas e quantas clientes responderam (até 7 dias depois). Vem da tela Transmissões.',
       extras: (ui) => [el2(ui, 'button', { class: 'pn-link', type: 'button', text: 'Abrir', onclick: () => ui.mostrar('transmissoes') })], corpo: (ui) => corpoTransmissoes(ui) },
+    /* nps-posvenda: resultado da pesquisa de satisfação (desenho em /telas/nps.js) */
+    nps: { cat: 'Atendimento', nome: 'Satisfação (NPS)', desc: 'Nota de 0 a 10 depois de finalizar o atendimento: NPS geral e por atendente, com os últimos comentários.', coluna: 'lateral',
+      pode: (c) => c.gestao && !c.pessoal && Boolean(window.SintoniaTelas?.nps),
+      titulo: () => 'Satisfação (NPS)', dica: (c) => CURTO_PERIODO[c.periodo],
+      explica: (c) => `Notas que as clientes deram ${NO_PERIODO[c.periodo]} na pesquisa enviada ao finalizar o atendimento. NPS = % de promotores (9–10) − % de detratores (0–6), de −100 a +100. Por atendente: quem atendeu a conversa.`,
+      corpo: (ui) => window.SintoniaTelas.nps.corpoPainel(ui, s.nps?.[s.periodo]) },
   };
   function el2(ui, ...a) { return ui.el(...a); }
   const CATEGORIAS = ['Comercial', 'Atendimento', 'Funil e CRM', 'Marketing', 'Equipe', 'Painel'];
   const ICONE_CAT = { Comercial: IC.dinheiro, Atendimento: IC.conversa, 'Funil e CRM': IC.funil, Marketing: IC.megafone, Equipe: IC.equipe, Painel: IC.grade };
   /** Blocos que pedem dados a mais (só carregados quando estão no Dashboard). */
-  const PRECISA = { origem: 'rel', perdas: 'rel', transmissoes: 'transmissoes', comissao: 'comissao' };
+  const PRECISA = { origem: 'rel', perdas: 'rel', transmissoes: 'transmissoes', comissao: 'comissao', nps: 'nps' };
 
   // =====================================================================================================
   // Layout: ordem (a do celular), coluna no computador, blocos tirados e a métrica de cada bloco.
@@ -1842,7 +1848,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ids = new Set((Array.isArray(s.layout?.blocos) ? s.layout.blocos : []).filter((b) => !b.oculto).map((b) => b.id));
     const precisa = new Set([...ids].map((id) => PRECISA[id]).filter(Boolean));
     const nada = Promise.resolve(undefined);
-    const [painel, atualizacoes, ligacoes, meta, comercial, rel, transm, comissao] = await Promise.allSettled([
+    const [painel, atualizacoes, ligacoes, meta, comercial, rel, transm, comissao, npsR] = await Promise.allSettled([
       ui.api(`/api/painel/completo?periodo=${encodeURIComponent(periodo)}`),
       ui.api('/api/atualizacoes'),
       gestao ? ui.api('/api/ligacoes') : Promise.resolve(null),
@@ -1851,6 +1857,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       gestao && precisa.has('rel') ? ui.api(`/api/relatorios?${qsRelatorio(periodo)}`) : nada,
       gestao && precisa.has('transmissoes') ? ui.api('/api/transmissoes') : nada,
       gestao && precisa.has('comissao') ? ui.api('/api/comercial/comissao') : nada,
+      gestao && precisa.has('nps') ? ui.api(`/api/nps/resumo?periodo=${encodeURIComponent(periodo)}`) : nada,
     ]);
     if (g !== s.geracao) return; // chegou resposta de um pedido mais antigo
     s.carregando = false;
@@ -1871,6 +1878,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.rel[periodo] = guarda(rel, s.rel[periodo]);
     s.transmissoes = guarda(transm, s.transmissoes);
     s.comissao = guarda(comissao, s.comissao);
+    s.nps = { ...(s.nps || {}), [periodo]: guarda(npsR, s.nps?.[periodo]) };
     // Não redesenha por cima de quem está digitando a meta.
     if (s.caixa?.isConnected && !(s.editandoMeta && !manual && s.caixa.contains(document.activeElement))) desenharTudo();
   }
