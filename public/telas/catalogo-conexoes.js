@@ -14,10 +14,9 @@
   // [id, seção, nome, descrição, logo, cor do logo (opcional)]
   const ITENS = [
     ['whatsapp', 'nao-oficial', 'WhatsApp', 'Ligue os números da loja por QR Code ou código e responda tudo na Sintonia.', () => svgMarca('whatsapp')],
-    ['instagram', 'instagram', 'Instagram Direct', 'Mensagens diretas da conta profissional viram conversas na Sintonia.', () => svgMarca('instagram')],
-    ['messenger', 'messenger', 'Facebook Messenger', 'Mensagens da sua Página do Facebook junto com o WhatsApp.', () => svgMarca('messenger')],
-    ['tiktok', 'tiktok', 'TikTok Leads', 'Quem preenche o formulário do anúncio vira lead na hora.', () => svgMarca('tiktok', 'var(--cx-tiktok)')],
-    ['ia', 'ia', 'Claude (IA)', 'A chave que dá vida à Serena: responde, sugere e revisa mensagens.', () => svgMarca('claude')],
+    ['instagram', 'instagram', 'Instagram', 'Mensagens diretas da conta profissional viram conversas na Sintonia.', () => svgMarca('instagram')],
+    ['messenger', 'messenger', 'Facebook', 'Mensagens da sua Página do Facebook junto com o WhatsApp.', () => svgMarca('facebook')],
+    ['tiktok', 'tiktok', 'TikTok', 'Quem preenche o formulário do anúncio vira lead na hora.', () => svgMarca('tiktok', 'var(--cx-tiktok)')],
     ['transcricao', 'transcricao', 'OpenAI Whisper', 'Os áudios das clientes viram texto para ler rápido.', () => svgMarca('openai', 'var(--cx-tiktok)')],
     ['agenda', 'agenda', 'Agenda (Trinks, Avec, AppBarber)', 'Veja horários livres e agende direto pela conversa.', () => svgMarca('agenda')],
     ['gmail', 'email', 'Gmail', 'Envie e-mails para as clientes pela sua conta do Gmail.', () => svgMarca('gmail')],
