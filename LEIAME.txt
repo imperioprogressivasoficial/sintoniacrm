@@ -1,2 +1,2 @@
-Pacote da Sintonia para o servidor baixar na publicação (gerado por scripts/gerar-deploy.mjs, commit abfa7e5).
+Pacote da Sintonia para o servidor baixar na publicação (gerado por scripts/gerar-deploy.mjs, commit 6b95d59).
 Só código que já está neste repositório. Pode apagar esta branch depois que a versão estiver no ar.
