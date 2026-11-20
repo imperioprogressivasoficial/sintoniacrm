@@ -116,7 +116,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .srn-vidro { box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 6px 22px rgba(0,0,0,.2); }
   .srn-toca { position: relative; overflow: hidden; cursor: pointer; transition: transform .45s var(--srn-mola); -webkit-tap-highlight-color: transparent; }
   .srn-toca:active { transform: scale(.97); transition-duration: .12s; }
-  button.srn-toca { all: unset; box-sizing: border-box; position: relative; overflow: hidden; cursor: pointer; transition: transform .45s var(--srn-mola); }
+  button.srn-toca { -webkit-appearance: none; appearance: none; border: 0; margin: 0; font: inherit; color: var(--texto); text-align: left; box-sizing: border-box; width: 100%; }
   .srn-onda { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; pointer-events: none; z-index: 0;
     background: radial-gradient(circle, rgba(15,252,190,.6), rgba(15,252,190,0) 70%); animation: srnOnda .7s ease-out forwards; }
   @keyframes srnOnda { to { transform: scale(22); opacity: 0; } }
@@ -133,7 +133,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-pilha { display: flex; flex: none; }
   .srn-pilha > * { margin-left: -10px; box-shadow: 0 0 0 2px var(--fundo) !important; }
   .srn-pilha > :first-child { margin-left: 0; }
+  .srn-pilha .avatar, .srn-cli .avatar { position: relative; overflow: hidden; margin-top: 0 !important; }
   .srn-pilha .avatar { width: 30px !important; height: 30px !important; font-size: 11.5px; }
+  .srn-pilha .avatar img, .srn-cli .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .srn-pilha .avatar svg, .srn-cli .avatar svg { width: 70%; height: 70%; }
   .srn-mais-n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; color: #fff; background: #0e7490; }
   .srn-rot { font-size: 12px; font-weight: 600; color: var(--sub); margin: 18px 4px 8px; letter-spacing: .02em; }
   .srn-sug { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -158,7 +161,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-cli .txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
   .srn-cli .txt b { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .srn-cli .txt span { font-size: 12.8px; color: var(--sub); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .srn-cli > svg { width: 16px; height: 16px; color: var(--sub); flex: none; }
+  .srn-cli > span:last-child { flex: none; width: 16px; height: 16px; }
+  .srn-cli > span:last-child svg { width: 16px; height: 16px; }
+  .srn-cartao .rot > span svg { width: 15px; height: 15px; }
+  .srn-procura > span, .srn-g-busca > span { flex: none; width: 18px; height: 18px; }
+  .srn-procura svg, .srn-g-busca > span svg { width: 18px; height: 18px; }
   .srn-acoes { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .srn-acao { all: unset; box-sizing: border-box; cursor: pointer; position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-size: 13px; font-weight: 600; padding: 0 12px; border-radius: 999px; background: var(--srn-acao); color: var(--srn-azul); }
   .srn-acao svg { width: 15px; height: 15px; }
@@ -231,7 +238,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-g-rolagem::-webkit-scrollbar { display: none; }
   .srn-g-item { all: unset; box-sizing: border-box; cursor: pointer; position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 0 12px; border-radius: 14px; font-size: 16.5px; font-weight: 500; color: var(--texto); }
   .srn-g-item:hover, .srn-g-item:focus-visible { background: var(--vidro-item); }
-  .srn-g-item > svg { width: 23px; height: 23px; flex: none; }
+  .srn-g-item > span:first-child { width: 24px; height: 24px; flex: none; }
+  .srn-g-item > span:first-child svg { width: 24px; height: 24px; }
+  .srn-g-conv > span:first-child:not(:last-child) { flex: none; width: 20px; height: 20px; }
+  .srn-g-conv > span svg { width: 20px; height: 20px; }
   .srn-g-item .lado { margin-left: auto; font-size: 13px; color: var(--sub); font-weight: 500; }
   .srn-g-item .qtd { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: var(--srn-vermelho); box-sizing: border-box; }
   .srn-g-item .qtd[hidden] { display: none; }
@@ -304,11 +314,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   `;
 
   // ---------- histórico neste aparelho (por pessoa) ----------
-  const chave = () => `sintonia.serena.v1.${estado.eu?.id || 'local'}`;
+  const chaveHistorico = () => `sintonia.serena.v1.${estado.eu?.id || 'local'}`;
   const novoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   function lerHistorico() {
     try {
-      const v = JSON.parse(localStorage.getItem(chave()) || '{}');
+      const v = JSON.parse(localStorage.getItem(chaveHistorico()) || '{}');
       const lista = Array.isArray(v.lista) ? v.lista : [];
       return lista.filter((c) => c && typeof c.id === 'string' && Array.isArray(c.msgs)).map((c) => ({
         id: c.id, titulo: String(c.titulo || 'Conversa'), em: Number(c.em) || Date.now(), fixada: Boolean(c.fixada),
@@ -319,7 +329,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function gravarHistorico() {
     const lista = historico.filter((c) => c.msgs.length).sort((a, b) => b.em - a.em);
     const presas = lista.filter((c) => c.fixada), soltas = lista.filter((c) => !c.fixada).slice(0, MAX_CONVERSAS);
-    const salvar = (l) => localStorage.setItem(chave(), JSON.stringify({ lista: l.map((c) => ({ ...c, msgs: c.msgs.slice(-MAX_MSGS) })) }));
+    const salvar = (l) => localStorage.setItem(chaveHistorico(), JSON.stringify({ lista: l.map((c) => ({ ...c, msgs: c.msgs.slice(-MAX_MSGS) })) }));
     try { salvar([...presas, ...soltas]); } catch {
       // Sem espaço: tira as miniaturas das imagens antigas e tenta de novo.
       try { for (const c of lista) for (const m of c.msgs) delete m.miniatura; salvar([...presas, ...soltas]); } catch { /* sem armazenamento: só esta tela lembra */ }
@@ -412,15 +422,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       }
     }
     // Parágrafos inteiros entre aspas = mensagem pronta (cartão de vidro).
-    for (const p of caixa.querySelectorAll ? [] : []) p;
     const frag = document.createDocumentFragment();
     for (const n of [...caixa.childNodes]) {
       if (n.tagName === 'P' && ehRascunho(n.textContent)) { const r = el('div', { class: 'srn-rascunho srn-vidro' }); r.append(...n.childNodes); frag.append(r); }
       else frag.append(n);
     }
     // Clientes citadas no meio do texto: linhas no fim (sem repetir as que já viraram linha).
-    const jaTem = new Set([...frag.querySelectorAll('.srn-cli')].map((b) => b));
-    if (soltas.length && !jaTem.size) frag.append(el('div', { class: 'srn-clientes srn-vidro' }, ...soltas.map((r) => linhaCliente(clientes[r], ''))));
+    const jaTem = [...frag.childNodes].some((n) => n.classList?.contains('srn-clientes'));
+    if (soltas.length && !jaTem) frag.append(el('div', { class: 'srn-clientes srn-vidro' }, ...soltas.map((r) => linhaCliente(clientes[r], ''))));
     return frag;
   }
 
@@ -1014,7 +1023,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     carregarResumo().then(() => {
       if (!R.raiz.isConnected) return;
       desenharCabecalho(); desenharGaveta();
-      if (!atual() && !enviando && !falha) { if (primeiro) desenharInicioSemAnimar(); else desenharInicioSemAnimar(); }
+      if (!atual() && !enviando && !falha) { if (primeiro) desenharInicioSemAnimar(); else desenharInicio(); }
     });
   }
   let historicoDe = null;
@@ -1024,9 +1033,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // A atendente e a bolinha de acesso rápido agora abrem a Serena (o antigo "Ajuda da IA").
   const antigo = window.SintoniaChatIa;
   window.SintoniaChatIa = { ...(antigo || {}), abrir: () => ui.mostrar('serena'), fechar: () => {} };
-  // Saiu da tela: fecha o menu (para a barra voltar ao lugar).
-  const vistaAntes = window.SintoniaMenu?.vistaMudou;
-  addEventListener('sintonia:vista', () => {});
+  // sair(): chamado por mostrar() ao trocar de tela (fecha o menu para a barra voltar ao lugar).
   window.SintoniaTelas.serena = { desenhar, abrirMenu, fecharMenu, nova, sair: () => { fecharMenu(); fecharFolha(); fecharPops(); if (reconhecedor) reconhecedor.stop(); } };
-  void vistaAntes;
 })();

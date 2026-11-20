@@ -892,6 +892,74 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
 #lt-presenca input:checked + .lt-chave { background: #16a34a; }
 #lt-presenca > svg { color: #16a34a; }
 #lt-presenca.fora > svg { color: #ef4444; }
+/* imperio: brilho (luz menta → azul), usado no Radar, na Serena e nas animações */
+:root { --brilho-1: #0ffcbe; --brilho-2: #3aa0ff; --brilho: linear-gradient(90deg, #0ffcbe, #3aa0ff); }
+/* imperio: barra com Serena no meio — Ligações cheio quando ativo e cápsula ativa com brilho menta suave (fixo, sem animar) */
+@media (max-width: 760px) {
+  .trilho .nav[aria-current="page"][data-vista="ligacoes"] > svg { fill: currentColor !important; }
+  .trilho .nav[aria-current="page"] { box-shadow: 0 0 16px rgba(15,252,190,.32), 0 0 0 1px rgba(15,252,190,.16) !important; }
+}
+/* imperio: Conversas › Lista | Funil (mesmo desenho do seletor de funis) */
+.titulo-linha { display: flex; align-items: center; gap: 12px; }
+.titulo-linha h1.titulo-grande { flex: 1 1 auto; min-width: 0; }
+.seg-vistas { display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; flex: none;
+  background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+.seg-vistas .seg-op { all: unset; box-sizing: border-box; cursor: pointer; min-height: 40px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--sub); transition: background .18s ease, color .18s ease; }
+.seg-vistas .seg-op:hover { color: var(--texto); }
+.seg-vistas .seg-op[aria-pressed="true"] { color: var(--texto); font-weight: 700; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(16,110,190,.12); }
+html[data-tema="escuro"] .seg-vistas .seg-op[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 6px 18px rgba(0,0,0,.3); }
+.seg-vistas .seg-op:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+#v-funil .cabeca-vista.fn-cabeca:has(.seg-vistas) h1.titulo-grande { flex: 1 1 auto !important; }
+#v-funil .fn-cabeca .seg-vistas { flex: none; }
+@media (max-width: 760px) { #v-funil .cabeca-vista.fn-cabeca:has(.seg-vistas) .fn-numeros { flex: 1 1 100%; } }
+/* imperio: Radar (clientes esperando resposta) — único chip com ícone, luz correndo na borda */
+#filtros .chip-radar { position: relative; overflow: hidden; isolation: isolate; background: transparent !important; box-shadow: none !important; gap: 6px; }
+#filtros .chip-radar::before { content: ""; position: absolute; inset: -60%; z-index: -2; background: conic-gradient(from 0deg, transparent 0 70%, var(--brilho-1) 85%, var(--brilho-2) 95%, transparent); animation: radarGira 2.6s linear infinite; }
+#filtros .chip-radar::after { content: ""; position: absolute; inset: 1.5px; z-index: -1; border-radius: 999px; background: var(--fundo); }
+html[data-tema="escuro"] #filtros .chip-radar::after { background: var(--painel); }
+#filtros .chip-radar[aria-pressed="true"]::after { background: var(--chip-ativo); }
+#filtros .chip-radar svg.rd { width: 17px; height: 17px; flex: none; }
+#filtros .chip-radar .feixe { transform-origin: 12px 12px; animation: radarGira 2.6s linear infinite; }
+@keyframes radarGira { to { transform: rotate(360deg); } }
+.radar-num { min-width: 18px; height: 18px; box-sizing: border-box; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center; background: #e8473f; color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+.radar-num[hidden] { display: none; }
+.motivo-radar { flex: none; align-self: center; font-style: normal; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #fff1e8; color: #c2410c; white-space: nowrap; }
+html[data-tema="escuro"] .motivo-radar { background: rgba(255,155,115,.14); color: #ffb08f; }
+/* imperio: troca de tema "curto-circuito" (falha + apagão) — só azul e menta, falha fina */
+.casca.curto { animation: curtoGlitch .38s steps(2,end), curtoGlitch .34s steps(2,end) .62s; }
+@keyframes curtoGlitch{0%{transform:none;filter:none}15%{transform:translate(-3px,1px);filter:drop-shadow(1.5px 0 rgba(58,160,255,.85)) drop-shadow(-1.5px 0 rgba(15,252,190,.85))}30%{transform:translate(2px,-1px);clip-path:inset(12% 0 32% 0);filter:drop-shadow(-1.5px 0 rgba(15,252,190,.8)) drop-shadow(0 0 3px rgba(58,160,255,.35))}45%{transform:translate(-1.5px,0);clip-path:inset(42% 0 6% 0);filter:drop-shadow(1px 0 rgba(58,160,255,.8)) drop-shadow(-1px 0 rgba(15,252,190,.8))}60%{transform:translate(1.5px,0);clip-path:none;filter:drop-shadow(1px 0 rgba(15,252,190,.6))}80%{transform:translate(-.5px,0);filter:drop-shadow(.5px 0 rgba(58,160,255,.5))}100%{transform:none;filter:none}}
+.curto-fx { position: fixed; inset: 0; z-index: 2147483000; pointer-events: none; }
+.curto-fx.apagao { background: #000; animation: curtoApagao 1s forwards; }
+@keyframes curtoApagao{0%,30%{opacity:0}36%{opacity:1}58%{opacity:1}63%{opacity:.15}67%{opacity:.85}72%{opacity:0}78%{opacity:.5}86%,100%{opacity:0}}
+.curto-fx .faisca { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #e9ffff; box-shadow: 0 0 8px #0ffcbe, 0 0 16px #3aa0ff; animation: curtoVoa .6s ease-out forwards; }
+@keyframes curtoVoa { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.choque { animation: curtoChoque .5s; }
+@keyframes curtoChoque{0%,100%{transform:none}20%{transform:translate(-2px,1px) rotate(-8deg)}40%{transform:translate(2px,-1px) rotate(8deg)}60%{transform:translate(-1px,0) rotate(-4deg)}}
+/* imperio: presença forte — anel grosso (verde online, vermelho offline) e selo Online/Offline na foto */
+html .avatar.pres-on.pres-on { box-shadow: 0 0 0 3px #16c784, 0 0 10px rgba(22,199,132,.45) !important; }
+html .avatar.off-line.off-line { box-shadow: 0 0 0 3px #e5383b, 0 0 10px rgba(229,56,59,.5) !important; }
+.pres-env { position: relative; display: inline-grid; flex: none; }
+.pres-env::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; opacity: 0; }
+.pres-pilula { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 6px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; line-height: 1.35; letter-spacing: .01em; white-space: nowrap; pointer-events: none; color: #0b6b47; background: #e6fbf2; box-shadow: 0 0 0 2px var(--fundo), 0 4px 10px rgba(8,36,63,.18); }
+.pres-pilula::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #16c784; flex: none; }
+.pres-pilula.off { color: #b4232a; background: #fdecec; }
+.pres-pilula.off::before { background: #e5383b; }
+html[data-tema="escuro"] .pres-pilula { color: #7ef0bd; background: #0c3a2b; }
+html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418; }
+#lt-eu .pres-pilula { font-size: 9px; bottom: -7px; padding: 1px 5px 1px 4px; gap: 3px; }
+#lt-eu .pres-pilula::before { width: 5px; height: 5px; }
+.casca.recolhida #lt-eu .pres-pilula { font-size: 0; gap: 0; padding: 3px; }
+.pres-pilula.pres-pulso { animation: presPilula .7s cubic-bezier(.34,1.56,.64,1); }
+@keyframes presPilula { 0% { transform: translateX(-50%) scale(.7); opacity: .3; } 60% { transform: translateX(-50%) scale(1.12); opacity: 1; } 100% { transform: translateX(-50%) scale(1); } }
+.pres-env:has(.pres-pulso)::after { animation: presOnda .7s ease-out; box-shadow: 0 0 0 3px #16c784, 0 0 18px rgba(22,199,132,.8); }
+.pres-env:has(.pres-pilula.off.pres-pulso)::after { box-shadow: 0 0 0 3px #e5383b, 0 0 18px rgba(229,56,59,.8); }
+@keyframes presOnda { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+.avatar.pres-eu.pres-pulso { animation: presAvatar .5s ease-out; }
+@keyframes presAvatar { 40% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) {
+  #filtros .chip-radar::before, #filtros .chip-radar .feixe, .casca.curto, .curto-fx, .choque, .pres-pulso, .pres-env::after { animation: none !important; }
+}
 </style>
 <link rel="stylesheet" href="/responsivo.css">
 </head>
