@@ -9,19 +9,16 @@
 
   const css = document.createElement('style');
   css.textContent = `
-  .px-ind{position:fixed;z-index:60;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);width:40px;height:40px;margin-left:-20px;border-radius:50%;
-    pointer-events:none;opacity:0;transform:translateY(-44px) scale(.6);
-    background:rgba(255,255,255,.62);backdrop-filter:blur(16px) saturate(170%);-webkit-backdrop-filter:blur(16px) saturate(170%);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.85),0 8px 22px rgba(13,34,64,.14)}
-  html[data-tema="escuro"] .px-ind{background:rgba(20,44,72,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 8px 22px rgba(0,0,0,.35)}
-  .px-ind svg{position:absolute;inset:7px;width:26px;height:26px}
-  .px-ind circle{fill:none;stroke:url(#px-brilho);stroke-width:2;stroke-linecap:round;stroke-dasharray:63;filter:drop-shadow(0 0 2px rgba(58,160,255,.55))}
+  .px-ind{position:fixed;z-index:60;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);width:40px;height:40px;margin-left:-20px;
+    pointer-events:none;opacity:0;transform:translateY(-44px) scale(.6)}
+  .px-ind svg{position:absolute;inset:4px;width:32px;height:32px}
+  .px-ind circle{fill:none;stroke:url(#px-brilho);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:63;filter:drop-shadow(0 0 2px rgba(58,160,255,.45))}
   .px-ind.solto{transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s}
-  .px-ind.girando svg{animation:px-gira .9s linear infinite}
+  .px-ind.px-girando svg{animation:px-gira .9s linear infinite}
   @keyframes px-gira{to{transform:rotate(360deg)}}
   .px-alvo{transition:none}
   .px-alvo.px-volta{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-  @media (prefers-reduced-motion:reduce){.px-ind.girando svg{animation:none}}`;
+  @media (prefers-reduced-motion:reduce){.px-ind.px-girando svg{animation:none}}`;
   document.head.appendChild(css);
 
   const ind = document.createElement('div');
@@ -61,7 +58,7 @@
   };
   const limpar = () => {
     ind.classList.add('solto');
-    ind.classList.remove('girando');
+    ind.classList.remove('px-girando');
     ind.style.opacity = '0';
     ind.style.transform = 'translateY(-44px) scale(.6)';
     if (alvo) { alvo.classList.add('px-volta'); alvo.style.transform = ''; const a = alvo; setTimeout(() => a.classList.remove('px-volta', 'px-alvo'), 380); }
@@ -95,7 +92,7 @@
     if (!decidido) { alvo = null; return; }
     if (d < LIMITE) { limpar(); return; }
     ocupado = true;
-    ind.classList.add('solto', 'girando');
+    ind.classList.add('solto', 'px-girando');
     d = LIMITE; desenhar(1);
     navigator.vibrate?.(8);
     const inicio = Date.now();
