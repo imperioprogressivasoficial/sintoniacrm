@@ -72,13 +72,18 @@
   .fc-menu button span { flex: 1; }
   .fc-menu button[aria-checked="true"] { background: rgba(16,110,190,.08); font-weight: 650; }
   html[data-tema="escuro"] .fc-menu button[aria-checked="true"] { background: rgba(255,255,255,.1); }
-  .fc-barra { display: flex; gap: 3px; height: 10px; margin-top: 8px; }
-  .fc-barra button { all: unset; cursor: pointer; border-radius: 5px; min-width: 6px; background: var(--cor); opacity: .8; }
-  .fc-barra button[aria-current="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--fc-fundo-anel, #fff), 0 0 0 3.5px #3aa0ff; }
+  .fc-barra { display: flex; gap: 2px; height: 4px; margin-top: 10px; }
+  .fc-barra button { all: unset; cursor: pointer; border-radius: 2px; min-width: 4px; background: var(--fc-tom); position: relative; }
+  .fc-barra button::after { content: ''; position: absolute; inset: -10px 0; }
+  .fc-barra button[aria-current="true"] { background: var(--texto); }
   html[data-tema="escuro"] .fc-barra button[aria-current="true"] { --fc-fundo-anel: #071629; }
   .fc-barra-rot { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--sub); }
   .fc-barra-rot span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fc-modos { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 16px 10px; }
+  .fc-modos { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 16px 10px; }
+  .fc-buscar { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 12px; font-size: 14px; color: var(--sub); background: var(--fc-leve); }
+  .fc-ver { all: unset; box-sizing: border-box; cursor: pointer; flex: none; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--texto); background: var(--fc-leve); }
+  .fc-ver svg, .fc-buscar svg { width: 18px; height: 18px; }
+  .fc-buscar:focus-visible, .fc-ver:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .fc-modos > span { font-size: 12.5px; color: var(--sub); line-height: 1.3; min-width: 0; }
   .fc-icones { flex: none; display: flex; gap: 2px; padding: 3px; border-radius: 15px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .fc-icones button { all: unset; box-sizing: border-box; cursor: pointer; width: 44px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--sub); border: 1.5px solid transparent; }
@@ -119,10 +124,11 @@
   .fc-valor { font-weight: 750; font-variant-numeric: tabular-nums; flex: none; }
   .fc-valor.fc-sem { color: var(--sub); font-weight: 600; }
   .fc-g1 .fc-valor { font-size: 16px; }
-  .fc-passos { display: flex; gap: 4px; }
+  .fc-passos { display: flex; gap: 3px; }
+  .fc-passos i { height: 3px !important; }
   .fc-passos i { flex: 1; height: 5px; border-radius: 3px; background: var(--fc-trilho); }
-  .fc-passos i.feito { background: #7fd3ff; }
-  .fc-passos i.aqui { background: linear-gradient(90deg,#0ffcbe,#3aa0ff); }
+  .fc-passos i.feito { background: color-mix(in srgb, var(--texto) 35%, transparent); }
+  .fc-passos i.aqui { background: var(--texto); }
   .fc-passos.perdido i { background: rgba(196,58,58,.35); }
   .fc-balao { background: var(--fc-leve); border-radius: 14px; padding: 8px 11px; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
   .fc-balao b { font-size: 11.5px; color: #3aa0ff; display: block; }
@@ -131,7 +137,8 @@
   .fc-acoes { display: flex; align-items: center; gap: 8px; }
   .fc-ico { all: unset; box-sizing: border-box; cursor: pointer; flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--fc-leve); color: var(--texto); }
   .fc-principal { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; height: 44px; border-radius: 14px; border: 1.5px solid transparent; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 8px;
-    font-size: 13.5px; font-weight: 700; color: #fff; white-space: nowrap; background: linear-gradient(135deg,#106ebe,#3aa0ff) padding-box, linear-gradient(135deg,#0ffcbe,#3aa0ff) border-box; }
+    font-size: 13.5px; font-weight: 650; color: #fff; white-space: nowrap; background: #0d2240; }
+  html[data-tema="escuro"] .fc-principal { background: #fff; color: #0d2240; }
   .fc-principal svg { width: 16px; height: 16px; flex: none; }
   .fc-principal span { overflow: hidden; text-overflow: ellipsis; }
   .fc-principal[aria-disabled="true"] { opacity: .55; cursor: default; }
@@ -144,12 +151,12 @@
   .fc-p2 span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .fc-p2 span:last-child { flex: none; }
   .fc-selo { flex: none; font-size: 11px; font-weight: 650; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-  .fc-selo.verde { background: rgba(15,252,190,.18); color: #087a5c; }
-  .fc-selo.laranja { background: rgba(242,169,59,.22); color: #9a5a00; }
-  .fc-selo.vermelho { background: rgba(196,58,58,.16); color: #b3261e; }
+  .fc-selo.verde { background: var(--fc-leve); color: var(--sub); }
+  .fc-selo.laranja { background: var(--fc-leve); color: var(--texto); }
+  .fc-selo.vermelho { background: var(--fc-leve); color: #b3261e; }
   .fc-selo.neutro { background: var(--fc-leve); color: var(--sub); }
-  html[data-tema="escuro"] .fc-selo.verde { color: #5ff5cf; }
-  html[data-tema="escuro"] .fc-selo.laranja { color: #ffc56b; }
+  html[data-tema="escuro"] .fc-selo.verde { color: var(--sub); }
+  html[data-tema="escuro"] .fc-selo.laranja { color: var(--texto); }
   html[data-tema="escuro"] .fc-selo.vermelho { color: #ff9a92; }
   .fc-carregar { all: unset; box-sizing: border-box; cursor: pointer; flex: none; text-align: center; padding: 11px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--marca-azul); background: var(--fc-leve); }
   html[data-tema="escuro"] .fc-carregar { color: var(--marca-menta); }
@@ -204,21 +211,21 @@
   .fc-l0 > span:nth-child(2) b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fc-l0 > span:nth-child(2) small { font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fc-chip { flex: none; max-width: 40%; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    background: color-mix(in srgb, var(--cor) 24%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cor) 45%, transparent); }
+    background: var(--fc-leve); color: var(--sub); }
 
   /* colunas */
   .fc-cols { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; align-items: stretch; gap: 10px; padding: 2px 16px calc(96px + env(safe-area-inset-bottom)); scroll-snap-type: x mandatory; scroll-padding: 0 16px; overscroll-behavior-x: contain; }
   .fc-col { flex: none; width: min(300px, calc(100vw - 64px)); scroll-snap-align: start; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 12px; border-radius: 24px;
     background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .fc-col > header { flex: none; display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .fc-col > header i { width: 10px; height: 10px; border-radius: 50%; background: var(--cor); flex: none; }
+  .fc-col > header i { display: none; }
   .fc-col > header b { font-size: 14px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fc-col > header span { font-size: 12px; color: var(--sub); flex: none; }
   .fc-col-lista { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; }
   .fc-add { all: unset; box-sizing: border-box; cursor: pointer; flex: none; text-align: center; border: 1.5px dashed var(--sub); border-radius: 14px; padding: 9px; font-size: 12.5px; font-weight: 600; color: var(--sub); opacity: .75; }
 
-  .fc { --fc-card: #fff; --fc-card-b: #fff; --fc-leve: #eef3f9; --fc-trilho: #e1e8f1; }
-  html[data-tema="escuro"] .fc { --fc-card: rgba(255,255,255,.07); --fc-card-b: rgba(255,255,255,.1); --fc-leve: rgba(255,255,255,.1); --fc-trilho: rgba(255,255,255,.14); }
+  .fc { --fc-tom: color-mix(in srgb, #106ebe 45%, transparent); --fc-card: #fff; --fc-card-b: #fff; --fc-leve: #eef3f9; --fc-trilho: #e1e8f1; }
+  html[data-tema="escuro"] .fc { --fc-tom: rgba(255,255,255,.28); --fc-card: rgba(255,255,255,.07); --fc-card-b: rgba(255,255,255,.1); --fc-leve: rgba(255,255,255,.1); --fc-trilho: rgba(255,255,255,.14); }
 
   /* busca (folha) */
   dialog.fc-busca-dlg .fn-busca { margin: 0 2px 10px; max-width: none; width: auto; }
@@ -399,7 +406,7 @@
 
   function escolherFunil(ctx) {
     const grupos = [ctx.funis.map((f) => ({ nome: f.nome, info: f.conversas != null ? `${f.conversas} cliente${f.conversas === 1 ? '' : 's'}` : '', atual: f.id === ctx.funil?.id, acao: () => ctx.trocarFunil(f.id) }))];
-    const extra = [{ nome: 'Filtros', info: 'Origem, atendente, unidade, etiqueta e período', acao: ctx.abrirFiltros }];
+    const extra = [{ nome: 'Novo lead', info: 'Cadastrar uma cliente neste pipeline', acao: ctx.novoLead }, { nome: 'Filtros', info: 'Origem, atendente, unidade, etiqueta e período', acao: ctx.abrirFiltros }];
     if (ctx.gestao) {
       extra.push({ nome: 'Botão do cartão', info: ACOES[acaoDoFunil(ctx)].nome + (ctx.funil?.acaoPrincipal ? '' : ' (padrão)'), acao: () => ctx.escolherAcao() });
       extra.push({ nome: 'Funis, etapas e automações', info: 'Criar, renomear e organizar', acao: ctx.menuTopo });
@@ -461,14 +468,9 @@
 
   function topo(ctx) {
     const { el } = ctx.ui;
-    const pilula = el('span', { class: 'fc-pilula' },
-      el('button', { type: 'button', 'aria-label': 'Buscar cliente', title: 'Buscar', html: IC.busca, onclick: () => abrirBusca(ctx) }));
-    if (window.SintoniaBotaoTema) pilula.append(window.SintoniaBotaoTema('fc-tema'));
-    pilula.append(el('button', { type: 'button', 'aria-label': 'Novo lead', title: 'Novo lead', html: IC.mais, onclick: ctx.novoLead }));
     return el('div', { class: 'fc-topo' },
       el('button', { class: 'fc-titulo', type: 'button', 'aria-haspopup': 'dialog', 'aria-label': `Pipeline ${ctx.funil?.nome || ''}. Trocar de pipeline`, onclick: () => escolherFunil(ctx) },
-        el('small', { text: 'Pipeline' }), el('b', {}, el('span', { text: ctx.funil?.nome || 'CRM' }), el('span', { html: IC.baixo, style: 'display:grid;overflow:visible' }))),
-      pilula);
+        el('small', { text: 'Pipeline' }), el('b', {}, el('span', { text: ctx.funil?.nome || 'CRM' }), el('span', { html: IC.baixo, style: 'display:grid;overflow:visible' }))));
   }
 
   function destaque(ctx) {
@@ -491,7 +493,7 @@
     const barra = el('div', { class: 'fc-barra', role: 'group', 'aria-label': 'Etapas do funil' },
       ...cols.map((c, k) => {
         const b = el('button', { type: 'button', 'aria-label': `${c.etapa.nome}: ${c.total} cliente${c.total === 1 ? '' : 's'}`, title: `${c.etapa.nome} · ${c.total}`,
-          'aria-current': st.modo === 'foco' && k === i ? 'true' : null, onclick: () => irEtapa(ctx, k) });
+          'aria-current': st.modo === 'foco' && st.etapaFoco === c.etapa.id ? 'true' : null, onclick: () => irEtapa(ctx, k) });
         b.style.setProperty('--cor', c.etapa.cor || '#3aa0ff');
         b.style.flex = String(Math.max(0.5, c.total));
         return b;
@@ -508,10 +510,12 @@
   function seletorModo(ctx) {
     const { el } = ctx.ui;
     const m = MODOS.find((x) => x[0] === st.modo) || MODOS[0];
-    return el('div', { class: 'fc-modos' }, el('span', { text: m[3] }),
-      el('div', { class: 'fc-icones', role: 'group', 'aria-label': 'Modo de ver' },
-        ...MODOS.map(([id, nome, rotulo]) => el('button', { type: 'button', 'aria-label': rotulo, title: nome, 'aria-pressed': String(st.modo === id), html: IC[id],
-          onclick: () => { if (st.modo === id) return; st.modo = id; gravarLocal(chave(ctx, 'modoCelular'), id); redesenhar(true); } }))));
+    const escolher = () => ctx.folha('Ver como', null, [MODOS.map(([id, nome, , exp]) => ({ nome, info: exp.split('· ')[1] || '', atual: st.modo === id,
+      acao: () => { st.modo = id; gravarLocal(chave(ctx, 'modoCelular'), id); redesenhar(true); } }))]);
+    return el('div', { class: 'fc-modos' },
+      el('button', { class: 'fc-buscar', type: 'button', onclick: () => abrirBusca(ctx) }, el('span', { html: IC.busca, style: 'display:grid' }), el('span', { text: 'Buscar cliente' })),
+      el('button', { class: 'fc-ver', type: 'button', 'aria-haspopup': 'dialog', 'aria-label': `Visualização: ${m[1]}. Trocar`, onclick: escolher },
+        el('span', { html: IC[m[0]], style: 'display:grid' }), el('span', { text: m[1] }), el('span', { html: IC.baixo, style: 'display:grid' })));
   }
 
   /** Foco: um lead por vez, por prioridade, como um baralho. Arrasta para o lado = próximo/anterior; toque abre a conversa. */
@@ -533,7 +537,7 @@
     const cab = el('div', { class: 'fc-deck-cab' },
       filtro
         ? el('button', { class: 'fc-filtro', type: 'button', 'aria-label': `Mostrando só ${filtro.etapa.nome}. Tocar para ver todas`, onclick: () => { st.etapaFoco = null; st.aberto = null; redesenhar(true); } },
-          el('i', { style: `background:${filtro.etapa.cor || '#3aa0ff'}` }), document.createTextNode(filtro.etapa.nome), el('span', { text: '✕', 'aria-hidden': 'true' }))
+          document.createTextNode(filtro.etapa.nome), el('span', { text: '✕', 'aria-hidden': 'true' }))
         : el('span', { class: 'fc-deck-tit', text: 'Todas as etapas' }),
       el('span', { class: 'fc-deck-nav' },
         el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Anterior', 'aria-disabled': pos === 0 ? 'true' : null, html: IC.esq, onclick: () => ir(-1) }),
@@ -572,7 +576,7 @@
     const podeAvancar = !!prox && col !== colGanho(ctx) && !ehPerdida(col);
     const acao = acaoDoFunil(ctx);
     const jaGanhou = (acao === 'ganho' || acao === 'venda') && colGanho(ctx) === col;
-    const etapa = el('span', { class: 'fc-etq' }, el('i', { style: `background:${col.etapa.cor || '#3aa0ff'}` }), document.createTextNode(col.etapa.nome));
+    const etapa = el('span', { class: 'fc-etq' }, document.createTextNode(col.etapa.nome));
     const tel = cartao.nome && ctx.ui.formatarTel ? ctx.ui.formatarTel(cartao.telefone) : '';
     return el('article', { class: 'fc-carta', 'data-id': cartao.conversaId, tabindex: '0', 'aria-label': `${nome}, ${col.etapa.nome}. Toque para abrir a conversa` },
       el('div', { class: 'fc-c0' }, etapa,
