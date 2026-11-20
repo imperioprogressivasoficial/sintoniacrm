@@ -374,7 +374,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', {}, el('b', {}, valor, selo ? el('span', { class: 'rl-selo', text: selo }) : null), el('small', { text: rot })));
     return el('div', { class: 'rl-numeros', role: 'list', 'aria-label': 'Resumo' },
       n(IC.pessoas, fmtN(r.origem.total), 'leads no período'),
-      n(IC.agenda, fmtN(et[2]?.total), 'agendaram', et[2]?.pct != null ? fmtPct(et[2].pct) : null),
+      n(IC.agenda, fmtN(et[2]?.total), et[0]?.total ? `agendaram (dos ${fmtN(et[0].total)} leads)` : 'agendaram', et[2]?.pct != null ? fmtPct(et[2].pct) : null),
       n(IC.relogio, fmtTempo(r.iaEquipe.equipe.primeiraRespostaSeg), '1ª resposta da equipe'),
       n(IC.raio, fmtN(r.iaEquipe.ia.agendamentos), 'agendados pela IA'));
   }

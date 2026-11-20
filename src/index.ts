@@ -1,5 +1,6 @@
 import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
 import { LayoutsPainelMemoria, LayoutsPainelPostgres } from './painel/layout.js';
+import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
@@ -77,6 +78,7 @@ import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type Po
 import { PagamentoManual } from './planos/pagamento.js';
 import { Planos } from './planos/porteiro.js';
 import { registrarPlanos } from './planos/rotas.js';
+import { estadoDaIa } from './planos/estado-ia.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
@@ -487,6 +489,7 @@ const app = criarServidor({
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
+  presencas: pool ? new PresencasPostgres(pool) : new PresencasMemoria(),
   gestao: {
     tags,
     empresa,
@@ -581,6 +584,12 @@ registrarPlanos(app, {
   fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
   armazemComercial,
   contas,
+  estadoIa: async () =>
+    estadoDaIa({
+      chaveGeral: (p) => (p === 'openai' ? Boolean(conexoes.get('openaiApiKey')) : iaLigada),
+      agentes: await agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID),
+      modoPadrao: (await empresa.configIa()).modoPadrao,
+    }),
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });

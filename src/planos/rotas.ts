@@ -9,6 +9,7 @@ import { calcularCalculadora, catalogo, custoMensalClt, precoColaborador } from 
 import { calcularComparativo, ladosDoDesempenho } from './comparativo.js';
 import type { PagamentoProvider } from './pagamento.js';
 import { fimDoMes, inicioDoMes, TEXTO_MOTIVO, type Planos } from './porteiro.js';
+import type { EstadoIa } from './estado-ia.js';
 
 /**
  * Plano e uso da IA (só administração e direção):
@@ -26,6 +27,8 @@ export interface OpcoesRotasPlanos {
   fonte?: FonteDesempenho;
   armazemComercial?: ArmazemComercial;
   contas?: Contas;
+  /** A IA está atendendo de verdade (chave + agente ligado)? Sem isso, vale só o que o plano permite. */
+  estadoIa?: () => Promise<EstadoIa>;
 }
 
 const erro = (status: number, msg: string) => Object.assign(new Error(msg), { statusCode: status });
@@ -50,6 +53,7 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
       o.planos.armazem.pedidos(emp, 10),
       o.planos.armazem.bloqueios(emp, inicioDoMes(agora), fimDoMes(agora)),
     ]);
+    const ia = o.estadoIa ? await o.estadoIa().catch((): EstadoIa => ({ atendendo: false })) : undefined;
     const a = s.assinatura;
     const cfg = o.planos.configDe(a);
     const plano = s.plano;
@@ -71,6 +75,8 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
       clt: cfg.clt,
       recargas: cfg.recargas,
       agora: decisao.pode ? { pode: true, usandoCreditos: decisao.usandoCreditos } : { pode: false, motivo: decisao.motivo, texto: decisao.texto },
+      /** Estado real da IA (chave e agente ligado). null = não informado. */
+      ia: ia ?? null,
       limites: s.limites,
       creditos: s.creditos,
       ilimitado: s.ilimitado,

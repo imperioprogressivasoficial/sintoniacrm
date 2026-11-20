@@ -53,7 +53,23 @@
     const st = document.createElement('style'); st.id = 'painel-lateral-css'; st.textContent = CSS; document.head.append(st);
     d = document.createElement('dialog'); d.className = 'pl'; d.setAttribute('aria-modal', 'true');
     pilha = document.createElement('div'); pilha.className = 'pl-pilha'; d.append(pilha);
+    // Esc volta uma página (ou fecha na primeira). Tratado no keydown porque o navegador só deixa segurar o
+    // "cancel" do <dialog> uma vez por toque: no 2º Esc seguido ele fechava o painel inteiro, pulando as subpáginas.
+    d.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
+      e.preventDefault(); e.stopPropagation(); voltar();
+    });
     d.addEventListener('cancel', (e) => { e.preventDefault(); voltar(); });
+    // Se o navegador fechou o <dialog> por conta própria, arruma a pilha (e o histórico) do mesmo jeito.
+    d.addEventListener('close', () => {
+      if (fechando || !paginas.length) return;
+      const n = entradas; entradas = 0;
+      const cb = aoFechar; aoFechar = null;
+      d.classList.remove('ver');
+      paginas.forEach(sair); paginas.forEach((p) => p.el.remove()); paginas = [];
+      try { cb?.(); } catch (x) { console.error(x); }
+      if (n > 0) { try { history.go(-n); } catch {} }
+    });
     d.addEventListener('click', (e) => { if (e.target === d) fechar(); });
     // gesto/botão de voltar do celular e do navegador
     addEventListener('popstate', (e) => {

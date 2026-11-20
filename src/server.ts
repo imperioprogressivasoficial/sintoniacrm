@@ -6,6 +6,7 @@ import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
+import { registrarPresenca, type Presencas } from './presenca/presenca.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
@@ -76,6 +77,8 @@ export interface DependenciasServidor {
   leituras?: Leituras;
   /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
   layoutsPainel?: LayoutsPainel;
+  /** Presença da equipe ("Disponível para atender"). */
+  presencas?: Presencas;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
@@ -494,6 +497,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
 
   if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
+  if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
 
   // ---------- Tags, aba IA, painel completo e empresa ----------
   registrarGestao(app, {

@@ -59,6 +59,7 @@
     document.body.append(fundo, painel, raiz);
 
     let editando = null; // lista de ids durante a edição
+    let empilhado = false; // o editor abriu por cima de outra página do painel
     let aviso = '';
 
     function desenharPainel() {
@@ -83,8 +84,11 @@
       editando = escolhidos(); aviso = '';
       const P = window.SintoniaPainel;
       if (!P) return;
-      P.abrir({ id: 'atalhos', titulo: 'Atalhos da bolinha', montar: (corpo) => { corpoEditor = corpo; corpo.classList.add('are'); desenharEditor(); },
-        aoFechar: () => { editando = null; corpoEditor = null; } });
+      const limpar = () => { editando = null; corpoEditor = null; };
+      const op = { id: 'atalhos', titulo: 'Atalhos da bolinha', montar: (corpo) => { corpoEditor = corpo; corpo.classList.add('are'); desenharEditor(); } };
+      // Vindo de Mais › Acesso rápido (painel já aberto): entra como subpágina, e Esc/voltar volta para lá.
+      empilhado = Boolean(P.aberto());
+      if (empilhado) P.empurrar({ ...op, aoSair: limpar }); else P.abrir({ ...op, aoFechar: limpar });
     }
     function desenharEditor() {
       const corpo = corpoEditor; if (!corpo) return;
@@ -123,17 +127,21 @@
         aviso ? el('p', { class: 'are-aviso', role: 'alert', text: aviso }) : null,
         el('div', { class: 'are-rodape' },
           el('button', { type: 'button', class: 'are-restaurar', text: 'Restaurar padrão', onclick: () => { gravarJson(chaveItens(), null); editando = escolhidos(); aviso = ''; desenharEditor(); } }),
-          el('button', { type: 'button', class: 'are-pronto', text: 'Pronto', onclick: () => window.SintoniaPainel.fechar() })));
+          el('button', { type: 'button', class: 'are-pronto', text: 'Pronto', onclick: () => (empilhado ? window.SintoniaPainel.voltar() : window.SintoniaPainel.fechar()) })));
     }
 
-    let pos = lerJson(CHAVE) || { lado: 'dir', y: 0.62 };
+    // Padrão: embaixo, à direita, logo acima da barra de abas (longe das setas das listas e dos cartões do meio).
+    let pos = lerJson(CHAVE) || { lado: 'dir', y: 0.8 };
     let aberta = false;
     let ocioso;
     function aplicar(animar) {
       const w = innerWidth, h = innerHeight;
       const y = Math.min(Math.max(pos.y * h, 90), h - 130);
-      raiz.style.transition = animar ? 'left .22s ease, top .22s ease' : 'none';
+      const calmo = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      raiz.style.transition = calmo ? 'none' : animar ? 'left .22s ease, top .22s ease, opacity .25s ease, transform .25s ease' : 'opacity .25s ease, transform .25s ease';
       raiz.style.left = (pos.lado === 'dir' ? w - TAM - MARGEM : MARGEM) + 'px';
+      // Parada, a bolinha se encosta na borda (fica só a pontinha) para não cobrir setas e botões das listas.
+      raiz.style.setProperty('--ar-encosta', (pos.lado === 'dir' ? 1 : -1) * (TAM / 2 + MARGEM) + 'px');
       raiz.style.top = y - TAM / 2 + 'px';
     }
     function acordar() {
@@ -168,7 +176,7 @@
       if (!arrasto || e.pointerId !== arrasto.id) return;
       const dx = e.clientX - arrasto.x0, dy = e.clientY - arrasto.y0;
       if (!arrasto.moveu && Math.hypot(dx, dy) < 6) return;
-      arrasto.moveu = true; raiz.style.transition = 'none';
+      arrasto.moveu = true; raiz.style.transition = 'opacity .25s ease';
       raiz.style.left = arrasto.l0 + dx + 'px'; raiz.style.top = arrasto.t0 + dy + 'px';
     });
     const soltar = (e) => {

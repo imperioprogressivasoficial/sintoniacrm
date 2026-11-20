@@ -573,6 +573,8 @@
   #filtros { gap: 6px; }
   #filtros .chip { padding: 0 10px; font-size: 13.5px; }
   #filtros .chip .luz { margin-right: -1px; }
+  /* No computador a coluna da lista é estreita: os chips quebram linha em vez de cortar o "Radar". */
+  @media (min-width: 761px) { #filtros { flex-wrap: wrap; overflow: visible; row-gap: 6px; } }
   .qtd-filtros { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; background: var(--marca-azul); color: #fff; }
   .qtd-filtros:empty { display: none; }
   /* filtros da lista: página do painel lateral */
@@ -2834,6 +2836,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { nome: 'Notificações', ic: IC.sino, cor: '#ef4444', acao: () => window.SintoniaTelas?.notificacoes?.preferencias() },
         { nome: 'Aparência', valor: temaTxt, ic: IC.aparencia, cor: '#1e293b', acao: abrirAparencia },
         { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
+        ...(window.SintoniaInstalar?.itens?.() || []), // Instalar o app / Ativar notificações (public/telas/instalar.js)
         adm && { nome: 'Dados de demonstração', ic: IC.campos, cor: '#94a3b8', acao: abrirDemo },
       ] },
       { titulo: '', itens: [
@@ -3154,6 +3157,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/followup.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
+<script src="/telas/instalar.js" defer></script>
 <script src="/telas/alertas.js" defer></script>
 <script src="/telas/chat-ia.js" defer></script>
 <script src="/telas/serena.js" defer></script>

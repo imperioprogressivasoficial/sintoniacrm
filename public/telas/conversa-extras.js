@@ -52,9 +52,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .cx-status.ia i { background: var(--marca-menta); box-shadow: 0 0 10px var(--marca-menta); }
   .cx-status small { display: block; color: var(--sub); font-size: 13px; }
   .cx-sug-txt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .cx-chave { margin-left: auto; flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--linha); position: relative; transition: background .15s ease; }
+  /* .folha-lista span (app.html) estica todo span; aqui a chave volta ao tamanho dela. */
+  .cx-op .cx-chave, .cx-chave { margin-left: auto; flex: none; display: block; width: 46px; height: 28px; border-radius: 999px; background: var(--linha); position: relative; transition: background .15s ease; }
   .cx-chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s ease; }
-  .cx-chave.ligada { background: var(--marca-azul); }
+  .cx-op .cx-chave.ligada { background: var(--marca-azul); }
   .cx-chave.ligada::after { transform: translateX(18px); }
   #modo[aria-busy="true"] i { animation: cxPulso 1s ease-in-out infinite; }
   @keyframes cxPulso { 50% { opacity: .3; } }
