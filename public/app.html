@@ -1077,7 +1077,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M4 4.5h16a.8.8 0 0 1 .6 1.3L14 13.5V19l-4 2v-7.5L3.4 5.8A.8.8 0 0 1 4 4.5Z"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
           <button class="so-gestao lt-item" id="lt-tags" type="button" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
           <button class="nav lt-item" data-vista="scripts" title="Scripts de venda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20Z"/><path d="M15 3.5V8h4M10 12h6M10 15.5h6"/></svg><span class="lt-rot">Scripts</span></button>
-          <button class="so-gestao nav lt-item" data-vista="leads" title="Importar e exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span class="lt-rot">Importar e exportar</span></button>
+          <!-- clientes-tags: "Importar e exportar" mudou para Clientes (abas Importar e Exportar) -->
         </div></div>
       </div>
 
@@ -1296,6 +1296,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <section class="vista" id="v-agenda"><div class="painel" id="agenda"></div></section>
     <section class="vista" id="v-ligacoes"><div class="painel" id="ligacoes"></div></section>
     <section class="vista" id="v-clientes"><div class="painel" id="clientes"></div></section>
+    <!-- clientes-tags: Vendas › Tags, gestão completa (public/telas/tags.js) -->
+    <section class="vista" id="v-tags"><div class="painel" id="tags-tela"></div></section>
     <section class="vista" id="v-respostas"><div class="painel" id="respostas"></div></section>
     <section class="vista" id="v-reunioes"><div class="painel" id="reunioes"></div></section>
     <section class="vista" id="v-grupos"><div class="painel" id="grupos"></div></section>
@@ -1621,6 +1623,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     } else mostrar(v);
   }));
   function mostrar(v) {
+    /* clientes-tags: a rota antiga "leads" (Importar e exportar) abre Clientes › Importar */
+    if (v === 'leads') { window.SintoniaTelas?.clientes?.irAba?.('importar'); v = 'clientes'; }
     if (!document.getElementById('v-' + v)) { toast('Essa área chega na próxima atualização.'); return; }
     // Configurar a IA é da gestão; para a atendente, o botão IA abre o chat "Ajuda da IA".
     // Configurar a IA é da gestão; para a atendente, o botão IA abre a Serena (o chat).
@@ -1639,6 +1643,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
     if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts' || v === 'rotina' || v === 'grupos' || v === 'equipe') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    /* clientes-tags: tela Vendas › Tags */
+    if (v === 'tags' && window.SintoniaTelas?.tags) window.SintoniaTelas.tags.desenhar($('tags-tela'), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
     window.SintoniaMenu?.vistaMudou?.(v);
   }
@@ -1801,6 +1807,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // etiquetar a conversa aberta
   function desenharEtiquetar() {
     const c = estado.detalhe?.conversa; if (!c) return;
+    /* clientes-tags: o mesmo seletor de todo lugar (busca, cor, contagem; cria só se não existe) */
+    if (window.SintoniaTags) {
+      $('et-vazio').hidden = true; $('et-lista').classList.remove('folha-lista');
+      window.SintoniaTags.montar($('et-lista'), { varias: true, alturaLivre: true, marcadas: () => new Set((estado.detalhe?.conversa?.tags || []).map((t) => t.id)),
+        aoEscolher: async (t, ligar) => { const tags = await window.SintoniaTags.alternarNaConversa(c.id, t, ligar); if (estado.detalhe?.conversa) estado.detalhe.conversa.tags = tags; estado.assinatura = ''; atualizar(); } });
+      return;
+    }
     const marcadas = new Set((c.tags || []).map((t) => t.id));
     $('et-lista').replaceChildren(...estado.tags.map((t) => {
       const b = el('button', { 'aria-pressed': String(marcadas.has(t.id)), onclick: async () => {
@@ -1849,6 +1862,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // gestão das tags (Conta › Tags)
   estado.tagEditando = null; estado.corEscolhida = null;
   async function abrirTags() {
+    /* clientes-tags: Tags virou tela (gestão completa); a janela antiga fica só de reserva */
+    if (window.SintoniaTelas?.tags) return mostrar('tags');
     if (!estado.cores.length) estado.cores = await api('/api/tags/cores').catch(() => []);
     await carregarTags(); limparFormTag(); desenharTagsGestao(); $('d-tags').showModal();
   }
@@ -2500,6 +2515,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         if (!etapa) return;
         await Promise.all(ids.map((id) => post(`/api/conversas/${id}/funis/${f.id}`, { etapaId: etapa.id })));
         toast(`${qtd} movida(s) para ${etapa.nome} ✓`);
+      } else if (b.dataset.sel === 'tags' && window.SintoniaTags) {
+        /* clientes-tags: seletor novo e marcação em massa numa chamada só */
+        const t = await window.SintoniaTags.escolher({ titulo: 'Marcar tag', sub: qtd });
+        if (!t) return;
+        const r = await post(`/api/tags/${t.id}/conversas`, { ids });
+        toast(`Tag ${t.nome} em ${r.mudaram === 1 ? '1 conversa' : `${r.mudaram} conversas`} ✓`); window.SintoniaTags.invalidar();
       } else if (b.dataset.sel === 'tags') {
         await carregarTags(); if (!estado.tags.length) return toast('Nenhuma tag ainda.');
         const t = await escolher('Marcar tag', qtd, estado.tags.map((x) => ({ nome: x.nome, cor: x.cor, valor: x })));
@@ -2901,12 +2922,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         gestor && { nome: 'Criar novo pipeline', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.novoFunil?.(), 300); } },
         { nome: 'Pipelines', sub: 'Funil das clientes', ic: IC.funil, cor: '#106ebe', acao: () => mostrar('funil') },
         gestor && { nome: 'Funis e etapas', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.menu?.(), 300); } },
-        gestor && { nome: 'Etiquetas', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
+        gestor && { nome: 'Tags', sub: 'Criar, juntar e ver quem tem cada uma', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
         { nome: 'Scripts', sub: 'Roteiros de venda por etapa', ic: IC.respostas, cor: '#6366f1', acao: () => mostrar('scripts') },
-        gestor && { nome: 'Importar e exportar leads', ic: IC.leads, cor: '#64748b', acao: () => mostrar('leads') },
       ] },
       { id: 'clientes', titulo: 'Clientes', ic: IC.clientes, cor: '#6366f1', itens: [
-        { nome: 'Clientes e leads', sub: 'Ficha de cada cliente', ic: IC.clientes, cor: '#6366f1', acao: () => mostrar('clientes') },
+        /* clientes-tags: Clientes com abas (Clientes, Empresas, Importar, Exportar) */
+        { nome: 'Clientes e leads', sub: 'Todos os contatos', ic: IC.clientes, cor: '#6366f1', acao: () => { window.SintoniaTelas?.clientes?.irAba?.('clientes'); mostrar('clientes'); } },
+        { nome: 'Empresas', sub: 'Empresas ligadas aos contatos', ic: IC.empresa, cor: '#475569', acao: () => { window.SintoniaTelas?.clientes?.irAba?.('empresas'); mostrar('clientes'); } },
+        gestor && { nome: 'Importar e exportar', sub: 'Planilhas e CSV', ic: IC.leads, cor: '#64748b', acao: () => { window.SintoniaTelas?.clientes?.irAba?.('importar'); mostrar('clientes'); } },
       ] },
       gestor && { id: 'marketing', titulo: 'Marketing', ic: IC.transmissoes, cor: '#f97316', itens: [
         pode('transmissoes') && { nome: 'Transmissões', sub: 'Mensagem para muitas clientes', ic: IC.transmissoes, cor: '#f97316', acao: () => mostrar('transmissoes') },
@@ -3384,6 +3407,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/responsivo.js" defer></script>
 <script src="/telas/rastreio.js" defer></script>
 <script src="/telas/acessos.js" defer></script>
+<script src="/telas/tags.js" defer></script>
 <script src="/telas/clientes.js" defer></script>
 <script src="/telas/fluxos-mensagens.js" defer></script><!-- respostas-fluxos -->
 <script src="/telas/respostas.js" defer></script>

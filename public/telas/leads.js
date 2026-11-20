@@ -10,6 +10,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const MAX_LINHAS = 5000;
 
   const CSS = `
+  .ld.ld-embutido { max-width: none; padding-bottom: 0; }
   .ld-caixa.ld-caixa { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; padding: 14px 16px 0; gap: 0; }
   .ld { --acento: var(--marca-menta); --acento-suave: color-mix(in srgb, var(--marca-menta) 14%, transparent);
         display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; max-width: 1000px; width: 100%; margin: 0 auto; }
@@ -117,7 +118,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     juntar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v5a5 5 0 0 0 5 5h7"/><path d="M18 4v2a5 5 0 0 1-2 4"/><path d="m15 11 3 3-3 3"/></svg>',
   };
 
-  const s = { totalGeral: null, aba: lerAba(), caixa: null, ui: null, tags: [], campos: [], exp: { unidade: '', etapa: '', tag: '', de: '', ate: '' }, previa: null, imp: novaImportacao(), dup: null, dupErro: null, ocupado: false };
+  /* clientes-tags: a tela agora mora em Clientes (abas Importar e Exportar); `embutido` tira o título e as abas daqui. */
+  const s = { embutido: false, abas: ABAS, totalGeral: null, aba: lerAba(), caixa: null, ui: null, tags: [], campos: [], exp: { unidade: '', etapa: '', tag: '', origem: '', de: '', ate: '' }, previa: null, imp: novaImportacao(), dup: null, dupErro: null, ocupado: false };
   function lerAba() { try { const v = sessionStorage.getItem(CHAVE); return ABAS.some(([k]) => k === v) ? v : 'exportar'; } catch { return 'exportar'; } }
   function novaImportacao() { return { passo: 'fonte', texto: '', nomeArquivo: '', cab: [], linhas: [], mapa: [], unidade: '', etapa: 'novo_lead', tagId: '', ddd: '71', conversa: true, previa: null, final: null, erro: '' }; }
 
@@ -249,6 +251,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const UNIDADES = [['norte', 'Salvador Norte Shopping'], ['sumare', 'Shopping Sumaré']];
   const unidadesDaPessoa = (ui) => { const eu = ui.estado.eu; return !eu || ['admin', 'direcao'].includes(eu.papel) || !eu.unidades?.length ? UNIDADES : UNIDADES.filter(([u]) => eu.unidades.includes(u)); };
 
+  const ORIGENS = [['', 'Todas'], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['google_ads', 'Google'], ['indicacao', 'Indicação'], ['estabelecimento', 'Estabelecimento'], ['desconhecido', 'Sem origem']];
   function consultaExp() {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(s.exp)) if (v) q.set(k, v);
@@ -270,6 +273,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('label', { class: 'ld-campo' }, 'Unidade', select(ui, s.exp.unidade, [['', unidades.length > 1 ? 'Todas' : 'Todas as minhas'], ...unidades], mudar('unidade'))),
         el('label', { class: 'ld-campo' }, 'Etapa', select(ui, s.exp.etapa, opcoesEtapa(ui, true), mudar('etapa'))),
         el('label', { class: 'ld-campo' }, 'Tag', select(ui, s.exp.tag, [['', 'Todas'], ...s.tags.map((t) => [t.id, t.nome])], mudar('tag'))),
+        el('label', { class: 'ld-campo' }, 'Origem', select(ui, s.exp.origem, ORIGENS, mudar('origem'))),
         el('div', { class: 'ld-campo ld-periodo' }, 'Criados entre',
           el('div', {}, el('input', { type: 'date', 'aria-label': 'Criados de', value: s.exp.de, onchange: mudar('de') }), el('span', { text: 'e' }), el('input', { type: 'date', 'aria-label': 'Criados até', value: s.exp.ate, min: s.exp.de || undefined, onchange: mudar('ate') })))));
     const p = s.previa;
@@ -282,7 +286,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('b', { text: l.nome || fmtTel(l.telefone) }), el('span', { class: 'ld-dir', text: l.etapa ? ui.NOME_ETAPA[l.etapa] || l.etapa : 'só ficha' }),
         el('span', { text: `${fmtTel(l.telefone)}${l.email ? ' · ' + l.email : ''}` }), el('span', { class: 'ld-dir', text: dataBR(l.criadoEm) })))));
       const botao = el('a', { class: 'ld-botao', href: '/api/leads/exportar?' + consultaExp(), download: '', html: IC.baixar + '<span>Exportar CSV</span>', 'aria-disabled': String(!p.total) });
-      resultado.append(el('div', { class: 'ld-acoes' }, botao), el('div', { class: 'ld-nota', text: 'Colunas: nome, telefone, e-mail, unidade, etapa, tags, dona, criado em e os campos da ficha. Abre direto no Excel (UTF-8, separado por ponto e vírgula).' }));
+      resultado.append(el('div', { class: 'ld-acoes' }, botao), el('div', { class: 'ld-nota', text: 'Colunas: nome, telefone, e-mail, unidade, etapa, tags, dona, criado em, origem e os campos da ficha. Abre direto no Excel (UTF-8, separado por ponto e vírgula).' }));
     }
     return [filtros, resultado];
   }
@@ -427,12 +431,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!caixa) return;
     const el = ui.el;
     const nDup = s.dup?.grupos?.length || 0;
-    const abas = el('div', { class: 'ld-abas', role: 'tablist', 'aria-label': 'Leads' }, ...ABAS.map(([k, t]) => el('button', { role: 'tab', type: 'button', 'aria-selected': String(k === s.aba), onclick: () => trocarAba(k) }, t, k === 'duplicatas' && nDup ? el('span', { class: 'ld-qtd', text: String(nDup) }) : null)));
+    const abas = s.abas.length < 2 ? null : el('div', { class: 'ld-abas', role: 'tablist', 'aria-label': 'Leads', style: `grid-template-columns:repeat(${s.abas.length},minmax(0,1fr))` }, ...s.abas.map(([k, t]) => el('button', { role: 'tab', type: 'button', 'aria-selected': String(k === s.aba), onclick: () => trocarAba(k) }, t, k === 'duplicatas' && nDup ? el('span', { class: 'ld-qtd', text: String(nDup) }) : null)));
     const conteudo = s.aba === 'importar' ? abaImportar(ui) : s.aba === 'duplicatas' ? abaDuplicatas(ui) : abaExportar(ui);
     const ativo = document.activeElement;
     const foco = ativo && caixa.contains(ativo) && ativo.tagName === 'SELECT' ? ativo.getAttribute('aria-label') : null;
-    caixa.replaceChildren(el('div', { class: 'ld' },
-      el('div', { class: 'ld-topo' }, el('h1', { class: 'titulo-grande' }, 'Leads', el('small', { text: 'Exporte para o Excel, importe planilhas e junte contatos repetidos.' })),
+    caixa.replaceChildren(el('div', { class: 'ld' + (s.embutido ? ' ld-embutido' : '') },
+      s.embutido ? null : el('div', { class: 'ld-topo' }, el('h1', { class: 'titulo-grande' }, 'Leads', el('small', { text: 'Exporte para o Excel, importe planilhas e junte contatos repetidos.' })),
         el('div', { class: 'ld-numeros', role: 'list', 'aria-label': 'Resumo' },
           numero(IC.pessoas, s.totalGeral == null ? '—' : fmtN(s.totalGeral), 'contatos'),
           numero(IC.juntar, s.dup ? fmtN(nDup) : '—', nDup === 1 ? 'possível duplicata' : 'possíveis duplicatas'),
@@ -450,11 +454,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   window.SintoniaTelas.leads = {
-    async desenhar(caixa, ui) {
+    /** op (clientes-tags): { embutido: true, abas: ['importar', 'duplicatas'], aba } para morar dentro de Clientes. */
+    async desenhar(caixa, ui, op = {}) {
       estilo();
       s.caixa = caixa;
       s.ui = ui;
-      caixa.classList.add('ld-caixa');
+      s.embutido = Boolean(op.embutido);
+      s.abas = op.abas ? ABAS.filter(([k]) => op.abas.includes(k)).map(([k, t]) => [k, op.nomes?.[k] || t]) : ABAS;
+      if (op.aba) s.aba = op.aba;
+      if (!s.abas.some(([k]) => k === s.aba)) s.aba = s.abas[0][0];
+      if (!s.embutido) caixa.classList.add('ld-caixa');
       if (ui.estado.eu && !ui.ehGestor(ui.estado.eu)) {
         caixa.replaceChildren(ui.el('div', { class: 'ld' }, ui.el('h1', { class: 'titulo-grande', text: 'Leads' }), ui.el('div', { class: 'ld-vazio' }, ui.el('b', { text: 'Só para a gestão' }), ui.el('span', { text: 'Importar, exportar e juntar contatos fica com a gerência, a direção e a administração.' }))));
         return;
