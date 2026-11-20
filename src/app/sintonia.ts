@@ -113,6 +113,8 @@ export class Sintonia {
   private readonly trava: Trava;
   /** Envios em andamento: a Evolution pode avisar do nosso próprio envio antes de ele retornar o id. */
   private readonly enviando = new Map<string, number>();
+  /** Envios sem confirmação (tempo esgotado): se o eco chegar, a mensagem saiu e é gravada na conversa. */
+  private readonly incertos = new Set<string>();
   private readonly agora: () => Date;
   private readonly regras: RegrasAtendimento;
   private readonly log: (msg: string, extra?: unknown) => void;
@@ -138,7 +140,8 @@ export class Sintonia {
       const chave = this.chaveEnvio(msg.canalId, msg.telefone, msg.texto);
       if (this.enviando.has(chave)) {
         this.enviando.delete(chave);
-        return;
+        // Envio que deu "tempo esgotado" mas saiu: grava (como do celular da loja) para ninguém mandar de novo.
+        if (!this.incertos.delete(chave)) return;
       }
     }
 
@@ -902,10 +905,38 @@ export class Sintonia {
       await this.d.repo.registrarEnviadoPorNos(r.idExterno);
       // Respondeu: a cliente vê os dois tiques azuis na mensagem dela (onde o canal permite).
       if (n.canal.marcarLida && !opcoes.modelo) this.marcarLida(c.id).catch((e) => this.log('Falha ao marcar como lida', String(e)));
-      return r.idExterno;
-    } finally {
       // Dá um tempo para o eco do webhook chegar e depois esquece.
       setTimeout(() => this.enviando.delete(chave), 60_000).unref?.();
+      return r.idExterno;
+    } catch (e) {
+      if ((e as { codigo?: string }).codigo === 'incerto') {
+        // Pode ter saído: se o eco chegar nos próximos minutos, ele entra na conversa.
+        this.incertos.add(chave);
+        setTimeout(() => {
+          this.enviando.delete(chave);
+          this.incertos.delete(chave);
+        }, 5 * 60_000).unref?.();
+      } else this.enviando.delete(chave); // não saiu: uma mensagem igual mandada pelo celular não pode sumir
+      throw e;
+    }
+  }
+
+  /**
+   * Envio fora de conversa (aviso para a equipe, relatório do dia): o id fica marcado como nosso, para o eco
+   * do WhatsApp (fromMe) não voltar como "a equipe respondeu pelo celular".
+   */
+  async enviarAvulso(n: NumeroConectado, telefone: string, texto: string): Promise<string> {
+    const chave = this.chaveEnvio(n.canalId, telefone, texto);
+    this.enviando.set(chave, Date.now());
+    try {
+      const r = await n.canal.enviarTexto(n.canalId, telefone, texto);
+      await this.d.repo.registrarEnviadoPorNos(r.idExterno);
+      setTimeout(() => this.enviando.delete(chave), 60_000).unref?.();
+      return r.idExterno;
+    } catch (e) {
+      if ((e as { codigo?: string }).codigo === 'incerto') setTimeout(() => this.enviando.delete(chave), 5 * 60_000).unref?.();
+      else this.enviando.delete(chave);
+      throw e;
     }
   }
 

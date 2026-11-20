@@ -4,6 +4,7 @@ import type { CanalWhatsApp, StatusRecebido } from '../channels/tipos.js';
 import type { UnidadeId } from '../domain.js';
 import type { OpcoesWebhookMeta } from '../server.js';
 import { UNIDADES_WHATSAPP, type Conexoes } from './conexoes.js';
+import { PREFIXO_INSTANCIA } from '../channels/evolution-admin.js';
 
 /**
  * Números de WhatsApp em vigor, a partir das Conexões. Cada unidade usa a API escolhida na tela:
@@ -57,6 +58,13 @@ export function numerosDasConexoes(f: FonteNumeros): NumeroConectado[] {
     }
   }
   return lista;
+}
+
+/** Canais da API não oficial salvos em Conexões, com o nome da tela (ou "WhatsApp N", como na lista). */
+export function canaisEvolution(numeros: Array<{ canalId: string; nome?: string }>): Array<{ canalId: string; nome: string }> {
+  return numeros
+    .filter((n) => n.canalId.startsWith(PREFIXO_INSTANCIA))
+    .map((n, i) => ({ canalId: n.canalId, nome: n.nome?.trim() || `WhatsApp ${i + 1}` }));
 }
 
 /** Só lê o webhook da Meta (os envios saem pelo canal de cada unidade). */

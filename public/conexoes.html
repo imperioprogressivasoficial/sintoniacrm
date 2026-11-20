@@ -95,6 +95,18 @@
   .wa-linha small i { width: 8px; height: 8px; border-radius: 50%; background: #f2a93b; flex: none; }
   .wa-linha small i.ok { background: #16c47f; }
   .wa-linha .seta { margin-left: auto; color: var(--sub); font-size: 22px; line-height: 1; }
+  /* whatsapp-estavel: selo de saúde por canal (Conectado / Desconectado / Servidor sem resposta) e Reconectar */
+  .wa-item { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--vidro-borda); }
+  .wa-item:last-child { border-bottom: 0; }
+  .wa-item .wa-linha { flex: 1; min-width: 0; border-bottom: 0; }
+  .wa-item .wa-linha > span:nth-child(2) { min-width: 0; }
+  .wa-item small { flex-wrap: wrap; }
+  .wa-linha small i.erro { background: var(--erro); }
+  .wa-selo { flex: none; font-size: 11.5px; padding: 3px 9px; }
+  .estado.erro { background: color-mix(in srgb, var(--erro) 14%, transparent); color: var(--erro); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erro) 35%, transparent); }
+  .wa-reconectar { flex: none; padding: 8px 14px !important; font-size: 13.5px; }
+  .wa-motivo { display: block; font-size: 12.5px; color: var(--erro); margin-top: 2px; overflow-wrap: anywhere; }
+  @media (max-width: 520px) { .wa-item { flex-wrap: wrap; } .wa-item .wa-reconectar { width: 100%; margin: 0 0 12px; } .wa-selo { display: none; } }
   .wa-novo { display: block; width: 100%; margin-top: 12px; padding: 13px 18px; font-size: 15px; }
   .wa-logo { width: 58px; height: 58px; border-radius: 16px; background: #25d366; display: grid; place-items: center; flex: none; }
   .wa-logo svg { width: 30px; height: 30px; }
@@ -750,6 +762,22 @@
   }
 
   // ---------- não oficial: números por QR Code ----------
+  /** Situação do canal para a linha: selo, ponto, texto e se mostra "Reconectar". */
+  function situacaoCanal(k, servidorFora) {
+    const s = k.saude || {};
+    const ultima = s.ultimaMensagemEm ? `última mensagem recebida ${haQuanto(s.ultimaMensagemEm)}` : '';
+    if (servidorFora) return { selo: 'Servidor sem resposta', cor: 'aviso', ponto: '', info: 'O servidor do WhatsApp não respondeu. A Sintonia continua tentando.' + (ultima ? ' · ' + ultima : '') };
+    if (k.estado === 'conectada') return { selo: 'Conectado', cor: 'ok', ponto: 'ok', info: ['Conectado', k.numero ? formatarTel(k.numero) : '', ultima].filter(Boolean).join(' · ') };
+    if (s.estado === 'desconectado') {
+      return {
+        selo: 'Desconectado', cor: 'erro', ponto: 'erro', reconectar: true,
+        info: ['Desconectado ' + haQuanto(s.desde), s.reconectando ? 'tentando religar sozinho' : '', ultima].filter(Boolean).join(' · '),
+        motivo: s.motivo || '',
+      };
+    }
+    if (k.estado === 'conectando') return { selo: 'Conectando', cor: 'aviso', ponto: '', info: 'Conectando…' };
+    return { selo: 'Não conectado', cor: '', ponto: '', info: 'Não conectado' };
+  }
   async function carregarLojas() {
     const caixa = $('lojas');
     let r; try { r = await api('/api/conexoes/whatsapp/canais'); } catch (x) { caixa.textContent = x.message; return; }
@@ -759,25 +787,46 @@
     if (!r.canais.length) { caixa.replaceChildren(el('p', { className: 'vazio-canais', textContent: 'Nenhum canal ainda. Toque em “+ Novo canal” para ligar o primeiro WhatsApp.' })); return; }
     caixa.replaceChildren(...r.canais.map((k) => {
       const ok = k.estado === 'conectada';
+      const sit = situacaoCanal(k, Boolean(r.erro));
       const logo = el('span', { className: 'wa-logo' + (ok ? '' : ' off'), innerHTML: LOGO_WA });
-      const ponto = el('i', { className: ok ? 'ok' : '' });
-      const info = ok ? `Conectado${k.numero ? ' · ' + formatarTel(k.numero) : ''}` : k.estado === 'erro' ? 'Sem resposta' : 'Não conectado';
-      const linha = el('button', { className: 'wa-linha', type: 'button' }, logo, el('span', {}, el('b', { textContent: k.nome }), el('small', {}, ponto, info)), el('span', { className: 'seta', textContent: '›' }));
-      linha.addEventListener('click', () => menuCanal(k, ok, info));
-      return linha;
+      const ponto = el('i', { className: sit.ponto });
+      const textos = el('span', {}, el('b', { textContent: k.nome }), el('small', {}, ponto, sit.info), sit.motivo ? el('span', { className: 'wa-motivo', textContent: sit.motivo }) : null);
+      const linha = el('button', { className: 'wa-linha', type: 'button' }, logo, textos, el('span', { className: 'estado wa-selo ' + sit.cor, textContent: sit.selo }), el('span', { className: 'seta', textContent: '›' }));
+      linha.addEventListener('click', () => menuCanal(k, ok, sit.info, sit.reconectar));
+      const item = el('div', { className: 'wa-item' }, linha);
+      if (sit.reconectar) {
+        const b = el('button', { className: 'botao wa-reconectar', type: 'button', textContent: 'Reconectar' });
+        b.addEventListener('click', () => reconectar(k, b));
+        item.append(b);
+      }
+      return item;
     }));
+  }
+  /** Reconectar: sem QR Code se a sessão ainda vale; senão abre o passo a passo (QR Code ou código). */
+  async function reconectar(k, botao) {
+    if (k.saude?.precisaParear) { conectar(k); return; }
+    botao?.setAttribute('aria-busy', 'true');
+    const texto = botao?.textContent; if (botao) botao.textContent = 'Reconectando…';
+    try {
+      const r = await api(`/api/conexoes/whatsapp/canais/${k.id}/reconectar`, { method: 'POST', body: '{}' });
+      if (r.estado === 'conectada') { await carregarLojas(); return; }
+      if (r.estado === 'conectando') { if (botao) botao.textContent = 'Religando…'; setTimeout(carregarLojas, 6000); return; }
+      conectar(k); // precisa de QR Code/código (ou a conexão foi apagada no servidor)
+    } catch (x) { alert(x.message); }
+    finally { botao?.removeAttribute('aria-busy'); if (botao && botao.textContent === 'Reconectando…') botao.textContent = texto; }
   }
   const LOGO_WA = '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.7-.1 1.2Z"/></svg>';
   let canalMenu = null;
-  function menuCanal(k, ok, info) {
+  function menuCanal(k, ok, info, caiu) {
     canalMenu = k;
     $('dc-nome').textContent = k.nome; $('dc-info').textContent = info;
     $('dc-conectar').hidden = ok; $('dc-desconectar').hidden = !ok; $('dc-sincronizar').hidden = !ok;
+    $('dc-conectar').textContent = caiu ? 'Reconectar' : 'Conectar';
     $('d-canal').showModal();
   }
   $('dc-fechar').addEventListener('click', () => $('d-canal').close());
   $('dc-sincronizar').addEventListener('click', () => { $('d-canal').close(); lojaAtual = canalMenu.id; clearInterval(espera); tela('ok'); $('d-wa').showModal(); sincronizar(canalMenu.id); });
-  $('dc-conectar').addEventListener('click', () => { $('d-canal').close(); conectar(canalMenu); });
+  $('dc-conectar').addEventListener('click', () => { $('d-canal').close(); if (canalMenu.saude?.estado === 'desconectado') reconectar(canalMenu); else conectar(canalMenu); });
   $('dc-renomear').addEventListener('click', () => { $('d-canal').close(); renomear(canalMenu); });
   $('dc-desconectar').addEventListener('click', (e) => desconectar(canalMenu, e.currentTarget).then(() => $('d-canal').close()));
   $('dc-apagar').addEventListener('click', (e) => apagarCanal(canalMenu, e.currentTarget).then(() => $('d-canal').close()));

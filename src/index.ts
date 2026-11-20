@@ -19,8 +19,10 @@ import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBase } from './ai/prompt.js';
 import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
+import { EvolutionAdmin } from './channels/evolution-admin.js';
+import { ArmazemSaudeMemoria, ArmazemSaudePostgres, SaudeWhatsApp } from './channels/whatsapp-saude.js';
 import { CanalMeta } from './channels/meta.js';
-import { numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
+import { canaisEvolution, numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
 import { contaDaRede, numerosSociais } from './conexoes/sociais.js';
 import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/chamadas.js';
 import { ehCanalSocial } from './channels/meta-social.js';
@@ -237,6 +239,21 @@ const notificador = new Notificador({
   log,
 });
 observarEventos(repo, (e) => notificador.aoEvento(e));
+
+// Saúde do WhatsApp não oficial: avisa quando um canal cai ou o servidor da Evolution some, e tenta reconectar.
+const whatsappSaude = new SaudeWhatsApp({
+  armazem: pool ? new ArmazemSaudePostgres(pool) : new ArmazemSaudeMemoria(),
+  admin: () => {
+    const url = conexoes.get('evolutionUrl');
+    const chave = conexoes.get('evolutionApiKey');
+    return url && chave ? new EvolutionAdmin(url, chave) : undefined;
+  },
+  canais: () => canaisEvolution(conexoes.numeros()),
+  avisar: (a) => notificador.avisarGestao(a),
+  log,
+});
+await whatsappSaude.carregar();
+whatsappSaude.iniciar();
 await chavesPush.obter().catch((e) => log('Falha ao preparar as chaves do push', String(e)));
 
 const destinosRelatorio = () => (conexoes.destinosRelatorio().length ? conexoes.destinosRelatorio() : cfg.destinosRelatorio);
@@ -401,7 +418,8 @@ const sintonia = new Sintonia({
     // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
     const n = numeros.find(ehReal);
     if (!n) return;
-    for (const destino of destinosRelatorio()) await n.canal.enviarTexto(n.canalId, destino, texto);
+    // enviarAvulso: o eco do WhatsApp não volta como "equipe respondeu pelo celular".
+    for (const destino of destinosRelatorio()) await sintonia.enviarAvulso(n, destino, texto);
   },
 });
 
@@ -487,6 +505,7 @@ const app = criarServidor({
   }),
   midias,
   notificacoes: { notificador, armazem: armazemNotificacoes, chaves: chavesPush },
+  whatsappSaude,
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
@@ -697,7 +716,7 @@ const relogio = setInterval(async () => {
     // As conversas de demonstração não entram no relatório que sai pelo WhatsApp.
     const texto = await sintonia.relatorioDoDia(agora, undefined, await demo.conversasDemo().catch(() => undefined));
     for (const destino of destinosRelatorio()) {
-      await real.canal.enviarTexto(real.canalId, destino, texto).catch((e) => log('Falha no relatório', String(e)));
+      await sintonia.enviarAvulso(real, destino, texto).catch((e) => log('Falha no relatório', String(e)));
     }
   }
 }, 30_000);
@@ -717,11 +736,13 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     log(`Recebido ${sinal}: encerrando`);
     clearInterval(relogio);
     clearInterval(relogioTransmissoes);
+    whatsappSaude.parar();
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
     await trabalhador.parar();
     await notificador.ocioso().catch(() => {});
+    await whatsappSaude.ocioso().catch(() => {});
     await pool?.end();
     process.exit(0);
   });

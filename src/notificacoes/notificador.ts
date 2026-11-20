@@ -57,7 +57,8 @@ const FALHAS: Array<{ classe: string; teste: RegExp; titulo: string; texto: stri
     texto: 'A IA não está conseguindo responder. Confira a chave da IA em Conexões.',
   },
 ];
-export const classificarFalha = (erro: string) => FALHAS.find((f) => f.teste.test(erro));
+// "Número sem WhatsApp" é do contato, não do sistema: não vira aviso de falha.
+export const classificarFalha = (erro: string) => (/não tem WhatsApp/i.test(erro) ? undefined : FALHAS.find((f) => f.teste.test(erro)));
 
 const formatarTel = (t: string) => {
   const d = t.replace(/^55/, '');
@@ -200,6 +201,19 @@ export class Notificador {
       if (await this.o.armazem.existeChave(u.id, chave, umaHora)) continue;
       await this.criar(u, { tipo: 'falha', titulo: f.titulo, texto: f.texto, vista: 'conexoes', chave });
     }
+  }
+
+  /**
+   * Aviso de sistema para a gestão (administração, direção e gerência): sino + push, tipo "falha".
+   * A chave garante que o mesmo aviso sai uma vez só para cada pessoa (ex.: uma queda do WhatsApp).
+   */
+  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string }): Promise<number> {
+    let n = 0;
+    for (const u of (await this.equipe()).filter((x) => ehGestor(x))) {
+      if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
+      if (await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+    }
+    return n;
   }
 
   // ---------------------------------------------------------------- relógio

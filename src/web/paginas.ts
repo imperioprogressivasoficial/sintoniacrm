@@ -111,6 +111,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/reunioes.js': { arquivo: 'telas/reunioes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
   '/sw.js': { arquivo: 'sw.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
