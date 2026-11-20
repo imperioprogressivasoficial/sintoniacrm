@@ -790,7 +790,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const nomeEscopo = escopo === 'pessoal' ? 'Seus números' : escopo === 'unidades' ? `Suas unidades${(eu.unidades || []).length ? ': ' + eu.unidades.map((u) => ui.UNIDADE[u] || u).join(', ') : ''}` : escopo === 'empresa' ? 'Toda a empresa' : '';
     const linha = el('div', { class: 'pn-estado', role: 'status' });
     if (nomeEscopo) linha.append(el('b', { text: nomeEscopo }));
-    linha.append(el('span', { class: s.carregando ? 'pn-carregando' : '', text: d?._em ? `${nomeEscopo ? '· ' : ''}atualizado às ${ui.hm(d._em)}` : 'Carregando os números…' }));
+    linha.append(el('span', { class: 'pn-atualizado' + (s.carregando ? ' pn-carregando' : ''), text: d?._em ? `${nomeEscopo ? '· ' : ''}atualizado às ${ui.hm(d._em)}` : 'Carregando os números…' }));
     linha.append(botaoRedondo(ui, IC.recarregar, 'Atualizar agora', () => carregar(true), { class: 'pn-redondo pn-mini' }));
     const podePersonalizar = Boolean(d);
     if (!s.largo && window.SintoniaBotaoTema) linha.append(window.SintoniaBotaoTema('pn-redondo pn-mini'));
@@ -1879,6 +1879,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.transmissoes = guarda(transm, s.transmissoes);
     s.comissao = guarda(comissao, s.comissao);
     s.nps = { ...(s.nps || {}), [periodo]: guarda(npsR, s.nps?.[periodo]) };
+    /* fluidez: números iguais aos que já estão na tela = não redesenha (o gráfico não pisca); só atualiza o "atualizado às" */
+    const marca = (() => { try { const { _em, ...p } = s.cache[periodo] || {}; return JSON.stringify([p, s.extra, s.meta, s.comercial, s.rel[periodo], s.transmissoes, s.comissao, s.nps[periodo], s.falhou, periodo]).replace(/(\d{4}-\d\d-\d\dT\d\d:\d\d):\d\d(\.\d+)?Z/g, '$1'); } catch { return ''; } })();
+    if (!manual && marca && marca === s.marcaDesenho && s.caixa?.isConnected && s.raiz?.isConnected && !s.pendente) {
+      const t = s.caixa.querySelector('.pn-atualizado'); const d = s.cache[periodo];
+      if (t && d?._em) { t.classList.remove('pn-carregando'); t.textContent = t.textContent.replace(/\d{2}:\d{2}/, ui.hm(d._em)); }
+      return;
+    }
+    s.marcaDesenho = marca;
     // Não redesenha por cima de quem está digitando a meta.
     if (s.caixa?.isConnected && !(s.editandoMeta && !manual && s.caixa.contains(document.activeElement))) desenharTudo();
   }
@@ -1928,7 +1936,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         s.tamanhoObs = new ResizeObserver(() => { const largo = caixa.clientWidth >= LARGURA_DUAS; if (largo !== s.largo && caixa.clientWidth) desenharTudo(); });
         s.tamanhoObs.observe(caixa);
       }
-      desenharTudo();
+      /* fluidez: voltando à aba com o Dashboard ainda montado e igual, não remonta tudo (só confere os números) */
+      const jaNaTela = s.raiz?.isConnected && caixa.contains(s.raiz) && s.marcaDesenho && !s.pendente && s.largo === ((caixa.clientWidth || innerWidth) >= LARGURA_DUAS);
+      if (!jaNaTela) desenharTudo();
       ligarRelogio();
       await carregar(false);
     },

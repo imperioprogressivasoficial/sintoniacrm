@@ -1537,7 +1537,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   const api = async (url, opcoes = {}) => {
     const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
-    if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    if (r.status === 401) { try { localStorage.removeItem('sintonia.fz.lista'); } catch {} location.href = '/entrar'; throw new Error('sem sessão'); } /* fluidez: sem sessão, apaga a lista guardada */
     // Resumo do sino em qualquer resposta que o traga (lista de conversas, atualizações): /telas/notificacoes.js escuta.
     const sino = r.headers.get('x-notificacoes');
     if (sino) { try { dispatchEvent(new CustomEvent('sintonia:notificacoes', { detail: JSON.parse(sino) })); } catch {} }
@@ -1556,7 +1556,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const avatar = (c, classe = '') => {
     const a = el('span', { class: 'avatar foto ' + classe, html: BONECO });
     if (c.id && !semFoto.has(c.id)) {
-      const img = el('img', { alt: '', loading: 'lazy', src: `/api/conversas/${c.id}/foto` });
+      const img = el('img', { alt: '', loading: 'lazy', decoding: 'async', width: '54', height: '54', src: `/api/conversas/${c.id}/foto` }); /* fluidez: decodifica fora do quadro */
       img.addEventListener('error', () => { semFoto.add(c.id); img.remove(); });
       a.append(img);
     }
@@ -1629,10 +1629,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // A barra responde na hora (a pílula já anda) e a tela nova é montada no quadro seguinte, para a animação não engasgar.
   document.querySelectorAll('.nav[data-vista]').forEach((b) => b.addEventListener('click', () => {
     const v = b.dataset.vista;
+    /* fluidez: troca de aba suave (public/telas/fluidez.js); sem o módulo, troca direta como antes */
+    const fz = window.SintoniaFluidez?.trocarAba;
     if (b.closest('.trilho') && innerWidth <= 760) {
       document.querySelectorAll('.trilho .nav[data-vista]').forEach((x) => (x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
-      requestAnimationFrame(() => setTimeout(() => mostrar(v), 0));
-    } else mostrar(v);
+      if (fz) fz(() => mostrar(v), v); else requestAnimationFrame(() => setTimeout(() => mostrar(v), 0));
+    } else if (fz) fz(() => mostrar(v), v); else mostrar(v);
   }));
   function mostrar(v) {
     if (!document.getElementById('v-' + v)) { toast('Essa área chega na próxima atualização.'); return; }
@@ -1697,18 +1699,35 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     b.parentElement.setAttribute('aria-label', n ? `Radar: ${n} ${n === 1 ? 'aviso novo' : 'avisos novos'}` : 'Radar: conversas que você está vigiando');
   }
   const esperaTxt = (c) => { const m = Math.max(1, Math.round((Date.now() - new Date(c.ultimaMensagemCliente).getTime()) / 60000)); return 'Esperando ' + (m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`); };
+  /* fluidez: cada linha guarda uma "assinatura" do que ela mostra; a cada atualização (4 s) só a linha que mudou
+     é refeita e as outras ficam no lugar (antes: 140 linhas apagadas e refeitas, ~80 ms de trabalho no celular). */
+  const linhasFz = new Map();
+  function assinaturaLinha(c, sel) {
+    const ra = window.SintoniaRastreio; const rd = window.SintoniaTelas?.radar;
+    let selo = ''; try { selo = ra ? JSON.stringify(ra.selo?.(c.id) ?? null) : ''; } catch {}
+    return [JSON.stringify(c), sel ? (sel.has(c.id) ? 2 : 1) : 0, c.id === estado.aberta, estado.filtro, estado.eu?.id, semFoto.has(c.id),
+      window.SintoniaFotos?.url(c.responsavelId) || '', selo, !!ra,
+      estado.filtro === 'radar' ? (rd?.etiqueta(c.id)?.outerHTML || '') : '',
+      estado.filtro === 'aguardando' && esperando(c) ? esperaTxt(c) : ''].join('|');
+  }
   function desenharLista() {
     if (window.SintoniaTelas?.conversasGestos?.segurar?.()) return; /* conversas-gestos: linha aberta/arrastando — redesenha quando fechar */
-    const caixa = $('itens'); caixa.replaceChildren();
+    const caixa = $('itens');
     contarRadar();
     const lista = filtradas();
     if (!lista.length) {
+      caixa.replaceChildren(); linhasFz.clear();
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
       if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Configurações › Conexões. Para mostrar o sistema, use Configurações › Dados de demonstração.' }));
       else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
     }
+    const hoje = new Date().toDateString(); const desejadas = []; const vistas = new Set();
     for (const c of lista) {
+      const ass = hoje + '|' + assinaturaLinha(c, estado.selecao);
+      const velha = linhasFz.get(c.id);
+      vistas.add(c.id);
+      if (velha && velha.ass === ass) { desejadas.push(velha.el); continue; }
       const u = c.ultima; const nova = naoLida(c);
       const previa = el('span', { class: 'previa' });
       if (u && u.autor !== 'cliente') previa.insertAdjacentHTML('beforeend', CHECK);
@@ -1724,14 +1743,20 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       else if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
       if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
-      caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
+      const linha = (el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
         onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
           el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : '', tsSelo ? tsSelo.hora(c, tsHora) : el('span', { class: 'hora' + (nova ? ' nova' : ''), text: tsHora })),
           l2)));
+      linhasFz.set(c.id, { ass, el: linha }); desejadas.push(linha);
     }
+    for (const id of [...linhasFz.keys()]) if (!vistas.has(id)) linhasFz.delete(id);
+    // põe as linhas na ordem certa mexendo só no que mudou de lugar; o resto (vazio, camadas de gesto) sai
+    let ref = caixa.firstChild;
+    for (const n of desejadas) { if (n === ref) ref = ref.nextSibling; else caixa.insertBefore(n, ref); }
+    while (ref) { const prox = ref.nextSibling; ref.remove(); ref = prox; }
   }
 
   // ---------- tags ----------
@@ -1910,10 +1935,25 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   });
 
   // conversa
+  /* fluidez: a conversa abre na hora com o que já se sabe (a última vez que foi aberta, ou nome e foto da lista)
+     e a versão nova do servidor entra por baixo, sem piscar. Nunca mostra a conversa anterior por engano. */
+  const conversasGuardadas = new Map();
+  function guardarConversa(d, ass) { conversasGuardadas.delete(d.conversa.id); conversasGuardadas.set(d.conversa.id, { d, ass }); if (conversasGuardadas.size > 40) conversasGuardadas.delete(conversasGuardadas.keys().next().value); }
+  function mostrarJa(id) {
+    const g = conversasGuardadas.get(id);
+    try {
+      // as 30 últimas na hora (o quadro fica leve); a conversa inteira entra depois do deslize, com a resposta do servidor
+      if (g) { estado.detalhe = g.d.mensagens.length > 30 ? { ...g.d, mensagens: g.d.mensagens.slice(-30) } : g.d; estado.assinatura = g.d.mensagens.length > 30 ? '' : g.ass; desenharConversa(); return; }
+      const c = estado.conversas.find((x) => x.id === id); if (!c) return;
+      estado.detalhe = { conversa: { ...c, tags: c.tags || [] }, mensagens: [], sugestao: null, digitando: [], permissoes: { assumir: false, transferir: false } };
+      desenharConversa(); $('msgs').replaceChildren(); $('sugestao').hidden = true;
+    } catch { estado.detalhe = null; estado.assinatura = ''; }
+  }
   async function abrir(id) {
     { const c = estado.conversas.find((x) => x.id === id); if (c) { c.lidaAte = new Date().toISOString(); c.marcadaNaoLida = false; } }
     if (grav.rec) pararGravacao(true);
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
+    mostrarJa(id); /* fluidez */
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
     desenharLista();
     await carregarConversa();
@@ -1930,7 +1970,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     /* respostas-fluxos: faixa do fluxo de mensagens em andamento */
     window.SintoniaFluxos?.faixa?.(estado.aberta);
     const assinatura = JSON.stringify(d);
+    if (d.conversa?.id !== estado.aberta) return; /* fluidez: chegou a resposta de uma conversa que já foi trocada */
+    guardarConversa(d, assinatura); /* fluidez */
     if (assinatura === estado.assinatura) return;
+    { const anda = window.SintoniaFluidez?.pilhaAndando?.(); if (anda) { await anda; if (d.conversa.id !== estado.aberta || assinatura === estado.assinatura) return; } } /* fluidez: desenha depois do deslize */
     estado.assinatura = assinatura; estado.detalhe = d;
     desenharConversa();
     desenharDono();
@@ -2713,8 +2756,22 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     );
   }
 
+  /* fluidez: a última lista conhecida fica guardada neste aparelho (só para a mesma pessoa) e aparece na hora ao abrir o app;
+     a lista nova do servidor entra por baixo. Sai ao sair da conta ou quando a sessão acaba. */
+  const LISTA_GUARDADA = 'sintonia.fz.lista';
+  function guardarLista() {
+    if (!estado.eu?.id || !estado.conversasDoServidor) return;
+    try { localStorage.setItem(LISTA_GUARDADA, JSON.stringify({ u: estado.eu.id, em: Date.now(), conversas: estado.conversas.slice(0, 150) })); } catch {}
+  }
+  function listaGuardada() {
+    try { const g = JSON.parse(localStorage.getItem(LISTA_GUARDADA) || 'null'); return g && g.u === estado.eu?.id && Date.now() - g.em < 7 * 864e5 && Array.isArray(g.conversas) ? g.conversas : null; } catch { return null; }
+  }
+  addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') guardarLista(); });
+  addEventListener('pagehide', guardarLista);
+  let pedidoLista = null;
   async function atualizar() {
-    try { estado.conversas = await api('/api/conversas'); } catch { return; }
+    try { const p = pedidoLista || api('/api/conversas'); pedidoLista = null; estado.conversas = await p; } catch { return; }
+    if (!estado.conversasDoServidor) { estado.conversasDoServidor = true; setTimeout(guardarLista, 1500); }
     const n = estado.conversas.filter(naoLida).length;
     $('contador').hidden = !n; $('contador').textContent = String(n);
     $('lt-qtd').hidden = !n; $('lt-qtd').textContent = String(n);
@@ -2955,7 +3012,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
       ...(window.SintoniaInstalar?.itens?.() || []),
     ].filter(Boolean);
-    const sair = { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } };
+    const sair = { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { try { localStorage.removeItem('sintonia.fz.lista'); } catch {} await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } }; /* fluidez: apaga a lista guardada */
     function abrirMinhaConta() {
       window.SintoniaPainel.abrir({ id: 'minha-conta', titulo: 'Minha conta', montar: (corpo) => corpo.append(
         el('div', { class: 'mais-lista' }, ...itensConta.map(linhaItem)),
@@ -3256,18 +3313,23 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   Object.assign(window.Sintonia.ui, { naoLida, esperando, textoPrevia }); /* conversas-gestos: arrastar e segurar a linha da lista */
 
   (async () => {
+    /* fluidez: tudo o que a abertura precisa sai junto (antes: um pedido esperava o outro) */
+    pedidoLista = api('/api/conversas'); pedidoLista.catch(() => {});
+    const pSituacao = api('/api/situacao').catch(() => ({}));
+    const pFotos = window.SintoniaFotos.carregar();
     estado.eu = await api('/api/auth/eu');
     $('nav-config').title = `Conta · ${estado.eu.nome}`;
     preencherLateral();
     $('nav-equipe').hidden = true;
-    estado.situacao = await api('/api/situacao').catch(() => ({}));
+    { const g = listaGuardada(); if (g && !estado.conversasDoServidor) { estado.conversas = g; desenharLista(); window.SintoniaAbertura?.pronto(); } } /* fluidez */
+    estado.situacao = await pSituacao;
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
     if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
     estado.avisos = avisos;
     $('nova-teste-cel').hidden = false;
-    await window.SintoniaFotos.carregar();
+    await pFotos;
     preencherLateral();
     await atualizar();
     carregarTags();
@@ -3300,6 +3362,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/radar.js" defer></script>
 <!-- conversas-gestos: arrastar a linha (não lida, radar, mais, mover) e segurar o dedo (prévia), como no WhatsApp -->
 <script src="/telas/conversas-gestos.js" defer></script>
+<script src="/telas/fluidez.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/instalar.js" defer></script>
