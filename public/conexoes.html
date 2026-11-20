@@ -868,8 +868,18 @@
     $('wa-ok-titulo').textContent = 'WhatsApp conectado'; $('wa-ok-texto').textContent = 'Sincronizando suas conversas… pode levar um minuto.';
     try {
       const r = await api(`/api/conexoes/whatsapp/canais/${id}/sincronizar`, { method: 'POST', body: '{}' });
+      // O WhatsApp manda o histórico sozinho logo depois de conectar: acompanha até parar de chegar.
+      const inicio = await api(`/api/conexoes/whatsapp/canais/${id}/progresso`).catch(() => ({ mensagens: 0, conversas: 0 }));
+      let conv = r.conversas, msgs = r.mensagens, parado = 0, ultimo = -1;
+      for (let i = 0; i < 40 && parado < (msgs ? 4 : 8); i++) {
+        await new Promise((ok) => setTimeout(ok, 2500));
+        const p = await api(`/api/conexoes/whatsapp/canais/${id}/progresso`).catch(() => null);
+        if (p) { conv = r.conversas + p.conversas - inicio.conversas; msgs = r.mensagens + p.mensagens - inicio.mensagens; }
+        if (msgs === ultimo) parado++; else { parado = 0; ultimo = msgs; }
+        if (msgs) $('wa-ok-texto').textContent = `Sincronizando… ${conv} ${conv === 1 ? 'conversa' : 'conversas'} · ${msgs} mensagens`;
+      }
       $('wa-ok-titulo').textContent = 'Tudo sincronizado';
-      $('wa-ok-texto').textContent = r.conversas ? `${r.conversas} ${r.conversas === 1 ? 'conversa chegou' : 'conversas chegaram'} (${r.mensagens} mensagens). As novas aparecem na hora.` : 'Nenhuma conversa antiga para trazer. As mensagens novas aparecem na hora.';
+      $('wa-ok-texto').textContent = conv ? `${conv} ${conv === 1 ? 'conversa chegou' : 'conversas chegaram'} (${msgs} mensagens). As novas aparecem na hora.` : 'As conversas antigas chegam quando o celular conecta. Se já estava conectado, desconecte e conecte de novo para trazer o histórico. As mensagens novas já aparecem na hora.';
     } catch (x) {
       $('wa-ok-titulo').textContent = 'WhatsApp conectado';
       $('wa-ok-texto').textContent = 'Não deu para trazer as conversas antigas agora (' + x.message + '). As mensagens novas já chegam normalmente.';

@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
+import { eventoEvolution, lerWebhookEvolution } from './channels/evolution.js';
 import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
@@ -119,7 +120,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   registrarPaginas(app, d.auth);
   // Quando chegou o último webhook de cada número da API oficial (para a tela de Conexões mostrar se está chegando).
   const vistosMeta = new Map<string, Date>();
-  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), ...d.conexoes, auth: d.auth });
+  /** Andamento do histórico do WhatsApp recebido depois de conectar (para a tela "Sincronizando"). */
+  const progressoHistorico = new Map<string, { mensagens: number; conversas: number; em: Date }>();
+  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).
@@ -159,9 +162,22 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.get('/saude', async () => ({ ok: true, fila: d.fila ? await d.fila.fila.situacao() : undefined }));
 
   // ---------- WhatsApp não oficial (Evolution) ----------
-  app.post('/webhooks/evolution', async (req, reply) => {
+  // O histórico (MESSAGES_SET) pode ser grande: aceita até 40 MB.
+  app.post('/webhooks/evolution', { bodyLimit: 40 * 1024 * 1024 }, async (req, reply) => {
     if (!d.evolution) return reply.code(404).send();
     if (d.evolution.token && req.headers['x-sintonia-token'] !== d.evolution.token) return reply.code(401).send();
+    if (eventoEvolution(req.body) === 'messages.set') {
+      // Histórico de conversas logo depois de conectar: grava sem IA, avisos nem funil, em segundo plano.
+      const historico = lerWebhookEvolution(req.body);
+      const instancia = String((req.body as { instance?: unknown }).instance ?? '');
+      const p = progressoHistorico.get(instancia) ?? { mensagens: 0, conversas: 0, em: new Date() };
+      progressoHistorico.set(instancia, { ...p, em: new Date() });
+      d.sintonia.importarHistorico(historico).then((r) => {
+        const q = progressoHistorico.get(instancia) ?? p;
+        progressoHistorico.set(instancia, { mensagens: q.mensagens + r.mensagens, conversas: q.conversas + r.conversas, em: new Date() });
+      }).catch((e) => log('Falha ao importar histórico do WhatsApp', String(e)));
+      return { historico: historico.length };
+    }
     const mensagens = d.evolution.canal.lerWebhook(req.body);
     const chamadas = d.chamadas ? await registrarChamadasWhatsapp(req.body).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
     return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}) };

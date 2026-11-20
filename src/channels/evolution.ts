@@ -96,12 +96,21 @@ function lerConteudo(bruta: Obj | null | undefined): { texto: string; anexo?: An
   return null;
 }
 
+/** Evento do webhook da Evolution, normalizado (ex.: "messages.upsert", "messages.set"). */
+export function eventoEvolution(corpo: unknown): string {
+  const e = (corpo as { event?: unknown } | null)?.event;
+  return typeof e === 'string' ? e.toLowerCase().replace(/_/g, '.') : '';
+}
+
 export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
-  const r = WebhookEvolution.safeParse(corpo);
-  if (!r.success) return [];
-  const evento = r.data.event.toLowerCase().replace(/_/g, '.');
-  if (evento !== 'messages.upsert') return [];
-  const lista = Array.isArray(r.data.data) ? r.data.data : [r.data.data];
+  const evento = eventoEvolution(corpo);
+  if (evento !== 'messages.upsert' && evento !== 'messages.set') return [];
+  // Histórico pode vir com mensagens fora do formato: cada uma é lida sozinha, as ruins ficam de fora.
+  const bruto = corpo as { instance?: unknown; data?: unknown };
+  if (typeof bruto.instance !== 'string') return [];
+  const dados = Array.isArray(bruto.data) ? bruto.data : (bruto.data as { messages?: unknown } | undefined)?.messages ?? [bruto.data];
+  const lista = (Array.isArray(dados) ? dados : []).map((x) => MensagemEvolution.safeParse(x)).filter((x) => x.success).map((x) => x.data);
+  const r = { data: { instance: bruto.instance } };
   const saida: MensagemRecebida[] = [];
   for (const m of lista) {
     // Contato identificado por LID ("…@lid"): o número verdadeiro vem em remoteJidAlt (ou senderPn).

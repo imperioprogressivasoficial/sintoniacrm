@@ -24,6 +24,8 @@ export interface OpcoesConexoes {
   agendas?: AgendasDasUnidades;
   /** Grava conversas antigas puxadas do WhatsApp (sem IA nem avisos). */
   importarHistorico?: (mensagens: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number }>;
+  /** Quanto do histórico do WhatsApp já chegou depois de conectar. */
+  progressoHistorico?: (canalId: string) => { mensagens: number; conversas: number; em: Date } | undefined;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
 }
@@ -375,6 +377,12 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const numero = numeroDe(req);
     if (!canaisSalvos().some((n) => n.canalId === id)) await salvarCanais([...canaisSalvos(), { canalId: id, unidade: UNIDADES[0] }], autor);
     return evolution().conectar(id, webhookDe(req), numero);
+  });
+
+  app.get('/api/conexoes/whatsapp/canais/:id/progresso', async (req) => {
+    await quem(req);
+    const p = o.progressoHistorico?.(IdCanal.parse((req.params as { id: string }).id));
+    return p ? { ...p, em: p.em.toISOString() } : { mensagens: 0, conversas: 0, em: null };
   });
 
   app.get('/api/conexoes/whatsapp/canais/:id/diagnostico', async (req) => {

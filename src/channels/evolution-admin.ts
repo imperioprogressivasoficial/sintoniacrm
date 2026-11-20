@@ -111,7 +111,8 @@ export class EvolutionAdmin {
       byEvents: false,
       base64: false,
       // CALL: ligação de voz recebida no número (vira "recebida"/"perdida" na tela Ligações).
-      events: ['MESSAGES_UPSERT', 'CALL'],
+      // MESSAGES_SET: o histórico de conversas que o WhatsApp manda uma vez, logo depois de conectar.
+      events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL'],
     };
     if (atual.estado === 'conectada') {
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});

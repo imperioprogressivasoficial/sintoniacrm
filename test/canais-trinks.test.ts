@@ -188,3 +188,17 @@ describe('Evolution: contatos por LID', () => {
     expect(lerWebhookEvolution({ event: 'messages.upsert', instance: 'i', data: { key: { remoteJid: '120363334258749766@g.us', id: 'X3' }, message: { conversation: 'Oi' } } })).toHaveLength(0);
   });
 });
+
+describe('Evolution: histórico (messages.set)', () => {
+  it('lê o lote do histórico e ignora itens fora do formato', async () => {
+    const { lerWebhookEvolution, eventoEvolution } = await import('../src/channels/evolution.js');
+    const corpo = { event: 'messages.set', instance: 'sintonia-norte', data: [
+      { key: { remoteJid: '5571988887777@s.whatsapp.net', fromMe: false, id: 'H1' }, pushName: 'Ana', message: { conversation: 'Oi' }, messageTimestamp: 1795180000 },
+      { key: { remoteJid: '5571988887777@s.whatsapp.net', fromMe: true, id: 'H2' }, message: { conversation: 'Olá!' }, messageTimestamp: 1795180100 },
+      { lixo: true },
+    ] };
+    expect(eventoEvolution(corpo)).toBe('messages.set');
+    const r = lerWebhookEvolution(corpo);
+    expect(r.map((m) => [m.idExterno, m.deMim])).toEqual([['H1', false], ['H2', true]]);
+  });
+});
