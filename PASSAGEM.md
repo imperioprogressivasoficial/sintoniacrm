@@ -24,31 +24,14 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 20/11/2026, madrugada (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 19/11/2026, 23h10 (Bahia) — Claude da conta do Bruno (Max).
 
-- **Feito na branch `claude/paginas-vendas-login` (NÃO publicado):**
-  - Tela **Serena** (botão do meio): estilo ChatGPT, `public/telas/serena.js`. Abrir NÃO chama a IA: só `GET /api/serena/resumo`
-    (novo, `src/serena/resumo.ts`, guardado 60 s). A IA só roda ao mandar mensagem (`POST /api/ia/chat`, agora aceita 1 imagem na última pergunta
-    e devolve `clientes` citadas `[[c1]]`). Menu lateral (empurra a tela), seletor do título, folhas Precisa de você/Resumo/Agendado,
-    histórico no aparelho (fixar/apagar segurando), ditado por voz (Web Speech; sem suporte avisa), anexo de print/foto.
-  - Barra do celular: Dashboard · Ligações · Serena · Conversas · Mais. CRM: Conversas › Lista | Funil e Mais › CRM.
-    Configuração da IA: Mais › Inteligência Artificial e Configurações › Inteligência Artificial (gestão). Lateral do PC: "Serena".
-  - Chip **Radar** (esperando resposta, contador vermelho), troca de tema "curto-circuito", presença forte (anel + selo Online/Offline).
-  - Testes: 622 passando; `tsc` ok.
-- **Falta:** vídeo de demonstração; versão sem fundo da foto da Serena.
-
-- **No ar:** `producao` (ver `deploy/no-ar.txt`), publicada em 19/11 às 22h21 pela conta Max, em cima do trabalho da conta Pro
-  (visual original, Evolution, presença). Conferido: /saude ok, presença ok, Evolution configurada, foto /serena.jpg.
+- **No ar:** `producao` = a4c6c8a (ver `deploy/no-ar.txt`), publicada 19/11 23h05. Inclui tela da Serena (estilo ChatGPT),
+  barra Dashboard · Ligações · Serena · Conversas · Mais, Lista | Funil, filtro Radar com contador, tema "curto-circuito",
+  anel/selo de presença e agenda no jeito do Google. Conferido no ar.
 - **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
-- **Renomeação Assia → Serena (pedido do dono em 20/11; passou por "Sincronia" antes do nome final):**
-  - No ar, pelo app (banco): agente "Assia" → "Serena" (e "quem é" da persona); automação "Perdida há 30 dias: Serena tenta reativar".
-  - n8n: os 5 fluxos renomeados (nomes, textos, prompt da supervisora). Endereços técnicos mantidos: webhooks `assia-*`,
-    cabeçalho `x-assia-voz`, login `assia-integracao@…`, chave de memória `assia-supervisora-v2-…`. Os 3 ativos seguem ativos.
-  - Código (publicado): gestão pode renomear pessoa (`PATCH /api/acessos/usuarios/:id {nome}`), selo de IA reconhece "Serena".
-    Usuário de serviço já renomeado para "Serena (integração)" (login continua `assia-integracao@…`). Foto da Serena (recorte C) na agente e no usuário.
-  - Fora daqui: agente de voz da ElevenLabs (não está na conta conectada) e textos do servidor do Espaço Rainha (outro repositório).
-- **Personagem:** a Serena é uma moça de fone de atendente (imagem do dono, feita no ChatGPT); falta a versão sem texto/fundo transparente para o avatar.
-- **Em desenho (aguardando escolha do dono):** tela do botão do meio "Serena" no estilo ChatGPT — 5 modelos em
-  `scratchpad` da sessão (sugestão: menu lateral + faixa de aviso); barra na ordem Dashboard, Ligações, Serena, Conversas, Mais
-  (falta o dono dizer para onde vai o CRM).
-- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Serena em Agentes de IA › Controle.
+- **Padrão de design aprovado:** cor "brilho" = `--brilho-1 #0ffcbe` + `--brilho-2 #3aa0ff` (fio fino, 0.5–1.5px). Usar em todo destaque com brilho.
+- **Regra do dono:** toda mudança de design = 5 modelos para comparar antes de aplicar.
+- **Fora daqui ainda dizendo "Assia":** agente de voz da ElevenLabs e servidor do Espaço Rainha (outro repositório).
+- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Serena em Agentes de IA › Controle;
+  imagem da Serena sem fundo (opcional). Agenda ainda sem remarcar/cancelar (precisa de rota nova + Trinks).

@@ -1,9 +1,10 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 01:21 UTC (19/11, 22h21 na Bahia)
-commit: f2682d9
-pacote sha256: f57bc3c2a13f9b968c15d98961d9a122debc100336c7f38ffa3eb0a4658a762b
+data: 2026-11-20 02:05 UTC (19/11, 23h05 na Bahia)
+commit: a4c6c8a
+pacote sha256: 23112ec576f2999fbeb5414c0ccc390cbc7a6a0b026344fac6775472f2e0a8fd
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f2682d9.b64); pode apagar depois.
-observação: em cima do f20efdd (visual original, Evolution, presença). Entra: assistente renomeada para Serena (selo de IA,
-  textos), gestão pode renomear pessoa, foto da Serena em /serena.jpg. Depois de publicar: usuário "Assia (integração)"
-  renomeado para "Serena (integração)" e foto da Serena na agente e no usuário (pelo app).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-a4c6c8a.b64); pode apagar depois.
+observação: em cima do 24274c3 (Serena renomeada). Entra: tela da Serena estilo ChatGPT (menu lateral, resumo, chat com foto),
+  barra Dashboard · Ligações · Serena · Conversas · Mais, Lista | Funil, filtro Radar (contador de quem espera resposta),
+  troca de tema "curto-circuito" (falha fina no azul-brilho + apagão com faíscas), anel e selo Online/Offline,
+  agenda no jeito do Google (Dia, 3 dias, Semana, Mês, Programação). Conferido no ar: /saude, Radar, /api/serena/resumo 200.
