@@ -8,6 +8,8 @@ const Env = z.object({
   SINTONIA_MODELO: z.string().default('claude-opus-5-5'),
   SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('low'),
   EVOLUTION_URL: z.string().url().optional(),
+  /** Whisper do próprio servidor (transcrição de áudio grátis). Ex.: http://whisper:9000 */
+  WHISPER_URL: z.string().url().optional(),
   EVOLUTION_API_KEY: z.string().optional(),
   /** Arquivo com a chave da Evolution (lida de um volume no servidor); só vale se EVOLUTION_API_KEY não vier. */
   EVOLUTION_API_KEY_ARQUIVO: z.string().optional(),

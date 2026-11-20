@@ -84,6 +84,8 @@ try {
   // Presença da equipe (disponível / fora do ar): serviço pequeno à parte (deploy/presenca, vai dentro do pacote
   // e roda do volume do app, já conferido pela soma). PRESENCA=0 desliga.
   const comPresenca = process.env.PRESENCA !== '0';
+  // Transcrição de áudio grátis no próprio servidor (faster-whisper em CPU, modelo small). WHISPER=0 desliga.
+  const comWhisper = process.env.WHISPER !== '0';
   // SINTONIA_SEGREDO (chave das conexões salvas) fica sempre com o endereço original do banco, mesmo se o nome mudar.
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
@@ -116,6 +118,7 @@ ${comEvolution ? `      chave-evolution:
       SINTONIA_SEGREDO: postgres://sintonia:${senha}@db:5432/sintonia
 ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       EVOLUTION_API_KEY_ARQUIVO: /chave/evolution.key
+` : ''}${comWhisper ? `      WHISPER_URL: http://whisper:9000
 ` : ''}      COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
@@ -182,6 +185,22 @@ ${comPresenca ? `
       - "traefik.http.routers.sintonia-presenca.tls.certresolver=letsencrypt"
       - "traefik.http.routers.sintonia-presenca.priority=1000"
       - "traefik.http.services.sintonia-presenca.loadbalancer.server.port=3400"
+` : ''}${comWhisper ? `
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:v1.10.0
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1.5
+    environment:
+      ASR_ENGINE: faster_whisper
+      ASR_MODEL: small
+      ASR_DEVICE: cpu
+      ASR_QUANTIZATION: int8
+      ASR_MODEL_PATH: /modelos
+    volumes:
+      - whisper:/modelos
+    networks:
+      - interna
 ` : ''}
 volumes:
   banco:
@@ -195,6 +214,8 @@ ${comEvolution ? `  chave:
     name: ${VOLUME_CHAVE}
 ` : ''}${comPresenca ? `  presenca:
     name: sintonia_presenca
+` : ''}${comWhisper ? `  whisper:
+    name: sintonia_whisper
 ` : ''}
 networks:
   interna:

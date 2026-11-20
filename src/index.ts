@@ -45,7 +45,7 @@ import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
-import { TranscricoesMemoria, TranscricoesPostgres, TranscritorOpenAI } from './conversa/transcricao.js';
+import { TranscricoesMemoria, TranscricoesPostgres, TranscritorComReserva, TranscritorLocal, TranscritorOpenAI } from './conversa/transcricao.js';
 import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
 import { Notificador, observarEventos } from './notificacoes/notificador.js';
@@ -623,8 +623,8 @@ registrarConversa(app, {
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   respostas: armazemRespostas,
   transcricoes: pool ? new TranscricoesPostgres(pool) : new TranscricoesMemoria(),
-  transcritor: new TranscritorOpenAI(() => conexoes.get('openaiApiKey')),
-  transcricaoLigada: () => Boolean(conexoes.get('openaiApiKey')),
+  transcritor: new TranscritorComReserva(cfg.WHISPER_URL ? new TranscritorLocal(cfg.WHISPER_URL) : null, new TranscritorOpenAI(() => conexoes.get('openaiApiKey')), () => Boolean(conexoes.get('openaiApiKey'))),
+  transcricaoLigada: () => Boolean(cfg.WHISPER_URL || conexoes.get('openaiApiKey')),
   ia: { claude, modelo: cfg.SINTONIA_MODELO, base: () => base.texto(), ligada: () => iaLigada },
   // Envia pelo número real da unidade; o de teste só vale enquanto nenhum número real estiver conectado.
   canalDa: (unidade) => {

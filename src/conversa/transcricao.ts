@@ -76,6 +76,54 @@ export class TranscritorOpenAI implements Transcritor {
   }
 }
 
+/**
+ * Whisper rodando no próprio servidor (serviço "whisper" do docker-compose, faster-whisper em CPU).
+ * Grátis por áudio: nada sai do servidor. Responde no formato do openai-whisper-asr-webservice (POST /asr).
+ */
+export class TranscritorLocal implements Transcritor {
+  constructor(
+    private readonly url: string,
+    readonly modelo = 'whisper-local',
+    private readonly fetchFn: typeof fetch = fetch,
+  ) {}
+
+  async transcrever(audio: Buffer, mimetype: string): Promise<string> {
+    if (audio.length > LIMITE_TRANSCRICAO) throw new ErroTranscricao('Áudio grande demais para transcrever (limite de 25 MB).', 'grande');
+    const tipo = mimetype.split(';')[0]!.trim().toLowerCase();
+    const form = new FormData();
+    form.append('audio_file', new Blob([new Uint8Array(audio)], { type: tipo || 'audio/ogg' }), `audio.${EXTENSAO[tipo] ?? 'ogg'}`);
+    const r = await this.fetchFn(`${this.url.replace(/\/$/, '')}/asr?task=transcribe&language=pt&output=json&encode=true&vad_filter=true`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(180_000),
+    });
+    if (!r.ok) throw new ErroTranscricao(`A transcrição no servidor falhou (${r.status}).`, 'falhou');
+    const j = (await r.json().catch(() => ({}))) as { text?: string };
+    return String(j.text ?? '').trim();
+  }
+}
+
+/** Tenta o Whisper do servidor (grátis); se ele não estiver no ar e houver chave da OpenAI, usa a OpenAI. */
+export class TranscritorComReserva implements Transcritor {
+  constructor(
+    private readonly local: Transcritor | null,
+    private readonly reserva: Transcritor,
+    private readonly temChaveReserva: () => boolean,
+  ) {}
+  get modelo() {
+    return this.local ? this.local.modelo : this.reserva.modelo;
+  }
+  async transcrever(audio: Buffer, mimetype: string): Promise<string> {
+    if (!this.local) return this.reserva.transcrever(audio, mimetype);
+    try {
+      return await this.local.transcrever(audio, mimetype);
+    } catch (e) {
+      if ((e as ErroTranscricao).codigo === 'grande' || !this.temChaveReserva()) throw e;
+      return this.reserva.transcrever(audio, mimetype);
+    }
+  }
+}
+
 export interface Transcricao {
   mensagemId: string;
   texto: string;
