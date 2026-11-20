@@ -388,7 +388,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         }, { 'aria-pressed': String(jaEu), 'aria-disabled': String(Boolean(bloqueado)) });
       })(),
       perm.transferir ? opcao('neutra', SVG_ATENDE.transferir, 'Transferir conversa', 'Passar para outra pessoa da equipe', () => { fechar(); ui.abrirTransferir(); }) : null,
-      window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', SVG_ATENDE.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null);
+      window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', SVG_ATENDE.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null,
+      // rotina: criar tarefa ligada a esta conversa (public/telas/rotina.js)
+      window.SintoniaTelas?.rotina?.novaTarefa ? opcao('neutra', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>', 'Criar tarefa', 'Lembrete com prazo ligado a esta conversa', () => { fechar(); window.SintoniaTelas.rotina.novaTarefa({ conversaId: c.id }); }) : null);
 
     // ---- ajuda para escrever
     const temAudio = (det.mensagens || []).some((m) => m.autor === 'cliente' && m.anexo?.tipo === 'audio');
