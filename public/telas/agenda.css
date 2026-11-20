@@ -161,6 +161,7 @@ html[data-tema="escuro"] .ag, html[data-tema="escuro"] dialog.ag-dlg {
 .ag-ev.ag-passou, .ag-card.ag-passou, .ag-mchip.ag-passou { background: color-mix(in srgb, var(--c) 58%, var(--ag-fundo)); }
 .ag-ev.ag-lift { box-shadow: var(--ag-sombra-alta); }
 .ag-g.ag-n7 .ag-ev, .ag-g.ag-n3 .ag-ev { overflow-wrap: anywhere; }
+.ag-g .ag-ev.ag-estreito { overflow-wrap: normal; word-break: keep-all; padding-left: 3px; padding-right: 2px; }
 .ag-agora { position: absolute; left: -1px; right: 0; height: 2px; background: var(--ag-agora); z-index: 3; pointer-events: none; transform: translateY(-1px); }
 .ag-agora::before { content: ''; position: absolute; left: -6px; top: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--ag-agora); }
 .ag-fantasma { position: absolute; left: 1px; right: 2px; border-radius: 6px; background: color-mix(in srgb, var(--ag-acento) 22%, var(--ag-fundo)); border: 2px solid var(--ag-acento); box-sizing: border-box; padding: 2px 5px; font-size: 12px; font-weight: 600; color: var(--ag-texto); z-index: 4; pointer-events: none; overflow: hidden; animation: ag-surge .18s ease-out; }
@@ -293,10 +294,11 @@ dialog.ag-folha { position: fixed; }
   .ag-lado { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 16px 8px; overflow-y: auto; min-height: 0; grid-row: 1; }
   .ag-lado-topo { display: flex; align-items: center; gap: 4px; height: 64px; padding-left: 4px; font-family: var(--fonte-titulo, var(--fonte)); font-size: 21px; font-weight: 600; flex: none; }
   .ag-lado-topo svg { width: 30px; height: 30px; color: var(--ag-acento); margin: 0 6px 0 8px; }
-  .ag-criar { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 12px; align-self: flex-start; height: 56px; padding: 0 24px 0 16px; border-radius: 18px; background: var(--ag-fab-bg); color: var(--ag-fab-tx); font-size: 14.5px; font-weight: 600; box-shadow: var(--ag-sombra); margin: 6px 0 14px 4px; transition: box-shadow .15s; }
-  .ag-criar:hover { box-shadow: var(--ag-sombra-alta); }
+  .ag-mm-cab > span:last-child { display: flex; }
+  .ag .ag-lado .ag-criar { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 12px; align-self: flex-start; height: 56px; padding: 0 24px 0 16px; border-radius: 18px; background: var(--ag-fab-bg); color: var(--ag-fab-tx); font-size: 14.5px; font-weight: 600; box-shadow: var(--ag-sombra); margin: 6px 0 14px 4px; transition: box-shadow .15s; }
+  .ag .ag-lado .ag-criar:hover { box-shadow: var(--ag-sombra-alta); }
   .ag-criar:focus-visible { outline: 2px solid var(--ag-acento); outline-offset: 2px; }
-  .ag-criar svg { width: 26px; height: 26px; }
+  .ag .ag-lado .ag-criar svg { width: 26px; height: 26px; }
   .ag-lado .ag-mm button { width: 32px; height: 32px; font-size: 12px; }
   .ag-lado .ag-mm-grade > small { height: 24px; }
   .ag-lado .ag-chk { min-height: 38px; }

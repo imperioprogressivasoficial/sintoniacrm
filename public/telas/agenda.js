@@ -592,7 +592,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         const curto = alt < 36;
         const tempo = curto ? hm(new Date(i.inicio)) : `${hm(new Date(i.inicio))} – ${hm(new Date(i.fim))}`;
         col.append(el('button', {
-          class: `ag-ev ${corDe(i.profissional)}${jaFoi(i) ? ' ag-passou' : ''}${curto ? ' ag-curto' : ''}`, type: 'button',
+          class: `ag-ev ${corDe(i.profissional)}${jaFoi(i) ? ' ag-passou' : ''}${curto ? ' ag-curto' : ''}${e.ncol > 1 && n >= 3 ? ' ag-estreito' : ''}`, type: 'button',
           style: `top:${top}px;height:${alt}px;left:calc(${(e.col / e.ncol) * 100}% + 1px);width:calc(${100 / e.ncol}% - 3px)`,
           'aria-label': rotuloEv(i),
           onclick: (ev) => { ev.stopPropagation(); if (!s.arrastou) abrirFolha(i); },
