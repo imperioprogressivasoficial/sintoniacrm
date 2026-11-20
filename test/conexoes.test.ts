@@ -73,6 +73,8 @@ describe.runIf(temPostgres)('Conexões no Postgres', () => {
 function evolutionFalsa() {
   const pedidos: Array<{ metodo: string; url: string; corpo?: unknown }> = [];
   const instancias = new Map<string, string>();
+  // Como a v2.3.7: o código só existe se a instância foi criada com o número, e chega depois da criação.
+  const comNumero = new Set<string>();
   const f = (async (url: string, init?: RequestInit) => {
     const metodo = init?.method ?? 'GET';
     const corpo = init?.body ? JSON.parse(String(init.body)) : undefined;
@@ -85,12 +87,17 @@ function evolutionFalsa() {
     }
     if (u.pathname === '/instance/create') {
       instancias.set(corpo.instanceName, 'connecting');
-      return new Response(JSON.stringify({ instance: { instanceName: corpo.instanceName }, qrcode: { base64: 'data:image/png;base64,QR' } }), { status: 201 });
+      if (corpo.number) comNumero.add(corpo.instanceName);
+      return new Response(JSON.stringify({ instance: { instanceName: corpo.instanceName }, qrcode: corpo.number ? { pairingCode: null } : { base64: 'data:image/png;base64,QR' } }), { status: 201 });
     }
     if (u.pathname.startsWith('/webhook/set/')) return new Response('{}');
-    if (u.pathname.startsWith('/instance/connect/')) return new Response(JSON.stringify(u.searchParams.get('number') ? { base64: 'data:image/png;base64,QR2', pairingCode: 'WZYEH1YY' } : { base64: 'data:image/png;base64,QR2' }));
+    if (u.pathname.startsWith('/instance/connect/')) {
+      const nome = decodeURIComponent(u.pathname.split('/').pop()!);
+      return new Response(JSON.stringify(comNumero.has(nome) ? { base64: 'data:image/png;base64,QR2', pairingCode: 'WZYEH1YY' } : { base64: 'data:image/png;base64,QR2', pairingCode: null }));
+    }
     if (u.pathname.startsWith('/instance/delete/')) {
       instancias.delete(decodeURIComponent(u.pathname.split('/').pop()!));
+      comNumero.delete(decodeURIComponent(u.pathname.split('/').pop()!));
       return new Response('{}');
     }
     if (u.pathname.startsWith('/instance/logout/')) {
@@ -200,7 +207,7 @@ describe('Rotas de Conexões', () => {
     const r = await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/sumare/conectar', headers: { cookie, host: 'sintonia.n8nimperio.tech' }, payload: { numero: '(71) 98888-7777' } });
     expect(r.statusCode).toBe(200);
     expect(r.json()).toMatchObject({ codigo: 'WZYEH1YY', estado: 'conectando' });
-    expect(evo.pedidos.some((p) => p.url.includes('/instance/connect/sintonia-sumare?number=5571988887777'))).toBe(true);
+    expect(evo.pedidos.some((p) => p.url.endsWith('/instance/create') && (p.corpo as { number?: string }).number === '5571988887777')).toBe(true);
     const ruim = await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/sumare/conectar', headers: { cookie }, payload: { numero: '123' } });
     expect(ruim.statusCode).toBe(400);
   });
@@ -222,7 +229,11 @@ describe('Rotas de Conexões', () => {
     const qr = await app.inject({ method: 'POST', url: `/api/conexoes/whatsapp/canais/${novo.id}/conectar`, headers: { cookie, host: 'sintonia.n8nimperio.tech' }, payload: {} });
     expect(qr.json()).toMatchObject({ qr: 'data:image/png;base64,QR', estado: 'conectando' });
     const cod = await app.inject({ method: 'POST', url: `/api/conexoes/whatsapp/canais/${novo.id}/conectar`, headers: { cookie }, payload: { numero: '71 98888-7777' } });
+    // o canal já estava gerando QR: a instância é recriada com o número para o código sair
     expect(cod.json()).toMatchObject({ codigo: 'WZYEH1YY' });
+    expect(evo.pedidos.some((p) => p.metodo === 'DELETE' && p.url.endsWith(`/instance/delete/${novo.id}`))).toBe(true);
+    const atual = await app.inject({ url: `/api/conexoes/whatsapp/canais/${novo.id}/codigo`, headers: { cookie } });
+    expect(atual.json()).toMatchObject({ codigo: 'WZYEH1YY' });
 
     expect((await app.inject({ method: 'PATCH', url: `/api/conexoes/whatsapp/canais/${novo.id}`, headers: { cookie }, payload: { nome: 'Vendas' } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'PATCH', url: `/api/conexoes/whatsapp/canais/${novo.id}`, headers: { cookie }, payload: { nome: '' } })).statusCode).toBe(400);

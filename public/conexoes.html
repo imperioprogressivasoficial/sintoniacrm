@@ -700,15 +700,17 @@
   $('cod-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const b = $('cod-gerar'); b.setAttribute('aria-busy', 'true');
+    $('cod-area').hidden = true; $('qr-estado').textContent = 'Gerando o código… leva até 20 segundos.';
     try {
       const r = await api(urlConectar(), { method: 'POST', body: JSON.stringify({ numero: $('cod-numero').value }) });
       if (r.estado === 'conectada') return pronto();
       if (!r.codigo) { $('cod-area').hidden = true; $('qr-estado').textContent = 'O servidor não devolveu o código. Tente de novo ou use o QR Code.'; return; }
-      $('cod-valor').textContent = r.codigo.length === 8 ? r.codigo.slice(0, 4) + '-' + r.codigo.slice(4) : r.codigo;
-      $('cod-area').hidden = false; $('qr-estado').textContent = 'Aguardando você digitar o código no celular…';
+      mostrarCodigo(r.codigo);
+      $('cod-area').hidden = false; $('qr-estado').textContent = 'No celular: WhatsApp › Aparelhos conectados › Conectar aparelho › Conectar com número de telefone, e digite o código.';
     } catch (x) { $('qr-estado').textContent = x.message; }
     finally { b.removeAttribute('aria-busy'); }
   });
+  const mostrarCodigo = (c) => { $('cod-valor').textContent = c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c; };
   async function pronto() {
     clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓';
     setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas();
@@ -726,6 +728,8 @@
       const u = lista?.canais.find((x) => x.id === k.id);
       if (u?.estado === 'conectada') return pronto();
       // O QR Code vence em ~40 s: renova sozinho enquanto a aba QR estiver aberta.
+      // O código também é trocado pela Evolution de tempos em tempos: mostra sempre o que vale agora.
+      if (!$('modo-cod').hidden && !$('cod-area').hidden) { const c = await api(`/api/conexoes/whatsapp/canais/${k.id}/codigo`).catch(() => null); if (c?.codigo) mostrarCodigo(c.codigo); }
       if (voltas % 8 === 0 && !$('modo-qr').hidden) { const n = await api(urlConectar(), { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
     }, 3000);
   }

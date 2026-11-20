@@ -23,6 +23,7 @@ export class EvolutionAdmin {
     baseUrl: string,
     private readonly apiKey: string,
     private readonly fetchFn: typeof fetch = fetch,
+    private readonly esperar: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {
     this.base = baseUrl.replace(/\/$/, '');
   }
@@ -112,6 +113,33 @@ export class EvolutionAdmin {
       // CALL: ligação de voz recebida no número (vira "recebida"/"perdida" na tela Ligações).
       events: ['MESSAGES_UPSERT', 'CALL'],
     };
+    if (atual.estado === 'conectada') {
+      await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
+      return { qr: null, estado: 'conectada' };
+    }
+    if (numero) {
+      // A Evolution (v2.3) só pede o código quando a conexão começa do zero com o número:
+      // se o canal já estava gerando QR Code, ela ignora o número. Por isso recria a instância.
+      if (atual.estado !== 'inexistente') {
+        await this.apagar(nome);
+        for (let i = 0; i < 20 && (await this.info(nome)).estado !== 'inexistente'; i++) await this.esperar(500);
+      }
+      const criada = await this.chamar<{ qrcode?: { pairingCode?: string | null } }>('POST', '/instance/create', {
+        instanceName: nome,
+        integration: 'WHATSAPP-BAILEYS',
+        qrcode: true,
+        number: numero,
+        webhook: configWebhook,
+      });
+      await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
+      // O código chega uns segundos depois de criar: espera por ele.
+      let codigo = criada.qrcode?.pairingCode ?? null;
+      for (let i = 0; i < 20 && !codigo; i++) {
+        if (i > 0) await this.esperar(1000);
+        codigo = await this.codigoAtual(nome).catch(() => null);
+      }
+      return { qr: null, codigo, estado: 'conectando' };
+    }
     if (atual.estado === 'inexistente') {
       const criada = await this.chamar<{ qrcode?: { base64?: string } }>('POST', '/instance/create', {
         instanceName: nome,
@@ -121,13 +149,19 @@ export class EvolutionAdmin {
       });
       // Algumas versões da v2 ignoram o webhook na criação: garante com a rota própria.
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
-      if (criada.qrcode?.base64 && !numero) return { qr: criada.qrcode.base64, estado: 'conectando' };
+      if (criada.qrcode?.base64) return { qr: criada.qrcode.base64, estado: 'conectando' };
     } else {
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
-      if (atual.estado === 'conectada') return { qr: null, estado: 'conectada' };
     }
-    const r = await this.chamar<{ base64?: string; pairingCode?: string | null }>('GET', `/instance/connect/${encodeURIComponent(nome)}${numero ? `?number=${numero}` : ''}`);
-    return numero ? { qr: r.base64 ?? null, codigo: r.pairingCode ?? null, estado: 'conectando' } : { qr: r.base64 ?? null, estado: 'conectando' };
+    const r = await this.chamar<{ base64?: string }>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
+    return { qr: r.base64 ?? null, estado: 'conectando' };
+  }
+
+  /** O código de 8 letras em vigor (a Evolution troca de tempos em tempos enquanto espera). */
+  async codigoAtual(nome: string): Promise<string | null> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const r = await this.chamar<{ pairingCode?: string | null }>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
+    return r.pairingCode ?? null;
   }
 
   async desconectar(nome: string): Promise<void> {

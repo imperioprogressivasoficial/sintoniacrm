@@ -373,6 +373,13 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     return evolution().conectar(id, webhookDe(req), numero);
   });
 
+  // Código em vigor (a Evolution troca enquanto espera): a tela confere e atualiza o que mostra.
+  app.get('/api/conexoes/whatsapp/canais/:id/codigo', async (req) => {
+    await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    return { codigo: await evolution().codigoAtual(id).catch(() => null) };
+  });
+
   app.post('/api/conexoes/whatsapp/canais/:id/desconectar', async (req) => {
     await quem(req);
     const id = IdCanal.parse((req.params as { id: string }).id);
