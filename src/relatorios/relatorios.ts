@@ -167,7 +167,9 @@ export class Relatorios {
     };
 
     // ---------- conversão (quem chegou no período) ----------
-    const coorte = new Set(noPeriodo.filter((e) => e.tipo === 'conversa_nova').map((e) => e.conversaId!));
+    // Mesma base dos "leads no período" (conversas novas e leads importados), para o topo, o funil e o CSV
+    // contarem as mesmas pessoas: "46 leads" e "x% agendaram" são sobre os mesmos 46.
+    const coorte = new Set(jaContada);
     const respondidas = new Set<string>();
     const agendaram = new Set<string>();
     const compareceram = new Set<string>();

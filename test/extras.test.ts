@@ -251,6 +251,16 @@ for (const amb of ambientes) {
       expect(r.perdas).toMatchObject({ total: 1, motivos: [{ motivo: 'Achou caro', total: 1 }] });
       expect(r.tags).toEqual([expect.objectContaining({ nome: 'VIP', marcacoes: 1, conversasAgora: 1 })]);
 
+      // Lead importado no período entra na mesma base do topo e do funil (antes: 46 leads × % sobre 39).
+      await g.repo.registrarEvento({ tipo: 'lead_importado', conversaId: paula.id, unidade: 'sumare', em: quinta(11, 40), dados: { por: 'Bruno' } });
+      const outra = await g.conversa('norte', 'Marta');
+      await g.repo.salvarConversa({ ...(await g.repo.buscarConversa(outra.id))!, etapa: 'agendada' });
+      await g.repo.registrarEvento({ tipo: 'lead_importado', conversaId: outra.id, unidade: 'norte', em: quinta(11, 45), dados: { por: 'Bruno' } });
+      const base = (await g.como(g.gente.admin, 'GET', '/api/relatorios?periodo=hoje')).json();
+      expect(base.origem.total).toBe(3);
+      expect(base.conversao.etapas[0].total).toBe(base.origem.total);
+      expect(base.conversao.etapas[2]).toMatchObject({ total: 2, pct: 66.7 });
+
       const soSumare = (await g.como(g.gente.admin, 'GET', '/api/relatorios?periodo=hoje&unidade=sumare')).json();
       expect(soSumare.origem.total).toBe(1);
       const daCarla = (await g.como(g.gente.admin, 'GET', `/api/relatorios?periodo=hoje&atendente=${g.gente.carla.id}`)).json();
