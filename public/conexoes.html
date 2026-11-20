@@ -134,6 +134,7 @@
   .wa-passos { text-align: left; font-size: 13px; color: var(--sub); padding-left: 20px; margin: 0; line-height: 1.75; }
   .wa-passos b { color: var(--texto); font-weight: 600; }
   .wa-qr { display: grid; place-items: center; min-height: 120px; font-size: 14px; color: var(--sub); }
+  .wa-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: -6px; }
   .wa-erro { color: var(--erro); font-size: 13px; margin: -4px 0 0; }
   .wa-check { width: 64px; height: 64px; border-radius: 50%; margin: 8px auto 0; display: grid; place-items: center; background: var(--ok-fundo); color: var(--ok); }
   .wa-check svg { width: 32px; height: 32px; }
@@ -531,14 +532,14 @@
     <ol class="wa-passos"><li>Abra o WhatsApp e toque em <b>Você</b> (ou <b>⋮</b>)</li><li><b>Aparelhos conectados</b></li><li><b>Conectar aparelho</b></li><li><b>Conectar com número de telefone</b></li><li>Digite ou cole o código</li></ol>
     <p class="wa-erro" id="wa-erro3" hidden></p>
     <button class="botao wa-pri" type="button" id="wa-ja">Já inseri o código</button>
-    <button class="wa-link" type="button" id="wa-novo-cod">Gerar novo código</button>
+    <div class="wa-duas"><button class="wa-link" type="button" id="wa-novo-cod">Gerar novo código</button><button class="wa-link" type="button" id="wa-cod-qr">Usar QR Code</button></div>
   </div>
   <!-- 3b: QR Code -->
   <div id="wa-e3q" class="wa-etapa" hidden>
     <h2>Leia o QR Code</h2>
     <div id="qr-area" class="wa-qr"></div>
     <ol class="wa-passos"><li>Abra o WhatsApp e toque em <b>Você</b> (ou <b>⋮</b>)</li><li><b>Aparelhos conectados</b> › <b>Conectar aparelho</b></li><li>Aponte a câmera para este código</li></ol>
-    <button class="wa-link" type="button" id="wa-pra-cod">Prefiro digitar um código</button>
+    <div class="wa-duas"><button class="wa-link" type="button" id="wa-novo-qr">Gerar novo QR Code</button><button class="wa-link" type="button" id="wa-pra-cod">Usar código</button></div>
   </div>
   <!-- pronto -->
   <div id="wa-ok" class="wa-etapa" hidden>
@@ -804,6 +805,8 @@
   $('wa-ir-cod').addEventListener('click', () => { $('wa-erro2').hidden = true; tela('e2'); });
   $('wa-ir-qr').addEventListener('click', () => { tela('e3q'); pedirQr(); });
   $('wa-pra-cod').addEventListener('click', () => tela('e2'));
+  $('wa-novo-qr').addEventListener('click', () => pedirQr());
+  $('wa-cod-qr').addEventListener('click', () => { tela('e3q'); pedirQr(); });
   $('wa-voltar').addEventListener('click', () => tela(telaAtual === 'e3c' || telaAtual === 'e3q' ? (telaAtual === 'e3c' ? 'e2' : 'e1') : 'e1'));
   async function pedirQr() {
     $('qr-area').textContent = 'Gerando o QR Code…';
