@@ -274,6 +274,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-folha header { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 20px; flex: none; }
   .srn-folha header h3 { flex: 1; margin: 0; font-size: 18px; font-weight: 700; }
   .srn-folha .corpo { overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 18px; }
+  /* No celular a barra de abas (64 px + 10 px de folga) fica por cima do fim da folha: deixa esse espaço livre embaixo. */
+  @media (max-width: 760px) { .srn-folha .corpo { padding-bottom: calc(18px + 84px); } }
   .srn-folha .srn-clientes { margin: 4px 0 0; }
   .srn-numeros { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: 14px 8px; font-size: 12.5px; color: var(--sub); }
   .srn-numeros b { display: block; font-size: 22px; font-weight: 700; color: var(--texto); line-height: 1.2; }

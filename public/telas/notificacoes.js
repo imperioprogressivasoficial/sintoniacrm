@@ -46,6 +46,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-botao { all: unset; cursor: pointer; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; font: 700 13px var(--fonte); white-space: nowrap; flex: none;
     color: var(--marca-azul); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   [data-tema="escuro"] .nt-botao { color: var(--texto); }
+  .nt-botao.nt-ativar, [data-tema="escuro"] .nt-botao.nt-ativar { height: 44px; padding: 0 18px; font-size: 15px; color: #fff; background: var(--marca-azul, #106ebe); }
   .nt-botao:hover { background: var(--vidro-ativo); }
   .nt-botao[disabled] { opacity: .45; cursor: default; }
   .nt-icone { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
@@ -418,6 +419,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       return false;
     }
   }
+  /** "Ativar notificações": pede a permissão no toque, inscreve o aparelho e liga a preferência. */
+  async function ativarPush() {
+    const ok = await ligarPush(true);
+    if (ok) { await salvar({ push: true }); toast('Pronto: este aparelho vai receber os avisos.'); }
+    return ok;
+  }
   async function desligarPush() {
     try {
       const reg = registro || (await navigator.serviceWorker.getRegistration('/'));
@@ -476,6 +483,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }, 'Receber no celular', !p.pushDisponivel || (!pushSuportado && !ehIOS));
     const secPush = el('div', { class: 'nt-secao' }, el('h3', { text: 'Neste aparelho' }),
       el('div', { class: 'nt-linha' }, el('span', {}, 'Receber no celular', estadoPush), chavePush));
+    // Botão claro para o 1º pedido: o iPhone (app na Tela de Início) só deixa pedir a partir de um toque.
+    if (pushSuportado && 'Notification' in window && Notification.permission === 'default') {
+      const ativar = el('button', { class: 'nt-botao nt-ativar', type: 'button', text: 'Ativar notificações', onclick: async () => {
+        const ok = await ativarPush();
+        const inp = chavePush.querySelector('input'); if (inp) inp.checked = ok;
+        if (ok || Notification.permission !== 'default') ativar.remove();
+        atualizarEstadoPush();
+      } });
+      secPush.append(el('div', { class: 'nt-acoes' }, ativar));
+    }
     if (ehIOS && !instalado) secPush.append(el('div', { class: 'nt-dica', text: 'No iPhone: abra a Sintonia no Safari, toque em Compartilhar (o quadrado com a seta) e depois em "Adicionar à Tela de Início". Abra pelo ícone novo e ligue esta opção. Precisa do iOS 16.4 ou mais novo.' }));
     else secPush.append(el('div', { class: 'nt-linha' }, el('small', { text: 'O aviso chega mesmo com o app fechado. Tocar nele abre a conversa.' })));
     secPush.append(linhaPref('Som no app', 'Um toque curto quando chega algo com o app aberto.', chave(p.som, (v) => { salvar({ som: v }); if (v) tocar(); }, 'Som no app')));
@@ -528,5 +545,5 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (pushSuportado && Notification.permission === 'granted' && est.prefs?.push) ligarPush(false);
   })();
 
-  window.SintoniaTelas.notificacoes = { abrir, fechar, preferencias: abrirPreferencias, verificar: () => novidades(est.versao ?? 0), tocar };
+  window.SintoniaTelas.notificacoes = { abrir, fechar, preferencias: abrirPreferencias, ativarPush, verificar: () => novidades(est.versao ?? 0), tocar };
 })();
