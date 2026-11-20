@@ -82,6 +82,9 @@ import { FonteComercialMemoria, FonteComercialPostgres } from './comercial/fonte
 import { registrarComercial } from './comercial/rotas.js';
 import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
 import { registrarDesempenho } from './desempenho/rotas.js';
+import { FonteAnalisesMemoria, FonteAnalisesPostgres } from './analises/fonte.js';
+import { OrigensConversa } from './analises/origens.js';
+import { registrarAnalises } from './analises/rotas.js';
 import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
 import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type PorteiroCliente } from './planos/medidor.js';
 import { PagamentoAsaas, PagamentoEscolhido, registrarAsaas } from './planos/asaas.js';
@@ -656,6 +659,16 @@ registrarDesempenho(app, {
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   unidades: ['norte', 'sumare'],
+  agora: () => new Date(),
+});
+// Análises (menu Análises): vendas e receita, horários de pico, tempo parado no funil e clientes que voltaram.
+registrarAnalises(app, {
+  fonte: pool ? new FonteAnalisesPostgres(pool) : new FonteAnalisesMemoria(repo),
+  comercial: pool ? new FonteComercialPostgres(pool) : new FonteComercialMemoria(repo),
+  armazemComercial,
+  origens: new OrigensConversa({ repo, contatos: armazemContatos, leads: extras.armazem, selos: (ids) => rastreio.selos(ids) }),
+  contas,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });
 // Plano e uso da IA (Configurações › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.

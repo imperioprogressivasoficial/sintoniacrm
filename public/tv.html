@@ -64,9 +64,9 @@ body {
 /* meta do mês */
 .meta { display: grid; justify-items: center; text-align: center; gap: .6rem; background: linear-gradient(160deg, rgba(15,252,190,.16), rgba(15,252,190,.04)); border-color: rgba(15,252,190,.3); }
 .anel { position: relative; width: 22rem; height: 22rem; }
-.anel svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.anel svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; filter: drop-shadow(0 0 .8rem rgba(15,252,190,.45)); } /* analises: brilho no svg inteiro (no círculo, o Chrome cortava num quadrado) */
 .anel .fundo { stroke: rgba(255,255,255,.1); }
-.anel .frente { stroke: var(--menta); filter: drop-shadow(0 0 .8rem rgba(15,252,190,.7)); transition: stroke-dashoffset 1.2s ease; }
+.anel .frente { stroke: var(--menta); transition: stroke-dashoffset 1.2s ease; }
 .anel .centro { position: absolute; inset: 0; display: grid; place-content: center; }
 .anel .pct { font-size: 6.4rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
 .anel .pct small { font-size: .45em; }

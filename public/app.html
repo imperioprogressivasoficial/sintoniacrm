@@ -1123,8 +1123,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           <button class="so-gestao nav lt-item" data-vista="relatorios" data-rel="" title="Relatório geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-2"/></svg><span class="lt-rot">Relatório geral</span></button>
           <button class="so-relatorios nav lt-item" data-vista="desempenho" id="lt-desempenho" title="Atendimento (desempenho)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-1v-6h3M4 12v4a2 2 0 0 0 2 2h1v-6H4"/></svg><span class="lt-rot">Atendimento</span></button>
           <button class="so-gestao lt-item lt-rel" data-rel="origem" type="button" title="Origem e marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg><span class="lt-rot">Origem e marketing</span></button>
+          <!-- analises: Vendas e receita, Clientes e satisfação, Horários e funil e Painel da TV abrem a tela Análises (telas/analises.js) na aba certa -->
+          <button class="so-gestao lt-item lt-an" data-an="vendas" type="button" title="Vendas e receita"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/></svg><span class="lt-rot">Vendas e receita</span></button>
+          <button class="so-gestao lt-item lt-an" data-an="clientes" type="button" title="Clientes e satisfação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.6A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.4C19 15.6 12 20 12 20Z"/></svg><span class="lt-rot">Clientes e satisfação</span></button>
+          <button class="so-gestao lt-item lt-an" data-an="horarios" type="button" title="Horários e funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="lt-rot">Horários e funil</span></button>
           <button class="so-gestao nav lt-item" data-vista="comercial" title="Comercial: metas, ranking, comissão e TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 6h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4"/></svg><span class="lt-rot">Comercial</span></button>
           <button class="so-gestao lt-item lt-rel" data-rel="ia-equipe" type="button" title="IA × equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7.5 6.5 4 5 7.5 1.5 9 5 10.5 6.5 14 8 10.5 11.5 9Z"/><circle cx="17.5" cy="8" r="2.5"/><path d="M14 16a3.5 3.5 0 0 1 7 0"/></svg><span class="lt-rot">IA × equipe</span></button>
+          <button class="so-gestao lt-item lt-an" data-an="tv" type="button" title="Painel da TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="12.5" rx="2.5"/><path d="M8 20.5h8M12 17v3.5"/></svg><span class="lt-rot">Painel da TV</span></button>
         </div></div>
       </div>
 
@@ -1304,6 +1309,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <!-- Relatórios, Leads (importar/exportar/duplicatas) e Agenda: telas em /telas/*.js -->
     <section class="vista" id="v-relatorios"><div class="painel" id="relatorios"></div></section>
     <section class="vista" id="v-desempenho"><div class="painel" id="desempenho"></div></section>
+    <section class="vista" id="v-analises"><div class="painel" id="analises"></div></section><!-- analises -->
     <section class="vista" id="v-leads"><div class="painel" id="leads"></div></section>
     <section class="vista" id="v-transmissoes"><div class="painel" id="transmissoes"></div></section>
     <section class="vista" id="v-email"><div class="painel" id="email"></div></section>
@@ -1654,7 +1660,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts' || v === 'rotina' || v === 'grupos') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'analises' /* analises */ || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts' || v === 'rotina' || v === 'grupos') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
     /* equipe: Conversas de equipe (chat interno) — a vista é 'chat-equipe'; 'equipe' continua sendo Atendentes e acessos */
     if (v === 'chat-equipe' && window.SintoniaTelas?.equipe) window.SintoniaTelas.equipe.desenhar($('chat-equipe'), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
@@ -2997,6 +3003,11 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
         { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
         { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
+        /* analises */
+        { nome: 'Vendas e receita', sub: 'Por dia, atendente, serviço e origem', ic: IC.relatorio, cor: '#7c3aed', acao: () => { window.SintoniaTelas?.analises?.focar?.('vendas'); mostrar('analises'); } },
+        { nome: 'Clientes e satisfação', sub: 'Quem voltou, quem sumiu e NPS', ic: IC.relatorio, cor: '#9333ea', acao: () => { window.SintoniaTelas?.analises?.focar?.('clientes'); mostrar('analises'); } },
+        { nome: 'Horários e funil', sub: 'Picos e tempo parado por etapa', ic: IC.relatorio, cor: '#6d28d9', acao: () => { window.SintoniaTelas?.analises?.focar?.('horarios'); mostrar('analises'); } },
+        { nome: 'Painel da TV', sub: 'Link para a TV da sala', ic: IC.relatorio, cor: '#5b21b6', acao: () => { window.SintoniaTelas?.analises?.focar?.('tv'); mostrar('analises'); } },
       ] },
       gestor && { id: 'empresa', titulo: 'Empresa e conta', ic: IC.empresa, cor: '#475569', itens: [
         { nome: 'Equipe e acessos', ic: IC.equipe, cor: '#334155', acao: () => mostrar('equipe') },
@@ -3259,6 +3270,16 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       trilha();
     }));
     document.querySelector('#lt-grupos [data-vista="relatorios"]')?.addEventListener('click', () => window.SintoniaTelas?.relatorios?.focar?.(''));
+    /* analises: itens que abrem a tela Análises numa aba; o item aceso segue a aba (Satisfação acende "Clientes e satisfação"; Funil, "Horários e funil") */
+    const ITEM_DA_ABA = { vendas: 'vendas', clientes: 'clientes', satisfacao: 'clientes', horarios: 'horarios', funil: 'horarios', tv: 'tv' };
+    function marcarAnalises(aba) {
+      document.querySelectorAll('#lt-grupos .lt-an').forEach((x) => (estado.vista === 'analises' && x.dataset.an === ITEM_DA_ABA[aba] ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
+      trilha();
+    }
+    document.querySelectorAll('#lt-grupos .lt-an').forEach((b) => b.addEventListener('click', () => {
+      window.SintoniaTelas?.analises?.focar?.(b.dataset.an);
+      mostrar('analises');
+    }));
     // IA: sempre começa pela visão geral (o que a IA atendeu hoje).
     $('lt-ia-config')?.addEventListener('click', () => { window.SintoniaTelas?.agentesIa?.inicio?.(); if (estado.vista === 'ia') mostrar('ia'); });
 
@@ -3277,13 +3298,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (v !== 'relatorios') document.querySelectorAll('#lt-grupos .lt-rel[aria-current]').forEach((x) => x.removeAttribute('aria-current'));
       else if (document.querySelector('#lt-grupos .lt-rel[aria-current]')) document.querySelector('#lt-grupos [data-vista="relatorios"]')?.removeAttribute('aria-current');
       if (v === 'funil') carregarFunis(false); else marcarFunil();
+      marcarAnalises(window.SintoniaTelas?.analises?.aba?.()); /* analises */
       trilha();
     }
     arrumar();
     carregarFunis(true);
     setTimeout(trilha, 0);
     setInterval(() => { if (estado.vista === 'funil') marcarFunil(); }, 1500);
-    return { arrumar, vistaMudou, recarregarFunis: () => carregarFunis(true), abrir: (id) => abrirGrupo(grupos.find((g) => g.dataset.grupo === id), true) };
+    return { arrumar, vistaMudou, analisesAba: marcarAnalises /* analises */, recarregarFunis: () => carregarFunis(true), abrir: (id) => abrirGrupo(grupos.find((g) => g.dataset.grupo === id), true) };
   })();
   $('lt-tags').addEventListener('click', () => abrirTags());
   $('lt-pref-notif').addEventListener('click', () => window.SintoniaTelas?.notificacoes?.preferencias());
@@ -3354,6 +3376,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/bot.js" defer></script>
 <script src="/telas/relatorios.js" defer></script>
 <script src="/telas/desempenho.js" defer></script>
+<script src="/telas/analises.js" defer></script><!-- analises -->
 <script src="/telas/planos.js" defer></script>
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/transmissoes.js" defer></script>

@@ -17,8 +17,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .rl { --azul-serie: #7cc4ff; }
   @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .rl { --azul-serie: #7cc4ff; } }
   .rl { --azul-serie: var(--marca-azul); --acento: var(--marca-menta); --acento-suave: color-mix(in srgb, var(--marca-menta) 14%, transparent); --brilho: color-mix(in srgb, var(--marca-menta) 50%, transparent); --menta: var(--marca-menta); --noite: #071d33;
-        display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; max-width: 1240px; width: 100%; margin: 0 auto; }
+        display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; width: 100%; margin: 0; }
   @media (max-width: 760px) { .rl { padding-bottom: 110px; } }
+  /* analises: no computador, toda a largura do painel com margem de 28px, como o Dashboard */
+  @media (min-width: 761px) { .rl-caixa.rl-caixa { padding: 22px 28px 0; } }
   .rl-vidro { background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); }
 
   .rl-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 30px; }
@@ -479,6 +481,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   window.SintoniaTelas.relatorios = {
+    /* analises: a tela Análises usa o mesmo visual (painéis de vidro, tabelas, filtros) */
+    estilo,
     /** Abre a visão geral; com nome ('origem', 'ia-equipe'…), rola até aquele relatório. */
     focar(nome) { s.aba = 'geral'; s.foco = nome || ''; if (!nome) s.caixa?.closest('.vista')?.scrollTo?.(0, 0); },
     async desenhar(caixa, ui) {
