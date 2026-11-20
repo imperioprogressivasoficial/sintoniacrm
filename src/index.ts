@@ -84,6 +84,10 @@ import { estadoDaIa } from './planos/estado-ia.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
+import { Radar } from './radar/radar.js';
+import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
+import { juizClaude } from './radar/juiz.js';
+import { registrarRadar } from './radar/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -318,11 +322,29 @@ const followup = new Followup({
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
+// Radar (src/radar): a equipe coloca a conversa no radar; a IA confere cada mensagem nova e o prazo; avisa e, se pedido, responde.
+const radar = new Radar({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemRadarPostgres(pool) : new ArmazemRadarMemoria(),
+  repo,
+  sintonia: () => sintonia,
+  agente: { executar: (p) => agentesIa.agente.executar(p) },
+  juiz: juizClaude(claude, { modelo: cfg.SINTONIA_MODELO }),
+  iaDisponivel: () => iaLigada,
+  log,
+});
+observarEventos(repo, (e) => radar.aoEvento(e));
 const ganchos: typeof ganchosBase = {
   ...ganchosBase,
+  // radar: a instrução do radar que acabou de disparar vai junto com o objetivo dos fluxos de IA.
+  objetivoIa: async (c) => {
+    const partes = [await ganchosBase.objetivoIa?.(c), await radar.objetivo(c).catch(() => undefined)].filter(Boolean);
+    return partes.length ? partes.join('\n\n') : undefined;
+  },
   mensagemCliente: async (c, m) => {
     await ganchosBase.mensagemCliente?.(c, m);
     await followup.mensagemCliente(c, m).catch((e) => log('Falha no follow-up (resposta da cliente)', String(e)));
+    await radar.mensagemCliente(c, m).catch((e) => log('Falha no radar (resposta da cliente)', String(e)));
     await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
   },
 };
@@ -684,6 +706,7 @@ const demo = new Demo({
 });
 registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
+registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
@@ -697,6 +720,7 @@ const relogio = setInterval(async () => {
   await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões
   await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
+  await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);
