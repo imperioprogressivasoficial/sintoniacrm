@@ -75,6 +75,17 @@
   .botao.mini { padding: 8px 12px; font-size: 13px; }
   .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
 
+  .oficial-trava .estado { flex: none; }
+  .oficial-trava { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-size: 13.5px; color: var(--sub); margin: 6px 0 14px; }
+  .avancado { margin-top: 18px; border-radius: 14px; padding: 10px 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .avancado summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; list-style: none; }
+  .avancado summary::-webkit-details-marker { display: none; }
+  .abas-conectar { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); margin: 12px auto 0; width: max-content; }
+  .abas-conectar button { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--sub); }
+  .abas-conectar button[aria-pressed="true"] { background: var(--texto); color: var(--fundo, #fff); }
+  .codigo-pareamento { font-size: 34px; font-weight: 800; letter-spacing: .18em; text-align: center; font-variant-numeric: tabular-nums; margin: 6px 0; }
+  #cod-form { display: grid; gap: 10px; margin-top: 14px; }
+  #cod-form input { font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--linha, rgba(0,0,0,.12)); background: var(--entrada, #fff); color: inherit; text-align: center; }
   .estado { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); white-space: nowrap; }
   .estado.ok { background: var(--ok-fundo); color: var(--ok); box-shadow: inset 0 0 0 1px rgba(15,252,190,.35); }
   .estado.aviso { background: var(--aviso); color: var(--aviso-txt); box-shadow: none; }
@@ -159,9 +170,7 @@
     <div><h1>Conexões</h1><div class="sub">WhatsApp, IA, agenda e relatório</div></div>
   </div>
   <nav class="atalhos" aria-label="Seções">
-    <a href="#lojas-canal">Cada loja</a>
-    <a href="#nao-oficial">WhatsApp não oficial</a>
-    <a href="#oficial">WhatsApp oficial</a>
+    <a href="#nao-oficial">WhatsApp</a>
     <a href="#messenger">Messenger</a>
     <a href="#instagram">Instagram</a>
     <a href="#tiktok">TikTok</a>
@@ -177,28 +186,32 @@
 <main>
   <div class="grupo">WhatsApp</div>
 
-  <section id="lojas-canal" aria-labelledby="t-canal">
+  <section id="lojas-canal" aria-labelledby="t-canal" hidden>
     <h2 id="t-canal"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg></span><span>Qual WhatsApp cada loja usa<small>Uma loja usa um só caminho por vez</small></span></h2>
     <p><b>Não oficial (QR Code)</b>: liga o WhatsApp que a loja já tem, lendo um QR Code. Rápido, mas o número pode ser bloqueado pelo WhatsApp. <b>Oficial (Meta)</b>: a API da própria Meta, mais estável; exige uma conta no Gerenciador do WhatsApp e, depois de 24 horas sem a cliente escrever, só aceita modelos aprovados.</p>
     <div class="cartoes" id="escolhas"></div>
   </section>
 
   <section id="nao-oficial" aria-labelledby="t-nao-oficial">
-    <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>Evolution, conexão por QR Code</small></span></h2>
-    <div class="aviso">Atenção: se o número já está ligado na Serena (n8n), as duas vão receber as mesmas mensagens e podem responder em dobro. Antes de conectar aqui, decida qual das duas atende esse número.</div>
-    <h3>1. Servidor da Evolution</h3>
-    <p>O servidor da Evolution que já roda no VPS. Endereço e chave global (a mesma usada no n8n).</p>
-    <div class="campos">
-      <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com" autocomplete="off"></label>
-      <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
-    </div>
-    <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution" role="status"></span></div>
-    <h3>2. Número de cada loja</h3>
-    <p id="wa-sem-evolution">Preencha a Evolution acima para conectar os números.</p>
+    <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>QR Code ou código, sem custo por mensagem</small></span></h2>
+    <p>Ligue o WhatsApp de cada loja lendo o <b>QR Code</b> ou digitando um <b>código</b> no celular da loja. Leva menos de um minuto.</p>
+    <div class="oficial-trava"><span class="estado">Bloqueado</span><span><b>WhatsApp oficial (Meta)</b> — fica para depois. Por enquanto, as lojas usam a conexão por QR Code ou código.</span></div>
+    <h3>Número de cada loja</h3>
+    <p id="wa-sem-evolution">O servidor de WhatsApp ainda não está configurado. Abra "Servidor do WhatsApp" logo abaixo.</p>
     <div class="cartoes" id="lojas"></div>
+    <details class="avancado" id="evo-servidor">
+      <summary>Servidor do WhatsApp (Evolution) <span class="estado" id="evo-ok">…</span></summary>
+      <p>O servidor da Evolution que já roda no VPS. Endereço e chave global. Só mexa aqui se o suporte pedir.</p>
+      <div class="campos">
+        <label>Endereço <input id="evolutionUrl" type="url" placeholder="https://evolution.seudominio.com" autocomplete="off"></label>
+        <label>Chave global <input id="evolutionApiKey" type="password" autocomplete="off"></label>
+      </div>
+      <div class="linha"><button class="botao" data-salvar="evolutionUrl,evolutionApiKey">Salvar</button><button class="botao leve" data-testar="evolution">Testar</button><span class="res" id="res-evolution" role="status"></span></div>
+      <div class="aviso">Se o número já está ligado em outro sistema (ex.: n8n), os dois recebem as mesmas mensagens e podem responder em dobro.</div>
+    </details>
   </section>
 
-  <section id="oficial" aria-labelledby="t-oficial">
+  <section id="oficial" aria-labelledby="t-oficial" hidden>
     <h2 id="t-oficial"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span><span>WhatsApp — API oficial<small>WhatsApp Cloud API da Meta</small></span></h2>
     <p>As mensagens chegam direto da Meta, sem celular ligado. Preencha os dados de cada loja (copiados do painel da Meta), cole a <b>URL do webhook</b> e o <b>Verify Token</b> lá, e depois escolha “Oficial” em <a href="#lojas-canal">Qual WhatsApp cada loja usa</a>.</p>
     <label>URL do webhook (igual para as duas lojas)
@@ -392,12 +405,28 @@
 
 <dialog id="d-qr">
   <h2 style="justify-content:center">Conectar <span id="qr-loja"></span></h2>
-  <div id="qr-area" style="margin-top:14px"></div>
-  <ol>
-    <li>Abra o WhatsApp no celular da loja</li>
-    <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
-    <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
-  </ol>
+  <div class="abas-conectar" role="group" aria-label="Como conectar"><button type="button" id="aba-qr" aria-pressed="true">QR Code</button><button type="button" id="aba-cod" aria-pressed="false">Código</button></div>
+  <div id="modo-qr">
+    <div id="qr-area" style="margin-top:14px"></div>
+    <ol>
+      <li>Abra o WhatsApp no celular da loja</li>
+      <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
+      <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
+    </ol>
+  </div>
+  <div id="modo-cod" hidden>
+    <form id="cod-form">
+      <label style="font-size:13.5px;color:var(--sub)">Número do WhatsApp da loja (com DDD)<input id="cod-numero" inputmode="tel" autocomplete="off" placeholder="71 99999-9999"></label>
+      <button class="botao" type="submit" id="cod-gerar">Gerar código</button>
+    </form>
+    <div id="cod-area" hidden><div class="codigo-pareamento" id="cod-valor"></div>
+      <ol>
+        <li>Abra o WhatsApp no celular da loja › <b>Dispositivos conectados</b></li>
+        <li>Toque em <b>Conectar dispositivo</b> › <b>Conectar com número de telefone</b></li>
+        <li>Digite este código</li>
+      </ol>
+    </div>
+  </div>
   <p id="qr-estado">Aguardando a leitura…</p>
   <div class="linha" style="justify-content:center;margin-top:12px"><button class="botao leve" id="qr-fechar">Fechar</button></div>
 </dialog>
@@ -580,11 +609,13 @@
     const caixa = $('lojas');
     let r; try { r = await api('/api/conexoes/whatsapp'); } catch (x) { caixa.textContent = x.message; return; }
     $('wa-sem-evolution').hidden = r.configurada;
+    const eo = $('evo-ok'); if (eo) { eo.className = 'estado' + (r.configurada ? ' ok' : ' aviso'); eo.textContent = r.configurada ? 'Ligado' : 'Falta configurar'; }
+    if (!r.configurada) $('evo-servidor').open = true;
     caixa.replaceChildren(...r.unidades.map((u) => {
       const ok = u.estado === 'conectada';
-      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando QR Code' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado' });
+      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : u.estado === 'conectando' ? 'Aguardando conexão' : u.estado === 'erro' ? 'Erro ao consultar' : 'Desconectado' });
       const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar WhatsApp' });
-      b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade, b)));
+      b.addEventListener('click', () => (ok ? desconectar(u.unidade, b) : conectar(u.unidade)));
       const usaOficial = resumo?.canais?.[u.unidade] === 'meta';
       return el('div', { className: 'cartao' },
         el('div', { className: 'cab' }, el('b', { textContent: NOMES[u.unidade] || u.unidade }), est),
@@ -595,25 +626,51 @@
     }));
   }
 
-  let espera = null;
-  async function conectar(unidade, botao) {
-    botao.setAttribute('aria-busy', 'true');
+  let espera = null, lojaAtual = null;
+  const modo = (m) => {
+    $('aba-qr').setAttribute('aria-pressed', String(m === 'qr')); $('aba-cod').setAttribute('aria-pressed', String(m === 'cod'));
+    $('modo-qr').hidden = m !== 'qr'; $('modo-cod').hidden = m !== 'cod';
+    if (m === 'qr' && lojaAtual && !$('qr-area').querySelector('img')) pedirQr();
+    if (m === 'cod') setTimeout(() => $('cod-numero').focus(), 50);
+  };
+  $('aba-qr').addEventListener('click', () => modo('qr'));
+  $('aba-cod').addEventListener('click', () => modo('cod'));
+  async function pedirQr() {
+    $('qr-area').textContent = 'Gerando o QR Code…';
+    try { const r = await api(`/api/conexoes/whatsapp/${lojaAtual}/conectar`, { method: 'POST', body: '{}' }); if (r.estado === 'conectada') return pronto(); mostrarQr(r.qr); }
+    catch (x) { $('qr-area').textContent = x.message; }
+  }
+  $('cod-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const b = $('cod-gerar'); b.setAttribute('aria-busy', 'true');
     try {
-      const r = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' });
-      if (r.estado === 'conectada') { await carregarLojas(); return; }
-      $('qr-loja').textContent = NOMES[unidade]; mostrarQr(r.qr); $('qr-estado').textContent = 'Aguardando a leitura…';
-      $('d-qr').showModal();
-      let voltas = 0;
-      clearInterval(espera);
-      espera = setInterval(async () => {
-        voltas++;
-        const lista = await api('/api/conexoes/whatsapp').catch(() => null);
-        const u = lista?.unidades.find((x) => x.unidade === unidade);
-        if (u?.estado === 'conectada') { clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓'; setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas(); return; }
-        if (voltas % 8 === 0) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
-      }, 3000);
-    } catch (x) { alert(x.message); }
-    finally { botao.removeAttribute('aria-busy'); }
+      const r = await api(`/api/conexoes/whatsapp/${lojaAtual}/conectar`, { method: 'POST', body: JSON.stringify({ numero: $('cod-numero').value }) });
+      if (r.estado === 'conectada') return pronto();
+      if (!r.codigo) { $('cod-area').hidden = true; $('qr-estado').textContent = 'O servidor não devolveu o código. Tente de novo ou use o QR Code.'; return; }
+      $('cod-valor').textContent = r.codigo.length === 8 ? r.codigo.slice(0, 4) + '-' + r.codigo.slice(4) : r.codigo;
+      $('cod-area').hidden = false; $('qr-estado').textContent = 'Aguardando você digitar o código no celular…';
+    } catch (x) { $('qr-estado').textContent = x.message; }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+  async function pronto() {
+    clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓';
+    setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas();
+  }
+  async function conectar(unidade) {
+    lojaAtual = unidade;
+    $('qr-loja').textContent = NOMES[unidade]; $('qr-area').replaceChildren(); $('cod-area').hidden = true; $('cod-numero').value = '';
+    $('qr-estado').textContent = 'Aguardando a leitura…';
+    $('d-qr').showModal(); modo('qr');
+    let voltas = 0;
+    clearInterval(espera);
+    espera = setInterval(async () => {
+      voltas++;
+      const lista = await api('/api/conexoes/whatsapp').catch(() => null);
+      const u = lista?.unidades.find((x) => x.unidade === unidade);
+      if (u?.estado === 'conectada') return pronto();
+      // O QR Code vence em ~40 s: renova sozinho enquanto a aba QR estiver aberta.
+      if (voltas % 8 === 0 && !$('modo-qr').hidden) { const n = await api(`/api/conexoes/whatsapp/${unidade}/conectar`, { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
+    }, 3000);
   }
   function mostrarQr(qr) {
     const area = $('qr-area'); area.replaceChildren();

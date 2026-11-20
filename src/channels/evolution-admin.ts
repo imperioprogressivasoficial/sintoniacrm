@@ -69,8 +69,11 @@ export class EvolutionAdmin {
     };
   }
 
-  /** Cria a instância (se não existir) já apontando o webhook para a Sintonia, e devolve o QR Code. */
-  async conectar(nome: string, webhook: { url: string; token: string }): Promise<{ qr: string | null; estado: EstadoInstancia }> {
+  /**
+   * Cria a instância (se não existir) já apontando o webhook para a Sintonia e devolve o QR Code.
+   * Com `numero` (só dígitos, com DDI 55), pede também o código de 8 letras para "Conectar com número de telefone".
+   */
+  async conectar(nome: string, webhook: { url: string; token: string }, numero?: string): Promise<{ qr: string | null; codigo?: string | null; estado: EstadoInstancia }> {
     if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia podem ser conectadas por aqui');
     const atual = await this.info(nome);
     const configWebhook = {
@@ -91,13 +94,13 @@ export class EvolutionAdmin {
       });
       // Algumas versões da v2 ignoram o webhook na criação: garante com a rota própria.
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
-      if (criada.qrcode?.base64) return { qr: criada.qrcode.base64, estado: 'conectando' };
+      if (criada.qrcode?.base64 && !numero) return { qr: criada.qrcode.base64, estado: 'conectando' };
     } else {
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
       if (atual.estado === 'conectada') return { qr: null, estado: 'conectada' };
     }
-    const r = await this.chamar<{ base64?: string }>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
-    return { qr: r.base64 ?? null, estado: 'conectando' };
+    const r = await this.chamar<{ base64?: string; pairingCode?: string | null }>('GET', `/instance/connect/${encodeURIComponent(nome)}${numero ? `?number=${numero}` : ''}`);
+    return numero ? { qr: r.base64 ?? null, codigo: r.pairingCode ?? null, estado: 'conectando' } : { qr: r.base64 ?? null, estado: 'conectando' };
   }
 
   async desconectar(nome: string): Promise<void> {

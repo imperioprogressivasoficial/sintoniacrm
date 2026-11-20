@@ -284,7 +284,11 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
   app.post('/api/conexoes/whatsapp/:unidade/conectar', async (req) => {
     const autor = await quem(req);
     const unidade = Unidade.parse((req.params as { unidade: string }).unidade);
-    const r = await evolution().conectar(`${PREFIXO_INSTANCIA}${unidade}`, webhookDe(req));
+    // Código pelo número (opcional): só dígitos; sem DDI, assume Brasil (55).
+    const bruto = String((req.body as { numero?: unknown } | undefined)?.numero ?? '').replace(/\D/g, '');
+    if (bruto && (bruto.length < 10 || bruto.length > 13)) throw Object.assign(new Error('Número inválido. Use DDD + número, ex.: 71 99999-9999.'), { statusCode: 400 });
+    const numero = bruto ? (bruto.length <= 11 ? `55${bruto}` : bruto) : undefined;
+    const r = await evolution().conectar(`${PREFIXO_INSTANCIA}${unidade}`, webhookDe(req), numero);
     await definirNumero(unidade, true, autor);
     return r;
   });

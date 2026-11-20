@@ -88,7 +88,7 @@ function evolutionFalsa() {
       return new Response(JSON.stringify({ instance: { instanceName: corpo.instanceName }, qrcode: { base64: 'data:image/png;base64,QR' } }), { status: 201 });
     }
     if (u.pathname.startsWith('/webhook/set/')) return new Response('{}');
-    if (u.pathname.startsWith('/instance/connect/')) return new Response(JSON.stringify({ base64: 'data:image/png;base64,QR2' }));
+    if (u.pathname.startsWith('/instance/connect/')) return new Response(JSON.stringify(u.searchParams.get('number') ? { base64: 'data:image/png;base64,QR2', pairingCode: 'WZYEH1YY' } : { base64: 'data:image/png;base64,QR2' }));
     if (u.pathname.startsWith('/instance/logout/')) {
       instancias.set(decodeURIComponent(u.pathname.split('/').pop()!), 'close');
       return new Response('{}');
@@ -188,5 +188,16 @@ describe('Rotas de Conexões', () => {
     await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/norte/desconectar', headers: { cookie }, payload: {} });
     expect(conexoes.numeros()).toEqual([]);
     expect(evo.pedidos.some((p) => p.metodo === 'DELETE' && p.url.endsWith('/instance/logout/sintonia-norte'))).toBe(true);
+  });
+  it('conectar WhatsApp por código: manda o número para a Evolution e devolve o código de 8 letras', async () => {
+    const { app, entrar, evo } = await montar();
+    const cookie = await entrar('bruno@imperio.com');
+    await app.inject({ method: 'PUT', url: '/api/conexoes', headers: { cookie }, payload: { evolutionUrl: 'https://evo.exemplo', evolutionApiKey: 'chave-global' } });
+    const r = await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/sumare/conectar', headers: { cookie, host: 'sintonia.n8nimperio.tech' }, payload: { numero: '(71) 98888-7777' } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ codigo: 'WZYEH1YY', estado: 'conectando' });
+    expect(evo.pedidos.some((p) => p.url.includes('/instance/connect/sintonia-sumare?number=5571988887777'))).toBe(true);
+    const ruim = await app.inject({ method: 'POST', url: '/api/conexoes/whatsapp/sumare/conectar', headers: { cookie }, payload: { numero: '123' } });
+    expect(ruim.statusCode).toBe(400);
   });
 });
