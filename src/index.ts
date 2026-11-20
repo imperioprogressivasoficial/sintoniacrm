@@ -1,5 +1,6 @@
 import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
 import { LayoutsPainelMemoria, LayoutsPainelPostgres } from './painel/layout.js';
+import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
@@ -487,6 +488,7 @@ const app = criarServidor({
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
+  presencas: pool ? new PresencasPostgres(pool) : new PresencasMemoria(),
   gestao: {
     tags,
     empresa,
