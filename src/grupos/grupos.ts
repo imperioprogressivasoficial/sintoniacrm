@@ -19,6 +19,12 @@ export interface AdminGrupos {
   listarGrupos(instancia: string): Promise<InfoGrupo[]>;
   historicoGrupos(instancia: string, o?: { grupos?: number; porGrupo?: number }): Promise<unknown[]>;
   liberarGrupos(instancia: string): Promise<'liberado' | 'ja_liberado'>;
+  /** Grupos com conversa guardada na Evolution (rápido: jid e nome). */
+  chatsDeGrupo(instancia: string): Promise<Array<{ jid: string; nome: string | null }>>;
+  /** Últimas mensagens de um grupo guardadas na Evolution. */
+  mensagensDoGrupo(instancia: string, jid: string, quantas?: number): Promise<unknown[]>;
+  /** Arquiva/desarquiva no WhatsApp do celular. */
+  arquivarConversa(instancia: string, jid: string, arquivar: boolean): Promise<void>;
 }
 
 export interface DependenciasGrupos {
@@ -37,6 +43,18 @@ export interface DependenciasGrupos {
 const VALIDADE_INFO_MS = 6 * 60 * 60 * 1000;
 /** "Ignorar grupos": confere cada instância no máximo uma vez por hora. */
 const INTERVALO_LIBERAR_MS = 60 * 60 * 1000;
+/** Lista completa de grupos (inclusive arquivados e sem mensagem recente): refeita no máximo a cada 30 min. */
+const INTERVALO_DESCOBRIR_MS = 30 * 60 * 1000;
+/** Nome e foto de um grupo por vez, no máximo estes ao mesmo tempo (não afoga a Evolution com centenas de grupos). */
+const MAX_INFO_JUNTOS = 4;
+/** Grupos vazios que ganham o histórico (últimas 50 mensagens) por rodada. */
+const MAX_HISTORICO_POR_RODADA = 60;
+
+export interface ResultadoDescoberta {
+  grupos: number;
+  novos: number;
+  mensagens: number;
+}
 
 export const erroGrupo = (msg: string, statusCode: number, codigo?: string) => Object.assign(new Error(msg), { statusCode, ...(codigo ? { codigo } : {}) });
 
@@ -61,6 +79,9 @@ export class Grupos {
   /** Última vez que conferiu o "ignorar grupos" de cada instância. */
   private readonly liberados = new Map<string, number>();
   private pendentes: Promise<unknown>[] = [];
+  /** Lista completa de grupos: quando rodou por último e a rodada em andamento. */
+  private descobertaEm = 0;
+  private descobrindo: Promise<ResultadoDescoberta> | null = null;
 
   constructor(private readonly d: DependenciasGrupos) {
     this.agora = d.agora ?? (() => new Date());
@@ -137,7 +158,7 @@ export class Grupos {
   /** Nome e foto vencidos (ou nunca lidos): pede à Evolution por trás, sem segurar o webhook. */
   talvezAtualizarInfo(g: Grupo): void {
     if (g.infoEm && this.agora().getTime() - g.infoEm.getTime() < VALIDADE_INFO_MS) return;
-    if (this.lendoInfo.has(g.id)) return;
+    if (this.lendoInfo.has(g.id) || this.lendoInfo.size >= MAX_INFO_JUNTOS || this.descobrindo) return;
     const admin = this.d.admin?.();
     if (!admin) return;
     this.lendoInfo.add(g.id);
@@ -147,10 +168,14 @@ export class Grupos {
   private async atualizarInfo(g: Grupo, admin: AdminGrupos, info?: InfoGrupo | null): Promise<void> {
     const i = info === undefined ? await admin.infoGrupo(g.canalId, g.jid) : info;
     await this.d.armazem.atualizarInfo(g.id, { nome: i?.nome ?? null, participantes: i?.participantes ?? null }, this.agora());
-    if (i?.fotoUrl) {
-      const foto = await this.baixarFoto(i.fotoUrl).catch(() => null);
-      if (foto) await this.d.armazem.guardarFoto(g.id, foto);
-    }
+    await this.atualizarFoto(g, i?.fotoUrl ?? null);
+  }
+
+  /** Baixa a foto só quando o endereço mudou (ou ainda não tem). */
+  private async atualizarFoto(g: Grupo, url: string | null): Promise<void> {
+    if (!url || (g.temFoto && g.fotoUrl === url)) return;
+    const foto = await this.baixarFoto(url).catch(() => null);
+    if (foto) await this.d.armazem.guardarFoto(g.id, foto, url);
   }
 
   private async baixarFoto(url: string): Promise<{ conteudo: Buffer; tipo: string } | null> {
@@ -198,28 +223,123 @@ export class Grupos {
     this.fundo(this.liberarGrupos());
   }
 
+  /** Está buscando a lista completa de grupos agora? (a tela mostra "Buscando grupos…") */
+  get emDescoberta(): boolean {
+    return Boolean(this.descobrindo);
+  }
+
+  /** Ao abrir a tela (e de tempos em tempos): busca a lista completa de grupos por trás, com cache de 30 min. */
+  descobrirPorTras(): void {
+    if (this.descobrindo || !this.d.admin?.() || !this.instancias().length) return;
+    if (Date.now() - this.descobertaEm < INTERVALO_DESCOBRIR_MS) return;
+    this.fundo(this.descobrir());
+  }
+
   /**
-   * "Sincronizar": libera os grupos, traz a lista de grupos (nome, quantas pessoas, foto) e as mensagens recentes
-   * guardadas na Evolution (entram como histórico, sem contar como não lidas).
+   * Lista TODOS os grupos de que o número participa (arquivados ou não, com ou sem mensagem recente) e cria os que faltam:
+   * 1) findChats (rápido) dá os grupos com conversa guardada e o nome;
+   * 2) fetchAllGroups (lento com muitos grupos) dá todos, com nome, quantas pessoas e foto;
+   * 3) grupos ainda vazios ganham as últimas 50 mensagens guardadas na Evolution, como histórico (sem notificar).
+   * Uma rodada por vez; quem chama durante uma rodada recebe a mesma.
    */
-  async sincronizar(): Promise<{ grupos: number; mensagens: number }> {
+  descobrir(o: { recentes?: boolean } = {}): Promise<ResultadoDescoberta> {
+    if (this.descobrindo) return this.descobrindo;
     const admin = this.d.admin?.();
-    if (!admin) throw erroGrupo('O WhatsApp não oficial não está configurado em Conexões.', 422);
-    await this.liberarGrupos(true);
-    let grupos = 0;
-    let mensagens = 0;
+    if (!admin) return Promise.reject(erroGrupo('O WhatsApp não oficial não está configurado em Conexões.', 422));
+    this.descobertaEm = Date.now();
+    this.descobrindo = this.rodarDescoberta(admin, o).finally(() => {
+      this.descobrindo = null;
+      this.descobertaEm = Date.now();
+    });
+    return this.descobrindo;
+  }
+
+  private async rodarDescoberta(admin: AdminGrupos, o: { recentes?: boolean }): Promise<ResultadoDescoberta> {
+    await this.liberarGrupos();
+    const r: ResultadoDescoberta = { grupos: 0, novos: 0, mensagens: 0 };
     for (const inst of this.instancias()) {
-      const numero = this.numero(inst)!;
-      const lista = await admin.listarGrupos(inst).catch((e) => (this.log('Falha ao listar grupos', String(e)), [] as InfoGrupo[]));
-      for (const info of lista) {
-        const g = await this.d.armazem.grupo({ empresaId: this.d.empresaId, canalId: inst, unidade: numero.unidade, jid: info.jid });
-        await this.atualizarInfo(g, admin, info).catch(() => {});
-        grupos++;
+      const numero = this.numero(inst);
+      if (!numero) continue;
+      const vistos = new Map<string, Grupo>();
+      const conhecidos = new Set((await this.d.armazem.listar(this.d.empresaId)).filter((g) => g.canalId === inst).map((g) => g.jid));
+      const criar = async (jid: string) => {
+        let g = vistos.get(jid);
+        if (!g) {
+          g = await this.d.armazem.grupo({ empresaId: this.d.empresaId, canalId: inst, unidade: numero.unidade, jid });
+          vistos.set(jid, g);
+          if (!conhecidos.has(jid)) r.novos++;
+        }
+        return g;
+      };
+      // 1) rápido
+      const chats = await admin.chatsDeGrupo(inst).catch((e) => (this.log('Conversas de grupo: findChats falhou', String(e).slice(0, 200)), []));
+      for (const c of chats) {
+        const g = await criar(c.jid);
+        if (c.nome && !g.nome) await this.d.armazem.atualizarInfo(g.id, { nome: c.nome }, null);
       }
-      const brutas = await admin.historicoGrupos(inst).catch((e) => (this.log('Falha ao puxar mensagens dos grupos', String(e)), [] as unknown[]));
-      mensagens += await this.receber(lerGruposEvolution({ event: 'messages.set', instance: inst, data: brutas }), { historico: true });
+      // 2) completo (nome, pessoas e foto)
+      const todos = await admin.listarGrupos(inst).catch((e) => (this.log('Conversas de grupo: fetchAllGroups falhou', String(e).slice(0, 200)), [] as InfoGrupo[]));
+      const fotos: Array<[Grupo, string]> = [];
+      for (const info of todos) {
+        const g = await criar(info.jid);
+        await this.d.armazem.atualizarInfo(g.id, { nome: info.nome, participantes: info.participantes }, this.agora());
+        if (info.fotoUrl) fotos.push([g, info.fotoUrl]);
+      }
+      r.grupos += vistos.size;
+      // 3) histórico dos grupos vazios (e, no "Buscar grupos", das conversas recentes)
+      const ultimas = await this.d.armazem.ultimas([...vistos.values()].map((g) => g.id));
+      const vazios = [...vistos.values()].filter((g) => !ultimas.has(g.id)).slice(0, MAX_HISTORICO_POR_RODADA);
+      for (const g of vazios) {
+        const brutas = await admin.mensagensDoGrupo(inst, g.jid, 50).catch(() => [] as unknown[]);
+        if (brutas.length) r.mensagens += await this.receber(lerGruposEvolution({ event: 'messages.set', instance: inst, data: brutas }), { historico: true });
+      }
+      if (o.recentes) {
+        const brutas = await admin.historicoGrupos(inst).catch((e) => (this.log('Falha ao puxar mensagens dos grupos', String(e)), [] as unknown[]));
+        r.mensagens += await this.receber(lerGruposEvolution({ event: 'messages.set', instance: inst, data: brutas }), { historico: true });
+      }
+      // Fotos por último (uma de cada vez): a lista já aparece antes.
+      for (const [g, url] of fotos) await this.atualizarFoto(g, url).catch(() => {});
     }
-    return { grupos, mensagens };
+    return r;
+  }
+
+  /**
+   * "Buscar grupos do WhatsApp": libera os grupos e refaz a lista completa agora, com as mensagens recentes.
+   * Espera até `esperarMs`; se a Evolution demorar mais, a busca continua por trás e a tela vai mostrando.
+   */
+  async sincronizar(esperarMs = 20_000): Promise<ResultadoDescoberta & { emAndamento?: boolean }> {
+    if (!this.d.admin?.()) throw erroGrupo('O WhatsApp não oficial não está configurado em Conexões.', 422);
+    await this.liberarGrupos(true);
+    const rodada = this.descobrir({ recentes: true });
+    this.fundo(rodada);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const limite = new Promise<null>((ok) => (timer = setTimeout(() => ok(null), esperarMs)));
+    const r = await Promise.race([rodada, limite]).finally(() => clearTimeout(timer));
+    if (r) return r;
+    const lista = await this.d.armazem.listar(this.d.empresaId);
+    return { grupos: lista.length, novos: 0, mensagens: 0, emAndamento: true };
+  }
+
+  // ---------- arquivar ----------
+
+  /**
+   * Arquiva ou desarquiva o grupo na Sintonia e tenta fazer o mesmo no WhatsApp do celular.
+   * A Evolution v2.3.7 não conta o que foi arquivado no celular; daqui para lá, funciona se ela tiver
+   * alguma mensagem do grupo guardada. `noCelular` diz se aplicou lá também.
+   */
+  async arquivar(g: Grupo, arquivar: boolean): Promise<{ arquivado: boolean; noCelular: boolean }> {
+    await this.d.armazem.arquivar(g.id, arquivar, this.agora());
+    const admin = this.d.admin?.();
+    let noCelular = false;
+    if (admin && this.numero(g.canalId)?.canal.tipo === 'evolution' && g.canalId.startsWith(PREFIXO_INSTANCIA)) {
+      try {
+        await admin.arquivarConversa(g.canalId, g.jid, arquivar);
+        noCelular = true;
+      } catch (e) {
+        this.log('Conversas de grupo: o celular não aceitou arquivar', String(e).slice(0, 200));
+      }
+    }
+    return { arquivado: arquivar, noCelular };
   }
 
   // ---------- envio ----------

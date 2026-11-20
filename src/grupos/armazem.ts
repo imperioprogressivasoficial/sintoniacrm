@@ -16,9 +16,13 @@ export interface Grupo {
   nome: string | null;
   participantes: number | null;
   temFoto: boolean;
+  /** Endereço da foto guardada (a Evolution troca quando a foto muda). */
+  fotoUrl: string | null;
   /** Quando nome e foto foram lidos da Evolution (null = ainda não). */
   infoEm: Date | null;
   ultimaEm: Date | null;
+  /** Arquivado (como no WhatsApp): sai da lista principal e vai para "Arquivadas". */
+  arquivado: boolean;
 }
 
 export interface AnexoGrupo {
@@ -59,8 +63,10 @@ export interface ArmazemGrupos {
   listar(empresaId: string): Promise<Grupo[]>;
   /** Última mensagem de cada grupo. */
   ultimas(grupoIds: string[]): Promise<Map<string, MensagemGrupo>>;
-  atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date): Promise<void>;
-  guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null): Promise<void>;
+  /** Nome e quantas pessoas. `em` = quando foi lido da Evolution (null: só o nome, sem mexer no cache). */
+  atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date | null): Promise<void>;
+  guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null, url?: string | null): Promise<void>;
+  arquivar(id: string, arquivado: boolean, em: Date): Promise<void>;
   foto(id: string): Promise<{ conteudo: Buffer; tipo: string } | undefined>;
   /**
    * Grava a mensagem (repetida pelo id externo é ignorada e devolve undefined).
@@ -91,7 +97,7 @@ export class ArmazemGruposMemoria implements ArmazemGrupos {
     const k = chaveGrupo(p.empresaId, p.canalId, p.jid);
     let g = this.grupos.get(k);
     if (!g) {
-      g = { id: randomUUID(), ...p, nome: null, participantes: null, temFoto: false, infoEm: null, ultimaEm: null };
+      g = { id: randomUUID(), ...p, nome: null, participantes: null, temFoto: false, fotoUrl: null, infoEm: null, ultimaEm: null, arquivado: false };
       this.grupos.set(k, g);
     }
     return { ...g };
@@ -118,19 +124,24 @@ export class ArmazemGruposMemoria implements ArmazemGrupos {
     }
     return r;
   }
-  async atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date) {
+  async atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date | null) {
     const g = this.porId(id);
     if (!g) return;
     if (info.nome !== undefined && info.nome !== null) g.nome = info.nome;
     if (info.participantes !== undefined && info.participantes !== null) g.participantes = info.participantes;
-    g.infoEm = em;
+    if (em) g.infoEm = em;
   }
-  async guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null) {
+  async guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null, url?: string | null) {
     const g = this.porId(id);
     if (!g) return;
     if (foto) this.fotos.set(id, foto);
     else this.fotos.delete(id);
     g.temFoto = Boolean(foto);
+    g.fotoUrl = foto ? (url ?? null) : null;
+  }
+  async arquivar(id: string, arquivado: boolean) {
+    const g = this.porId(id);
+    if (g) g.arquivado = arquivado;
   }
   async foto(id: string) {
     return this.fotos.get(id);
@@ -196,10 +207,12 @@ interface LinhaGrupo {
   nome: string | null;
   participantes: number | null;
   tem_foto: boolean;
+  foto_url: string | null;
   info_em: Date | null;
   ultima_em: Date | null;
+  arquivado: boolean;
 }
-const COLUNAS_GRUPO = 'id, empresa_id, canal_id, unidade, jid, nome, participantes, foto is not null as tem_foto, info_em, ultima_em';
+const COLUNAS_GRUPO = 'id, empresa_id, canal_id, unidade, jid, nome, participantes, foto is not null as tem_foto, foto_url, info_em, ultima_em, arquivado';
 const doGrupo = (r: LinhaGrupo): Grupo => ({
   id: r.id,
   empresaId: r.empresa_id,
@@ -209,8 +222,10 @@ const doGrupo = (r: LinhaGrupo): Grupo => ({
   nome: r.nome,
   participantes: r.participantes,
   temFoto: r.tem_foto,
+  fotoUrl: r.foto_url,
   infoEm: r.info_em,
   ultimaEm: r.ultima_em,
+  arquivado: r.arquivado,
 });
 
 interface LinhaMensagem {
@@ -281,14 +296,17 @@ export class ArmazemGruposPostgres implements ArmazemGrupos {
     );
     return new Map(rows.map((r) => [r.grupo_id, daMensagem(r)]));
   }
-  async atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date) {
+  async atualizarInfo(id: string, info: { nome?: string | null; participantes?: number | null }, em: Date | null) {
     await this.pool.query(
-      'update sintonia.grupos set nome = coalesce($2, nome), participantes = coalesce($3, participantes), info_em = $4 where id = $1',
+      'update sintonia.grupos set nome = coalesce($2, nome), participantes = coalesce($3, participantes), info_em = coalesce($4, info_em) where id = $1',
       [id, info.nome ?? null, info.participantes ?? null, em],
     );
   }
-  async guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null) {
-    await this.pool.query('update sintonia.grupos set foto = $2, foto_tipo = $3 where id = $1', [id, foto?.conteudo ?? null, foto?.tipo ?? null]);
+  async guardarFoto(id: string, foto: { conteudo: Buffer; tipo: string } | null, url?: string | null) {
+    await this.pool.query('update sintonia.grupos set foto = $2, foto_tipo = $3, foto_url = $4 where id = $1', [id, foto?.conteudo ?? null, foto?.tipo ?? null, foto ? (url ?? null) : null]);
+  }
+  async arquivar(id: string, arquivado: boolean, em: Date) {
+    await this.pool.query('update sintonia.grupos set arquivado = $2, arquivado_em = case when $2 then $3::timestamptz else null end where id = $1', [id, arquivado, em]);
   }
   async foto(id: string) {
     if (!ehUuid(id)) return undefined;

@@ -73,6 +73,8 @@ export function registrarGrupos(app: FastifyInstance, o: OpcoesRotasGrupos): voi
   app.get('/api/grupos', async (req) => {
     // Primeira vez (e depois de hora em hora): desliga o "ignorar grupos" da Evolution, por trás.
     o.grupos.prepararPorTras();
+    // Lista completa (arquivados e grupos sem mensagem recente), por trás e com cache de 30 min.
+    o.grupos.descobrirPorTras();
     const lista = (await o.armazem.listar(o.empresaId)).filter(ve(req));
     const ids = lista.map((g) => g.id);
     const [ultimas, naoLidas] = await Promise.all([
@@ -91,11 +93,20 @@ export function registrarGrupos(app: FastifyInstance, o: OpcoesRotasGrupos): voi
           participantes: g.participantes,
           temFoto: g.temFoto,
           ultimaEm: g.ultimaEm,
+          arquivado: g.arquivado,
           naoLidas: naoLidas.get(g.id) ?? 0,
           ultima: u ? { autor: u.autor, nome: quemMandou(u), texto: u.texto.slice(0, 140), em: u.em, anexo: u.anexo?.tipo ?? null } : null,
         };
       });
-    return { grupos, naoLidas: grupos.filter((g) => g.naoLidas > 0).length, podeSincronizar: !req.usuario || ehGestor(req.usuario) };
+    const arquivados = grupos.filter((g) => g.arquivado);
+    return {
+      grupos,
+      // Como no WhatsApp: os arquivados não entram no contador do menu (ficam em "Arquivadas").
+      naoLidas: grupos.filter((g) => !g.arquivado && g.naoLidas > 0).length,
+      arquivadas: { total: arquivados.length, naoLidas: arquivados.filter((g) => g.naoLidas > 0).length },
+      buscando: o.grupos.emDescoberta,
+      podeSincronizar: !req.usuario || ehGestor(req.usuario),
+    };
   });
 
   app.get('/api/grupos/:id/mensagens', async (req) => {
@@ -103,7 +114,7 @@ export function registrarGrupos(app: FastifyInstance, o: OpcoesRotasGrupos): voi
     const q = Pagina.parse(req.query);
     const mensagens = await o.armazem.mensagens(g.id, q.limite, q.antes ? new Date(q.antes) : undefined);
     return {
-      grupo: { id: g.id, nome: nomeDoGrupo(g), participantes: g.participantes, temFoto: g.temFoto, unidade: g.unidade },
+      grupo: { id: g.id, nome: nomeDoGrupo(g), participantes: g.participantes, temFoto: g.temFoto, unidade: g.unidade, arquivado: g.arquivado },
       mensagens: mensagens.map(paraTelaMensagem),
       mais: mensagens.length === q.limite,
     };
@@ -113,6 +124,14 @@ export function registrarGrupos(app: FastifyInstance, o: OpcoesRotasGrupos): voi
     const g = await grupoVisivel(req);
     if (req.usuario) await o.armazem.marcarLida(req.usuario.id, [g.id], new Date());
     return { ok: true };
+  });
+
+  // Arquivar/desarquivar: na Sintonia sempre; no celular quando a Evolution aceita (noCelular).
+  const Arquivar = z.object({ arquivar: z.boolean() });
+  app.post('/api/grupos/:id/arquivar', async (req) => {
+    const { arquivar } = Arquivar.parse(req.body);
+    const g = await grupoVisivel(req);
+    return { ok: true, ...(await o.grupos.arquivar(g, arquivar)) };
   });
 
   app.post('/api/grupos/:id/enviar', async (req) => {

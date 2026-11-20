@@ -72,12 +72,12 @@ export class EvolutionAdmin {
     this.base = baseUrl.replace(/\/$/, '');
   }
 
-  private async chamar<T>(metodo: string, caminho: string, corpo?: unknown): Promise<T> {
+  private async chamar<T>(metodo: string, caminho: string, corpo?: unknown, timeoutMs = 15_000): Promise<T> {
     const resp = await this.fetchFn(`${this.base}${caminho}`, {
       method: metodo,
       headers: { apikey: this.apiKey, ...(corpo ? { 'content-type': 'application/json' } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     const texto = await resp.text();
     if (!resp.ok) {
@@ -306,10 +306,43 @@ export class EvolutionAdmin {
     return r ? lerGrupo(r) : null;
   }
 
-  /** Todos os grupos em que o número está (GET /group/fetchAllGroups, sem a lista de pessoas). */
+  /**
+   * Todos os grupos em que o número está, arquivados ou não (GET /group/fetchAllGroups, sem a lista de pessoas).
+   * Demora com muitos grupos (a Evolution busca a foto de um por um): espera até 3 minutos.
+   */
   async listarGrupos(nome: string): Promise<InfoGrupo[]> {
-    const r = await this.chamar<unknown>('GET', `/group/fetchAllGroups/${encodeURIComponent(nome)}?getParticipants=false`);
+    const r = await this.chamar<unknown>('GET', `/group/fetchAllGroups/${encodeURIComponent(nome)}?getParticipants=false`, undefined, 180_000);
     return (Array.isArray(r) ? r : []).map((g) => lerGrupo(g as Record<string, unknown>)).filter((g): g is InfoGrupo => Boolean(g));
+  }
+
+  /** Grupos que têm conversa guardada na Evolution (POST /chat/findChats, só "@g.us"): rápido, só jid e nome. */
+  async chatsDeGrupo(nome: string): Promise<Array<{ jid: string; nome: string | null }>> {
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {}, 60_000);
+    const lista = (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>;
+    const saida = new Map<string, string | null>();
+    for (const c of lista) {
+      const jid = typeof c.remoteJid === 'string' ? c.remoteJid : '';
+      if (!jid.endsWith('@g.us')) continue;
+      const n = typeof c.pushName === 'string' && c.pushName.trim() && !c.pushName.includes('@') ? c.pushName.trim() : typeof c.name === 'string' && c.name.trim() ? c.name.trim() : null;
+      if (!saida.has(jid) || (n && !saida.get(jid))) saida.set(jid, n);
+    }
+    return [...saida].map(([jid, n]) => ({ jid, nome: n }));
+  }
+
+  /** As últimas `quantas` mensagens de um grupo guardadas na Evolution (formato do webhook). */
+  async mensagensDoGrupo(nome: string, jid: string, quantas = 50): Promise<unknown[]> {
+    const r = await this.chamar<Record<string, unknown>>('POST', `/chat/findMessages/${encodeURIComponent(nome)}`, { where: { key: { remoteJid: jid } }, page: 1, offset: quantas }, 30_000);
+    const msgs = (r?.messages as Record<string, unknown> | undefined)?.records ?? r?.records ?? (Array.isArray(r) ? r : []);
+    return Array.isArray(msgs) ? msgs : [];
+  }
+
+  /**
+   * Arquiva (ou desarquiva) a conversa no WhatsApp do celular (POST /chat/archiveChat). A Evolution precisa ter
+   * alguma mensagem dessa conversa guardada; sem ela, recusa (e a Sintonia arquiva só do lado dela).
+   */
+  async arquivarConversa(nome: string, jid: string, arquivar: boolean): Promise<void> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    await this.chamar('POST', `/chat/archiveChat/${encodeURIComponent(nome)}`, { chat: jid, archive: arquivar }, 20_000);
   }
 
   /** Mensagens recentes dos grupos guardadas na Evolution (formato do webhook): os `grupos` mais recentes. */
