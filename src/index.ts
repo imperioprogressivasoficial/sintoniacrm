@@ -347,7 +347,8 @@ const followup = new Followup({
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
 // Finalizar atendimento + pesquisa de satisfação (src/nps): lê a nota na resposta da cliente; dispara as automações.
-const nps = new Nps({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: pool ? new ArmazemNpsPostgres(pool) : new ArmazemNpsMemoria(), repo, sintonia: () => sintonia, automacoes: () => automacoes, log });
+const armazemNps = pool ? new ArmazemNpsPostgres(pool) : new ArmazemNpsMemoria();
+const nps = new Nps({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: armazemNps, repo, sintonia: () => sintonia, automacoes: () => automacoes, log });
 // Radar (src/radar): a equipe coloca a conversa no radar; a IA confere cada mensagem nova e o prazo; avisa e, se pedido, responde.
 const radar = new Radar({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -516,6 +517,7 @@ const app = criarServidor({
     },
   },
   origens: (ids) => rastreio.selos(ids),
+  finalizadas: (ids) => armazemNps.ultimasFinalizacoes(ids),
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({
     iaLigada,

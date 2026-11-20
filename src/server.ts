@@ -91,6 +91,8 @@ export interface DependenciasServidor {
   /** Presença da equipe ("Disponível para atender"). */
   presencas?: Presencas;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
+  /** Última vez que cada conversa foi finalizada (selo verde "Finalizado" na lista). */
+  finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
 }
@@ -318,12 +320,13 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     /* conversas-gestos: "marcar como não lida" feito à mão (arrastar a linha ou segurar o dedo) */
     const marcadas = d.leituras && req.usuario ? await d.leituras.marcadasNaoLidas(req.usuario.id) : new Set<string>();
     const origens = d.origens ? await d.origens(lista.map((c) => c.id)).catch(() => ({}) as Record<string, never>) : undefined;
+    const finalizadas = d.finalizadas ? await d.finalizadas(lista.map((c) => c.id)).catch(() => new Map<string, Date>()) : new Map<string, Date>();
     return lista
       .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 

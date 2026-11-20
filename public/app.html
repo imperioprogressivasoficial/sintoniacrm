@@ -1683,7 +1683,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const l2 = el('div', { class: 'l2' }, previa, quemAtende(c));
       /* radar: no Radar, o que está vigiando (ou o que aconteceu); no Esperando, há quanto tempo. */
       if (estado.filtro === 'radar') { const m = window.SintoniaTelas?.radar?.etiqueta(c.id); if (m) l2.append(m); }
-      if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
+      /* espera-selo: o tempo esperando vira cronômetro no lugar do horário (abaixo); aqui fica o horário em que chegou. */
+      const tsHora = horaLista(u ? u.em : c.atualizadaEm); const tsSelo = window.SintoniaTelas?.esperaSelo;
+      if (tsSelo) { const ch = tsSelo.chegou(c, tsHora); if (ch) l2.append(ch); }
+      else if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
       if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
@@ -1691,7 +1694,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
-          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : '', el('span', { class: 'hora' + (nova ? ' nova' : ''), text: horaLista(u ? u.em : c.atualizadaEm) })),
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : '', tsSelo ? tsSelo.hora(c, tsHora) : el('span', { class: 'hora' + (nova ? ' nova' : ''), text: tsHora })),
           l2)));
     }
   }
@@ -3265,6 +3268,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/instalar.js" defer></script>
 <script src="/telas/alertas.js" defer></script>
+<script src="/telas/espera-selo.js" defer></script>
 <script src="/telas/chat-ia.js" defer></script>
 <script src="/telas/serena.js" defer></script>
 <script src="/telas/ligacoes.js" defer></script>

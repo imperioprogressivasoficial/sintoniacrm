@@ -9,6 +9,8 @@ export interface ArmazemNps {
   salvarFinalizacao(f: Finalizacao): Promise<void>;
   finalizacoesDa(conversaId: string, limite: number): Promise<Finalizacao[]>;
   finalizacoesEntre(empresaId: string, inicio: Date, fim: Date): Promise<Finalizacao[]>;
+  /** Quando cada conversa foi finalizada pela última vez (só as que já foram). Usado no selo verde da lista. */
+  ultimasFinalizacoes(conversaIds: string[]): Promise<Map<string, Date>>;
 
   salvarPesquisa(p: Pesquisa): Promise<void>;
   /** A pesquisa aberta (esperando nota ou comentário) mais nova da conversa. */
@@ -48,6 +50,12 @@ export class ArmazemNpsMemoria implements ArmazemNps {
   }
   async finalizacoesEntre(empresaId: string, inicio: Date, fim: Date) {
     return this.finalizacoes.filter((f) => f.empresaId === empresaId && dentro(f.em, inicio, fim)).map(copia);
+  }
+  async ultimasFinalizacoes(conversaIds: string[]) {
+    const quer = new Set(conversaIds);
+    const r = new Map<string, Date>();
+    for (const f of this.finalizacoes) if (quer.has(f.conversaId) && (!r.has(f.conversaId) || f.em > r.get(f.conversaId)!)) r.set(f.conversaId, new Date(f.em));
+    return r;
   }
   async salvarPesquisa(p: Pesquisa) {
     this.pesquisas.set(p.id, copia(p));
@@ -172,6 +180,16 @@ export class ArmazemNpsPostgres implements ArmazemNps {
   async finalizacoesDa(conversaId: string, limite: number) {
     const { rows } = await this.pool.query<LinhaFinalizacao>(`select ${COLUNAS_F} from sintonia.atendimentos_finalizados where conversa_id = $1 order by em desc limit $2`, [conversaId, limite]);
     return rows.map(finalizacaoDaLinha);
+  }
+  async ultimasFinalizacoes(conversaIds: string[]) {
+    const r = new Map<string, Date>();
+    if (!conversaIds.length) return r;
+    const { rows } = await this.pool.query<{ conversa_id: string; em: Date }>(
+      'select conversa_id, max(em) as em from sintonia.atendimentos_finalizados where conversa_id = any($1::uuid[]) group by conversa_id',
+      [conversaIds],
+    );
+    for (const l of rows) r.set(l.conversa_id, new Date(l.em));
+    return r;
   }
   async finalizacoesEntre(empresaId: string, inicio: Date, fim: Date) {
     const { rows } = await this.pool.query<LinhaFinalizacao>(`select ${COLUNAS_F} from sintonia.atendimentos_finalizados where empresa_id = $1 and em >= $2 and em < $3`, [
