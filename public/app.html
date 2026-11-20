@@ -803,6 +803,7 @@
   .atende.atende-eu { background: var(--marca-azul); color: #fff; box-shadow: none; }
   .atende.atende-ia { background: color-mix(in srgb, var(--marca-menta) 22%, transparent); color: #078a6a; box-shadow: inset 0 0 0 1px rgba(15,252,190,.6), 0 0 10px rgba(15,252,190,.35); }
   .atende.com-foto { width: 22px; min-width: 22px; padding: 0; color: transparent; }
+  .atende.atende-ia.com-foto { overflow: hidden; background: none; } .atende.atende-ia.com-foto img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
   [data-tema="escuro"] .atende { color: #8fd0ff; } [data-tema="escuro"] .atende.atende-eu { color: #fff; } [data-tema="escuro"] .atende.atende-ia { color: var(--marca-menta); }
   .item .l1 .nome { min-width: 0; flex: 0 1 auto; } .item .l1 .hora { margin-left: auto; }
   .lt-raio svg { color: #f5b800 !important; filter: drop-shadow(0 0 6px rgba(245,184,0,.55)); }
@@ -1649,7 +1650,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const origemConhecida = (c) => !!window.SintoniaRastreio && ((c.origem?.icone && c.origem.icone !== 'desconhecido') || !!window.SintoniaRastreio.selo(c.id));
   // Ao lado do nome: quem está atendendo (IA, a inicial da atendente, ou ninguém).
   function quemAtende(c) {
-    if (c.modo === 'ia') return el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' });
+    if (c.modo === 'ia') { const sf = window.SintoniaSerenaFoto; /* IA atendendo = foto da Serena (pedido do dono 20/11) */
+      return sf ? el('span', { class: 'atende atende-ia com-foto', title: 'A Serena (IA) está atendendo', 'aria-label': 'A Serena (IA) está atendendo' }, el('img', { src: sf, alt: '', width: '22', height: '22', decoding: 'async' }))
+        : el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' }); }
     if (!c.responsavelId) return '';
     const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
     return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);

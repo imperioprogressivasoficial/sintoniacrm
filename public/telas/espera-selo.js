@@ -4,21 +4,22 @@
  *   O horário em que a mensagem chegou continua visível, pequeno, na linha de baixo.
  * - Já respondemos e a cliente ainda não voltou: horário em vidro branco (a bola está com ela).
  * - Atendimento finalizado (e ela não escreveu depois): horário em verde com um ✓.
+ * Sem fundo nem contorno: só o texto na cor do estado.
  * Registra window.SintoniaTelas.esperaSelo = { hora(c, u), chegou(c) }. O relógio atualiza só o texto, 1x por segundo,
  * e só quando há cronômetro na tela (nada de animação). */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const CSS = `
-  .ts-selo { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px;
-    font: 600 11.5px/1 var(--fonte, system-ui); font-variant-numeric: tabular-nums; letter-spacing: .01em; white-space: nowrap;
-    color: var(--ts-cor); background: var(--ts-fundo); border: 1px solid var(--ts-borda); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+  /* Sem contorno (pedido do dono 20/11): só o texto colorido com o reloginho. */
+  .ts-selo { flex: none; margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 0;
+    font: 600 12px/1 var(--fonte, system-ui); font-variant-numeric: tabular-nums; letter-spacing: .01em; white-space: nowrap; color: var(--ts-cor); }
+  .ts-selo.neutro:not(.espera) { font-weight: 500; }
   .ts-selo svg { width: 11px; height: 11px; flex: none; opacity: .85; }
   .ts-selo.neutro { --ts-cor: var(--sub, #5b6b80); --ts-fundo: rgba(255,255,255,.55); --ts-borda: rgba(13,34,64,.10); }
   .ts-selo.espera.neutro { --ts-cor: var(--texto, #0d2240); }
   .ts-selo.amarelo { --ts-cor: #8a5a00; --ts-fundo: rgba(245,183,0,.13); --ts-borda: rgba(245,183,0,.38); }
   .ts-selo.vermelho { --ts-cor: #b3261e; --ts-fundo: rgba(229,57,53,.09); --ts-borda: rgba(229,57,53,.30); }
   .ts-selo.verde { --ts-cor: #0b7a52; --ts-fundo: rgba(15,190,130,.10); --ts-borda: rgba(15,190,130,.32); }
-  html[data-tema="escuro"] .ts-selo { box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
   html[data-tema="escuro"] .ts-selo.neutro { --ts-cor: rgba(255,255,255,.72); --ts-fundo: rgba(255,255,255,.07); --ts-borda: rgba(255,255,255,.12); }
   html[data-tema="escuro"] .ts-selo.espera.neutro { --ts-cor: #fff; }
   html[data-tema="escuro"] .ts-selo.amarelo { --ts-cor: #ffd666; --ts-fundo: rgba(255,200,40,.10); --ts-borda: rgba(255,200,40,.28); }
@@ -26,7 +27,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .ts-selo.verde { --ts-cor: #5ef0b8; --ts-fundo: rgba(15,252,190,.08); --ts-borda: rgba(15,252,190,.24); }
   .ts-chegou { flex: none; font: 500 11px/1 var(--fonte, system-ui); color: var(--sub, #5b6b80); font-variant-numeric: tabular-nums; white-space: nowrap; }
   @media (max-width: 760px) {
-    .ts-selo { height: 22px; padding: 0 9px; font-size: 12.5px; }
+    .ts-selo { font-size: 14px; }
     .ts-chegou { font-size: 12px; margin-top: 3px; }
   }
   /* O destaque antigo (linha inteira vermelha + selo vermelho forte) sai: o selo novo já mostra a espera. */
