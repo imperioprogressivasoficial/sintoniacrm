@@ -81,9 +81,9 @@ try {
   const REDE_EVOLUTION = process.env.EVOLUTION_REDE ?? 'rainha-saas_default';
   const VOLUME_CHAVE = process.env.EVOLUTION_VOLUME_CHAVE ?? 'rainha-saas_app';
   const comEvolution = Boolean(REDE_EVOLUTION);
-  // Presença da equipe (disponível / fora do ar): serviço pequeno à parte (deploy/presenca, vai dentro do pacote
-  // e roda do volume do app, já conferido pela soma). PRESENCA=0 desliga.
-  const comPresenca = process.env.PRESENCA !== '0';
+  // Presença da equipe (disponível / fora do ar) agora é do próprio app (/api/presenca, tabela presencas).
+  // O serviço antigo à parte (deploy/presenca) só volta com PRESENCA=1.
+  const comPresenca = process.env.PRESENCA === '1';
   // Transcrição de áudio grátis no próprio servidor (faster-whisper em CPU, modelo small). WHISPER=0 desliga.
   const comWhisper = process.env.WHISPER !== '0';
   // Cópia do banco todo dia (pg_dump), um arquivo por dia da semana (sobrescreve: guarda 7 dias). COPIA=0 desliga.
