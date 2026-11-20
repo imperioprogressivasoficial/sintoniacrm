@@ -1,10 +1,9 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 11:23 UTC (20/11, 08h23 na Bahia)
-commit: 855f49c
-pacote sha256: d2333ad4ac608427ce0365d866db9323ac487484f4b47b603ee8ee41e7e62499
+data: 2026-11-20 11:39 UTC (20/11, 08h39 na Bahia)
+commit: 78d9777
+pacote sha256: bc0d6ab43b665a98d7185348dbb309d0d34e3b39622ad7077341140249fe8328
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-855f49c.b64); pode apagar depois.
-observação: em cima do 34c49d0. Entra o 2º lote da auditoria: presença dentro do app (tabela presencas, migração 310; o
-  serviço "presenca" saiu do compose, o volume sintonia_presenca ficou órfão no servidor), links rastreados aceitam DDD,
-  relatórios na mesma base, selo real da IA no Plano, ajustes de tela, "Instalar o app" e "Ativar notificações".
-  Conferido: /saude 200, /api/presenca 200 pelo app, /telas/instalar.js 200.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-78d9777.b64); pode apagar depois.
+observação: em cima do 855f49c. Entra: cobrança pelo Asaas (desligada até cadastrar a chave em Conexões › Outras
+  configurações › Pagamentos; webhook /webhooks/asaas) e Agenda com os horários marcados direto no Trinks (cache de 60 s;
+  Avec/AppBarber ainda não suportam). Conferido: /saude 200, /webhooks/asaas 401 sem token.

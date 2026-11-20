@@ -26,10 +26,10 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 ## Onde parei
 **Última atualização:** 20/11/2026, 02h10 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` = 855f49c (2º lote da auditoria); antes 34c49d0 (ver `deploy/no-ar.txt`): Dashboard novo, consertos da auditoria, transcrição grátis,
+- **No ar:** `producao` = 78d9777 (Asaas + agenda Trinks); antes 855f49c (ver `deploy/no-ar.txt`): Dashboard novo, consertos da auditoria, transcrição grátis,
   cópia diária do banco, monitor (status.n8nimperio.tech) e estatísticas (estatisticas.n8nimperio.tech).
-- **Auditoria completa (20/11):** 103 funcionalidades. Lotes 1 e 2 de consertos publicados. Falta: agenda mostrar o
-  que é marcado direto no Trinks; cobrança real do Plano; ligações pelo app; testar push num iPhone real.
+- **Auditoria completa (20/11):** 103 funcionalidades. Lotes 1 e 2 de consertos publicados. Agenda Trinks e cobrança Asaas
+  publicadas (validar com chave real). Ligação pelo app: só pela API oficial do WhatsApp (decisão do dono pendente).
 - **Aguardando o dono:** modelo do menu "Mais" em cascata (5 modelos enviados); tirar ou não os avisos de falha das
   Movimentações; chave nova do Claude (cadastrar em Conexões › Outras configurações); QR Code do WhatsApp; Trinks; e-mail.
 - **Regras do dono:** 5 modelos antes de design; sem animação rodando o tempo todo; cor brilho #0ffcbe→#3aa0ff;
