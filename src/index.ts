@@ -47,6 +47,7 @@ import { registrarFunis } from './rotas/funis.js';
 import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
+import { fontesDoBanco, funisComEtapas } from './serena/acoes.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorComReserva, TranscritorLocal, TranscritorOpenAI } from './conversa/transcricao.js';
 import { montarExtras, registrarExtras } from './rotas/extras.js';
@@ -655,6 +656,13 @@ registrarConversa(app, {
   },
   modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
   controleIa: () => agentesIa.servico.controle(),
+  // Serena cria coisas no CRM (sempre com prévia e "Salvar"): scripts, fluxos, links de agendamento e etiquetas.
+  serenaAcoes: (empresaId) => ({
+    ...(pool ? fontesDoBanco(pool, empresaId) : {}),
+    funis: async () => funisComEtapas(await funis.listar(), await tags.listar()),
+    tags: () => tags.listar(),
+    conferirAutomacao: (d) => automacoes.conferir(d),
+  }),
 });
 
 // Dados de demonstração: só administração e direção (src/demo/rotas.ts).
