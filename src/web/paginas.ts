@@ -87,6 +87,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/serena.js': { arquivo: 'telas/serena.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ligacoes.js': { arquivo: 'telas/ligacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/funil.js': { arquivo: 'telas/funil.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/funil-celular.js': { arquivo: 'telas/funil-celular.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/automacoes.js': { arquivo: 'telas/automacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/bot.js': { arquivo: 'telas/bot.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/relatorios.js': { arquivo: 'telas/relatorios.js', tipo: 'text/javascript; charset=utf-8' },
@@ -94,6 +95,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/transmissoes.js': { arquivo: 'telas/transmissoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/email.js': { arquivo: 'telas/email.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/followup.js': { arquivo: 'telas/followup.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/radar.js': { arquivo: 'telas/radar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/email-conexoes.js': { arquivo: 'telas/email-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/logos-conexoes.js': { arquivo: 'telas/logos-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/catalogo-conexoes.js': { arquivo: 'telas/catalogo-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
@@ -109,9 +111,13 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/clientes.js': { arquivo: 'telas/clientes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/respostas.js': { arquivo: 'telas/respostas.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/reunioes.js': { arquivo: 'telas/reunioes.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/rotina.js': { arquivo: 'telas/rotina.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/chanfro.js': { arquivo: 'telas/chanfro.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },
+  // Tela "Estamos atualizando melhorias" (camada do app durante uma publicação; a página inteira é /atualizando.html).
+  '/telas/atualizando.js': { arquivo: 'telas/atualizando.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
   '/sw.js': { arquivo: 'sw.js', tipo: 'text/javascript; charset=utf-8' },
   '/manifest.webmanifest': { arquivo: 'manifest.webmanifest', tipo: 'application/manifest+json' },
@@ -187,6 +193,36 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
       return reply.send(ler(arquivo));
     });
   }
+
+  // Página de atualização: guardada pelo service worker (public/sw.js) e mostrada quando o servidor está reiniciando.
+  // Precisa ser autossuficiente, então o script da tela entra aqui dentro.
+  let paginaAtualizando: Buffer | null = null;
+  app.get('/atualizando.html', async (_req, reply) => {
+    if (!paginaAtualizando) {
+      const js = ler('telas/atualizando.js').toString('utf8').replace(/<\/script/gi, '<\\/script');
+      paginaAtualizando = Buffer.from(ler('atualizando.html').toString('utf8').replace('<script data-embutir="/telas/atualizando.js"></script>', () => `<script>\n${js}</script>`), 'utf8');
+    }
+    return reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-cache')
+      .header('x-content-type-options', 'nosniff')
+      .header('x-robots-tag', 'noindex')
+      .send(paginaAtualizando);
+  });
+
+  // Endereço que não existe: página 404 da Sintonia para quem navega; JSON para a API, webhooks e chamadas do app.
+  app.setNotFoundHandler(async (req, reply) => {
+    const caminho = req.url.split('?')[0]!;
+    const html = (req.method === 'GET' || req.method === 'HEAD') && !/^\/(api|webhooks)(\/|$)/.test(caminho) && String(req.headers.accept ?? '').includes('text/html');
+    if (!html) return reply.code(404).send({ erro: 'Endereço não encontrado.', statusCode: 404 });
+    return reply
+      .code(404)
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-store, max-age=0')
+      .header('x-content-type-options', 'nosniff')
+      .header('x-robots-tag', 'noindex')
+      .send(ler('404.html'));
+  });
 
   // Painel da sala comercial na TV: público, sem login. A página só mostra algo se o token valer
   // (os números vêm de /tv/:token/dados, em src/comercial/rotas.ts).

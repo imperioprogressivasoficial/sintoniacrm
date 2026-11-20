@@ -47,6 +47,8 @@ export type TipoEvento =
   | 'followup'
   /** A cliente respondeu à confirmação de agenda (dados: status confirmado|remarcar, agendamento, inicio, servico). */
   | 'confirmacao'
+  /** Radar (src/radar): dados.acao = 'disparou' (motivo, origem, vigiar, donoId, iaResponde). */
+  | 'radar'
   | 'falha';
 
 export interface Evento {

@@ -10,6 +10,7 @@ import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
 import { registrarReunioes } from './reunioes/reunioes.js';
+import { registrarRotina } from './rotina/rotina.js';
 import { registrarPresenca, type Presencas } from './presenca/presenca.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
@@ -85,6 +86,8 @@ export interface DependenciasServidor {
   layoutsPainel?: LayoutsPainel;
   /** Banco para o link de agendamento e os scripts de venda (só com Postgres). */
   poolReunioes?: import('pg').Pool;
+  /** Rotina do vendedor (tarefas e checklist do dia): src/rotina/rotina.ts. */
+  poolRotina?: import('pg').Pool;
   /** Presença da equipe ("Disponível para atender"). */
   presencas?: Presencas;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
@@ -108,6 +111,9 @@ export interface OpcoesWebhookMeta {
   status?: (lista: StatusRecebido[]) => Promise<unknown>;
 }
 
+/** Identifica este início do servidor (muda a cada publicação/reinício). */
+const VERSAO_SERVIDOR = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const app = Fastify({ logger: false });
   const log = d.log ?? (() => {});
@@ -121,6 +127,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       // JSON quebrado é erro de quem mandou (400), não do servidor.
       feito(Object.assign(e as Error, { statusCode: 400 }), undefined);
     }
+  });
+
+  // Toda resposta do nosso servidor leva x-sintonia: 1. Assim o app e o service worker sabem que um 404/502 sem ele
+  // veio do proxy (servidor reiniciando numa publicação) e mostram "Estamos atualizando melhorias" (public/telas/atualizando.js).
+  // x-sintonia-versao muda a cada início do servidor: o app recarrega quando volta de uma atualização.
+  app.addHook('onSend', async (_req, reply, corpo) => {
+    reply.header('x-sintonia', '1').header('x-sintonia-versao', VERSAO_SERVIDOR);
+    return corpo;
   });
 
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
@@ -567,6 +581,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
   if (d.poolReunioes) registrarReunioes(app, d.poolReunioes);
+  if (d.poolRotina) registrarRotina(app, { pool: d.poolRotina, contas: d.auth?.contas, repo: d.repo, visivelPara, agora });
   if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
 
   // ---------- Tags, aba IA, painel completo e empresa ----------

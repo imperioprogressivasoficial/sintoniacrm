@@ -315,6 +315,49 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     .srn-raiz *, .srn-raiz *::after, .srn-raiz { animation: none !important; transition: none !important; }
     body.srn-menu-aberto .trilho, body .trilho { transition: none !important; }
   }
+  /* ===== serena-acoes: cartões do que a Serena vai criar (prévia + Salvar/Ajustar/Abrir no app) ===== */
+  .srn-art { margin: 10px 0 4px; padding: 0; overflow: hidden; border-radius: 18px; position: relative; }
+  .srn-art::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, #0ffcbe, #3aa0ff); opacity: .9; }
+  .srn-art-cab { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+  .srn-art-ic { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+  .srn-art-ic svg { width: 18px; height: 18px; }
+  .srn-art-tit { flex: 1; min-width: 0; display: grid; gap: 1px; }
+  .srn-art-tit small { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--sub); text-transform: uppercase; }
+  .srn-art-tit b { font-size: 15px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+  .srn-art-selo { flex: none; font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: var(--srn-acao); color: var(--srn-azul); }
+  .srn-art-selo.ok { background: rgba(10,143,122,.12); color: #0a8f7a; } html[data-tema="escuro"] .srn-art-selo.ok { background: rgba(15,252,190,.14); color: #0ffcbe; }
+  .srn-art-corpo { padding: 2px 14px 12px; display: grid; gap: 8px; }
+  .srn-art-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .srn-art-chip { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--srn-acao); color: var(--texto); }
+  .srn-art-texto { margin: 0; white-space: pre-wrap; font: inherit; font-size: 13.8px; line-height: 1.55; max-height: 240px; overflow: auto; padding: 10px 12px; border-radius: 12px; background: rgba(8,36,63,.04); }
+  html[data-tema="escuro"] .srn-art-texto { background: rgba(255,255,255,.05); }
+  .srn-art-texto.aberto { max-height: none; }
+  .srn-art-mais { all: unset; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--srn-azul); justify-self: start; min-height: 28px; }
+  .srn-art-linhas { display: grid; gap: 6px; margin: 0; }
+  .srn-art-linhas div { display: flex; gap: 10px; font-size: 13.5px; } .srn-art-linhas dt { color: var(--sub); flex: none; width: 108px; } .srn-art-linhas dd { margin: 0; font-weight: 600; }
+  .srn-art-pe { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid var(--linha); }
+  .srn-art-pe .srn-acao.forte { background: linear-gradient(135deg, #106ebe, #3aa0ff); color: #fff; }
+  .srn-art-pe .srn-acao[aria-busy="true"] { opacity: .6; pointer-events: none; }
+  /* fluxo: gatilho → condições → ações, em cartões ligados */
+  .srn-fluxo { display: grid; gap: 0; }
+  .srn-no { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 9px 11px; border-radius: 14px; background: var(--vidro-forte, rgba(255,255,255,.8)); box-shadow: inset 0 0 0 1px var(--linha); }
+  html[data-tema="escuro"] .srn-no { background: rgba(255,255,255,.05); }
+  .srn-liga { width: 1.5px; height: 14px; margin-left: 24px; background: linear-gradient(#0ffcbe, #3aa0ff); }
+  .srn-no-ic { flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--srn-acao); color: var(--srn-azul); }
+  .srn-no-ic svg { width: 16px; height: 16px; }
+  .srn-no.gatilho .srn-no-ic { background: linear-gradient(135deg, #0ffcbe, #3aa0ff); color: #08243f; }
+  .srn-no.cond .srn-no-ic { background: rgba(245,184,0,.16); color: #b07d00; } html[data-tema="escuro"] .srn-no.cond .srn-no-ic { color: #f5c842; }
+  .srn-no-txt { min-width: 0; display: grid; gap: 1px; }
+  .srn-no-txt small { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--sub); }
+  .srn-no-txt b { font-size: 13.8px; font-weight: 650; }
+  .srn-no-txt span { font-size: 13px; color: var(--sub); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .srn-ramos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-left: 14px; padding-left: 10px; border-left: 1.5px dashed var(--linha); }
+  .srn-ramo { display: grid; align-content: start; gap: 0; }
+  .srn-ramo > em { font-style: normal; font-size: 11.5px; font-weight: 700; margin: 6px 0 4px; color: #0a8f7a; } .srn-ramo.nao > em { color: #c2410c; }
+  html[data-tema="escuro"] .srn-ramo > em { color: #0ffcbe; } html[data-tema="escuro"] .srn-ramo.nao > em { color: #ff9b73; }
+  .srn-ramo-vazio { font-size: 12.5px; color: var(--sub); padding: 4px 0; }
+  @media (max-width: 520px) { .srn-ramos { grid-template-columns: 1fr; } }
+
   `;
 
   // ---------- histórico neste aparelho (por pessoa) ----------
@@ -590,9 +633,131 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       acoes.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => folhaEnviar(rasc[0], m.clientes) }, el('span', { html: SVG.aviao, style: 'display:grid' }), document.createTextNode('Enviar na conversa')));
       acoes.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => mandar('Deixe a mensagem mais curta.') }, el('span', { html: SVG.encurtar, style: 'display:grid' }), document.createTextNode('Mais curta')));
     }
+    if (Array.isArray(m.artefatos)) for (const a of m.artefatos) { const c = cartaoArtefato(m, a); if (c) corpo.append(c); }
     if (!m.local) corpo.append(acoes);
     return el('div', { class: 'srn-m ia' + (nova ? ' srn-entra-msg' : ''), role: 'article', 'aria-label': 'Serena' }, fotoP(false), corpo);
   }
+
+  // ---------- serena-acoes: cartões do que a Serena vai criar (só salva no "Salvar") ----------
+  const ART = {
+    script: { rotulo: 'Script de venda', vista: 'scripts', ic: '<path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20Z"/><path d="M15 3.5V8h4M10 12h6M10 15.5h6"/>' },
+    automacao: { rotulo: 'Fluxo de automação', vista: 'automacoes', ic: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/>' },
+    link: { rotulo: 'Link de agendamento', vista: 'reunioes', ic: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/>' },
+    etiqueta: { rotulo: 'Etiqueta', vista: 'funil', ic: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>' },
+  };
+  const IC_NO = {
+    gatilho: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/>',
+    enviar_mensagem: '<path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/>',
+    esperar: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    condicao: '<path d="M6 4v5a4 4 0 0 0 4 4h4a4 4 0 0 1 4 4v3M18 4v5a4 4 0 0 1-4 4"/><circle cx="6" cy="4" r="1.5"/>',
+    lembrete_ligacao: '<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/>',
+    mover_etapa: '<path d="M4 12h14M13 6l6 6-6 6"/>',
+    marcar_tag: ART.etiqueta.ic, desmarcar_tag: ART.etiqueta.ic,
+    fluxo_ia: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4.5"/>',
+    mudar_modo: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M17 8h4M19 6v4"/>',
+  };
+  const icone = (d) => el('span', { html: I(d), style: 'display:grid' });
+  const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  function noFluxo(n, gatilho) {
+    const c = el('div', { class: 'srn-no' + (gatilho ? ' gatilho' : n.tipo === 'condicao' ? ' cond' : '') },
+      el('span', { class: 'srn-no-ic', html: I(IC_NO[gatilho ? 'gatilho' : n.tipo] || IC_NO.mover_etapa) }),
+      el('span', { class: 'srn-no-txt' }, gatilho ? el('small', { text: 'Quando' }) : null, el('b', { text: n.titulo }), n.detalhe ? el('span', { text: n.detalhe }) : null));
+    return c;
+  }
+  function listaFluxo(nos) {
+    const frag = document.createDocumentFragment();
+    nos.forEach((n, i) => {
+      if (i) frag.append(el('i', { class: 'srn-liga', 'aria-hidden': 'true' }));
+      frag.append(noFluxo(n));
+      if (n.tipo === 'condicao') {
+        const ramo = (lista, sim) => el('div', { class: 'srn-ramo' + (sim ? '' : ' nao') }, el('em', { text: sim ? 'Se sim' : 'Se não' }),
+          lista && lista.length ? listaFluxo(lista) : el('span', { class: 'srn-ramo-vazio', text: 'Não faz nada' }));
+        frag.append(el('div', { class: 'srn-ramos' }, ramo(n.entao, true), ramo(n.senao, false)));
+      }
+    });
+    return frag;
+  }
+  function corpoArtefato(a) {
+    const d = a.dados || {};
+    const corpo = el('div', { class: 'srn-art-corpo' });
+    if (a.tipo === 'script') {
+      if (d.etapa) corpo.append(el('div', { class: 'srn-art-chips' }, el('span', { class: 'srn-art-chip', text: `Etapa: ${d.etapa}` })));
+      const pre = el('pre', { class: 'srn-art-texto', text: String(d.texto || '') });
+      corpo.append(pre);
+      if (String(d.texto || '').length > 420) corpo.append(el('button', { type: 'button', class: 'srn-art-mais', text: 'Ver tudo', onclick: (e) => { pre.classList.toggle('aberto'); e.currentTarget.textContent = pre.classList.contains('aberto') ? 'Ver menos' : 'Ver tudo'; } }));
+    } else if (a.tipo === 'automacao' && a.fluxo) {
+      const f = el('div', { class: 'srn-fluxo' }, noFluxo(a.fluxo.gatilho, true));
+      if (a.fluxo.passos.length) f.append(el('i', { class: 'srn-liga', 'aria-hidden': 'true' }), listaFluxo(a.fluxo.passos));
+      corpo.append(f);
+      if (a.estado !== 'salvo') corpo.append(el('span', { class: 'srn-ramo-vazio', text: 'Fica desligado ao salvar: você liga em Automações quando quiser.' }));
+    } else if (a.tipo === 'link') {
+      const linha = (k, v) => el('div', {}, el('dt', { text: k }), el('dd', { text: v }));
+      corpo.append(el('dl', { class: 'srn-art-linhas' },
+        linha('Duração', `${d.duracao_min} min`),
+        linha('Dias', (d.dias || []).map((x) => DIAS_CURTOS[x]).join(', ')),
+        linha('Horário', `${d.inicio} às ${d.fim}`),
+        linha('Antecedência', `${d.antecedencia_h ?? 2} h`),
+        d.local ? linha('Local', d.local) : null));
+      if (d.descricao) corpo.append(el('pre', { class: 'srn-art-texto', text: d.descricao }));
+    } else if (a.tipo === 'etiqueta') {
+      const chip = el('span', { class: 'srn-art-chip', text: d.nome });
+      if (/^#[0-9a-f]{6}$/i.test(d.cor || '')) { chip.style.background = d.cor; chip.style.color = '#fff'; }
+      corpo.append(el('div', { class: 'srn-art-chips' }, chip));
+    }
+    return corpo;
+  }
+  async function salvarArtefato(m, a, bt) {
+    bt.setAttribute('aria-busy', 'true');
+    try {
+      const d = a.dados || {};
+      let r;
+      if (a.tipo === 'script') r = a.acao === 'editar' && a.alvoId ? await api(`/api/scripts/${encodeURIComponent(a.alvoId)}`, { method: 'PUT', body: JSON.stringify(d) }) : await post('/api/scripts', d);
+      else if (a.tipo === 'automacao') r = await post('/api/automacoes', d);
+      else if (a.tipo === 'link') r = await post('/api/reunioes/links', d);
+      else if (a.tipo === 'etiqueta') r = await post('/api/tags', d);
+      a.estado = 'salvo';
+      if (r && r.id && !a.alvoId) a.salvoId = r.id;
+      if (r && r.slug) a.slug = r.slug;
+      gravarHistorico();
+      toast(`${ART[a.tipo].rotulo} salvo ✓`);
+      ultimoQtd = 1e9; desenharMiolo();
+    } catch (x) {
+      bt.removeAttribute('aria-busy');
+      toast(x.message || 'Não deu para salvar agora.');
+    }
+  }
+  function ajustarArtefato(a) {
+    R.campo.value = `Quero ajustar ${a.tipo === 'automacao' ? 'o fluxo' : a.tipo === 'script' ? 'o script' : a.tipo === 'link' ? 'o link' : 'a etiqueta'}: `;
+    ajustarCampo(); atualizarEnviar();
+    R.campo.focus({ preventScroll: true });
+    R.campo.setSelectionRange(R.campo.value.length, R.campo.value.length);
+  }
+  function cartaoArtefato(m, a) {
+    const tipo = ART[a.tipo];
+    if (!tipo) return null;
+    const salvo = a.estado === 'salvo';
+    const pe = el('div', { class: 'srn-art-pe' });
+    if (!salvo) {
+      const bt = el('button', { type: 'button', class: 'srn-acao forte' }, icone('<path d="m5 12.5 4.5 4.5L19 7.5"/>'), document.createTextNode(a.acao === 'editar' ? 'Salvar mudanças' : 'Salvar'));
+      bt.addEventListener('click', () => salvarArtefato(m, a, bt));
+      pe.append(bt, el('button', { type: 'button', class: 'srn-acao', onclick: () => ajustarArtefato(a) }, icone('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>'), document.createTextNode('Ajustar')));
+    }
+    if (a.tipo === 'link' && a.slug) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => copiar(`${location.origin}/r/${a.slug}`) }, icone('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/>'), document.createTextNode('Copiar link')));
+    pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => { fecharMenu(); ui.mostrar(tipo.vista); } }, icone('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>'), document.createTextNode('Abrir no app')));
+    return el('section', { class: 'srn-art srn-vidro', 'aria-label': `${tipo.rotulo}: ${a.titulo}` },
+      el('div', { class: 'srn-art-cab' }, el('span', { class: 'srn-art-ic', html: I(tipo.ic) }),
+        el('span', { class: 'srn-art-tit' }, el('small', { text: a.acao === 'editar' ? `${tipo.rotulo} · edição` : tipo.rotulo }), el('b', { text: a.titulo })),
+        el('span', { class: 'srn-art-selo' + (salvo ? ' ok' : ''), text: salvo ? 'Salvo ✓' : 'Prévia' })),
+      corpoArtefato(a), pe);
+  }
+  /** O que a IA lê das mensagens anteriores: o cartão (e se foi salvo) vem antes do texto, para não ser cortado. */
+  function textoParaIa(m) {
+    if (m.papel !== 'ia' || !Array.isArray(m.artefatos) || !m.artefatos.length) return m.texto;
+    const notas = m.artefatos.map((a) => `[cartão ${ART[a.tipo]?.rotulo || a.tipo} "${a.titulo}": ${a.estado === 'salvo' ? 'a pessoa SALVOU' : 'ainda NÃO salvo'}] ${JSON.stringify(a.dados || {}).slice(0, 2500)}`);
+    return `${notas.join('\n')}\n\n${m.texto}`.slice(0, 11000);
+  }
+  /* serena-acoes: fim */
   function bolhaEu(m, nova) {
     const b = el('div', { class: 'srn-m eu' + (nova ? ' srn-entra-msg' : '') });
     if (m.miniatura) b.append(el('img', { src: m.miniatura, alt: 'Imagem enviada' }));
@@ -658,11 +823,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function pedir(imagem) {
     const c = atual(); if (!c) return;
     enviando = true; falha = null; desenharMiolo();
-    const mensagens = c.msgs.filter((m) => !m.local).slice(-20).map((m) => ({ papel: m.papel, texto: m.texto }));
+    const mensagens = c.msgs.filter((m) => !m.local).slice(-20).map((m) => ({ papel: m.papel, texto: textoParaIa(m) }));
     if (imagem && mensagens.length) mensagens[mensagens.length - 1].imagem = imagem;
     try {
       const r = await post('/api/ia/chat', { mensagens });
-      c.msgs.push({ papel: 'ia', texto: String(r.texto || ''), ...(r.clientes ? { clientes: r.clientes } : {}) });
+      c.msgs.push({ papel: 'ia', texto: String(r.texto || ''), ...(r.clientes ? { clientes: r.clientes } : {}), ...(Array.isArray(r.artefatos) && r.artefatos.length ? { artefatos: r.artefatos.map((a) => ({ ...a, estado: 'previa' })) } : {}) });
       c.em = Date.now(); gravarHistorico();
     } catch (x) {
       falha = { texto: x.message || 'Não deu certo agora.', semChave: x.status === 501 || /chave da IA/i.test(x.message || '') };

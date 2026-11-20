@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
 <script>/* Sem zoom com os dedos nem com toque duplo: a ferramenta já se ajusta à tela. */(()=>{const nao=(e)=>e.preventDefault();['gesturestart','gesturechange','gestureend'].forEach((t)=>document.addEventListener(t,nao,{passive:false}));document.addEventListener('touchmove',(e)=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});})();</script>
+<!-- atualizando: durante uma publicação, mostra "Estamos atualizando melhorias" em vez de erro (antes de qualquer fetch). -->
+<script src="/telas/atualizando.js"></script>
 <title>Conexões · Sintonia</title>
 <meta name="theme-color" content="#eef4fb" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#04121f" media="(prefers-color-scheme: dark)">
