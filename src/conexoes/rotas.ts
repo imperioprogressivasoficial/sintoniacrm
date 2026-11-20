@@ -377,6 +377,11 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     return evolution().conectar(id, webhookDe(req), numero);
   });
 
+  app.get('/api/conexoes/whatsapp/canais/:id/diagnostico', async (req) => {
+    await quem(req);
+    return evolution().diagnosticoHistorico(IdCanal.parse((req.params as { id: string }).id));
+  });
+
   // Puxa as conversas recentes do WhatsApp para a Sintonia (tela "Sincronizando" depois de conectar).
   app.post('/api/conexoes/whatsapp/canais/:id/sincronizar', async (req) => {
     await quem(req);

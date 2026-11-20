@@ -161,6 +161,16 @@ export class EvolutionAdmin {
    * Conversas recentes guardadas na Evolution (sem grupos), no formato do webhook: as últimas `porConversa`
    * mensagens de cada uma das `conversas` mais recentes.
    */
+  /** Resumo do que a Evolution guarda (diagnóstico da sincronização; sem conteúdo de mensagens). */
+  async diagnosticoHistorico(nome: string): Promise<{ chats: number; tipos: Record<string, number>; campos: string[] }> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {});
+    const lista = (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>;
+    const tipos: Record<string, number> = {};
+    for (const c of lista) { const k = String(c.remoteJid ?? c.id ?? '?').split('@')[1] ?? 'sem'; tipos[k] = (tipos[k] ?? 0) + 1; }
+    return { chats: lista.length, tipos, campos: Object.keys(lista[0] ?? (Array.isArray(chats) ? {} : (chats as Record<string, unknown>) ?? {})) };
+  }
+
   async historico(nome: string, o: { conversas?: number; porConversa?: number } = {}): Promise<unknown[]> {
     if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
     const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {});
