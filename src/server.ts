@@ -95,6 +95,8 @@ export interface DependenciasServidor {
   finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
+  /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
+  grupos?: { aoWebhook(corpo: unknown): Promise<number> };
 }
 
 export interface OpcoesWebhookMeta {
@@ -214,6 +216,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
         log('Histórico do WhatsApp em formato estranho', String(e));
       }
       d.whatsappSaude?.aoMensagem(instancia);
+      /* grupos: o histórico dos grupos vai para Conversas de grupo */
+      d.grupos?.aoWebhook(corpo).catch((e) => log('Falha ao importar histórico dos grupos', String(e)));
       const p = progressoHistorico.get(instancia) ?? { mensagens: 0, conversas: 0, em: new Date() };
       progressoHistorico.set(instancia, { ...p, em: new Date() });
       d.sintonia.importarHistorico(historico).then((r) => {
@@ -233,9 +237,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const recebida = mensagens.filter((m) => !m.deMim).at(-1);
     if (recebida) d.whatsappSaude?.aoMensagem(instancia, recebida.em);
     else if (mensagens.length) d.whatsappSaude?.aoMensagem(instancia, undefined);
+    /* grupos: mensagem de grupo do WhatsApp (Conversas de grupo), sem IA, funil, alarme nem automações */
+    const grupos = d.grupos ? await d.grupos.aoWebhook(corpo).catch((e) => (log('Falha ao gravar mensagem de grupo', String(e)), 0)) : 0;
+    if (grupos && !mensagens.length) d.whatsappSaude?.aoMensagem(instancia, undefined);
     const chamadas = d.chamadas ? await registrarChamadasWhatsapp(corpo).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
     // Se gravar na fila falhar, responde erro: a Evolution reenvia (as repetidas são ignoradas pelo id).
-    return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}) };
+    return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}), ...(grupos ? { grupos } : {}) };
   });
 
   // Faixa "WhatsApp desconectado" no app (qualquer pessoa logada vê; só a administração reconecta).
