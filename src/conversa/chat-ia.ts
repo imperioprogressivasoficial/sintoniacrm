@@ -6,6 +6,7 @@ import { UNIDADES } from '../unidades.js';
 import { partesBahia } from '../util/tempo.js';
 import { ErroAssistente } from './assistente.js';
 import type { SugestaoLigacao } from '../app/ligacoes.js';
+import type { AcoesSerena, Artefato } from '../serena/acoes.js';
 
 /**
  * Serena (botão do meio da barra; antes "Ajuda da IA"): um chat (como o ChatGPT) para a equipe do salão.
@@ -70,7 +71,15 @@ Regras:
 - Quando citar uma cliente que aparece no contexto com "ref", ponha a referência logo depois do nome, assim: Fabiana Matos [[c3]]. Para listar clientes, use um item "- " por cliente com a referência e o motivo curto. Nunca invente referências.
 - Você pode escrever mensagens prontas para a equipe mandar às clientes (ex.: chamar clientes sumidas, responder quem achou caro), no jeito de WhatsApp, curtas e calorosas, sem prometer preço ou horário que não esteja no contexto. Ponha a mensagem pronta sozinha num parágrafo, entre aspas ("assim"), para a equipe copiar.
 - Se a pessoa mandar uma imagem (por exemplo, o print de uma conversa), leia o que dá para ler e ajude com base nela.
-- Você não executa ações no sistema (não envia, não agenda, não move no CRM); explique como a pessoa faz pelo app quando perguntarem.`;
+- Você não envia mensagens, não agenda clientes e não move conversas no CRM; explique como a pessoa faz pelo app quando perguntarem.`;
+
+/** Quando a Serena pode criar coisas no CRM (ferramentas "mostrar_…"): sempre com prévia e confirmação. */
+const INSTRUCOES_ACOES = `Criar coisas no CRM (scripts, fluxos de automação, links de agendamento, etiquetas):
+- Converse como gente: entenda o objetivo e pergunte só o que faltar (uma ou duas perguntas por vez). Se já der para montar uma boa primeira versão, monte e deixe a pessoa ajustar.
+- Para mostrar o que vai criar, chame a ferramenta "mostrar_…" certa. Ela aparece para a pessoa como um cartão com os botões Salvar, Ajustar e Abrir no app. Você NUNCA salva: só a pessoa salva, clicando em Salvar. Nunca diga que salvou ou criou; diga que montou a prévia.
+- Para fluxos de automação, chame antes "consultar_crm" e use só ids reais de etapas e etiquetas. Se faltar uma etapa ou etiqueta, diga qual falta e sugira criar antes.
+- Se a pessoa pedir ajuste, chame a ferramenta de novo com a versão nova inteira.
+- Nas mensagens anteriores, "[cartão …]" mostra o que já foi mostrado e se a pessoa salvou.`;
 
 const hm = (d: Date) => {
   const p = partesBahia(d);
@@ -196,32 +205,58 @@ export function paraMensagensClaude(mensagens: MensagemChat[]): Array<{ role: 'u
   return [...saida.slice(0, -1), { role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: imagem.tipo, data: imagem.dados } }, { type: 'text', text: ultima.content }] }];
 }
 
+/** Rodadas de ferramenta por mensagem (consultar → mostrar → corrigir…). */
+export const LIMITE_RODADAS = 6;
+
 export async function conversarComIa(
   claude: ClienteClaude,
   opcoes: { modelo: string },
   mensagens: MensagemChat[],
   contexto: ContextoChat,
-): Promise<{ texto: string; clientes?: Record<string, ClienteCitada> }> {
-  const msgs = paraMensagensClaude(mensagens);
-  const resp = await claude.beta.messages.create({
-    model: opcoes.modelo,
-    max_tokens: 4000,
-    system: [
-      { type: 'text', text: `${INSTRUCOES}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>`, cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: `<contexto>\n${montarContexto(contexto)}\n</contexto>` },
-    ],
-    messages: msgs as Anthropic.Beta.Messages.BetaMessageParam[],
-    output_config: { effort: 'low' },
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-  });
-  if (resp.stop_reason === 'refusal') throw new ErroAssistente('A IA não quis responder este pedido. Tente perguntar de outro jeito.', 422);
-  const texto = resp.content
-    .filter((b): b is Anthropic.Beta.Messages.BetaTextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('\n')
-    .trim();
+  acoes?: AcoesSerena,
+): Promise<{ texto: string; clientes?: Record<string, ClienteCitada>; artefatos?: Artefato[] }> {
+  type Msg = Anthropic.Beta.Messages.BetaMessageParam;
+  const msgs = paraMensagensClaude(mensagens) as Msg[];
+  const ferramentas = acoes?.ferramentas() ?? [];
+  const instrucoes = ferramentas.length ? `${INSTRUCOES}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES;
+  const regras = acoes ? `\n\n<o_que_voce_pode_criar>\n${acoes.regras()}\n</o_que_voce_pode_criar>` : '';
+  const textos: string[] = [];
+  for (let rodada = 0; ; rodada++) {
+    const resp = await claude.beta.messages.create({
+      model: opcoes.modelo,
+      max_tokens: 8000,
+      system: [
+        { type: 'text', text: `${instrucoes}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>`, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: `<contexto>\n${montarContexto(contexto)}\n</contexto>${regras}` },
+      ],
+      messages: msgs,
+      ...(ferramentas.length ? { tools: ferramentas } : {}),
+      output_config: { effort: 'low' },
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+    });
+    if (resp.stop_reason === 'refusal') throw new ErroAssistente('A IA não quis responder este pedido. Tente perguntar de outro jeito.', 422);
+    const texto = resp.content
+      .filter((b): b is Anthropic.Beta.Messages.BetaTextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n')
+      .trim();
+    if (texto) textos.push(texto);
+    const usos = resp.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === 'tool_use');
+    if (resp.stop_reason !== 'tool_use' || !usos.length || !acoes || rodada >= LIMITE_RODADAS) break;
+    // Devolve a resposta inteira (pensamento e chamadas) e todos os resultados numa mensagem só.
+    msgs.push({ role: 'assistant', content: resp.content as Anthropic.Beta.Messages.BetaContentBlockParam[] });
+    const resultados = await Promise.all(
+      usos.map(async (u) => {
+        const r = await acoes.executar(u.name, u.input);
+        return { type: 'tool_result' as const, tool_use_id: u.id, content: r.conteudo, ...(r.erro ? { is_error: true } : {}) };
+      }),
+    );
+    msgs.push({ role: 'user', content: resultados });
+  }
+  const artefatos = acoes?.artefatos.length ? [...acoes.artefatos] : undefined;
+  const texto = textos.join('\n\n').trim() || (artefatos ? 'Montei a prévia abaixo. Quer salvar ou ajustar alguma coisa?' : '');
   if (!texto) throw new ErroAssistente('A IA não devolveu nada agora. Tente de novo.', 502);
   const clientes = clientesCitadas(texto, referencias(contexto));
-  return Object.keys(clientes).length ? { texto, clientes } : { texto };
+  return { texto, ...(Object.keys(clientes).length ? { clientes } : {}), ...(artefatos ? { artefatos } : {}) };
 }

@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { minutosDoDia, partesBahia } from '../util/tempo.js';
 
 /** Tipos de notificação (cada um pode ser ligado/desligado nas preferências). */
-export const TIPOS_NOTIFICACAO = ['nova_cliente', 'mensagem', 'ia_equipe', 'espera', 'transferida', 'agendamento', 'agenda_mudou', 'lembrete_ligacao', 'falha'] as const;
+export const TIPOS_NOTIFICACAO = ['nova_cliente', 'mensagem', 'ia_equipe', 'espera', 'transferida', 'agendamento', 'agenda_mudou', 'lembrete_ligacao', 'falha', 'radar'] as const;
 /**
  * O que ainda vira notificação (só o que pede ação). "nova_cliente", "mensagem" e "agendamento" (a IA agendou)
  * não são mais criadas, e as antigas desses tipos não aparecem no sino nem contam (filtro na leitura).
  */
-export const TIPOS_VISIVEIS = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'falha', 'teste'] as const;
+export const TIPOS_VISIVEIS = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'radar', 'falha', 'teste'] as const;
 /** Categorias que aparecem nas preferências (engrenagem), na ordem da tela. */
-export const TIPOS_PREFERENCIA = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'falha'] as const;
+export const TIPOS_PREFERENCIA = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'radar', 'falha'] as const;
 export type TipoNotificacao = (typeof TIPOS_NOTIFICACAO)[number] | 'teste';
 
 export const NOME_TIPO: Record<(typeof TIPOS_NOTIFICACAO)[number], string> = {
@@ -22,6 +22,7 @@ export const NOME_TIPO: Record<(typeof TIPOS_NOTIFICACAO)[number], string> = {
   agenda_mudou: 'Agendamento cancelado ou remarcado',
   lembrete_ligacao: 'Lembrete de ligação',
   falha: 'Problemas que impedem o trabalho (WhatsApp, chave da IA)',
+  radar: 'Radar disparou',
 };
 
 export interface Notificacao {

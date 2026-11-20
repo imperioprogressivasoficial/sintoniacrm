@@ -13,6 +13,7 @@ import { relatorioDaConversa } from './relatorio.js';
 import { conversarComIa, LIMITE_IMAGEM_B64, LIMITE_TEXTO, TIPOS_IMAGEM } from './chat-ia.js';
 import { quemLigar } from '../app/ligacoes.js';
 import { resumoSerena, type ControleSerena } from '../serena/resumo.js';
+import { AcoesSerena, type FontesSerena } from '../serena/acoes.js';
 import { pode } from '../auth/permissoes.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
@@ -47,6 +48,8 @@ export interface OpcoesConversa {
   modoInicial?: () => Promise<ModoAtendimento>;
   /** "IA atende primeiro" por unidade (agentes de IA), para a tela Serena mostrar se ela está ligada. */
   controleIa?: () => Promise<ControleSerena>;
+  /** O que a Serena consulta para criar coisas no CRM (scripts, fluxos, links, etiquetas). Sem isto ela só conversa. */
+  serenaAcoes?: (empresaId: string) => FontesSerena;
 }
 
 const UNIDADE = z.enum(['norte', 'sumare', 'feira']);
@@ -239,6 +242,10 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
       return cli > 0 && cli > Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
     });
     try {
+      // Ferramentas da Serena: só prévias; quem salva é a pessoa, pelas rotas de sempre (que conferem a permissão de novo).
+      const acoes = o.serenaAcoes
+        ? new AcoesSerena(o.serenaAcoes(req.usuario?.empresaId ?? o.empresaId), { automacoes: pode(req, 'automacoes'), etiquetas: !req.usuario || ehGestor(req.usuario) })
+        : undefined;
       return await conversarComIa(o.ia.claude, { modelo: o.ia.modelo }, b.mensagens, {
         agora: ag,
         pessoa: req.usuario ? { nome: req.usuario.nome, papel: req.usuario.papel } : undefined,
@@ -247,7 +254,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
         esperando,
         agenda,
         ligar,
-      });
+      }, acoes);
     } catch (e) {
       if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
       const status = (e as { status?: number }).status;
