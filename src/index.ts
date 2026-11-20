@@ -513,7 +513,7 @@ const app = criarServidor({
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
-  ...(pool ? { poolReunioes: pool } : {}),
+  ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
   presencas: pool ? new PresencasPostgres(pool) : new PresencasMemoria(),
   gestao: {
     tags,
