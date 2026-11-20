@@ -6,12 +6,13 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const SVG = {
+    calendario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg>',
     pontos: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
     mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     tel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>',
     relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
     teclado: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="18" cy="5" r="1.7"/><circle cx="6" cy="11" r="1.7"/><circle cx="12" cy="11" r="1.7"/><circle cx="18" cy="11" r="1.7"/><circle cx="6" cy="17" r="1.7"/><circle cx="12" cy="17" r="1.7"/><circle cx="18" cy="17" r="1.7"/><circle cx="12" cy="22" r="1.5"/></svg>',
-    estrela: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/></svg>',
+    estrela: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.3 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10Z"/></svg>',
     estrelaCheia: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/></svg>',
     saiu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>',
     chegou: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17M15 17H7V9"/></svg>',
@@ -75,6 +76,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .lg-form label { display: grid; gap: 6px; font-size: 13.5px; color: var(--sub); }
   .lg-form input { font: inherit; font-size: 16px; color: var(--texto); background: var(--entrada); border: 1px solid var(--linha); border-radius: 12px; padding: 12px 14px; }
   .lg-sec { font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); margin: 14px 4px 8px; }
+  /* imperio: jeito do WhatsApp — só o círculo nos 4 botões, lista corrida sem cartão */
+  .lg-acoes { gap: 4px; margin: 4px 0 22px; }
+  .lg-acao { background: none !important; box-shadow: none !important; padding: 0; gap: 8px; font-size: 13.5px; font-weight: 400; color: var(--sub); }
+  .lg-acao i { width: 62px; height: 62px; color: var(--texto); background: var(--vidro-item, rgba(13,34,64,.06)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); transition: transform .15s ease; }
+  .lg-acao:active i { transform: scale(.94); }
+  .lg-acao i svg { width: 25px; height: 25px; }
+  .lg-acao b { font-weight: 400; }
+  .lg-cab h2 { font-size: 21px; font-weight: 600; }
+  .lg-cab .lg-chips { display: none; }
+  .lg-lista { background: none !important; box-shadow: none !important; border-radius: 0; overflow: visible; }
+  .lg-linha { padding: 9px 0; gap: 12px; }
+  .lg-linha + .lg-linha { border-top: 0; }
+  .lg-linha .lg-txt { align-self: stretch; align-content: center; border-bottom: 1px solid var(--linha); padding: 6px 0; }
+  .lg-linha:last-child .lg-txt { border-bottom: 0; }
+  .lg-linha:hover { background: none; }
+  .lg-linha .avatar { width: 48px; height: 48px; }
+  .lg-txt b { font-weight: 400; font-size: 16.5px; }
+  .lg-quando { font-size: 14px; }
+  .lg-ligar { width: 42px; height: 42px; color: var(--texto) !important; background: var(--vidro-item, rgba(13,34,64,.06)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); }
   `;
   const s = { ui: null, caixa: null, filtro: 'todas', itens: [], proximo: null, sugestoes: null, carregando: false };
   const ehCelular = () => matchMedia('(max-width: 760px)').matches || /Android|iPhone|iPad/.test(navigator.userAgent);
@@ -254,10 +274,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('h1', { class: 'titulo-grande', text: 'Ligações' }),
       el('div', { class: 'lg-acoes' },
         acao('Ligar', SVG.tel, () => escolherELigar('Ligar')),
-        acao('Programar', SVG.relogio, programar, prog ? `${prog} hoje` : ''),
+        acao('Programar', SVG.calendario, programar, prog ? `${prog} hoje` : ''),
         acao('Teclado', SVG.teclado, teclado),
         acao('Favoritos', SVG.estrela, favoritos)),
-      el('div', { class: 'lg-cab' }, el('h2', { text: 'Recentes' }), el('div', { class: 'lg-chips', role: 'group', 'aria-label': 'Filtro' }, chip('todas', 'Todas'), chip('perdidas', 'Perdidas'))),
+      el('div', { class: 'lg-cab' }, el('h2', { text: 'Ligações recentes' }), el('div', { class: 'lg-chips', role: 'group', 'aria-label': 'Filtro' }, chip('todas', 'Todas'), chip('perdidas', 'Perdidas'))),
       lista,
       s.proximo ? el('button', { class: 'lg-mais', type: 'button', text: 'Carregar mais', onclick: () => carregar(true) }) : null,
       el('p', { class: 'lg-nota', text: 'Efetuadas: registradas quando alguém toca em Ligar (a ligação sai do celular; sem duração). Recebidas e perdidas: avisadas pelo WhatsApp da loja.' })));
