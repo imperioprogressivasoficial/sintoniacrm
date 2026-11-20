@@ -13,6 +13,7 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
 
+- **20/11 16:10 UTC — no ar o 1d19ca6:** juntadas as branches claude/atualizando, claude/serena-acoes, claude/radar e claude/rotina. Em andamento (pararam no limite de uso, retomar): wt-whatsapp-estavel, wt-pipeline-celular, wt-respostas-fluxos, wt-nps-posvenda.
 - **20/11 15:40 UTC — no ar o 1a5d78f:** Agendamento online nativo (src/reunioes/reunioes.ts; o Cal.com não foi instalado: VPS já usa 6,3 de 8 GB) e Scripts de venda.
 - **20/11 15:25 UTC — no ar o 690711b:** WhatsApp: LID (remoteJidAlt), histórico ao conectar via webhook MESSAGES_SET (a Evolution do Rainha não guarda histórico: SAVE_DATA.HISTORIC desligado), `Sintonia.importarHistorico` sem IA/avisos. Grupos ainda são ignorados (pedido: aba Equipe com chat interno + grupos).
 - **20/11 14:56 UTC — no ar o 032a359:** menu reorganizado pelo dono e Dashboard do computador no modelo 3. Próximo: fluxos nas Respostas rápidas e o pipeline "Junção" no app (ver docs/PEDIDOS.md).

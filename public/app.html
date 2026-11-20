@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <style>html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
 <script>/* Sem zoom com os dedos nem com toque duplo: a ferramenta já se ajusta à tela. */(()=>{const nao=(e)=>e.preventDefault();['gesturestart','gesturechange','gestureend'].forEach((t)=>document.addEventListener(t,nao,{passive:false}));document.addEventListener('touchmove',(e)=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});})();</script>
+<!-- atualizando: durante uma publicação, mostra "Estamos atualizando melhorias" em vez de erro (antes de qualquer fetch). -->
+<script src="/telas/atualizando.js"></script>
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
@@ -1046,6 +1048,8 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
           <button class="nav lt-item" data-vista="ligacoes" title="Ligações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.6 3.5h2.6l1.6 4.3-2 1.3a11.5 11.5 0 0 0 6.1 6.1l1.3-2 4.3 1.6v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z"/></svg><span class="lt-rot">Ligações</span></button>
           <button class="nav lt-item" data-vista="respostas" title="Respostas rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg><span class="lt-rot">Respostas rápidas</span></button>
           <button class="nav lt-item" data-vista="reunioes" title="Agendamento online: link para o contato marcar reunião"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/></svg><span class="lt-rot">Agendamento online</span></button>
+          <!-- rotina: tarefas e checklist do dia do vendedor (public/telas/rotina.js) -->
+          <button class="nav lt-item" data-vista="rotina" title="Rotina: tarefas e checklist do dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/></svg><span class="lt-rot">Rotina</span><span class="lt-qtd" id="lt-rotina-qtd" hidden></span></button>
         </div></div>
       </div>
 
@@ -1156,8 +1160,9 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
           <div class="filtros" id="filtros">
             <button class="chip" data-f="todas" aria-pressed="true">Todas</button>
             <button class="chip" data-f="esperando" aria-pressed="false">Não lidas <span class="qtd" id="qtd-nao-lidas"></span></button>
+            <button class="chip" data-f="aguardando" aria-pressed="false" title="Clientes esperando resposta (lidas ou não)">Esperando</button>
             <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA atendendo</button>
-            <button class="chip chip-radar" data-f="radar" aria-pressed="false" title="Radar: clientes esperando resposta"><svg class="rd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" opacity=".5"/><g class="feixe"><path d="M12 12 L12 3"/></g><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>Radar<span class="radar-num" id="radar-num" hidden></span></button>
+            <button class="chip chip-radar" data-f="radar" aria-pressed="false" title="Radar: conversas que você colocou no radar"><svg class="rd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" opacity=".5"/><g class="feixe"><path d="M12 12 L12 3"/></g><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>Radar<span class="radar-num" id="radar-num" hidden></span></button>
           </div>
           <div class="filtros-ativos" id="filtros-ativos" hidden></div>
         </div>
@@ -1275,6 +1280,7 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
     <section class="vista" id="v-clientes"><div class="painel" id="clientes"></div></section>
     <section class="vista" id="v-respostas"><div class="painel" id="respostas"></div></section>
     <section class="vista" id="v-reunioes"><div class="painel" id="reunioes"></div></section>
+    <section class="vista" id="v-rotina"><div class="painel" id="rotina"></div></section>
     <section class="vista" id="v-scripts"><div class="painel" id="scripts"></div></section>
     <section class="vista" id="v-links"><div class="painel" id="links"></div></section>
     <section class="vista" id="v-comercial"><div class="painel" id="comercial-tela"></div></section>
@@ -1568,6 +1574,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     desenharLista?.();
   }
   addEventListener('sintonia:fotos', () => { try { redesenharFotos(); } catch {} });
+  addEventListener('sintonia:radar', () => { if (estado.conversas) desenharLista(); }); /* radar: lista muda quando o radar muda */
   const avatares = new Map();
   const avatarDaLista = (c) => { let a = avatares.get(c.id); if (!a || (semFoto.has(c.id) && a.querySelector('img'))) { a = avatar(c); avatares.set(c.id, a); } return a; };
   const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
@@ -1610,7 +1617,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts' || v === 'rotina') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
     window.SintoniaMenu?.vistaMudou?.(v);
   }
@@ -1623,8 +1630,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !naoLida(c)) return false;
     if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
-    // Radar: a cliente está esperando resposta (lida ou não).
-    if (estado.filtro === 'radar' && !esperando(c)) return false;
+    /* radar: o Radar mostra só as conversas colocadas no radar (public/telas/radar.js);
+       a lista antiga "esperando resposta" (lida ou não) virou o chip "Esperando". */
+    if (estado.filtro === 'radar' && !window.SintoniaTelas?.radar?.tem(c.id)) return false;
+    if (estado.filtro === 'aguardando' && !esperando(c)) return false;
     if (estado.quem === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if (estado.quem === 'sem' && c.responsavelId) return false;
     if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
@@ -1643,12 +1652,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
     return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);
   }
-  // Radar: quantas clientes esperam resposta (o número vermelho do chip; some no zero).
+  /* radar: número vermelho do chip = conversas no seu radar que dispararam e você ainda não viu (some no zero). */
   function contarRadar() {
     const b = $('radar-num'); if (!b) return;
-    const n = estado.conversas.filter((c) => esperando(c) && (!estado.unidadeFiltro || c.unidade === estado.unidadeFiltro)).length;
+    const n = window.SintoniaTelas?.radar?.alertas(estado.conversas.filter((c) => !estado.unidadeFiltro || c.unidade === estado.unidadeFiltro)) || 0;
     b.hidden = !n; b.textContent = n > 99 ? '99+' : String(n);
-    b.parentElement.setAttribute('aria-label', n ? `Radar: ${n} ${n === 1 ? 'cliente esperando' : 'clientes esperando'} resposta` : 'Radar: ninguém esperando resposta');
+    b.parentElement.setAttribute('aria-label', n ? `Radar: ${n} ${n === 1 ? 'aviso novo' : 'avisos novos'}` : 'Radar: conversas que você está vigiando');
   }
   const esperaTxt = (c) => { const m = Math.max(1, Math.round((Date.now() - new Date(c.ultimaMensagemCliente).getTime()) / 60000)); return 'Esperando ' + (m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`); };
   function desenharLista() {
@@ -1669,7 +1678,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       // Item limpo: foto, nome + ícone de origem, prévia, hora, não lidas e quem atende (sem etiquetas escritas).
       const l2 = el('div', { class: 'l2' }, previa, quemAtende(c));
-      if (estado.filtro === 'radar' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
+      /* radar: no Radar, o que está vigiando (ou o que aconteceu); no Esperando, há quanto tempo. */
+      if (estado.filtro === 'radar') { const m = window.SintoniaTelas?.radar?.etiqueta(c.id); if (m) l2.append(m); }
+      if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1', 'aria-label': 'Não lida' }));
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
@@ -1881,6 +1892,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     desenharConversa();
     desenharDono();
     window.SintoniaTelas?.followup?.seloConversa($('fu-selo'), estado.aberta, window.Sintonia.ui);
+    window.SintoniaTelas?.radar?.faixa(null, estado.aberta); /* radar: faixa da conversa */
   }
   function desenharConversa() {
     const { conversa: c, mensagens, sugestao } = estado.detalhe;
@@ -2848,6 +2860,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { nome: 'Ligações', ic: IC.ligacoes, cor: '#16a34a', acao: () => mostrar('ligacoes') },
         { nome: 'Respostas rápidas', ic: IC.respostas, cor: '#0a8f7a', acao: () => mostrar('respostas') },
         { nome: 'Agendamento online', sub: 'Link para o contato marcar reunião', ic: IC.agenda, cor: '#106ebe', acao: () => mostrar('reunioes') },
+        /* rotina: tarefas e checklist do dia; o valor mostra as atrasadas */
+        { nome: 'Rotina', sub: 'Tarefas e checklist do dia', valor: window.SintoniaTelas?.rotina?.valorMenu?.() || '', ic: I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), cor: '#0ea5e9', acao: () => mostrar('rotina') },
       ] },
       { id: 'vendas', titulo: 'Vendas (CRM)', ic: IC.funil, cor: '#106ebe', itens: [
         gestor && { nome: 'Criar novo pipeline', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.novoFunil?.(), 300); } },
@@ -3229,6 +3243,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/transmissoes.js" defer></script>
 <script src="/telas/email.js" defer></script>
 <script src="/telas/followup.js" defer></script>
+<script src="/telas/radar.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/instalar.js" defer></script>
@@ -3330,7 +3345,9 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/clientes.js" defer></script>
 <script src="/telas/respostas.js" defer></script>
 <script src="/telas/reunioes.js" defer></script>
+<script src="/telas/rotina.js" defer></script>
 <script src="/telas/scripts.js" defer></script>
+<script src="/telas/chanfro.js" defer></script>
 <script src="/telas/puxar.js" defer></script>
 <script>
 // imperio: presença da equipe (disponível / fora do ar)
