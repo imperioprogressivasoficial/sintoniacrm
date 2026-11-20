@@ -42,7 +42,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-- **20/11 21h35 (Bahia):** no ar 5608cf2 — TODOS os agentes do dia juntados (fluidez, grupos 410, equipe 420, clientes-tags 430, analises, layout-telas, marketing 450). Vistas: `chat-equipe` = chat interno; `acessos` = Atendentes e acessos (a antiga `equipe` ainda existe). Sem agentes rodando.
+- **20/11 21h35 (Bahia):** no ar 5608cf2 — TODOS os agentes do dia juntados (fluidez, grupos 410, equipe 420, clientes-tags 430, analises, layout-telas, marketing 450). Vistas: `chat-equipe` = chat interno; `acessos` = Atendentes e acessos (a antiga `equipe` ainda existe). Agentes rodando: conversa-ux, msg-agendada (470), auditoria (só docs), grupos v2 (arquivados), crm-topo (480), empresa-conta (490), integracoes (500), rotas-fontes.
 - **20/11 19h25 (Bahia):** no ar a8ae1c1 — largura total, sem barra de rolagem, Conversas em cascata. Agentes `grupos` (migração 410) e `equipe` (migração 420) construindo as telas que aparecem na cascata.
 - **20/11 19h10 (Bahia):** no ar d058a19 — tempo sem contorno, foto da Serena quando a IA atende. Antes: 963e38f — cronômetro de espera na lista (espera-selo.js) e foto da Serena embutida. Agente `fluidez` (branch claude/fluidez) ainda trabalhando: juntar, testar e publicar.
 **Última atualização:** 20/11/2026, 02h10 (Bahia) — Claude da conta do Bruno (Max).

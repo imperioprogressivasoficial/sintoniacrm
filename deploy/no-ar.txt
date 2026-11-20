@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 00:35 UTC (20/11, 21h35 na Bahia)
-commit: 5608cf2
-pacote sha256: d48ba5341e444d134ba817f3526a3f00766a53bea760e6cab565b513eb03965e
+data: 2026-11-21 00:50 UTC (20/11, 21h50 na Bahia)
+commit: da1e748
+pacote sha256: 3fed3822a8add2c254bf446d677278ce41877cc1b47eec09e567e5e304b96187
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-5608cf2.b64); pode apagar depois.
-observação: em cima do cece124. Entra: Análises novas (claude/analises), Clientes com abas + Tags completas (claude/clientes-tags, migração 430), telas em largura total + Acessos/Empresa/Planos como telas (claude/layout-telas), Central de criativos + conexão de anúncios consertada (claude/marketing, migração 450).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-da1e748.b64); pode apagar depois.
+observação: em cima do 5608cf2. Entra: menu com Grupos/Equipe numa linha e Vendas (CRM) renomeado para Pipelines.
