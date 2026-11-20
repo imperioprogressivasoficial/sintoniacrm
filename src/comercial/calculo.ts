@@ -409,3 +409,78 @@ export function primeiroNome(nome: string | null | undefined): string | null {
   if (!p || /\d/.test(p)) return null;
   return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
 }
+
+// ---------------------------------------------------------------- "Vendido no mês" (topo do Dashboard)
+
+export interface DiaVendido {
+  dia: string; // AAAA-MM-DD (Bahia)
+  valor: number | null;
+  agendamentos: number;
+}
+
+export interface VendidoDoMes {
+  mes: string;
+  /** Vendido = valor de quem compareceu (o mesmo critério das metas). null = a pessoa não vê dinheiro. */
+  valor: number | null;
+  agendamentos: number;
+  /** O mês anterior, do dia 1 até o mesmo ponto (mesmo dia e hora), para comparar sem desvantagem. */
+  anterior: { mes: string; valor: number | null; agendamentos: number; ate: Date };
+  /** Últimos 30 dias, um ponto por dia (o último é hoje). */
+  porDia: DiaVendido[];
+  podeVerValor: boolean;
+  /** 'equipe' (gestão: o time que ela vê) ou 'voce' (atendente: só as dela). */
+  de: 'equipe' | 'voce';
+}
+
+const p2 = (n: number) => String(n).padStart(2, '0');
+const isoBahia = (d: Date) => {
+  const p = partesBahia(d);
+  return `${p.ano}-${p2(p.mes)}-${p2(p.dia)}`;
+};
+
+/** Desde quando carregar para montar o "vendido": o menor entre o 1º dia do mês anterior e 29 dias atrás. */
+export function inicioVendido(agora: Date): Date {
+  const p = partesBahia(agora);
+  const mesAnterior = bahia(p.ano, p.mes - 1, 1);
+  const trintaDias = bahia(p.ano, p.mes, p.dia - 29);
+  return mesAnterior < trintaDias ? mesAnterior : trintaDias;
+}
+
+/**
+ * Vendido no mês, comparação com o mês anterior até o mesmo ponto e série dos últimos 30 dias.
+ * `vendas` deve cobrir de `inicioVendido(agora)` até `agora`.
+ */
+export function vendidoDoMes(vendas: Venda[], cfg: ConfigComercial, agora: Date, o: { podeVerValor: boolean; de: 'equipe' | 'voce' }): VendidoDoMes {
+  const p = partesBahia(agora);
+  const inicio = bahia(p.ano, p.mes, 1);
+  const inicioAnt = bahia(p.ano, p.mes - 1, 1);
+  const decorrido = agora.getTime() - inicio.getTime();
+  const ateAnt = new Date(Math.min(inicioAnt.getTime() + decorrido, inicio.getTime()));
+  const pa = partesBahia(inicioAnt);
+  const soma = (vs: Venda[]) => centavos(vs.filter((v) => v.compareceu).reduce((s, v) => s + valorDe(v, cfg.precos), 0));
+  const doMes = vendas.filter((v) => v.em >= inicio && v.em < agora);
+  const doAnt = vendas.filter((v) => v.em >= inicioAnt && v.em < ateAnt);
+  const dias: DiaVendido[] = [];
+  const indice = new Map<string, DiaVendido>();
+  for (let i = 29; i >= 0; i--) {
+    const d: DiaVendido = { dia: isoBahia(bahia(p.ano, p.mes, p.dia - i, 12)), valor: o.podeVerValor ? 0 : null, agendamentos: 0 };
+    dias.push(d);
+    indice.set(d.dia, d);
+  }
+  for (const v of vendas) {
+    if (v.em >= agora) continue;
+    const d = indice.get(isoBahia(v.em));
+    if (!d) continue;
+    d.agendamentos++;
+    if (d.valor !== null && v.compareceu) d.valor = centavos(d.valor + valorDe(v, cfg.precos));
+  }
+  return {
+    mes: `${p.ano}-${p2(p.mes)}`,
+    valor: o.podeVerValor ? soma(doMes) : null,
+    agendamentos: doMes.length,
+    anterior: { mes: `${pa.ano}-${p2(pa.mes)}`, valor: o.podeVerValor ? soma(doAnt) : null, agendamentos: doAnt.length, ate: ateAnt },
+    porDia: dias,
+    podeVerValor: o.podeVerValor,
+    de: o.de,
+  };
+}

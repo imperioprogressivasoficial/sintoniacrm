@@ -14,6 +14,8 @@ import {
   progresso,
   servicosMaisAgendados,
   valorDe,
+  inicioVendido,
+  vendidoDoMes,
   type Venda,
 } from '../src/comercial/calculo.js';
 import { FonteComercialMemoria, type FonteComercial } from '../src/comercial/fonte.js';
@@ -201,5 +203,72 @@ describe('Painel na TV (token)', () => {
   it('primeiro nome nunca leva sobrenome nem número', () => {
     expect(primeiroNome('maria DA silva')).toBe('Maria');
     expect(primeiroNome('5571999')).toBeNull();
+  });
+});
+
+describe('vendido no mês (topo do Dashboard)', () => {
+  const agora = bahia(2026, 11, 20, 15);
+  const precos = [{ servico: 'Selagem', valor: 150 }];
+  const vendas = [
+    venda({ em: bahia(2026, 11, 2, 10), valor: 300 }),
+    venda({ em: bahia(2026, 11, 20, 9), valor: 200 }),
+    venda({ em: bahia(2026, 11, 20, 11), valor: 500, compareceu: false }), // não compareceu: não é vendido
+    venda({ em: bahia(2026, 11, 19, 9), servico: 'Selagem' }), // sem valor: usa a tabela
+    venda({ em: bahia(2026, 10, 5, 10), valor: 400 }), // outubro, antes do mesmo ponto: conta
+    venda({ em: bahia(2026, 10, 25, 10), valor: 999 }), // outubro, depois do dia 20: não conta
+  ];
+
+  it('soma o mês, compara com o mês anterior até o mesmo ponto e monta 30 dias', () => {
+    expect(inicioVendido(agora)).toEqual(bahia(2026, 10, 1));
+    const r = vendidoDoMes(vendas, cfg({ precos }), agora, { podeVerValor: true, de: 'equipe' });
+    expect(r.mes).toBe('2026-11');
+    expect(r.valor).toBe(300 + 200 + 150);
+    expect(r.agendamentos).toBe(4);
+    expect(r.anterior).toMatchObject({ mes: '2026-10', valor: 400, agendamentos: 1 });
+    expect(r.anterior.ate).toEqual(bahia(2026, 10, 20, 15));
+    expect(r.porDia).toHaveLength(30);
+    expect(r.porDia.at(-1)).toEqual({ dia: '2026-11-20', valor: 200, agendamentos: 2 });
+    expect(r.porDia[0]!.dia).toBe('2026-10-22');
+    expect(r.porDia.find((d) => d.dia === '2026-10-25')).toMatchObject({ valor: 999, agendamentos: 1 });
+  });
+
+  it('sem permissão de ver dinheiro: só agendamentos, nenhum valor', () => {
+    const r = vendidoDoMes(vendas, cfg({ precos }), agora, { podeVerValor: false, de: 'voce' });
+    expect(r.valor).toBeNull();
+    expect(r.anterior.valor).toBeNull();
+    expect(r.porDia.every((d) => d.valor === null)).toBe(true);
+    expect(r.agendamentos).toBe(4);
+  });
+
+  it('janeiro compara com dezembro do ano anterior; março 31 compara até o fim de fevereiro', () => {
+    expect(vendidoDoMes([], cfg(), bahia(2027, 1, 10), { podeVerValor: true, de: 'equipe' }).anterior.mes).toBe('2026-12');
+    const mar = vendidoDoMes([], cfg(), bahia(2027, 3, 31, 12), { podeVerValor: true, de: 'equipe' });
+    expect(mar.anterior.ate).toEqual(bahia(2027, 3, 1));
+  });
+
+  it('na rota: a atendente vê só as dela e sem valor; a gestão vê o valor do time', async () => {
+    const usuarios: Usuario[] = [
+      { id: 'ana', empresaId: 'emp', nome: 'Ana Souza', email: 'a@x', papel: 'atendente', unidades: ['norte'], ativo: true },
+      { id: 'gi', empresaId: 'emp', nome: 'Gi Gerente', email: 'g@x', papel: 'gerente', unidades: ['norte', 'sumare'], ativo: true },
+    ];
+    const contas = { listarUsuarios: async () => usuarios } as unknown as Contas;
+    const hoje = new Date();
+    const fonte: FonteComercial = {
+      carregar: async (inicio, fim) => ({
+        vendas: [venda({ em: new Date(hoje.getTime() - 60_000), valor: 100 }), venda({ em: new Date(hoje.getTime() - 120_000), valor: 50, atendenteId: 'bia' })].filter((v) => v.em >= inicio && v.em < fim),
+        atendimento: [],
+      }),
+    };
+    const montar = async (usuario: Usuario) => {
+      const app = Fastify();
+      app.addHook('onRequest', async (req) => { (req as { usuario?: Usuario }).usuario = usuario; });
+      registrarComercial(app, { armazem: new ArmazemComercialMemoria(), fonte, contas, empresaId: 'emp', agora: () => new Date(), unidades: ['norte', 'sumare'] });
+      await app.ready();
+      return app;
+    };
+    const ana = (await (await montar(usuarios[0]!)).inject({ url: '/api/comercial/resumo' })).json().vendido;
+    expect(ana).toMatchObject({ de: 'voce', podeVerValor: false, valor: null, agendamentos: 1 });
+    const gi = (await (await montar(usuarios[1]!)).inject({ url: '/api/comercial/resumo' })).json().vendido;
+    expect(gi).toMatchObject({ de: 'equipe', podeVerValor: true, valor: 150, agendamentos: 2 });
   });
 });

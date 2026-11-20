@@ -10,6 +10,12 @@ export interface Atualizacao {
   cliente?: string;
   titulo: string;
   detalhe?: string;
+  /** Quem fez: 'IA', o nome da atendente ou 'Automático' (lembretes e follow-ups). Vazio quando não se aplica. */
+  por?: string;
+  /** Valor do agendamento, quando ele traz (R$). */
+  valor?: number;
+  servico?: string;
+  unidade?: string;
 }
 
 const ENVIOS: Record<string, { tipo: Atualizacao['tipo']; texto: string }> = {
@@ -36,15 +42,25 @@ export function descrever(e: Evento, c: Conversa | undefined): Atualizacao | nul
     case 'agendamento_ia':
     case 'agendamento_equipe': {
       const quem = e.tipo === 'agendamento_ia' ? 'A IA' : String(d.atendente ?? 'A equipe');
-      return { ...base, tipo: 'agendamento', titulo: `${quem} agendou ${String(d.servico ?? 'um horário')}`, detalhe: horaBahia(d.inicio) };
+      const valor = typeof d.valor === 'number' && Number.isFinite(d.valor) && d.valor >= 0 ? d.valor : typeof d.valor === 'string' && d.valor.trim() && Number.isFinite(Number(d.valor)) ? Number(d.valor) : undefined;
+      return {
+        ...base,
+        tipo: 'agendamento',
+        titulo: `${quem} agendou ${String(d.servico ?? 'um horário')}`,
+        detalhe: horaBahia(d.inicio),
+        por: e.tipo === 'agendamento_ia' ? 'IA' : d.atendente ? String(d.atendente) : 'Equipe',
+        ...(valor !== undefined ? { valor } : {}),
+        ...(d.servico ? { servico: String(d.servico) } : {}),
+        unidade: e.unidade ?? c?.unidade,
+      };
     }
     case 'ia_assumiu':
-      return { ...base, tipo: 'ia_assumiu', titulo: 'A IA assumiu a conversa', detalhe: 'Ninguém da equipe respondeu a tempo' };
+      return { ...base, tipo: 'ia_assumiu', titulo: 'A IA assumiu a conversa', detalhe: 'Ninguém da equipe respondeu a tempo', por: 'IA' };
     case 'passou_para_humano':
-      return { ...base, tipo: 'pediu_ajuda', titulo: 'A IA pediu ajuda da equipe', detalhe: d.motivo ? String(d.motivo) : undefined };
+      return { ...base, tipo: 'pediu_ajuda', titulo: 'A IA pediu ajuda da equipe', detalhe: d.motivo ? String(d.motivo) : undefined, por: 'IA' };
     case 'envio_ativo': {
       const info = ENVIOS[String(d.tipo)];
-      return info ? { ...base, tipo: info.tipo, titulo: info.texto } : null;
+      return info ? { ...base, tipo: info.tipo, titulo: info.texto, por: 'Automático' } : null;
     }
     case 'conversa_nova':
       return { ...base, tipo: 'nova_cliente', titulo: 'Nova cliente chamou no WhatsApp' };

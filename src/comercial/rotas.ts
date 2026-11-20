@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ehGestor, veTudo, type EscopoVisao } from '../auth/acesso.js';
 import type { Contas, Usuario } from '../auth/contas.js';
+import { pode } from '../auth/permissoes.js';
 import { mesDe } from '../painel/painel.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
 import { novoTokenTv, tokenValido, type ArmazemComercial } from './armazem.js';
@@ -18,6 +19,8 @@ import {
   progresso,
   progressoMetas,
   servicosMaisAgendados,
+  inicioVendido,
+  vendidoDoMes,
   type Pessoa,
   type PeriodoRanking,
 } from './calculo.js';
@@ -84,7 +87,11 @@ export function registrarComercial(app: FastifyInstance, o: OpcoesComercial): vo
     const pessoas = await pessoasDe(empresaId, u);
     const agora = o.agora();
     const m = mesDe(agora);
-    const [rk, mes] = await Promise.all([ranking(empresaId, escopo, pessoas, cfg, periodo, criterio), o.fonte.carregar(m.inicio, agora, escopo)]);
+    const [rk, mes, desde] = await Promise.all([
+      ranking(empresaId, escopo, pessoas, cfg, periodo, criterio),
+      o.fonte.carregar(m.inicio, agora, escopo),
+      o.fonte.carregar(inicioVendido(agora), agora, escopo),
+    ]);
     const metas = progressoMetas(mes.vendas, cfg, pessoas, o.unidades);
     const minha = u ? { ...progresso(mes.vendas.filter((v) => v.atendenteId === u.id), cfg.metas.atendentes[u.id], cfg), posicao: rk.linhas.find((l) => l.id === u.id)?.posicao ?? null } : null;
     return {
@@ -97,6 +104,11 @@ export function registrarComercial(app: FastifyInstance, o: OpcoesComercial): vo
       metas: { equipe: metas.equipe, unidades: metas.unidades },
       minha,
       podeEditar: !u || ehGestor(u),
+      // Topo do Dashboard: a gestão vê o vendido do time; a atendente, só o dela. Dinheiro só para quem vê relatórios ou comissões.
+      vendido: vendidoDoMes(u && !ehGestor(u) ? desde.vendas.filter((v) => v.atendenteId === u.id) : desde.vendas, cfg, agora, {
+        podeVerValor: !u || ehGestor(u) || pode(req, 'relatorios') || pode(req, 'comissoes'),
+        de: u && !ehGestor(u) ? 'voce' : 'equipe',
+      }),
     };
   });
 
