@@ -85,21 +85,22 @@ const h = (dias: number) => dias * 24;
 
 /** Modelos prontos (a tela oferece; a configuração inicial nasce deles, tudo desligado). */
 export const MODELOS_CADENCIA: Record<Situacao, Omit<Cadencia, 'ligada'>> = {
+  // Régua "sem resposta: 1 dia, 3 dias, 7 dias" (as esperas somam: 1 + 2 + 4 dias). Para quando a cliente responde.
   sem_resposta: {
     id: 'sem_resposta',
     pararSeResponder: true,
     passos: [
-      { esperaHoras: 3, texto: 'Oi, {primeiro_nome}! Conseguiu ver minha mensagem? Fico à disposição para tirar qualquer dúvida 😊', ia: true, objetivo: 'Retomar a conversa com leveza e perguntar se ficou alguma dúvida.', email: false, emailModeloId: null },
-      { esperaHoras: h(1), texto: '{primeiro_nome}, ainda pensando no seu cabelo? Temos horários essa semana na {unidade}. Quer que eu veja um para você?', ia: true, objetivo: 'Oferecer ajuda para escolher um horário, sem pressionar.', email: false, emailModeloId: null },
-      { esperaHoras: h(3), texto: 'Oi, {primeiro_nome}! Vou deixar sua conversa aqui guardadinha. Quando quiser agendar, é só me chamar 💙', ia: false, objetivo: '', email: false, emailModeloId: null },
+      { esperaHoras: h(1), texto: 'Oi, {primeiro_nome}! Conseguiu ver minha mensagem? Fico à disposição para tirar qualquer dúvida 😊', ia: false, objetivo: 'Retomar a conversa com leveza e perguntar se ficou alguma dúvida.', email: false, emailModeloId: null },
+      { esperaHoras: h(2), texto: '{primeiro_nome}, passando para saber se ainda posso te ajudar. Se quiser, me conta o que você precisa que eu te ajudo por aqui.', ia: false, objetivo: 'Oferecer ajuda de novo, sem pressionar.', email: false, emailModeloId: null },
+      { esperaHoras: h(4), texto: 'Oi, {primeiro_nome}! Vou deixar nossa conversa guardada por aqui. Quando quiser continuar, é só me chamar 💙', ia: false, objetivo: '', email: false, emailModeloId: null },
     ],
   },
   preco_sem_agendar: {
     id: 'preco_sem_agendar',
     pararSeResponder: true,
     passos: [
-      { esperaHoras: 2, texto: '{primeiro_nome}, conseguiu ver os valores? Se quiser, já deixo um horário reservado para você na {unidade} 😉', ia: true, objetivo: 'A cliente pediu preço e não agendou: tirar dúvidas e convidar para agendar.', email: false, emailModeloId: null },
-      { esperaHoras: h(1), texto: 'Oi, {primeiro_nome}! Lembrando que a avaliação do fio é gratuita. Quer agendar um horário?', ia: true, objetivo: 'Reforçar o valor do serviço e convidar para agendar.', email: false, emailModeloId: null },
+      { esperaHoras: 2, texto: '{primeiro_nome}, conseguiu ver os valores? Se quiser, já deixo um horário reservado para você 😉', ia: true, objetivo: 'A cliente pediu preço e não agendou: tirar dúvidas e convidar para agendar.', email: false, emailModeloId: null },
+      { esperaHoras: h(1), texto: 'Oi, {primeiro_nome}! Ficou alguma dúvida sobre os valores ou o que está incluído? Posso te explicar e já ver um horário.', ia: true, objetivo: 'Reforçar o valor do serviço e convidar para agendar.', email: false, emailModeloId: null },
       { esperaHoras: h(3), texto: '{primeiro_nome}, essa semana ainda tenho alguns horários livres. Posso reservar um para você?', ia: false, objetivo: '', email: false, emailModeloId: null },
     ],
   },
@@ -115,10 +116,10 @@ export const MODELOS_CADENCIA: Record<Situacao, Omit<Cadencia, 'ligada'>> = {
     id: 'pos_atendimento',
     pararSeResponder: false,
     passos: [
-      { esperaHoras: h(1), texto: 'Oi, {primeiro_nome}! Como ficou seu cabelo depois do {servico}? Qualquer dúvida sobre os cuidados, é só chamar 💙', ia: false, objetivo: '', email: false, emailModeloId: null },
-      { esperaHoras: h(29), texto: '{primeiro_nome}, já faz um mês do seu {servico}! Como está o cabelo? Se quiser, já vejo um horário de hidratação para você.', ia: false, objetivo: '', email: false, emailModeloId: null },
+      { esperaHoras: h(1), texto: 'Oi, {primeiro_nome}! Como você está depois do {servico}? Qualquer dúvida sobre os cuidados, é só chamar 💙', ia: false, objetivo: '', email: false, emailModeloId: null },
+      { esperaHoras: h(29), texto: '{primeiro_nome}, já faz um mês do seu {servico}! Como está tudo? Se quiser, já vejo um horário de manutenção para você.', ia: false, objetivo: '', email: false, emailModeloId: null },
       { esperaHoras: h(30), texto: 'Oi, {primeiro_nome}! Dois meses do seu {servico}. Que tal já reservar sua manutenção na {unidade}?', ia: false, objetivo: '', email: false, emailModeloId: null },
-      { esperaHoras: h(30), texto: '{primeiro_nome}, chegou a hora da manutenção do seu {servico} (90 dias) ✨ Quer que eu reserve um horário?', ia: true, objetivo: 'Convidar para a manutenção de 90 dias da progressiva.', email: true, emailModeloId: null },
+      { esperaHoras: h(30), texto: '{primeiro_nome}, chegou a hora da manutenção do seu {servico} (90 dias) ✨ Quer que eu reserve um horário?', ia: true, objetivo: 'Convidar para a manutenção de 90 dias.', email: true, emailModeloId: null },
     ],
   },
   orcamento: {

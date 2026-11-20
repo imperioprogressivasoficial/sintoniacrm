@@ -169,6 +169,16 @@ export class Notificador {
         }
         return;
       }
+      case 'nps': {
+        // Nota baixa (0 a 6) na pesquisa de satisfação: a gestão fica sabendo para agir rápido.
+        const nota = typeof d.nota === 'number' ? d.nota : NaN;
+        if (!(nota >= 0 && nota <= 6)) return;
+        const atendente = d.atendenteNome ? ` · atendimento de ${String(d.atendenteNome)}` : '';
+        for (const u of this.gestao(us, c)) {
+          await this.criar(u, { tipo: 'nps_baixa', titulo: `Nota ${nota} de ${nome}`, texto: curto(`Pesquisa de satisfação${atendente} · ${unidade}`), conversaId: c.id });
+        }
+        return;
+      }
       case 'lembrete_ligacao': {
         if (d.teste) return;
         const quando = typeof d.quando === 'string' ? new Date(d.quando) : this.agora();

@@ -83,6 +83,10 @@ import { estadoDaIa } from './planos/estado-ia.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
+/* nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS) e modelos prontos de automação */
+import { Nps } from './nps/nps.js';
+import { ArmazemNpsMemoria, ArmazemNpsPostgres } from './nps/armazem.js';
+import { registrarNps } from './nps/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -286,6 +290,7 @@ const automacoes = new Automacoes({
   contas,
   log,
   transmissoes: () => transmissoes,
+  variaveis: () => nps.variaveis(), // {link_avaliacao} da pesquisa de satisfação
 });
 // Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
 const armazemBots = pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria();
@@ -317,10 +322,13 @@ const followup = new Followup({
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
+// Finalizar atendimento + pesquisa de satisfação (src/nps): lê a nota na resposta da cliente; dispara as automações.
+const nps = new Nps({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: pool ? new ArmazemNpsPostgres(pool) : new ArmazemNpsMemoria(), repo, sintonia: () => sintonia, automacoes: () => automacoes, log });
 const ganchos: typeof ganchosBase = {
   ...ganchosBase,
   mensagemCliente: async (c, m) => {
     await ganchosBase.mensagemCliente?.(c, m);
+    await nps.mensagemCliente(c, m).catch((e) => log('Falha na pesquisa de satisfação (resposta da cliente)', String(e)));
     await followup.mensagemCliente(c, m).catch((e) => log('Falha no follow-up (resposta da cliente)', String(e)));
     await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
   },
@@ -676,6 +684,7 @@ const demo = new Demo({
 });
 registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
+registrarNps(app, { nps, repo, automacoes });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
@@ -689,6 +698,7 @@ const relogio = setInterval(async () => {
   await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões
   await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
+  await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);

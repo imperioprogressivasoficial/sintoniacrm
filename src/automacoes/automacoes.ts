@@ -479,6 +479,8 @@ export interface OpcoesAutomacoes {
   email?: EmailParaAutomacoes;
   /** Gatilhos de calendário (aniversário, X dias após comparecer): quem casa hoje. */
   calendario?: CalendarioAutomacoes;
+  /** Variáveis da empresa para as mensagens (ex.: {link_avaliacao} da pesquisa de satisfação). */
+  variaveis?: () => Promise<Record<string, string>>;
 }
 
 /** O que o e-mail marketing oferece às automações (src/email). */
@@ -615,6 +617,7 @@ export class Automacoes {
       if (a.funilId && e.funilId !== a.funilId) throw erro('Gatilho: a etapa é de outro funil.');
     }
     if (g.tipo === 'tag_marcada' && !tag(g.tagId)) throw erro('Gatilho: tag não encontrada.');
+    if (g.tipo === 'nota_nps' && g.min > g.max) throw erro('Gatilho: a nota mínima é maior que a máxima.');
 
     let n = 0;
     for (const { passo: p, nivel } of percorrer(a.passos)) {
@@ -663,6 +666,18 @@ export class Automacoes {
     if (c.empresaId !== this.empresaId) return;
     if (m.primeira) await this.disparar(c, (g) => g.tipo === 'nova_conversa' && (!g.unidade || g.unidade === c.unidade), 'nova_conversa');
     await this.disparar(c, (g) => g.tipo === 'palavra_chave' && casaPalavra(m.texto, g.palavras, g.modo), `msg:${m.idExterno || randomUUID()}`);
+  }
+
+  /** Atendimento finalizado (src/nps): gatilho atendimento_finalizado (com o filtro de motivos). */
+  async aoFinalizar(c: Conversa, f: { id: string; motivo: string }): Promise<void> {
+    if (c.empresaId !== this.empresaId) return;
+    await this.disparar(c, (g) => g.tipo === 'atendimento_finalizado' && (!g.motivos.length || (g.motivos as string[]).includes(f.motivo)), `final:${f.id}`);
+  }
+
+  /** Nota da pesquisa de satisfação (src/nps): gatilho nota_nps (faixa de nota). */
+  async aoNotaNps(c: Conversa, p: { id: string; nota: number }): Promise<void> {
+    if (c.empresaId !== this.empresaId) return;
+    await this.disparar(c, (g) => g.tipo === 'nota_nps' && p.nota >= g.min && p.nota <= g.max, `nps:${p.id}`);
   }
 
   /** A equipe respondeu: execuções com envio pendente (e a opção ligada) param. */
@@ -919,7 +934,9 @@ export class Automacoes {
         if (sintonia.canalDa(c) === 'meta' && agora.getTime() - (c.ultimaMensagemCliente?.getTime() ?? 0) > DIA) {
           return { parar: 'erro', motivo: 'WhatsApp oficial: fora da janela de 24 h só com modelo aprovado pela Meta.' };
         }
-        const texto = preencher(p.texto, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome });
+        const extras = (await this.o.variaveis?.().catch(() => undefined)) ?? {};
+        if (p.texto.includes('{link_avaliacao}') && !extras.link_avaliacao) return { parar: 'erro', motivo: 'Falta o link de avaliação: preencha em Automações › Pesquisa de satisfação.' };
+        const texto = preencher(p.texto, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome }, extras);
         await sintonia.enviarAutomatico(c, texto, `Automação: ${a.nome}`);
         await this.o.armazem.registrarEnvio(c.id, agora);
         await evento('enviou', { texto });

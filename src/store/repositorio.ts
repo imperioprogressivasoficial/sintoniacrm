@@ -47,6 +47,10 @@ export type TipoEvento =
   | 'followup'
   /** A cliente respondeu à confirmação de agenda (dados: status confirmado|remarcar, agendamento, inicio, servico). */
   | 'confirmacao'
+  /** Atendimento finalizado (src/nps; dados: finalizacaoId, motivo, motivoNome, porId, porNome, atendenteId, atendenteNome, pesquisa). */
+  | 'atendimento_finalizado'
+  /** Nota da pesquisa de satisfação (src/nps; dados: pesquisaId, nota, categoria, atendenteId, atendenteNome, motivo, comentario). */
+  | 'nps'
   | 'falha';
 
 export interface Evento {

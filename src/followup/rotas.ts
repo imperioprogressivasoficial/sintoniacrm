@@ -44,6 +44,14 @@ export function registrarFollowup(app: FastifyInstance, o: OpcoesRotasFollowup):
     }
   });
 
+  /** Usa o modelo pronto de uma cadência (ex.: régua "sem resposta: 1, 3 e 7 dias") e liga, se pedido. */
+  app.post('/api/followup/modelo/:situacao', async (req) => {
+    exigeGestao(req);
+    const situacao = z.enum(SITUACOES).parse((req.params as { situacao: string }).situacao);
+    const { ligar } = z.object({ ligar: z.boolean().default(true) }).parse(req.body ?? {});
+    return { config: await f.aplicarModelo(situacao, ligar, req.usuario?.nome ?? 'teste') };
+  });
+
   app.get('/api/followup/conversa/:id', async (req) => f.seloDaConversa((await conversa(req)).id));
 
   app.post('/api/followup/conversa/:id/pausar', async (req) => {

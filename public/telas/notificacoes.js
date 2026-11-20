@@ -66,7 +66,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--cor-ic, var(--marca-azul)); background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 14%, transparent); }
   .nt-ic svg { width: 17px; height: 17px; }
   .nt-ic.t-espera { --cor-ic: #d97706; } .nt-ic.t-ia_equipe { --cor-ic: #0a8f7a; } .nt-ic.t-transferida { --cor-ic: #106ebe; }
-  .nt-ic.t-agenda_mudou { --cor-ic: #7c3aed; } .nt-ic.t-lembrete_ligacao { --cor-ic: #0369a1; } .nt-ic.t-falha, .nt-ic.t-problema { --cor-ic: #dc2626; }
+  .nt-ic.t-agenda_mudou { --cor-ic: #7c3aed; } .nt-ic.t-lembrete_ligacao { --cor-ic: #0369a1; } .nt-ic.t-nps_baixa { --cor-ic: #d97706; } .nt-ic.t-falha, .nt-ic.t-problema { --cor-ic: #dc2626; }
   [data-tema="escuro"] .nt-ic { background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 26%, transparent); filter: brightness(1.35); }
   .nt-titulo { font-size: 15px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nt-nova .nt-titulo { font-weight: 800; }
@@ -129,6 +129,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     agendamento: SVG('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/>'),
     lembrete_ligacao: SVG('<path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/>'),
     falha: SVG('<path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4M12 17.5v.01"/>'),
+    nps_baixa: SVG('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/>'),
     teste: SVG('<path d="m5 12 4 4 10-10"/>'),
     fechar: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 'stroke-width="2.2"'),
     engrenagem: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'),
@@ -142,6 +143,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['transferida', 'Conversa passada para você', 'Transferida ou atribuída a você.'],
     ['agenda_mudou', 'Agendamento cancelado ou remarcado', 'Quando a cliente pede para remarcar.'],
     ['lembrete_ligacao', 'Lembrete de ligação', 'Ligações programadas, na hora marcada.'],
+    ['nps_baixa', 'Nota baixa na pesquisa de satisfação', 'Cliente deu nota de 0 a 6 (só para a gestão).'],
     ['falha', 'Problemas que impedem o trabalho', 'WhatsApp desconectado, chave da IA, agenda (só administração e direção).'],
   ];
 

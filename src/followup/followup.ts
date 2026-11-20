@@ -7,6 +7,7 @@ import { DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemFollowup } from './armazem.js';
 import {
   ConfigFollowup,
+  MODELOS_CADENCIA,
   NOME_SITUACAO,
   normalizarConfig,
   lerResposta,
@@ -100,6 +101,14 @@ export class Followup {
     return cfg;
   }
 
+  /** Aplica o modelo pronto de uma cadência (textos e esperas do modelo) e, se pedido, liga. */
+  async aplicarModelo(situacao: Situacao, ligar: boolean, por: string): Promise<ConfigFollowup> {
+    const cfg = structuredClone(await this.config());
+    const modelo = MODELOS_CADENCIA[situacao];
+    cfg.cadencias = cfg.cadencias.map((c) => (c.id === situacao ? { ...structuredClone(modelo), ligada: ligar || c.ligada } : c));
+    return this.salvarConfig(cfg, por);
+  }
+
   /**
    * O que o motor antigo da Sintonia continua fazendo: os follow-ups fixos (1h/1d/3d) saem quando a cadência
    * "Não respondeu" está ligada; os lembretes fixos (véspera/2h) saem quando a confirmação de agenda está ligada na unidade.
@@ -154,6 +163,10 @@ export class Followup {
         return;
       case 'passou_para_humano':
         await this.o.armazem.cancelar(id, { tipo: 'cadencia', exceto: ['pos_atendimento'] }, 'passou para a equipe');
+        return;
+      case 'atendimento_finalizado':
+        // Atendimento encerrado: nada de "você sumiu?" depois (o pós-atendimento segue).
+        await this.o.armazem.cancelar(id, { tipo: 'cadencia', exceto: ['pos_atendimento'] }, 'atendimento finalizado');
         return;
       case 'etapa_mudou':
         if (d.para === 'perdida') await this.o.armazem.cancelar(id, { tipo: 'cadencia' }, 'conversa perdida');
