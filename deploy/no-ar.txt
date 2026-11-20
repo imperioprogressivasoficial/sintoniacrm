@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 23:30 UTC (20/11, 20h30 na Bahia)
-commit: cece124
-pacote sha256: 9433a3f263f4aba8077fdf0c9bbd78a1d492b03e5cc6834edaa5642d66462c8b
+data: 2026-11-21 00:35 UTC (20/11, 21h35 na Bahia)
+commit: 5608cf2
+pacote sha256: d48ba5341e444d134ba817f3526a3f00766a53bea760e6cab565b513eb03965e
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-cece124.b64); pode apagar depois.
-observação: em cima do c3c1a07. Entra: Conversas de equipe (claude/equipe, migração 420, vista chat-equipe — 'equipe' é Atendentes e acessos) e Conversas de grupo do WhatsApp (claude/grupos, migração 410, groupsIgnore desligado na instância ao abrir a tela).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-5608cf2.b64); pode apagar depois.
+observação: em cima do cece124. Entra: Análises novas (claude/analises), Clientes com abas + Tags completas (claude/clientes-tags, migração 430), telas em largura total + Acessos/Empresa/Planos como telas (claude/layout-telas), Central de criativos + conexão de anúncios consertada (claude/marketing, migração 450).
