@@ -825,7 +825,7 @@
   .barra-selecao b { font-size: 16px; }
   .barra-selecao .link { all: unset; cursor: pointer; font-weight: 700; color: var(--marca-azul); padding: 8px 4px; }
   [data-tema="escuro"] .barra-selecao .link { color: var(--marca-menta); }
-  .em-selecao .lista-topo > .titulo, .em-selecao .lista-topo > .titulo-grande { display: none; }
+  .em-selecao .lista-topo > .titulo, .em-selecao .lista-topo > .titulo-grande, .em-selecao .lista-topo > .titulo-linha { display: none; }
   .item.selecionando { padding-left: 10px; }
   .marca-sel { flex: none; align-self: center; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--sub); margin-right: 2px; position: relative; }
   .marca-sel.on { background: var(--marca-azul); box-shadow: none; }
@@ -929,7 +929,7 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
     </div>
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
     <nav class="lt-grupos" id="lt-grupos" aria-label="Seções">
-      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
+      <button class="nav lt-item lt-ia" data-vista="serena" id="lt-ia" title="Serena"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Serena</span><span class="lt-luz"></span></button>
       <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M5 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 4h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/></svg><span class="lt-rot">Dashboard</span></button>
       <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
       <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
@@ -977,6 +977,7 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
         <button class="lt-cab" type="button" aria-expanded="false" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="lt-rot">Configurações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
           <button class="so-gestao nav lt-item" data-vista="equipe" id="lt-equipe" title="Atendentes e acessos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="lt-rot">Atendentes e acessos</span></button>
+          <button class="so-gestao nav lt-item" data-vista="ia" id="lt-ia-config" title="Inteligência Artificial: agentes, treinamento e memória"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Inteligência Artificial</span></button>
           <button class="so-gestao lt-item" id="lt-tags" type="button" title="Tags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tags</span></button>
           <button class="nav lt-item" data-vista="respostas" title="Respostas rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg><span class="lt-rot">Respostas rápidas</span></button>
           <button class="so-gestao nav lt-item" data-vista="leads" title="Importar e exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span class="lt-rot">Importar e exportar</span></button>
@@ -993,10 +994,11 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
   </aside>
   <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
-    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
-    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a.8.8 0 0 1 .6 1.3L14 13.5V19l-4 2v-7.5L3.4 5.8A.8.8 0 0 1 4 4.5Z"/></svg><span class="rotulo">CRM</span></button>
-    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg></span><span class="rotulo">IA</span></button>
+    <!-- Ordem no celular: Dashboard · Ligações · Serena (meio) · Conversas · Mais. O CRM fica em Conversas › Funil e em Mais. -->
     <button class="nav" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 4h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/></svg><span class="rotulo">Dashboard</span></button>
+    <button class="nav" data-vista="ligacoes" title="Ligações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.5h2.6l1.6 4.3-2 1.3a11.5 11.5 0 0 0 6.1 6.1l1.3-2 4.3 1.6v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z"/></svg><span class="rotulo">Ligações</span></button>
+    <button class="nav nav-ia" data-vista="serena" title="Serena" aria-label="Serena"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg></span><span class="rotulo">Serena</span></button>
+    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
     <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Mais</span></button>
@@ -1030,7 +1032,7 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
             <button role="menuitem" data-acao="etapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Filtrar por etapa do CRM</span></button>
           </div>
           <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
-          <h1 class="titulo-grande">Conversas</h1>
+          <div class="titulo-linha"><h1 class="titulo-grande">Conversas</h1><div class="seg-vistas" role="group" aria-label="Ver como"><button type="button" class="seg-op" data-ir="conversas" aria-pressed="true">Lista</button><button type="button" class="seg-op" data-ir="funil" aria-pressed="false">Funil</button></div></div>
           <div class="linha-busca">
           <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Pesquisar" aria-label="Pesquisar"></label>
             <button aria-label="Filtros" class="bt-filtros" id="bt-filtros" type="button" aria-expanded="false" aria-controls="painel-filtros" title="Filtrar por atendente, unidade, etiqueta ou origem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="qtd-filtros" id="qtd-filtros"></span></button>
@@ -1039,6 +1041,7 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
             <button class="chip" data-f="todas" aria-pressed="true">Todas</button>
             <button class="chip" data-f="esperando" aria-pressed="false">Não lidas <span class="qtd" id="qtd-nao-lidas"></span></button>
             <button class="chip" data-f="ia" aria-pressed="false"><i class="luz"></i>IA atendendo</button>
+            <button class="chip chip-radar" data-f="radar" aria-pressed="false" title="Radar: clientes esperando resposta"><svg class="rd" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" opacity=".5"/><g class="feixe"><path d="M12 12 L12 3"/></g><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>Radar<span class="radar-num" id="radar-num" hidden></span></button>
           </div>
           <div class="filtros-ativos" id="filtros-ativos" hidden></div>
         </div>
@@ -1137,12 +1140,13 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
     <section class="vista coluna-vista" id="v-funil">
       <div class="cabeca-vista fn-cabeca">
         <div class="crm-barra"><button class="icone redondo" id="crm-menu" type="button" title="Mais opções do CRM" aria-label="Mais opções do CRM"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button class="icone redondo branco" id="crm-novo" type="button" title="Novo lead" aria-label="Novo lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
-        <h1 class="titulo-grande">CRM</h1><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div></div>
+        <h1 class="titulo-grande">CRM</h1><div class="seg-vistas" role="group" aria-label="Ver como"><button type="button" class="seg-op" data-ir="conversas" aria-pressed="false">Lista</button><button type="button" class="seg-op" data-ir="funil" aria-pressed="true">Funil</button></div><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div></div>
       <div class="funil" id="funil"></div>
     </section>
     <section class="vista" id="v-automacoes"><div class="painel" id="automacoes"></div></section>
     <section class="vista" id="v-bot"><div class="painel" id="bot"></div></section>
     <section class="vista" id="v-ia"><div class="painel" id="ia"></div></section>
+    <section class="vista" id="v-serena" aria-label="Serena"><div id="serena"></div></section>
     <section class="vista" id="v-painel"><div class="painel" id="painel"></div></section>
     <!-- Relatórios, Leads (importar/exportar/duplicatas) e Agenda: telas em /telas/*.js -->
     <section class="vista" id="v-relatorios"><div class="painel" id="relatorios"></div></section>
@@ -1466,9 +1470,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   function mostrar(v) {
     if (!document.getElementById('v-' + v)) { toast('Essa área chega na próxima atualização.'); return; }
     // Configurar a IA é da gestão; para a atendente, o botão IA abre o chat "Ajuda da IA".
-    if (v === 'ia' && estado.eu && !ehGestor(estado.eu)) { window.SintoniaChatIa?.abrir(); return; }
+    // Configurar a IA é da gestão; para a atendente, o botão IA abre a Serena (o chat).
+    if (v === 'ia' && estado.eu && !ehGestor(estado.eu)) v = 'serena';
+    if (estado.vista === 'serena' && v !== 'serena') window.SintoniaTelas?.serena?.sair?.();
     estado.vista = v;
     document.querySelectorAll('.nav[data-vista]').forEach((b) => (b.dataset.vista === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+    // CRM saiu da barra do celular: no Funil, a aba Conversas continua acesa (Conversas › Funil).
+    if (v === 'funil') document.querySelector('.trilho .nav[data-vista="conversas"]')?.setAttribute('aria-current', 'page');
     document.querySelectorAll('.vista').forEach((s) => s.classList.toggle('ativa', s.id === 'v-' + v));
     if (v === 'funil') desenharFunil();
     if (v === 'automacoes' && window.SintoniaTelas?.automacoes) window.SintoniaTelas.automacoes.desenhar($('automacoes'), window.Sintonia.ui);
@@ -1477,10 +1485,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'painel') carregarPainel();
     if (v === 'equipe') carregarEquipe();
     if (v === 'configuracoes') desenharConfiguracoes();
-    if ((v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
+    if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
     window.SintoniaMenu?.vistaMudou?.(v);
   }
+
+  // Conversas › Lista | Funil (o CRM saiu da barra do celular)
+  document.querySelectorAll('.seg-vistas .seg-op').forEach((b) => b.addEventListener('click', () => { if (b.getAttribute('aria-pressed') !== 'true') mostrar(b.dataset.ir); }));
 
   // lista
   $('busca').addEventListener('input', (e) => { estado.busca = e.target.value.toLowerCase(); desenharLista(); });
@@ -1488,6 +1499,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const filtradas = () => estado.conversas.filter((c) => {
     if (estado.filtro === 'esperando' && !naoLida(c)) return false;
     if (estado.filtro === 'ia' && c.modo !== 'ia') return false;
+    // Radar: a cliente está esperando resposta (lida ou não).
+    if (estado.filtro === 'radar' && !esperando(c)) return false;
     if (estado.quem === 'minhas' && c.responsavelId !== estado.eu?.id) return false;
     if (estado.quem === 'sem' && c.responsavelId) return false;
     if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
@@ -1506,8 +1519,17 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
     return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);
   }
+  // Radar: quantas clientes esperam resposta (o número vermelho do chip; some no zero).
+  function contarRadar() {
+    const b = $('radar-num'); if (!b) return;
+    const n = estado.conversas.filter((c) => esperando(c) && (!estado.unidadeFiltro || c.unidade === estado.unidadeFiltro)).length;
+    b.hidden = !n; b.textContent = n > 99 ? '99+' : String(n);
+    b.parentElement.setAttribute('aria-label', n ? `Radar: ${n} ${n === 1 ? 'cliente esperando' : 'clientes esperando'} resposta` : 'Radar: ninguém esperando resposta');
+  }
+  const esperaTxt = (c) => { const m = Math.max(1, Math.round((Date.now() - new Date(c.ultimaMensagemCliente).getTime()) / 60000)); return 'Esperando ' + (m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`); };
   function desenharLista() {
     const caixa = $('itens'); caixa.replaceChildren();
+    contarRadar();
     const lista = filtradas();
     if (!lista.length) {
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
@@ -1523,6 +1545,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       // Item limpo: foto, nome + ícone de origem, prévia, hora, não lidas e quem atende (sem etiquetas escritas).
       const l2 = el('div', { class: 'l2' }, previa, quemAtende(c));
+      if (estado.filtro === 'radar' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
       if (nova) l2.append(el('span', { class: 'badge', text: '1', 'aria-label': 'Não lida' }));
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       caixa.append(el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
@@ -2697,6 +2720,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     // Grupos como as Configurações do WhatsApp: só o que existe e o que o perfil pode usar.
     const grupos = [
       { titulo: 'Trabalho', itens: [
+        { nome: 'CRM', sub: 'Funil das clientes', ic: IC.funil, cor: '#106ebe', acao: () => mostrar('funil') },
         { nome: 'Agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('agenda') },
         { nome: 'Ligações', ic: IC.ligacoes, cor: '#16a34a', acao: () => mostrar('ligacoes') },
         { nome: 'Clientes', ic: IC.clientes, cor: '#6366f1', acao: () => mostrar('clientes') },
@@ -2708,7 +2732,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       gestor && { titulo: 'Gestão', itens: [
         pode('relatorios') && { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
         pode('relatorios') && { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
-        { nome: 'Inteligência (IA)', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
+        { nome: 'Inteligência Artificial', sub: 'Agentes, treinamento e memória da Serena', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
         pode('automacoes') && { nome: 'Automações e bots', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
         { nome: 'Funis e etapas', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.menu?.(), 300); } },
         { nome: 'Etiquetas', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
@@ -2726,7 +2750,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         adm && { nome: 'Dados de demonstração', ic: IC.campos, cor: '#94a3b8', acao: abrirDemo },
       ] },
       { titulo: '', itens: [
-        { nome: 'Ajuda da IA', sub: 'Tire dúvidas sobre o dia e o app', ic: IC.ajuda, cor: '#1a8be0', acao: () => window.SintoniaChatIa?.abrir() },
+        { nome: 'Serena', sub: 'Pergunte sobre o dia e o app', ic: IC.ia, cor: '#1a8be0', acao: () => mostrar('serena') },
         { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } },
       ] },
     ].filter(Boolean).map((g) => ({ ...g, itens: g.itens.filter(Boolean) })).filter((g) => g.itens.length);
@@ -2950,7 +2974,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }));
     document.querySelector('#lt-grupos [data-vista="relatorios"]')?.addEventListener('click', () => window.SintoniaTelas?.relatorios?.focar?.(''));
     // IA: sempre começa pela visão geral (o que a IA atendeu hoje).
-    $('lt-ia').addEventListener('click', () => { window.SintoniaTelas?.agentesIa?.inicio?.(); if (estado.vista === 'ia') mostrar('ia'); });
+    $('lt-ia-config')?.addEventListener('click', () => { window.SintoniaTelas?.agentesIa?.inicio?.(); if (estado.vista === 'ia') mostrar('ia'); });
 
     // ---------- trilha do topo ("CRM › Funil de agendamento") ----------
     function trilha() {
@@ -2985,7 +3009,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   $('busca').addEventListener('input', (e) => { $('lt-busca').value = e.target.value; });
   addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); ($('lateral').offsetParent ? $('lt-busca') : $('busca')).focus(); } });
   const sincronizarNoite = () => { $('lt-noite').checked = window.SintoniaTema.escuro(); };
-  $('lt-noite').addEventListener('change', (e) => window.SintoniaTema.definir(e.target.checked ? 'escuro' : 'claro'));
+  $('lt-noite').addEventListener('change', (e) => { const t = e.target.checked ? 'escuro' : 'claro'; window.SintoniaCurto ? window.SintoniaCurto(e.target.closest('.lt-noite'), () => window.SintoniaTema.definir(t)) : window.SintoniaTema.definir(t); });
   addEventListener('tema', sincronizarNoite); sincronizarNoite();
   function preencherLateral() {
     const eu = estado.eu; if (!eu) return;
@@ -2993,7 +3017,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelectorAll('#lateral .so-relatorios').forEach((e) => { e.hidden = !eu.permissoes?.relatorios; });
     document.querySelectorAll('#lateral .so-gestao').forEach((e) => { e.hidden = !ehGestor(eu); });
     document.querySelectorAll('#lateral .so-admin').forEach((e) => { e.hidden = !['admin', 'direcao'].includes(eu.papel); });
-    { const r = document.querySelector('#lt-ia .lt-rot'); if (r) r.textContent = ehGestor(eu) ? 'Inteligência Artificial' : 'Ajuda da IA'; document.getElementById('lt-ia')?.setAttribute('title', ehGestor(eu) ? 'Inteligência Artificial' : 'Ajuda da IA'); }
+    // A Serena (chat) é de todos; a configuração da IA fica em Configurações › Inteligência Artificial (gestão).
     window.SintoniaMenu?.arrumar();
     api('/api/empresa').then((emp) => { if (emp?.nome) $('lt-empresa').textContent = emp.nome; }).catch(() => {});
   }
@@ -3045,6 +3069,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/alertas.js" defer></script>
 <script src="/telas/chat-ia.js" defer></script>
+<script src="/telas/serena.js" defer></script>
 <script src="/telas/ligacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>
 <script>
@@ -3066,7 +3091,7 @@ addEventListener('load', () => {
     { id: 'agenda', rotulo: 'Agenda', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h2M14 14h2M8 17h2"/></svg>', acao: () => ui.mostrar('agenda') },
     { id: 'crm', rotulo: 'CRM', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>', disponivel: () => pode('crm_ver'), acao: () => ui.mostrar('funil') },
     { id: 'respostas', rotulo: 'Respostas rápidas', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/></svg>', acao: () => ui.mostrar('respostas') },
-    { id: 'ajuda-ia', rotulo: 'Ajuda da IA', icone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>', acao: () => window.SintoniaChatIa?.abrir() },
+    { id: 'ajuda-ia', rotulo: 'Serena', icone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>', acao: () => ui.mostrar('serena') },
     { id: 'notificacoes', rotulo: 'Notificações', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>', acao: () => window.SintoniaTelas?.notificacoes?.abrir() },
     { id: 'noturno', rotulo: 'Modo noturno', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>', ativo: () => window.SintoniaTema?.escuro(), acao: () => window.SintoniaTema?.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro') },
     { id: 'painel', rotulo: 'Dashboard', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>', disponivel: () => pode('dashboard'), acao: () => ui.mostrar('painel') },
@@ -3082,7 +3107,9 @@ addEventListener('load', () => {
   const ligada = () => { try { return localStorage.getItem('sintonia.acessoRapido.ligada') !== '0'; } catch { return true; } };
   const conversaAbertaNoCelular = () => innerWidth <= 760 && ui.estado.vista === 'conversas' && Boolean(ui.estado.aberta) && $('casca')?.classList.contains('em-conversa');
   let antes = null;
-  const ajustar = () => { const ver = ligada() && !conversaAbertaNoCelular(); if (ver !== antes) { antes = ver; ar.mostrar(ver); } };
+  // Some também na Serena do celular (lá o espaço é do campo de perguntar).
+  const naSerenaNoCelular = () => innerWidth <= 760 && ui.estado.vista === 'serena';
+  const ajustar = () => { const ver = ligada() && !conversaAbertaNoCelular() && !naSerenaNoCelular(); if (ver !== antes) { antes = ver; ar.mostrar(ver); } };
   ajustar();
   new MutationObserver(ajustar).observe($('casca') || document.body, { attributes: true, attributeFilter: ['class'] });
   addEventListener('resize', ajustar);
@@ -3092,7 +3119,27 @@ addEventListener('load', () => {
 </script>
 <script>
 // Atalho de claro/escuro no topo das Conversas (celular): um toque troca.
-addEventListener('load', () => { const b = document.getElementById('tema-cel'); if (!b || !window.SintoniaTema) return; b.addEventListener('click', () => window.SintoniaTema.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro')); });
+// Troca com "curto-circuito" (falha + apagão): a tela falha, apaga, saem faíscas da lua e a luz volta já no outro tema.
+// Só transform/filter/opacity, por ~1,3 s, numa camada fixa sem toque; em "reduzir movimento" troca na hora.
+window.SintoniaCurto = (origem, trocar) => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || window.SintoniaCurto.rodando) { trocar(); return; }
+  window.SintoniaCurto.rodando = true;
+  const casca = document.getElementById('casca');
+  const r = origem?.getBoundingClientRect?.(); const x = r ? r.left + r.width / 2 : innerWidth / 2, y = r ? r.top + r.height / 2 : 40;
+  const fx = document.createElement('div'); fx.className = 'curto-fx'; fx.setAttribute('aria-hidden', 'true'); document.body.append(fx);
+  const ic = origem?.querySelector?.('svg:not([style*="display: none"])') || origem;
+  ic?.classList.remove('choque'); void ic?.offsetWidth; ic?.classList.add('choque');
+  casca.classList.remove('curto'); void casca.offsetWidth; casca.classList.add('curto');
+  setTimeout(() => {
+    fx.classList.add('apagao');
+    for (let i = 0; i < 16; i++) { const f = document.createElement('i'); f.className = 'faisca'; const a = Math.random() * 6.28, d = 40 + Math.random() * 100;
+      f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.setProperty('--dx', Math.cos(a) * d + 'px'); f.style.setProperty('--dy', Math.sin(a) * d + 'px'); fx.append(f); }
+  }, 280);
+  setTimeout(trocar, 600);
+  setTimeout(() => { casca.classList.remove('curto'); ic?.classList.remove('choque'); }, 1000);
+  setTimeout(() => { fx.remove(); window.SintoniaCurto.rodando = false; }, 1300);
+};
+addEventListener('load', () => { const b = document.getElementById('tema-cel'); if (!b || !window.SintoniaTema) return; b.addEventListener('click', () => window.SintoniaCurto(b, () => window.SintoniaTema.definir(window.SintoniaTema.escuro() ? 'claro' : 'escuro'))); });
 </script>
 <script src="/telas/responsivo.js" defer></script>
 <script src="/telas/rastreio.js" defer></script>
@@ -3103,14 +3150,36 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 // imperio: presença da equipe (disponível / fora do ar)
 (() => {
   const PONTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>';
-  let mapa = {}, eu = null, t = 0;
+  let mapa = {}, eu = null, t = 0, antes = null;
   const ligado = () => mapa[eu] !== 'offline';
+  const troca = (e, cls, sim) => { if (e.classList.contains(cls) !== sim) e.classList.toggle(cls, sim); };
+  // Selo "● Online / ● Offline" em cima da foto (cartão de Mais e conta do menu lateral).
+  function pilulas(on) {
+    document.querySelectorAll('.mais-perfil > .avatar, #lt-eu > .avatar').forEach((a) => {
+      const env = document.createElement('span'); env.className = 'pres-env'; a.replaceWith(env); env.append(a);
+    });
+    document.querySelectorAll('.mais-perfil .pres-env, #lt-eu .pres-env').forEach((env) => {
+      let p = env.querySelector('.pres-pilula');
+      if (!p) { p = document.createElement('span'); p.className = 'pres-pilula'; p.setAttribute('role', 'status'); env.append(p); }
+      const txt = on ? 'Online' : 'Offline';
+      if (p.textContent !== txt) p.textContent = txt;
+      troca(p, 'off', !on);
+    });
+  }
   function marcar() {
+    const on = ligado();
+    const mudou = antes !== null && antes !== on; antes = on;
     document.querySelectorAll('.avatar[data-pessoa]').forEach((a) => {
       const id = a.dataset.pessoa;
-      a.classList.toggle('off-line', !!id && mapa[id] === 'offline' && !a.classList.contains('com-selo-ia'));
+      const ia = a.classList.contains('com-selo-ia');
+      troca(a, 'off-line', !!id && mapa[id] === 'offline' && !ia);
+      // A própria pessoa: anel grosso verde (online) ou vermelho (offline) em todo lugar; na equipe, verde para quem está online.
+      const minha = !!id && id === eu && !ia;
+      troca(a, 'pres-eu', minha);
+      troca(a, 'pres-on', !!id && !ia && mapa[id] !== 'offline' && (minha || !!a.closest('#equipe, #v-equipe, .lista-equipe')));
     });
-    const on = ligado();
+    pilulas(on);
+    if (mudou) document.querySelectorAll('.avatar.pres-eu, .pres-pilula').forEach((x) => { x.classList.remove('pres-pulso'); void x.offsetWidth; x.classList.add('pres-pulso'); setTimeout(() => x.classList.remove('pres-pulso'), 800); });
     const chk = document.getElementById('lt-online');
     if (chk && chk.checked !== on) chk.checked = on;
     const lt = document.getElementById('lt-presenca');
