@@ -515,11 +515,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.botaoFiltros = el('button', { class: 'fn-filtros-bt', type: 'button', title: 'Filtrar por origem, atendente, unidade, etiqueta ou período', onclick: abrirFiltros },
       el('span', { html: SVG.filtro, style: 'display:grid' }), el('span', { text: 'Filtros' }), s.qtdFiltros);
     s.quadro = el('div', { class: 'fn-quadro' });
+    s.cel = el('div', { class: 'fc', hidden: '' }); // pipeline-celular: o CRM do celular (/telas/funil-celular.js)
     s.caixa.replaceChildren(
       el('div', { class: 'fn-topo' },
         el('div', { class: 'fn-buscar' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.achados),
         s.botaoFiltros, el('div', { class: 'fn-funis-linha' }, s.barraFunis)),
-      s.quadro,
+      s.quadro, s.cel,
     );
     s.colEls.clear(); s.cartaoEls.clear();
     // cabeçalho da vista (em app.html): números ao lado do título
@@ -643,6 +644,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         s.erro ? el('button', { class: 'botao leve', type: 'button', text: 'Tentar de novo', onclick: () => carregarQuadro() }) : null));
       s.colEls.clear();
       desenharNumeros();
+      desenharCelular();
       return;
     }
     const gestao = ehGestao();
@@ -703,7 +705,50 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     for (const k of s.cartaoEls.keys()) if (!ids.has(k)) s.cartaoEls.delete(k);
     desenharPessoas();
     desenharNumeros();
+    desenharCelular();
     if (s.ficha) s.ficha.atualizar();
+  }
+
+  // ---------- pipeline-celular: no celular (até 760 px) o quadro vira o "Pipeline" com Foco, Lista e Colunas ----------
+  const MQ_CELULAR = matchMedia('(max-width: 760px)');
+  const celularLigado = () => MQ_CELULAR.matches && !!window.SintoniaFunilCelular && !!s.cel;
+  MQ_CELULAR.addEventListener?.('change', () => { if (s.montado) desenharQuadro(); });
+  function desenharCelular() {
+    if (!s.cel) return;
+    const ligado = celularLigado();
+    s.caixa.classList.toggle('fc-on', ligado);
+    s.caixa.closest('#v-funil')?.classList.toggle('fc-on', ligado);
+    s.cel.hidden = !ligado;
+    if (!ligado) return;
+    const ra = window.SintoniaRastreio;
+    window.SintoniaFunilCelular.desenhar(s.cel, {
+      ui: s.ui, q: s.q, erro: s.erro, funis: s.funis, funil: funil(), gestao: ehGestao(),
+      filtros: [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo],
+      passa: (x) => passaDona(x) && passaEtiqueta(x) && passaPeriodo(x) && (!ra || ra.passa(x.conversaId, x.origem, s.origem)),
+      dinheiro, haTexto,
+      mover, carregarMais, adicionarCliente, menuCartao, editarValor, novoLead, trocarFunil, menuTopo, abrirFiltros, pular, folha,
+      recarregar: () => recarregarTudo(),
+      buscar: async (q) => { const r = await s.ui.api(`/api/funis/${s.funilId}/buscar?q=${encodeURIComponent(q)}&limite=20`); return Array.isArray(r) ? r : []; },
+      escolherAcao,
+      abrirDialogo: (d) => {
+        d.addEventListener('close', () => { d.remove(); s.abertos--; });
+        d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+        document.body.append(d); s.abertos++; d.showModal();
+      },
+    });
+  }
+
+  /** Botão do meio do cartão no celular (Agendar, Marcar como ganho, Fechar venda, Enviar proposta): um por funil. */
+  function escolherAcao() {
+    const f = funil(); if (!f) return;
+    const A = window.SintoniaFunilCelular?.ACOES || {};
+    const padrao = f.sistema ? 'agendar' : 'ganho';
+    const salvar = async (acao) => {
+      if (await tentar(() => s.ui.api(`/api/funis/${f.id}`, { method: 'PATCH', body: JSON.stringify({ acaoPrincipal: acao }) }), 'Botão do cartão salvo ✓')) recarregarTudo();
+    };
+    folha('Botão do cartão', `No celular, o botão do meio do cartão em “${f.nome}”.`, [
+      Object.entries(A).map(([id, a]) => ({ nome: a.nome, info: a.info + (id === padrao ? ' · padrão' : ''), atual: (f.acaoPrincipal || padrao) === id, acao: () => salvar(id) })),
+    ]);
   }
 
   function criarColuna(id) {
@@ -1055,12 +1100,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   async function editarValor(cartao) {
     const r = await pedir({ titulo: 'Valor do negócio', aviso: 'Quanto vale esta cliente (R$). Deixe vazio para tirar.', campos: [{ nome: 'valor', rotulo: 'Valor (R$)', valor: cartao.valor != null ? String(cartao.valor).replace('.', ',') : '', max: 14, dica: '220' }] });
-    if (!r) return;
+    if (!r) return false;
     const txt = String(r.valor || '').trim().replace(/[R$\s.]/g, '').replace(',', '.');
     const valor = txt === '' ? null : Number(txt);
-    if (valor !== null && (!Number.isFinite(valor) || valor < 0)) { s.ui.toast('Valor inválido.'); return; }
+    if (valor !== null && (!Number.isFinite(valor) || valor < 0)) { s.ui.toast('Valor inválido.'); return false; }
     const res = await tentar(() => s.ui.api(`/api/conversas/${cartao.conversaId}/valor`, { method: 'PUT', body: JSON.stringify({ valor }) }), 'Valor salvo ✓');
     if (res) { cartao.valor = res.valor; s.cartaoEls.delete(cartao.conversaId); desenharQuadro(); }
+    return !!res;
   }
 
   /** Menu ⋯ do topo do CRM: funis, etapas e automações. */
@@ -1153,6 +1199,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       } catch {}
       desenharQuadro();
     }
+    if (celularLigado()) { window.SintoniaFunilCelular.focar(conversaId, etapaId); return; }
     const c = s.colEls.get(etapaId);
     const no = s.cartaoEls.get(conversaId)?.no;
     if (!c) return;
@@ -1170,6 +1217,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     folha(f.nome, f.sistema ? 'Funil do sistema: a IA move as clientes sozinha. Dá para renomear e recolorir as etapas.' : null, [[
       { nome: 'Renomear funil', icone: SVG.lapis, acao: renomearFunil },
       { nome: 'Nova etapa', icone: SVG.mais, acao: novaEtapa },
+      { nome: 'Botão do cartão no celular', info: window.SintoniaFunilCelular?.ACOES[f.acaoPrincipal || (f.sistema ? 'agendar' : 'ganho')]?.nome, icone: SVG.check, acao: escolherAcao },
       { nome: 'Automações deste funil', icone: SVG.raio, acao: () => { if (window.SintoniaTelas.automacoes) s.ui.mostrar('automacoes'); } },
     ], f.sistema ? [] : [
       { nome: 'Apagar funil', info: 'As conversas continuam; somem as etapas e as automações dele', icone: SVG.lixo, perigo: true, acao: apagarFunil },

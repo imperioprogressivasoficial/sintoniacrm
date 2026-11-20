@@ -26,7 +26,13 @@ export interface Funil {
   sistema: boolean;
   criadaPor: string | null;
   criadaEm: Date;
+  /** Botão do meio do cartão no celular (null = padrão da tela). */
+  acaoPrincipal?: AcaoPrincipal | null;
 }
+
+/** Ações que o botão principal do cartão pode fazer. */
+export const ACOES_PRINCIPAIS = ['agendar', 'ganho', 'venda', 'proposta'] as const;
+export type AcaoPrincipal = (typeof ACOES_PRINCIPAIS)[number];
 
 /** Etapa = tag com funilId. */
 export type EtapaFunil = Tag & { funilId: string };
@@ -106,7 +112,7 @@ export interface ArmazemFunis {
   buscar(id: string): Promise<Funil | undefined>;
   /** Recusa (409) nome repetido na empresa ou um segundo funil do sistema. */
   criar(f: Funil): Promise<void>;
-  atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem'>>): Promise<void>;
+  atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem' | 'acaoPrincipal'>>): Promise<void>;
   apagar(id: string): Promise<void>;
   /** Conversas visíveis em cada etapa do funil. */
   contar(funilId: string, escopo: EscopoVisao): Promise<Map<string, number>>;
@@ -157,9 +163,10 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     if (f.sistema && [...this.funis.values()].some((x) => x.empresaId === f.empresaId && x.sistema)) throw new ErroFunil('O funil do sistema já existe.', 409);
     this.funis.set(f.id, { ...f });
   }
-  async atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem'>>) {
+  async atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem' | 'acaoPrincipal'>>) {
     const f = this.funis.get(id);
     if (!f) return;
+    if (campos.acaoPrincipal !== undefined) f.acaoPrincipal = campos.acaoPrincipal;
     if (campos.nome !== undefined && this.repetido(f.empresaId, campos.nome, id)) throw new ErroFunil(`Já existe o funil "${campos.nome}".`, 409);
     if (campos.nome !== undefined) f.nome = campos.nome;
     if (campos.ordem !== undefined) f.ordem = campos.ordem;
@@ -282,6 +289,7 @@ interface LinhaFunil {
   sistema: boolean;
   criada_por: string | null;
   criada_em: Date;
+  acao_principal: AcaoPrincipal | null;
 }
 const paraFunil = (l: LinhaFunil): Funil => ({
   id: l.id,
@@ -291,8 +299,9 @@ const paraFunil = (l: LinhaFunil): Funil => ({
   sistema: l.sistema,
   criadaPor: l.criada_por,
   criadaEm: l.criada_em,
+  acaoPrincipal: l.acao_principal ?? null,
 });
-const COLUNAS_FUNIL = 'id::text, empresa_id, nome, ordem, sistema, criada_por, criada_em';
+const COLUNAS_FUNIL = 'id::text, empresa_id, nome, ordem, sistema, criada_por, criada_em, acao_principal';
 
 export class ArmazemFunisPostgres implements ArmazemFunis {
   constructor(private readonly pool: pg.Pool) {}
@@ -317,13 +326,14 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
       throw e;
     }
   }
-  async atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem'>>) {
+  async atualizar(id: string, campos: Partial<Pick<Funil, 'nome' | 'ordem' | 'acaoPrincipal'>>) {
     try {
-      await this.pool.query('update sintonia.funis set nome = coalesce($2, nome), ordem = coalesce($3, ordem) where id = $1', [
-        id,
-        campos.nome ?? null,
-        campos.ordem ?? null,
-      ]);
+      await this.pool.query(
+        `update sintonia.funis set nome = coalesce($2, nome), ordem = coalesce($3, ordem),
+                acao_principal = case when $4 then $5 else acao_principal end
+          where id = $1`,
+        [id, campos.nome ?? null, campos.ordem ?? null, campos.acaoPrincipal !== undefined, campos.acaoPrincipal ?? null],
+      );
     } catch (e) {
       if (nomeRepetido(e)) throw new ErroFunil(`Já existe o funil "${campos.nome}".`, 409);
       throw e;
@@ -580,7 +590,7 @@ export class Funis implements DelegadoEtapas {
     if (this.sistemaCache) return this.sistemaCache.funil;
     let funil = (await this.o.armazem.listar(this.empresaId)).find((f) => f.sistema);
     if (!funil) {
-      const novo: Funil = { id: randomUUID(), empresaId: this.empresaId, nome: 'Atendimento', ordem: 0, sistema: true, criadaPor: 'sistema', criadaEm: this.agora() };
+      const novo: Funil = { id: randomUUID(), empresaId: this.empresaId, nome: 'Atendimento', ordem: 0, sistema: true, criadaPor: 'sistema', criadaEm: this.agora(), acaoPrincipal: null };
       try {
         await this.o.armazem.criar(novo);
       } catch (e) {
@@ -697,15 +707,21 @@ export class Funis implements DelegadoEtapas {
       sistema: false,
       criadaPor: por,
       criadaEm: this.agora(),
+      acaoPrincipal: null,
     };
     await this.o.armazem.criar(f);
     for (const e of etapas) await this.criarEtapa(f.id, e, por);
     return f;
   }
 
-  async alterar(id: string, campos: { nome?: string; ordem?: number }): Promise<Funil> {
+  async alterar(id: string, campos: { nome?: string; ordem?: number; acaoPrincipal?: AcaoPrincipal | null }): Promise<Funil> {
     await this.exigir(id);
-    await this.o.armazem.atualizar(id, { nome: campos.nome !== undefined ? validarNomeFunil(campos.nome) : undefined, ordem: campos.ordem });
+    if (campos.acaoPrincipal != null && !ACOES_PRINCIPAIS.includes(campos.acaoPrincipal)) throw new ErroFunil('Ação do botão inválida.', 400);
+    await this.o.armazem.atualizar(id, {
+      nome: campos.nome !== undefined ? validarNomeFunil(campos.nome) : undefined,
+      ordem: campos.ordem,
+      acaoPrincipal: campos.acaoPrincipal,
+    });
     if (this.sistemaCache?.funil.id === id) this.sistemaCache = undefined;
     return this.exigir(id);
   }

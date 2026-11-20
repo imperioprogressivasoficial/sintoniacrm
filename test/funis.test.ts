@@ -214,6 +214,31 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
   });
 });
 
+describe.each(ambientes)('Botão principal do cartão no celular ($nome)', (amb) => {
+  it('cada funil guarda o seu botão (agendar, ganho, venda, proposta); só a gestão muda; null volta ao padrão', async () => {
+    const { como, gente, sistema } = await montarFunis(amb);
+    const lista = (await como(gente.carla, 'GET', '/api/funis')).json() as Array<FunilJson & { acaoPrincipal: string | null }>;
+    expect(lista[0]!.acaoPrincipal).toBeNull();
+    const vendas = (await como(gente.admin, 'POST', '/api/funis', { nome: 'Vendas', etapas: [{ nome: 'Lead' }, { nome: 'Fechado' }] })).json() as FunilJson & { acaoPrincipal: string | null };
+    expect(vendas.acaoPrincipal).toBeNull();
+
+    expect((await como(gente.carla, 'PATCH', `/api/funis/${vendas.id}`, { acaoPrincipal: 'venda' })).statusCode).toBe(403);
+    expect((await como(gente.admin, 'PATCH', `/api/funis/${vendas.id}`, { acaoPrincipal: 'apagar_tudo' })).statusCode).toBe(400);
+    const r = await como(gente.admin, 'PATCH', `/api/funis/${vendas.id}`, { acaoPrincipal: 'venda' });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ nome: 'Vendas', acaoPrincipal: 'venda' });
+    expect((await como(gente.gerenteNorte, 'PATCH', `/api/funis/${sistema.id}`, { acaoPrincipal: 'agendar' })).json()).toMatchObject({ acaoPrincipal: 'agendar', sistema: true });
+
+    // Renomear não mexe no botão; cada funil tem o seu.
+    expect((await como(gente.admin, 'PATCH', `/api/funis/${vendas.id}`, { nome: 'Vendas B2B' })).json()).toMatchObject({ nome: 'Vendas B2B', acaoPrincipal: 'venda' });
+    const depois = (await como(gente.carla, 'GET', '/api/funis')).json() as Array<FunilJson & { acaoPrincipal: string | null }>;
+    expect(Object.fromEntries(depois.map((f) => [f.nome, f.acaoPrincipal]))).toEqual({ Atendimento: 'agendar', 'Vendas B2B': 'venda' });
+
+    // null volta ao padrão da tela.
+    expect((await como(gente.admin, 'PATCH', `/api/funis/${vendas.id}`, { acaoPrincipal: null })).json()).toMatchObject({ acaoPrincipal: null });
+  });
+});
+
 describe.runIf(temPostgres)('Migração 010 (funil do sistema)', () => {
   it('cria o funil do sistema, põe cada conversa na sua etapa e pode rodar de novo', async () => {
     const pool = await poolDeTeste();
