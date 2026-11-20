@@ -53,7 +53,7 @@ export interface InscricaoPush {
 }
 
 /** Sons de mensagem (Web Audio, desenhados no app). */
-export const SONS_MENSAGEM = ['futurista', 'gota', 'bolha', 'sininho', 'duplo'] as const;
+export const SONS_MENSAGEM = ['plump', 'futurista', 'gota', 'bolha', 'sininho', 'duplo'] as const;
 /** Alarmes de cliente esperando. */
 export const SONS_ALARME = ['futurista', 'sirene'] as const;
 export type SomAlarme = (typeof SONS_ALARME)[number];
@@ -85,7 +85,7 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   som: true,
   push: true,
   naoPerturbe: { ligado: false, inicio: '22:00', fim: '07:00' },
-  mensagens: { push: true, som: true, vibrar: true, tipoSom: 'futurista', volume: 70 },
+  mensagens: { push: true, som: true, vibrar: true, tipoSom: 'plump', volume: 70 },
   espera: { push: true, alarme: true, tipoAlarme: 'futurista', volume: 80, silencioAte: null },
 };
 

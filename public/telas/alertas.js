@@ -54,7 +54,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------------------------------------------------------------- preferências da pessoa
   let prefs = null;
   const carregarPrefs = async () => { prefs = await api('/api/notificacoes/preferencias').catch(() => prefs); return prefs; };
-  const pm = () => (prefs && prefs.mensagens) || { push: true, som: true, vibrar: true, tipoSom: 'futurista', volume: 70 };
+  const pm = () => (prefs && prefs.mensagens) || { push: true, som: true, vibrar: true, tipoSom: 'plump', volume: 70 };
   const pe = () => (prefs && prefs.espera) || { push: true, alarme: true, tipoAlarme: 'futurista', volume: 80, silencioAte: null };
   addEventListener('sintonia:preferencias', (e) => { if (e.detail) prefs = e.detail; });
 
@@ -107,8 +107,29 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       nota(262, 262, 'sine', b, 0.36, 0.18, g, saida);
     }
   }
+  /** Mensagem nova (padrão): "plump" Sintonia — gota curta e redonda + duas notinhas que sobem ("conectou"), ~350 ms. */
+  function somPlump(g) {
+    const t = audio.currentTime;
+    const f = audio.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 6000; f.Q.value = 0.8; f.connect(audio.destination);
+    const eco = audio.createDelay(0.4), volta = audio.createGain(), molhado = audio.createGain();
+    eco.delayTime.value = 0.085; volta.gain.value = 0.25; molhado.gain.value = 0.2;
+    f.connect(eco); eco.connect(volta).connect(eco); eco.connect(molhado).connect(audio.destination);
+    const n = (f0, f1, ini, dur, v, glide, ataque) => {
+      const o = audio.createOscillator(), a = audio.createGain(), t0 = t + ini;
+      o.type = 'sine'; o.frequency.setValueAtTime(f0, t0);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0 + dur * glide);
+      a.gain.setValueAtTime(0.0001, t0); a.gain.exponentialRampToValueAtTime(Math.max(0.0002, v * g), t0 + ataque);
+      a.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(a).connect(f); o.start(t0); o.stop(t0 + dur + 0.02);
+    };
+    n(500, 165, 0, 0.15, 0.85, 0.55, 0.006);
+    n(1318.5, 1318.5, 0.09, 0.14, 0.14, 1, 0.004);
+    n(1760, 1760, 0.15, 0.2, 0.12, 1, 0.004);
+    setTimeout(() => { try { f.disconnect(); eco.disconnect(); volta.disconnect(); molhado.disconnect(); } catch {} }, 1500);
+  }
   const SONS = {
-    futurista: { nome: 'Futurista (padrão)', tocar: (g) => somFuturista(g) },
+    plump: { nome: 'Plump Sintonia (padrão)', tocar: (g) => somPlump(g) },
+    futurista: { nome: 'Futurista', tocar: (g) => somFuturista(g) },
     gota: { nome: 'Gota', tocar: (g) => { nota(1350, 520, 'sine', 0, 0.16, 0.5, g); nota(1750, 900, 'sine', 0.1, 0.14, 0.32, g); } },
     bolha: { nome: 'Bolha', tocar: (g) => { nota(420, 900, 'sine', 0, 0.09, 0.55, g); nota(620, 1300, 'sine', 0.11, 0.1, 0.45, g); } },
     sininho: { nome: 'Sininho', tocar: (g) => { nota(1568, 1568, 'triangle', 0, 0.42, 0.42, g); nota(2093, 2093, 'sine', 0.07, 0.5, 0.26, g); } },
@@ -118,7 +139,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     try {
       prep(); if (!audio || audio.state !== 'running') return false;
       const v = (volume ?? pm().volume) / 100; if (v <= 0) return false;
-      (SONS[tipo || pm().tipoSom] || SONS.futurista).tocar(v * 0.6);
+      (SONS[tipo || pm().tipoSom] || SONS.plump).tocar(v * 0.6);
       return true;
     } catch { return false; }
   }
@@ -298,7 +319,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     prefs = p;
     const m = p.mensagens, e = p.espera;
     const tipo = el('select', { 'aria-label': 'Tipo de som da mensagem' }, ...Object.entries(SONS).map(([k, s]) => el('option', { value: k, text: s.nome })));
-    tipo.value = SONS[m.tipoSom] ? m.tipoSom : 'futurista';
+    tipo.value = SONS[m.tipoSom] ? m.tipoSom : 'plump';
     const tipoAl = el('select', { 'aria-label': 'Tipo de alarme de cliente esperando' }, ...Object.entries(ALARMES).map(([k, s]) => el('option', { value: k, text: s.nome })));
     tipoAl.value = ALARMES[e.tipoAlarme] ? e.tipoAlarme : 'futurista';
     tipoAl.addEventListener('change', () => { salvar({ espera: { tipoAlarme: tipoAl.value } }); prep(); setTimeout(() => tocarAlarme(1, undefined, tipoAl.value), 30); });
