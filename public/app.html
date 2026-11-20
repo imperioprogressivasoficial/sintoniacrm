@@ -1679,6 +1679,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'tags' && window.SintoniaTelas?.tags) window.SintoniaTelas.tags.desenhar($('tags-tela'), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
     window.SintoniaMenu?.vistaMudou?.(v);
+    window.SintoniaRotas?.mudou?.(); /* rotas-fontes: o endereço acompanha a tela (/app/dashboard, /app/pipelines/…) */
   }
 
   // Conversas › Lista | Funil (o CRM saiu da barra do celular)
@@ -1986,6 +1987,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
     mostrarJa(id); /* fluidez */
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
+    window.SintoniaRotas?.mudou?.(); /* rotas-fontes: /app/conversas/<id> */
     desenharLista();
     await carregarConversa();
     if (!$('ficha').hidden) carregarContato();
@@ -2837,6 +2839,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
     $('chat-aberto').style.display = 'none'; $('sem-conversa').hidden = false; fecharFicha();
     $('v-conversas').classList.remove('abrindo'); $('casca').classList.remove('em-conversa');
+    window.SintoniaRotas?.mudou?.({ fechar: true }); /* rotas-fontes */
     desenharLista();
     if (aviso) toast(aviso);
   }
@@ -3366,6 +3369,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
   Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
   Object.assign(window.Sintonia.ui, { naoLida, esperando, textoPrevia }); /* conversas-gestos: arrastar e segurar a linha da lista */
+  Object.assign(window.Sintonia.ui, { fecharConversa }); /* rotas-fontes: voltar do navegador fecha a conversa (computador) */
 
   (async () => {
     /* fluidez: tudo o que a abertura precisa sai junto (antes: um pedido esperava o outro) */
@@ -3535,6 +3539,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
 <script src="/telas/whatsapp-saude.js" defer></script>
 <script src="/telas/equipe.js" defer></script><!-- equipe: Conversas de equipe (chat interno) -->
+<script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)
 (() => {
