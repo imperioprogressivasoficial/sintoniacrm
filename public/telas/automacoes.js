@@ -84,6 +84,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .au-botao.perigo { color: #ff8f94; }
   .au-botao[disabled] { opacity: .55; cursor: default; }
   .au-lista { display: grid; gap: 10px; }
+  /* layout-telas: no computador largo, as automações em 2 colunas (o vazio ocupa a linha toda) */
+  @media (min-width: 1280px) { #automacoes .au-lista { grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); align-items: start; } #automacoes .au-lista > .au-vazio, #automacoes .au-lista > p { grid-column: 1 / -1; } }
   .au-card { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 7px; padding: 16px 18px; border-radius: 24px; transition: transform .15s ease, border-color .15s ease; background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho);
     -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5); }
   .au-card:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--marca-menta) 45%, var(--vidro-borda)); }

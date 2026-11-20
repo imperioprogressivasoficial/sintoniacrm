@@ -14,6 +14,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pl { --azul: var(--marca-azul, #106ebe); --menta: var(--marca-menta, #0fbf8f); --coral: #ff7a59; color: var(--texto, #0b1b2b);
         max-width: 1100px; margin: 0 auto; padding: 18px 16px 120px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; box-sizing: border-box; font-family: inherit; }
   .pl * { box-sizing: border-box; }
+  /* layout-telas: dentro do painel (Empresa e conta › Plano e uso da IA) usa a largura toda; no computador largo,
+     as seções ficam lado a lado (uso por dia × comparativo com atendente). */
+  .painel > .pl { max-width: none; width: 100%; margin: 0; padding: 0 0 40px; }
+  @media (min-width: 1280px) {
+    .painel > .pl { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .painel > .pl > .pl-topo, .painel > .pl > .pl-g2, .painel > .pl > section:first-of-type, .painel > .pl > section[data-calc], .painel > .pl > section:last-of-type { grid-column: 1 / -1; }
+    .painel > .pl > section { height: 100%; }
+  }
   .pl-topo { display: flex; align-items: center; gap: 12px; }
   .pl-topo h1 { margin: 0; font-size: 30px; letter-spacing: -.02em; flex: 1; min-width: 0; }
   .pl-topo small { display: block; font-size: 13px; color: var(--sub, #5b6b7b); font-weight: 600; letter-spacing: 0; }

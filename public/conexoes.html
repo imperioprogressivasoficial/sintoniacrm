@@ -227,6 +227,12 @@
     .cartoes, .campos { grid-template-columns: minmax(0, 1fr); }
     .linha .botao { flex: 1 1 auto; }
   }
+  /* layout-telas: no computador a página usa a largura toda (mesma margem de ~28px das outras telas). */
+  @media (min-width: 900px) {
+    .topo { padding-left: 28px; padding-right: 28px; }
+    .topo-linha, .atalhos, main { max-width: none; }
+    main { padding: 20px 28px calc(60px + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>

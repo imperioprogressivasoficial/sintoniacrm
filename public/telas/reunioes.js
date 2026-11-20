@@ -4,7 +4,16 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const CSS = `
-  .rn { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+  .rn { width: 100%; min-width: 0; display: grid; gap: 16px; }
+  /* layout-telas: no computador usa a largura toda — links em grade de cartões e as próximas reuniões na coluna da direita */
+  .rn-grade { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .rn-links .rn-bt { padding: 7px 11px; }
+  .rn-links { display: grid; gap: 12px; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+  .rn-passos { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: rn; }
+  .rn-passos li { counter-increment: rn; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 2px 10px; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-size: 13.5px; color: var(--sub); }
+  .rn-passos li::before { content: counter(rn); grid-row: span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+  .rn-passos li b { color: var(--texto); font-size: 14.5px; }
+  @media (min-width: 1100px) { .rn-grade { grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); } }
   .rn-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .rn-topo h1 { margin: 0; font-size: 28px; letter-spacing: -.01em; }
   .rn-topo p { margin: 4px 0 0; color: var(--sub); font-size: 14.5px; }
@@ -77,8 +86,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }) : [el('p', { class: 'rn-vazio', text: 'Nenhuma reunião marcada ainda.' })];
     caixa.replaceChildren(el('div', { class: 'rn' },
       el('div', { class: 'rn-topo' }, el('div', {}, el('h1', { text: 'Agendamento online' }), el('p', { text: 'Crie um link, mande para o contato e ele escolhe o horário sozinho.' })), novo),
-      el('section', { class: 'rn-cartao' }, el('h2', { text: 'Seus links' }), ...links),
-      el('section', { class: 'rn-cartao' }, el('h2', { text: 'Próximas reuniões' }), ...reunioes)));
+      el('div', { class: 'rn-grade' },
+        el('section', { class: 'rn-cartao' }, el('h2', { text: 'Seus links' }), d.links.length ? el('div', { class: 'rn-links' }, ...links) : el('div', { style: 'display:grid;gap:12px' }, ...links, passos())),
+        el('section', { class: 'rn-cartao' }, el('h2', { text: 'Próximas reuniões' }), ...reunioes))));
+  }
+  /* layout-telas: com a tela vazia, mostra o caminho em 3 passos (ocupa a largura no computador). */
+  function passos() {
+    const el = ui.el;
+    const passo = (t, s) => el('li', {}, el('b', { text: t }), el('span', { text: s }));
+    return el('ol', { class: 'rn-passos' },
+      passo('Crie o link', 'Escolha a duração, os dias e os horários livres.'),
+      passo('Copie e mande', 'Mande o link na conversa, no Instagram ou no e-mail.'),
+      passo('O contato escolhe', 'A reunião aparece em Próximas reuniões, já marcada.'));
   }
 
   function editar(l) {

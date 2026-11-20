@@ -20,7 +20,38 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     copiar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>',
   };
   const CSS = `
-  .lg { max-width: 760px; margin: 0 auto; padding: 4px 0 90px; }
+  .lg { width: 100%; min-width: 0; padding: 4px 0 90px; }
+  /* layout-telas: no computador, lista larga de recentes à esquerda; ações, resumo do dia e programadas à direita */
+  .lg-grade { display: block; }
+  .lg-principal { min-width: 0; }
+  .lg-resumo, .lg-prog { display: none; }
+  @media (max-width: 760px) { .lg { max-width: 760px; margin: 0 auto; } }
+  @media (min-width: 1100px) {
+    .lg-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); gap: 24px; align-items: start; }
+    .lg-lado { grid-column: 2; grid-row: 1; display: grid; gap: 14px; position: sticky; top: 0; }
+    .lg-principal { grid-column: 1; grid-row: 1; }
+    .lg-lado .lg-acoes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+    .lg-lado .lg-acao { grid-auto-flow: column; justify-content: start; align-items: center; text-align: left; gap: 10px; padding: 10px 12px; border-radius: 18px; background: var(--vidro-item) !important; box-shadow: inset 0 0 0 1px var(--vidro-borda) !important; color: var(--texto); font-weight: 600; }
+    .lg-lado .lg-acao i { width: 40px; height: 40px; }
+    .lg-lado .lg-acao i svg { width: 20px; height: 20px; }
+    .lg-lado .lg-acao b { font-weight: 600; }
+    .lg-lado .lg-acao small { grid-column: 2; }
+    .lg-resumo, .lg-prog { display: grid; gap: 10px; padding: 16px; border-radius: 20px; background: var(--vidro-fundo, var(--painel)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)), var(--vidro-brilho, none); }
+    .lg-resumo h3, .lg-prog h3 { margin: 0; font-size: 15px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .lg-resumo h3 small, .lg-prog h3 small { font-size: 12px; font-weight: 500; color: var(--sub); }
+    .lg-nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .lg-nums div { padding: 10px 12px; border-radius: 14px; background: var(--vidro-item, rgba(13,34,64,.05)); }
+    .lg-nums b { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .lg-nums span { font-size: 12.5px; color: var(--sub); }
+    .lg-nums .perdida b { color: #dc2626; } [data-tema="escuro"] .lg-nums .perdida b { color: #f87171; }
+    .lg-prog .lg-linha { min-height: 52px; padding: 4px 0; }
+    .lg-prog .lg-linha .avatar { width: 36px; height: 36px; }
+    .lg-prog .lg-txt b { font-size: 14.5px; }
+    .lg-prog .lg-txt small { font-size: 12.5px; }
+    .lg-prog .lg-ligar { width: 36px; height: 36px; }
+    .lg-prog .lg-mais { margin: 0; justify-self: start; padding: 4px 0; font-size: 13.5px; }
+    .lg-principal .lg-cab { margin-top: 0; }
+  }
   .lg-barra { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
   .lg-barra .icone.redondo { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
   .lg-barra .icone.redondo svg { width: 22px; height: 22px; }
@@ -270,18 +301,40 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const chip = (v, rot) => el('button', { class: 'chip', type: 'button', 'aria-pressed': String(s.filtro === v), onclick: () => { s.filtro = v; s.itens = []; s.proximo = null; carregar(); } }, document.createTextNode(rot));
     const lista = s.itens.length ? el('div', { class: 'lg-lista', role: 'list' }, ...s.itens.map(linhaChamada))
       : el('p', { class: 'lg-vazio', text: s.carregando ? 'Carregando…' : s.filtro === 'perdidas' ? 'Nenhuma ligação perdida.' : 'Nenhuma ligação ainda. Toque em Ligar para começar.' });
+    // layout-telas: resumo de hoje (das ligações já carregadas) e as programadas para hoje — só aparecem no computador.
+    const hoje = new Date().toDateString();
+    const deHoje = s.itens.filter((x) => new Date(x.em).toDateString() === hoje);
+    const conta = (f) => deHoje.filter(f).length;
+    const num = (n, rot, cls = '') => el('div', { class: cls }, el('b', { text: String(n) }), el('span', { text: rot }));
+    const resumo = el('section', { class: 'lg-resumo', 'aria-label': 'Resumo de hoje' },
+      el('h3', {}, document.createTextNode('Hoje'), el('small', { text: new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' }) })),
+      el('div', { class: 'lg-nums' },
+        num(conta((x) => x.direcao === 'efetuada'), 'efetuadas'),
+        num(conta((x) => x.resultado === 'atendeu' || x.resultado === 'agendou'), 'atenderam'),
+        num(conta((x) => x.resultado === 'agendou'), 'agendaram'),
+        num(conta((x) => x.direcao === 'perdida'), 'perdidas', 'perdida')));
+    const progLista = (s.sugestoes || []).filter((x) => x.motivo === 'lembrete');
+    const progBox = el('section', { class: 'lg-prog', 'aria-label': 'Programadas para hoje' },
+      el('h3', {}, document.createTextNode('Programadas para hoje'), el('small', { text: String(progLista.length) })),
+      progLista.length ? el('div', { class: 'lg-lista' }, ...progLista.slice(0, 5).map((x) => linhaContato({ id: x.conversaId, nome: x.cliente, telefone: x.telefone, unidade: x.unidade })))
+        : el('p', { class: 'lg-nota', style: 'margin:0', text: 'Nenhuma ligação programada para hoje.' }),
+      el('button', { class: 'lg-mais', type: 'button', text: progLista.length > 5 ? `Ver todas (${progLista.length})` : 'Programar ligação', onclick: programar }));
     s.caixa.replaceChildren(el('div', { class: 'lg' },
       el('div', { class: 'lg-barra' }, btMenu, el('span', { style: 'display:flex;align-items:center;gap:10px' }, window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null, btNovo)),
       el('h1', { class: 'titulo-grande', text: 'Ligações' }),
-      el('div', { class: 'lg-acoes' },
-        acao('Ligar', SVG.tel, () => escolherELigar('Ligar')),
-        acao('Programar', SVG.calendario, programar, prog ? `${prog} hoje` : ''),
-        acao('Teclado', SVG.teclado, teclado),
-        acao('Favoritos', SVG.estrela, favoritos)),
-      el('div', { class: 'lg-cab' }, el('h2', { text: 'Ligações recentes' }), el('div', { class: 'lg-chips', role: 'group', 'aria-label': 'Filtro' }, chip('todas', 'Todas'), chip('perdidas', 'Perdidas'))),
-      lista,
-      s.proximo ? el('button', { class: 'lg-mais', type: 'button', text: 'Carregar mais', onclick: () => carregar(true) }) : null,
-      el('p', { class: 'lg-nota', text: 'Efetuadas: registradas quando alguém toca em Ligar (a ligação sai do celular; sem duração). Recebidas e perdidas: avisadas pelo WhatsApp da loja.' })));
+      el('div', { class: 'lg-grade' },
+        el('aside', { class: 'lg-lado' },
+          el('div', { class: 'lg-acoes' },
+            acao('Ligar', SVG.tel, () => escolherELigar('Ligar')),
+            acao('Programar', SVG.calendario, programar, prog ? `${prog} hoje` : ''),
+            acao('Teclado', SVG.teclado, teclado),
+            acao('Favoritos', SVG.estrela, favoritos)),
+          s.filtro === 'todas' ? resumo : null, progBox),
+        el('div', { class: 'lg-principal' },
+          el('div', { class: 'lg-cab' }, el('h2', { text: 'Ligações recentes' }), el('div', { class: 'lg-chips', role: 'group', 'aria-label': 'Filtro' }, chip('todas', 'Todas'), chip('perdidas', 'Perdidas'))),
+          lista,
+          s.proximo ? el('button', { class: 'lg-mais', type: 'button', text: 'Carregar mais', onclick: () => carregar(true) }) : null,
+          el('p', { class: 'lg-nota', text: 'Efetuadas: registradas quando alguém toca em Ligar (a ligação sai do celular; sem duração). Recebidas e perdidas: avisadas pelo WhatsApp da loja.' })))));
   }
 
   async function carregar(mais = false) {

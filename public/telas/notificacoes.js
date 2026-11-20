@@ -115,6 +115,21 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-horas input { font: 600 15px var(--fonte); color: var(--texto); background: var(--entrada); border: 1px solid var(--linha); border-radius: 10px; padding: 6px 8px; }
   .nt-dica { font-size: 13px; line-height: 1.45; color: var(--aviso-txt); background: var(--aviso); border-radius: 14px; padding: 10px 12px; margin: 4px 4px 6px; }
   .nt-acoes { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 4px 2px; }
+  /* layout-telas: no computador, preferências em 2 colunas (painel largo) e linhas mais densas; o sino também mais denso */
+  @media (min-width: 761px) {
+    dialog.pl.larga .nt-pref-corpo { display: block; columns: 2 250px; column-gap: 14px; }
+    dialog.pl.larga:has(.nt-pref-corpo) { width: min(820px, max(620px, calc(100vw - 300px))); }
+    dialog.pl.larga .nt-pref-corpo > * { break-inside: avoid; margin-bottom: 14px; }
+    .nt-pref-corpo .nt-linha { min-height: 40px; padding: 3px 10px; font-size: 14px; gap: 10px; }
+    .nt-pref-corpo .nt-linha small { font-size: 12px; line-height: 1.3; margin-top: 1px; }
+    .nt-pref-corpo .nt-secao h3 { margin: 4px 10px 2px; font-size: 11.5px; }
+    .nt-item { padding: 7px 16px; gap: 10px; }
+    .nt-corpo { margin: -7px 0; padding: 7px 0; }
+    .nt-ic { width: 28px; height: 28px; } .nt-ic svg { width: 15px; height: 15px; }
+    .nt-titulo { font-size: 14px; }
+    .nt-texto { font-size: 12.5px; }
+    .nt-grupo { padding: 10px 16px 2px; }
+  }
   `;
   if (!$('estilo-notificacoes')) document.head.append(el('style', { id: 'estilo-notificacoes', text: CSS }));
 
@@ -524,7 +539,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
     const extras = window.SintoniaTelas.alertas ? await window.SintoniaTelas.alertas.secoesPreferencias(p).catch(() => []) : [];
     corpo.append(secTipos, secPush, ...extras, secNp);
-    const pagina = { id: 'nt-preferencias', titulo: 'Preferências', montar: (c) => c.append(corpo) };
+    const pagina = { id: 'nt-preferencias', titulo: 'Preferências', larga: true, montar: (c) => c.append(corpo) };
     if (op.empurrar && P().aberto()) P().empurrar(pagina); else P().abrir(pagina);
   }
 

@@ -4,7 +4,7 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const CSS = `
-  .rt { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+  .rt { width: 100%; min-width: 0; display: grid; gap: 16px; } /* layout-telas: largura toda do painel */
   .rt-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .rt-topo h1 { margin: 0; font-size: 28px; letter-spacing: -.01em; }
   .rt-topo p { margin: 4px 0 0; color: var(--sub); font-size: 14.5px; }
