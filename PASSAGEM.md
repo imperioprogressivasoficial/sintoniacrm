@@ -24,12 +24,15 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 20/11/2026, 01h20 (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 20/11/2026, 02h10 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` = 698dfa3 (ver `deploy/no-ar.txt`): Dashboard escuro (celular), WhatsApp em canais, Conexões em lista.
-- **Em obra (pedidos do dono em 20/11):**
-  - Dashboard novo (colunas no computador, claro/escuro, personalizar, biblioteca de relatórios): pronto na branch
-    `claude/paginas-vendas-login` (veio de `claude/dashboard-colunas`), aguardando o ok do dono para publicar.
-- **Decisões do dono:** canais de WhatsApp sem loja fixa; oficial bloqueado; Claude fora da lista de Conexões;
-  beta interna com um acesso só; evitar animações rodando o tempo todo; cor "brilho" #0ffcbe→#3aa0ff; 5 modelos antes de design.
-- **Pendente com o dono:** QR Code do WhatsApp; chave do Claude; ligar a Serena.
+- **No ar:** `producao` = 34c49d0 (ver `deploy/no-ar.txt`): Dashboard novo, consertos da auditoria, transcrição grátis,
+  cópia diária do banco, monitor (status.n8nimperio.tech) e estatísticas (estatisticas.n8nimperio.tech).
+- **Auditoria completa (20/11):** 103 funcionalidades; relatório na sessão. Consertos em andamento na branch
+  `claude/consertos-auditoria` (worktree /home/user/wt-consertos): presença dentro da Sintonia (depois tirar o serviço
+  "presenca" do compose), links rastreados, base dos relatórios, selo da IA no Plano, ajustes visuais, botões
+  "Instalar o app" e "Ativar notificações".
+- **Aguardando o dono:** modelo do menu "Mais" em cascata (5 modelos enviados); tirar ou não os avisos de falha das
+  Movimentações; chave nova do Claude (cadastrar em Conexões › Outras configurações); QR Code do WhatsApp; Trinks; e-mail.
+- **Regras do dono:** 5 modelos antes de design; sem animação rodando o tempo todo; cor brilho #0ffcbe→#3aa0ff;
+  ícones no padrão do menu; sem zoom no celular; beta interna com um acesso.
