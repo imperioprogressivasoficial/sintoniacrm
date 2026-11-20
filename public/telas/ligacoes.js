@@ -84,7 +84,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .lg-acao i svg { width: 25px; height: 25px; }
   .lg-acao b { font-weight: 400; }
   .lg-cab h2 { font-size: 21px; font-weight: 600; }
-  .lg-cab .lg-chips { display: none; }
   .lg-lista { background: none !important; box-shadow: none !important; border-radius: 0; overflow: visible; }
   .lg-linha { padding: 9px 0; gap: 12px; }
   .lg-linha + .lg-linha { border-top: 0; }
@@ -92,7 +91,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .lg-linha:last-child .lg-txt { border-bottom: 0; }
   .lg-linha:hover { background: none; }
   .lg-linha .avatar { width: 48px; height: 48px; }
-  .lg-txt b { font-weight: 400; font-size: 16.5px; }
+  .lg-txt b { font-weight: 600; font-size: 16px; }
+  .lg-linha .avatar { box-shadow: 0 0 0 2px var(--fundo, #fff), 0 0 0 3.5px rgba(15,252,190,.6) !important; border: 0 !important; }
+  .lg-cab h2 { font-size: 18px; }
   .lg-quando { font-size: 14px; }
   .lg-ligar { width: 42px; height: 42px; color: var(--texto) !important; background: var(--vidro-item, rgba(13,34,64,.06)); box-shadow: inset 0 0 0 1px var(--vidro-borda, var(--linha)); }
   `;
