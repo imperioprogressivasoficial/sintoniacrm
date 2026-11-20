@@ -50,6 +50,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
   .pn-eu { all: unset; box-sizing: border-box; cursor: pointer; flex: none; border-radius: 50%; display: grid; }
   .pn-eu .avatar { width: 40px; height: 40px; font-size: 14px; background: linear-gradient(135deg, #1a8be0, #0a4c86); color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, .22); }
+  .pn-eu.pn-on .avatar { box-shadow: 0 0 0 2px #071c33, 0 0 0 4px #16c784 !important; }
   .pn-redondo { all: unset; box-sizing: border-box; cursor: pointer; flex: none; position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
                 background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); transition: background .15s ease; }
   .pn-redondo:hover { background: var(--vidro-ativo); }
@@ -474,7 +475,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const eu = ui.estado.eu || {};
     const av = el('span', { class: 'avatar', 'data-pessoa': eu.id || '', text: iniciais(eu.nome) });
     window.SintoniaFotos?.aplicar(av, eu.id);
-    const quem = el('button', { class: 'pn-eu', type: 'button', title: eu.nome ? `${eu.nome}: sua conta` : 'Sua conta', 'aria-label': 'Abrir sua conta', onclick: () => ui.mostrar('configuracoes') }, av);
+    // Anel de presença: verde quando o Dashboard diz que você está online (respondeu ou digitou nos últimos minutos).
+    const online = Boolean(eu.id && (d?.ranking || []).some((p) => p.usuarioId === eu.id && p.online));
+    const quem = el('button', { class: 'pn-eu' + (online ? ' pn-on' : ''), type: 'button', title: `${eu.nome || 'Sua conta'}${online ? ' · online agora' : ''}`, 'aria-label': `Abrir sua conta${online ? ' (você está online)' : ''}`, onclick: () => ui.mostrar('configuracoes') }, av);
     const trilho = el('div', { class: 'pn-trilho', role: 'group', 'aria-label': 'Período' },
       ...PERIODOS.map(([k, t]) => el('button', { type: 'button', 'aria-pressed': String(k === s.periodo), onclick: () => trocarPeriodo(k), text: t })));
     const bolinha = el('span', { class: 'pn-bolinha', id: 'pn-sino-qtd', hidden: '' });
