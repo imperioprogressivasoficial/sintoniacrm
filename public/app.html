@@ -2892,6 +2892,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         pode('automacoes') && { nome: 'Fluxos', sub: 'Gatilhos e mensagens automáticas', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
         { nome: 'Agente de IA', sub: 'Agentes, treinamento e memória', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
         pode('automacoes') && { nome: 'Follow-up', sub: 'Lembretes para quem parou de responder', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('automacoes') },
+        /* nps-posvenda: configuração da pesquisa de satisfação */
+        pode('automacoes') && window.SintoniaTelas?.nps && { nome: 'Pesquisa de satisfação', sub: 'Nota de 0 a 10 ao finalizar o atendimento', ic: IC.relatorio, cor: '#d97706', acao: () => window.SintoniaTelas.nps.configurar(window.Sintonia.ui) },
       ] },
       gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
         { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
@@ -3251,6 +3253,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/transmissoes.js" defer></script>
 <script src="/telas/email.js" defer></script>
 <script src="/telas/followup.js" defer></script>
+<!-- nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS), pós-venda pronto -->
+<script src="/telas/nps.js" defer></script>
 <script src="/telas/radar.js" defer></script>
 <script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>

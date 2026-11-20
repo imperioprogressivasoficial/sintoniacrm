@@ -184,6 +184,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         em.onchange = () => { p.email = em.checked; modelo.hidden = !em.checked; };
         return el('div', { class: 'fu-passo' },
           el('div', { class: 'fu-linha' }, el('span', { class: 'fu-n', text: String(k + 1) }), el('span', { text: k === 0 ? 'Esperar' : 'Depois, esperar' }), qtd, unidade, el('span', { text: '→ mandar:' }),
+            (() => { const t = cad.passos.slice(0, k + 1).reduce((n, x) => n + (Number(x.esperaHoras) || 0), 0); return t >= 24 && t % 24 === 0 ? el('span', { class: 'fu-dia', text: `(dia ${t / 24})`, style: 'opacity:.7' }) : null; })(),
             cad.passos.length > 1 ? el('button', { class: 'fu-x', type: 'button', text: 'Remover', onclick: () => { cad.passos.splice(k, 1); desenharPassos(); } }) : null),
           area(p.texto, (v) => { p.texto = v; }, `Mensagem do passo ${k + 1}`),
           el('div', { class: 'fu-linha' }, el('label', {}, ia, el('span', { text: 'A IA escreve com este objetivo' })), objetivo),

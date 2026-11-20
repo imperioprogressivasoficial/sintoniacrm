@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MOTIVOS_FINALIZACAO } from '../nps/tipos.js';
 
 /**
  * Formato das automações: um gatilho e uma lista de passos. Tudo em JSON simples, para a tela montar
@@ -29,6 +30,10 @@ export const Gatilho = z.discriminatedUnion('tipo', [
   z.object({ tipo: z.literal('aniversario') }),
   /** `dias` depois de a conversa entrar na etapa "Compareceu" (uma vez por comparecimento). */
   z.object({ tipo: z.literal('dias_apos_compareceu'), dias: z.number().int().min(0).max(365) }),
+  /** Alguém finalizou o atendimento (opcional: só com estes motivos; vazio = qualquer motivo). */
+  z.object({ tipo: z.literal('atendimento_finalizado'), motivos: z.array(z.enum(MOTIVOS_FINALIZACAO)).max(MOTIVOS_FINALIZACAO.length).default([]) }),
+  /** A cliente respondeu a pesquisa de satisfação com uma nota entre `min` e `max` (0 a 10). */
+  z.object({ tipo: z.literal('nota_nps'), min: z.number().int().min(0).max(10).default(0), max: z.number().int().min(0).max(10).default(10) }),
 ]);
 export type Gatilho = z.infer<typeof Gatilho>;
 
@@ -148,10 +153,14 @@ export function casaPalavra(texto: string, palavras: string[], modo: 'contem' | 
   });
 }
 
-/** Troca {primeiro_nome} {nome} {unidade} {atendente} no texto. */
-export function preencher(texto: string, v: { nome?: string; unidade: string; atendente?: string }): string {
+/**
+ * Troca {primeiro_nome} {nome} {unidade} {atendente} no texto. `extras`: outras variáveis da empresa
+ * (ex.: {link_avaliacao}, da pesquisa de satisfação).
+ */
+export function preencher(texto: string, v: { nome?: string; unidade: string; atendente?: string }, extras: Record<string, string> = {}): string {
   const nome = v.nome?.trim() || '';
   const primeiro = nome.split(/\s+/)[0] ?? '';
+  for (const [k, valor] of Object.entries(extras)) if (/^[a-z_]{2,40}$/.test(k)) texto = texto.split(`{${k}}`).join(valor);
   return texto
     .replace(/\{primeiro_nome\}/g, primeiro)
     .replace(/\{nome\}/g, nome)

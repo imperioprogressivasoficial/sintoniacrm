@@ -139,29 +139,44 @@ describe('follow-up: funções puras', () => {
 
 for (const a of ambientes) {
   describe(`follow-up (${a.nome})`, () => {
-    it('cadência "Não respondeu" dispara no tempo certo, segue os passos e substitui o motor fixo', async () => {
+    it('régua "Não respondeu" (modelo pronto): 1, 3 e 7 dias, e substitui o motor fixo', async () => {
       const m = await montar(a, (cfg) => {
         cfg.cadencias.find((c) => c.id === 'sem_resposta')!.ligada = true;
       });
-      await m.cliente('Oi, queria saber da progressiva');
+      await m.cliente('Oi, queria saber dos valores');
       expect(m.canal.enviados.map((x) => x.texto)).toEqual(['Oi! Posso ajudar?']);
       const c = await m.conversa();
       // O motor fixo (1h/1d/3d) não programou nada: a cadência configurável assumiu.
       expect((await m.repo.tarefasPendentes(c.id)).filter((t) => t.tipo.startsWith('followup'))).toHaveLength(0);
-      const selo = await m.f.seloDaConversa(c.id);
-      expect(selo.cadencia).toMatchObject({ situacao: 'sem_resposta', passo: 1, total: 3 });
+      expect((await m.f.seloDaConversa(c.id)).cadencia).toMatchObject({ situacao: 'sem_resposta', passo: 1, total: 3 });
 
-      expect(await m.ir(new Date(QUINTA.getTime() + 2 * HORA))).toBe(0);
-      expect(await m.ir(new Date(QUINTA.getTime() + 3 * HORA + MIN))).toBe(1);
-      // Passo 1 usa a IA com objetivo (há chave).
-      expect(m.canal.enviados.at(-1)!.texto).toBe('Texto escrito pela IA');
-      expect(m.agente.pedidos.at(-1)!.objetivo).toMatch(/follow-up/i);
-      expect((await m.f.seloDaConversa(c.id)).cadencia).toMatchObject({ passo: 2, total: 3 });
-      // De novo no mesmo instante: nada sai em dobro.
-      expect(await m.tick()).toBe(0);
-      // Passo 2: 1 dia depois.
-      expect(await m.ir(new Date(QUINTA.getTime() + 3 * HORA + DIA + 2 * MIN))).toBe(1);
-      expect(m.canal.enviados).toHaveLength(3);
+      expect(await m.ir(new Date(QUINTA.getTime() + 23 * HORA))).toBe(0);
+      expect(await m.ir(new Date(QUINTA.getTime() + DIA + MIN))).toBe(1); // dia 1
+      expect(m.canal.enviados.at(-1)!.texto).toBe('Oi, Marina! Conseguiu ver minha mensagem? Fico à disposição para tirar qualquer dúvida 😊');
+      expect(await m.tick()).toBe(0); // de novo no mesmo instante: nada sai em dobro
+      expect(await m.ir(new Date(QUINTA.getTime() + 3 * DIA - HORA))).toBe(0);
+      expect(await m.ir(new Date(QUINTA.getTime() + 3 * DIA + 2 * MIN))).toBe(1); // dia 3
+      expect(await m.ir(new Date(QUINTA.getTime() + 7 * DIA - HORA))).toBe(0);
+      expect(await m.ir(new Date(QUINTA.getTime() + 7 * DIA + 3 * MIN))).toBe(1); // dia 7
+      expect(m.canal.enviados).toHaveLength(4);
+      expect(m.agente.pedidos.filter((p) => p.objetivo)).toHaveLength(0); // textos editáveis, sem IA
+    });
+
+    it('régua 1, 3 e 7 dias aplicada pelo modelo pronto para quando a cliente responde', async () => {
+      const m = await montar(a);
+      const cfg = await m.f.aplicarModelo('sem_resposta', true, 'Gil');
+      expect(cfg.cadencias.find((c) => c.id === 'sem_resposta')).toMatchObject({ ligada: true, pararSeResponder: true, passos: [{ esperaHoras: 24 }, { esperaHoras: 48 }, { esperaHoras: 96 }] });
+      await m.cliente('Oi');
+      expect(await m.ir(new Date(QUINTA.getTime() + DIA + MIN))).toBe(1);
+      m.relogio.t = new Date(QUINTA.getTime() + DIA + 5 * MIN);
+      await m.cliente('Oi! Desculpa a demora');
+      const c = await m.conversa();
+      expect((await m.f.seloDaConversa(c.id)).historico.some((h) => h.estado === 'cancelado' && h.detalhe === 'a cliente respondeu')).toBe(true);
+      const antes = m.canal.enviados.length;
+      // A régua antiga não continua: se a cliente sumir de novo, recomeça do "dia 1" (contando da última resposta da loja).
+      expect(await m.ir(new Date(QUINTA.getTime() + 2 * DIA + 10 * MIN))).toBe(1);
+      expect(m.canal.enviados.length).toBe(antes + 1);
+      expect(m.canal.enviados.at(-1)!.texto).toContain('Conseguiu ver minha mensagem?');
     });
 
     it('para quando a cliente responde e respeita o horário da loja', async () => {

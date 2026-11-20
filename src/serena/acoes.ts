@@ -1,3 +1,4 @@
+import { NOME_MOTIVO } from '../nps/tipos.js';
 import { randomUUID } from 'node:crypto';
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
@@ -368,6 +369,11 @@ export function descreverGatilho(g: Gatilho, nomes: Map<string, string>): NoFlux
       return { tipo: g.tipo, titulo: 'Aniversário do contato', detalhe: 'No dia, uma vez por ano' };
     case 'dias_apos_compareceu':
       return { tipo: g.tipo, titulo: 'Depois que compareceu', detalhe: `${g.dias} dia${g.dias === 1 ? '' : 's'} depois` };
+    // nps-posvenda: gatilhos de finalizar atendimento e da nota da pesquisa de satisfação.
+    case 'atendimento_finalizado':
+      return { tipo: g.tipo, titulo: 'Atendimento finalizado', detalhe: g.motivos.length ? `Motivo: ${g.motivos.map((m) => NOME_MOTIVO[m]).join(', ')}` : 'Qualquer motivo' };
+    case 'nota_nps':
+      return { tipo: g.tipo, titulo: 'Nota da pesquisa', detalhe: g.min === g.max ? `Nota ${g.min}` : `Nota de ${g.min} a ${g.max}` };
   }
 }
 

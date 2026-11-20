@@ -12,6 +12,9 @@ import type { Repositorio } from '../src/store/repositorio.js';
 import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, type ArmazemTags } from '../src/tags/tags.js';
 import { ligarFunis } from '../src/automacoes/automacoes.js';
 import { AgenteFalso, ambientes, quinta, type Ambiente } from './gestao-ambiente.js';
+import { ArmazemNpsMemoria, ArmazemNpsPostgres, type ArmazemNps } from '../src/nps/armazem.js';
+import { Nps } from '../src/nps/nps.js';
+import { registrarNps } from '../src/nps/rotas.js';
 
 export { ambientes, quinta, AgenteFalso };
 
@@ -24,11 +27,11 @@ interface Base {
   relogio: { t: Date };
   enviados: Array<{ canalId: string; telefone: string; texto: string }>;
   /** Memória: o "banco" é o mesmo objeto (sobrevive ao "reinício"). Postgres: cada instância cria os seus. */
-  armazens: { tags: ArmazemTags; funis: ArmazemFunis; automacoes: ArmazemAutomacoes };
+  armazens: { tags: ArmazemTags; funis: ArmazemFunis; automacoes: ArmazemAutomacoes; nps: ArmazemNps };
 }
 
 /** Uma "instância do servidor": Sintonia, funis, automações e a API, sobre o mesmo banco. */
-function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number) {
+function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNps = false) {
   const agora = () => b.relogio.t;
   const canal = (tipo: CanalWhatsApp['tipo']): CanalWhatsApp => ({
     tipo,
@@ -39,13 +42,21 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number) {
     },
   });
   const armazens = b.pool
-    ? { tags: new ArmazemTagsPostgres(b.pool), funis: new ArmazemFunisPostgres(b.pool), automacoes: new ArmazemAutomacoesPostgres(b.pool) }
+    ? { tags: new ArmazemTagsPostgres(b.pool), funis: new ArmazemFunisPostgres(b.pool), automacoes: new ArmazemAutomacoesPostgres(b.pool), nps: new ArmazemNpsPostgres(b.pool) }
     : b.armazens;
   const tags = new Tags(armazens.tags, 'imperio', agora);
   let sintonia: Sintonia;
   const funis = new Funis({ armazem: armazens.funis, armazemTags: armazens.tags, tags, repo: b.repo, empresaId: 'imperio', agora, comConversa: (id, fn) => sintonia.comConversa(id, fn) });
-  const automacoes = new Automacoes({ armazem: armazens.automacoes, repo: b.repo, empresaId: 'imperio', sintonia: () => sintonia, funis, tags, contas: b.contas, agora, maxEncadeamento });
-  const ganchos = ligarFunis({ tags, funis, automacoes });
+  let nps: Nps | undefined;
+  const automacoes = new Automacoes({
+    armazem: armazens.automacoes, repo: b.repo, empresaId: 'imperio', sintonia: () => sintonia, funis, tags, contas: b.contas, agora, maxEncadeamento,
+    ...(comNps ? { variaveis: () => nps!.variaveis() } : {}),
+  });
+  const ganchosBase = ligarFunis({ tags, funis, automacoes });
+  if (comNps) nps = new Nps({ empresaId: 'imperio', armazem: armazens.nps, repo: b.repo, sintonia: () => sintonia, automacoes: () => automacoes, agora });
+  const ganchos: typeof ganchosBase = nps
+    ? { ...ganchosBase, mensagemCliente: async (c, m) => { await ganchosBase.mensagemCliente?.(c, m); await nps!.mensagemCliente(c, m); } }
+    : ganchosBase;
   sintonia = new Sintonia({
     empresaId: 'imperio',
     repo: b.repo,
@@ -60,10 +71,11 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number) {
   });
   const app = criarServidor({ sintonia, repo: b.repo, agora, auth: { contas: b.contas, agora }, gestao: { tags } });
   registrarFunis(app, { repo: b.repo, funis, automacoes });
-  return { sintonia, funis, automacoes, tags, app };
+  if (nps) registrarNps(app, { nps, repo: b.repo, automacoes, agora });
+  return { sintonia, funis, automacoes, tags, app, nps };
 }
 
-export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean } = {}) {
+export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean } = {}) {
   const { repo, contas, pool } = await amb.criar();
   const relogio = { t: opcoes.inicio ?? quinta(14) };
   const armazemTags = new ArmazemTagsMemoria(() => repo.listarConversas());
@@ -73,10 +85,11 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     pool,
     relogio,
     enviados: [],
-    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas) },
+    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas), nps: new ArmazemNpsMemoria() },
   };
+  if (pool && opcoes.nps) await pool.query('truncate sintonia.nps_config, sintonia.atendimentos_finalizados, sintonia.nps_pesquisas');
   const agente = opcoes.agente ?? new AgenteFalso();
-  let atual = instancia(b, agente, opcoes.maxEncadeamento);
+  let atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps);
   const sistema = await atual.funis.garantirSistema();
   const etapasSistema = new Map((await atual.funis.etapas(sistema.id)).map((e) => [e.chaveSistema!, e.id]));
 
@@ -154,9 +167,12 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     get sintonia() {
       return atual.sintonia;
     },
+    get nps() {
+      return atual.nps;
+    },
     /** "Reinício": nova Sintonia, novos funis e automações lendo do mesmo banco. */
     reiniciar() {
-      atual = instancia(b, agente, opcoes.maxEncadeamento);
+      atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps);
     },
     como,
     conversa,

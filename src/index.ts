@@ -88,6 +88,10 @@ import { estadoDaIa } from './planos/estado-ia.js';
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
+/* nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS) e modelos prontos de automação */
+import { Nps } from './nps/nps.js';
+import { ArmazemNpsMemoria, ArmazemNpsPostgres } from './nps/armazem.js';
+import { registrarNps } from './nps/rotas.js';
 import { Radar } from './radar/radar.js';
 import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
 import { juizClaude } from './radar/juiz.js';
@@ -310,6 +314,7 @@ const automacoes = new Automacoes({
   contas,
   log,
   transmissoes: () => transmissoes,
+  variaveis: () => nps.variaveis(), // {link_avaliacao} da pesquisa de satisfação
 });
 // Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
 const armazemBots = pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria();
@@ -341,6 +346,8 @@ const followup = new Followup({
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
+// Finalizar atendimento + pesquisa de satisfação (src/nps): lê a nota na resposta da cliente; dispara as automações.
+const nps = new Nps({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: pool ? new ArmazemNpsPostgres(pool) : new ArmazemNpsMemoria(), repo, sintonia: () => sintonia, automacoes: () => automacoes, log });
 // Radar (src/radar): a equipe coloca a conversa no radar; a IA confere cada mensagem nova e o prazo; avisa e, se pedido, responde.
 const radar = new Radar({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -362,6 +369,7 @@ const ganchos: typeof ganchosBase = {
   },
   mensagemCliente: async (c, m) => {
     await ganchosBase.mensagemCliente?.(c, m);
+    await nps.mensagemCliente(c, m).catch((e) => log('Falha na pesquisa de satisfação (resposta da cliente)', String(e)));
     await followup.mensagemCliente(c, m).catch((e) => log('Falha no follow-up (resposta da cliente)', String(e)));
     await radar.mensagemCliente(c, m).catch((e) => log('Falha no radar (resposta da cliente)', String(e)));
     await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
@@ -743,6 +751,7 @@ const demo = new Demo({
 });
 registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
+registrarNps(app, { nps, repo, automacoes });
 registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
@@ -757,6 +766,7 @@ const relogio = setInterval(async () => {
   await capi.tick().catch((e) => log('Falha no relógio da CAPI', String(e))); // eventos da API de Conversões
   await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
+  await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
   await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
   const agora = new Date();
   const p = partesBahia(agora);

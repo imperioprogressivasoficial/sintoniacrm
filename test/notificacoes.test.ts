@@ -175,6 +175,20 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     expect(await ag(gente.rita)).toHaveLength(0); // outra unidade
   });
 
+  it('nota baixa na pesquisa de satisfação (0 a 6) avisa só a gestão', async () => {
+    const { gente, cliente, de, repo, notificador, relogio } = await montar(amb);
+    const c = await cliente('norte', '5571988000009', 'Oi');
+    await repo.registrarEvento({ tipo: 'nps', conversaId: c.id, unidade: 'norte', em: relogio.t, dados: { nota: 9, atendenteNome: 'Carla' } });
+    await repo.registrarEvento({ tipo: 'nps', conversaId: c.id, unidade: 'norte', em: relogio.t, dados: { nota: 4, atendenteNome: 'Carla' } });
+    await notificador.ocioso();
+    const baixas = (u: Usuario) => de(u).then((l) => l.filter((n) => n.tipo === 'nps_baixa'));
+    expect(await baixas(gente.admin)).toHaveLength(1);
+    expect((await baixas(gente.admin))[0]).toMatchObject({ titulo: 'Nota 4 de Marina' });
+    expect(await baixas(gente.gerente)).toHaveLength(1);
+    expect(await baixas(gente.carla)).toHaveLength(0);
+    expect(await baixas(gente.rita)).toHaveLength(0);
+  });
+
   it('sem dona e com a IA respondendo sozinha, mensagem nova não incomoda; IA passa para a equipe avisa', async () => {
     const { gente, cliente, de, sintonia, armazem, repo, notificador, relogio } = await montar(amb);
     const c = await cliente('norte', '5571988000003', 'Oi');
