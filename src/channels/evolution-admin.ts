@@ -13,6 +13,33 @@ export interface InfoInstancia {
   estado: EstadoInstancia;
   numero: string | null;
   perfil: string | null;
+  /** Código da última desconexão (401 = aparelho removido no celular; ver motivoDoCodigo em whatsapp-saude.ts). */
+  codigoDesconexao?: number | null;
+}
+
+/** Eventos que a Sintonia assina no webhook de cada instância. */
+export const EVENTOS_WEBHOOK = [
+  'MESSAGES_UPSERT',
+  // MESSAGES_SET: o histórico de conversas que o WhatsApp manda uma vez, logo depois de conectar.
+  'MESSAGES_SET',
+  // CALL: ligação de voz recebida no número (vira "recebida"/"perdida" na tela Ligações).
+  'CALL',
+  // CONNECTION_UPDATE: conectou, caiu, o aparelho foi removido no celular (aviso e faixa no app).
+  'CONNECTION_UPDATE',
+];
+
+function lerInfo(nome: string, i: Record<string, unknown>): InfoInstancia {
+  const inst = i.instance as Record<string, unknown> | undefined;
+  const status = String(i.connectionStatus ?? inst?.status ?? inst?.state ?? '');
+  const dono = String(i.ownerJid ?? inst?.owner ?? '');
+  const cod = Number(i.disconnectionReasonCode);
+  return {
+    nome,
+    estado: status === 'open' ? 'conectada' : status === 'connecting' ? 'conectando' : 'desconectada',
+    numero: dono ? dono.split('@')[0]!.replace(/\D/g, '') || null : null,
+    perfil: (i.profileName as string | undefined) ?? null,
+    codigoDesconexao: Number.isFinite(cod) && cod > 0 ? cod : null,
+  };
 }
 
 export const PREFIXO_INSTANCIA = 'sintonia-';
@@ -41,7 +68,13 @@ export class EvolutionAdmin {
       erro.status = resp.status;
       throw erro;
     }
-    return (texto ? JSON.parse(texto) : {}) as T;
+    if (!texto) return {} as T;
+    try {
+      return JSON.parse(texto) as T;
+    } catch {
+      // Proxy ou página de erro no lugar da Evolution: trata como "sem resposta".
+      throw Object.assign(new Error(`Evolution respondeu algo que não é JSON (${resp.status})`), { status: 502 });
+    }
   }
 
   /** Confere URL e chave. */
@@ -54,17 +87,7 @@ export class EvolutionAdmin {
   async listar(): Promise<InfoInstancia[]> {
     const lista = await this.chamar<Array<Record<string, unknown>>>('GET', '/instance/fetchInstances');
     return (Array.isArray(lista) ? lista : [])
-      .map((i) => {
-        const nome = String(i.name ?? (i.instance as Record<string, unknown> | undefined)?.instanceName ?? '');
-        const status = String(i.connectionStatus ?? (i.instance as Record<string, unknown> | undefined)?.status ?? '');
-        const dono = String(i.ownerJid ?? (i.instance as Record<string, unknown> | undefined)?.owner ?? '');
-        return {
-          nome,
-          estado: (status === 'open' ? 'conectada' : status === 'connecting' ? 'conectando' : 'desconectada') as EstadoInstancia,
-          numero: dono ? dono.split('@')[0]!.replace(/\D/g, '') || null : null,
-          perfil: (i.profileName as string | undefined) ?? null,
-        };
-      })
+      .map((i) => lerInfo(String(i.name ?? (i.instance as Record<string, unknown> | undefined)?.instanceName ?? ''), i))
       .filter((i) => i.nome.startsWith(PREFIXO_INSTANCIA));
   }
 
@@ -87,14 +110,7 @@ export class EvolutionAdmin {
     }
     const i = (Array.isArray(lista) ? lista : []).find((x) => (x.name ?? (x.instance as Record<string, unknown> | undefined)?.instanceName) === nome);
     if (!i) return { nome, estado: 'inexistente', numero: null, perfil: null };
-    const status = String(i.connectionStatus ?? (i.instance as Record<string, unknown> | undefined)?.status ?? '');
-    const dono = String(i.ownerJid ?? (i.instance as Record<string, unknown> | undefined)?.owner ?? '');
-    return {
-      nome,
-      estado: status === 'open' ? 'conectada' : status === 'connecting' ? 'conectando' : 'desconectada',
-      numero: dono ? dono.split('@')[0]!.replace(/\D/g, '') || null : null,
-      perfil: (i.profileName as string | undefined) ?? null,
-    };
+    return lerInfo(nome, i);
   }
 
   /**
@@ -110,9 +126,7 @@ export class EvolutionAdmin {
       headers: { 'x-sintonia-token': webhook.token },
       byEvents: false,
       base64: false,
-      // CALL: ligação de voz recebida no número (vira "recebida"/"perdida" na tela Ligações).
-      // MESSAGES_SET: o histórico de conversas que o WhatsApp manda uma vez, logo depois de conectar.
-      events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL'],
+      events: EVENTOS_WEBHOOK,
     };
     if (atual.estado === 'conectada') {
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
@@ -196,6 +210,49 @@ export class EvolutionAdmin {
     if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
     const r = await this.chamar<{ pairingCode?: string | null }>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
     return r.pairingCode ?? null;
+  }
+
+  /**
+   * Religa uma instância que caiu, sem número (GET /instance/connect): se a sessão do aparelho ainda vale, volta sozinha.
+   * Se o WhatsApp devolve QR Code, a sessão acabou e só a pessoa resolve (lendo o QR Code de novo).
+   */
+  async reconectar(nome: string): Promise<{ estado: 'conectada' | 'precisa_parear' | 'conectando' | 'inexistente' }> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const antes = await this.info(nome);
+    if (antes.estado === 'inexistente') return { estado: 'inexistente' };
+    if (antes.estado === 'conectada') return { estado: 'conectada' };
+    const r = await this.chamar<Record<string, unknown>>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
+    // A Evolution devolve 200 com { error: true } quando algo falha por dentro.
+    if (r.error) return { estado: /does not exist|não existe/i.test(String(r.message ?? '')) ? 'inexistente' : 'conectando' };
+    if (r.base64 || r.code || r.pairingCode) return { estado: 'precisa_parear' };
+    if ((r.instance as Record<string, unknown> | undefined)?.state === 'open') return { estado: 'conectada' };
+    await this.esperar(4000);
+    const depois = await this.info(nome);
+    return { estado: depois.estado === 'conectada' ? 'conectada' : depois.estado === 'inexistente' ? 'inexistente' : 'conectando' };
+  }
+
+  /**
+   * Instâncias criadas antes de a Sintonia assinar CONNECTION_UPDATE: acrescenta os eventos que faltam,
+   * mantendo o endereço e o token do webhook que já estão lá. Devolve true se mudou algo.
+   */
+  async atualizarEventos(nome: string): Promise<boolean> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) return false;
+    const w = await this.chamar<Record<string, unknown> | null>('GET', `/webhook/find/${encodeURIComponent(nome)}`);
+    if (!w || typeof w.url !== 'string' || !w.url) return false;
+    const atuais = Array.isArray(w.events) ? (w.events as unknown[]).map(String) : [];
+    const faltam = EVENTOS_WEBHOOK.filter((e) => !atuais.includes(e));
+    if (!faltam.length) return false;
+    await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, {
+      webhook: {
+        enabled: w.enabled !== false,
+        url: w.url,
+        headers: (w.headers as Record<string, unknown> | undefined) ?? {},
+        byEvents: w.webhookByEvents === true,
+        base64: w.webhookBase64 === true,
+        events: [...atuais, ...faltam],
+      },
+    });
+    return true;
   }
 
   async desconectar(nome: string): Promise<void> {

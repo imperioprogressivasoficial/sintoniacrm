@@ -219,7 +219,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------------------------------------------------------------- abrir o que a notificação aponta
   function irPara(n) {
     if (n.conversaId) { ui.abrir(n.conversaId); return; }
-    if (n.vista === 'conexoes') { location.href = '/conexoes'; return; }
+    // "conexoes" ou "conexoes#nao-oficial" (aviso do WhatsApp): abre a tela de Conexões no lugar certo.
+    if (n.vista && n.vista.split('#')[0] === 'conexoes') { location.href = '/' + n.vista; return; }
     if (n.vista) ui.mostrar(n.vista);
   }
   async function tocarItem(n) {

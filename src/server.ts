@@ -1,5 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
-import { eventoEvolution, lerWebhookEvolution } from './channels/evolution.js';
+import { ErroEnvioWhatsApp, eventoEvolution, lerWebhookEvolution } from './channels/evolution.js';
+import type { SaudeWhatsApp } from './channels/whatsapp-saude.js';
+import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
@@ -76,6 +78,8 @@ export interface DependenciasServidor {
   /** Tags, aba IA (configuração, treinamento, testar), painel completo e empresa. */
   /** Sino, notificações e push (Web Push). */
   notificacoes?: OpcoesNotificacoes;
+  /** Saúde do WhatsApp não oficial: eventos de conexão do webhook, faixa no app e selo em Conexões. */
+  whatsappSaude?: SaudeWhatsApp;
   /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
   leituras?: Leituras;
   /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
@@ -120,7 +124,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       (req as unknown as { corpoBruto: string }).corpoBruto = String(corpo);
       feito(null, corpo ? JSON.parse(String(corpo)) : {});
     } catch (e) {
-      feito(e as Error, undefined);
+      // JSON quebrado é erro de quem mandou (400), não do servidor.
+      feito(Object.assign(e as Error, { statusCode: 400 }), undefined);
     }
   });
 
@@ -139,7 +144,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const vistosMeta = new Map<string, Date>();
   /** Andamento do histórico do WhatsApp recebido depois de conectar (para a tela "Sincronizando"). */
   const progressoHistorico = new Map<string, { mensagens: number; conversas: number; em: Date }>();
-  if (d.conexoes) registrarConexoes(app, { ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
+  if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).
@@ -179,14 +184,34 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.get('/saude', async () => ({ ok: true, fila: d.fila ? await d.fila.fila.situacao() : undefined }));
 
   // ---------- WhatsApp não oficial (Evolution) ----------
+  /** Token do cabeçalho x-sintonia-token, comparado em tempo constante. */
+  const tokenConfere = (recebido: unknown, esperado: string) => {
+    if (typeof recebido !== 'string') return false;
+    const a = Buffer.from(recebido);
+    const b = Buffer.from(esperado);
+    return a.length === b.length && timingSafeEqual(a, b);
+  };
+  // Responde rápido: mensagens vão para a fila, histórico e eventos de conexão são tratados por trás.
   // O histórico (MESSAGES_SET) pode ser grande: aceita até 40 MB.
   app.post('/webhooks/evolution', { bodyLimit: 40 * 1024 * 1024 }, async (req, reply) => {
     if (!d.evolution) return reply.code(404).send();
-    if (d.evolution.token && req.headers['x-sintonia-token'] !== d.evolution.token) return reply.code(401).send();
-    if (eventoEvolution(req.body) === 'messages.set') {
+    if (d.evolution.token && !tokenConfere(req.headers['x-sintonia-token'], d.evolution.token)) return reply.code(401).send();
+    const corpo = req.body;
+    // Corpo estranho (vazio, lista, texto): aceita e ignora, para a Evolution não ficar reenviando.
+    if (!corpo || typeof corpo !== 'object' || Array.isArray(corpo)) return { ignorado: true };
+    const evento = eventoEvolution(corpo);
+    const instancia = typeof (corpo as { instance?: unknown }).instance === 'string' ? String((corpo as { instance: string }).instance) : '';
+    // Conectou, caiu, aparelho removido no celular: só atualiza o estado (o aviso sai por trás).
+    if (d.whatsappSaude?.aoWebhook(corpo)) return { ok: true };
+    if (evento === 'messages.set') {
       // Histórico de conversas logo depois de conectar: grava sem IA, avisos nem funil, em segundo plano.
-      const historico = lerWebhookEvolution(req.body);
-      const instancia = String((req.body as { instance?: unknown }).instance ?? '');
+      let historico: MensagemRecebida[] = [];
+      try {
+        historico = lerWebhookEvolution(corpo);
+      } catch (e) {
+        log('Histórico do WhatsApp em formato estranho', String(e));
+      }
+      d.whatsappSaude?.aoMensagem(instancia);
       const p = progressoHistorico.get(instancia) ?? { mensagens: 0, conversas: 0, em: new Date() };
       progressoHistorico.set(instancia, { ...p, em: new Date() });
       d.sintonia.importarHistorico(historico).then((r) => {
@@ -195,9 +220,34 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       }).catch((e) => log('Falha ao importar histórico do WhatsApp', String(e)));
       return { historico: historico.length };
     }
-    const mensagens = d.evolution.canal.lerWebhook(req.body);
-    const chamadas = d.chamadas ? await registrarChamadasWhatsapp(req.body).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
+    let mensagens: MensagemRecebida[] = [];
+    try {
+      mensagens = d.evolution.canal.lerWebhook(corpo);
+    } catch (e) {
+      // Evento desconhecido ou fora do formato: nunca derruba o webhook.
+      log('Webhook da Evolution fora do formato', { evento, erro: String(e).slice(0, 200) });
+    }
+    // Mensagem recebida (da cliente): prova de que o canal está conectado; guarda a hora para a tela.
+    const recebida = mensagens.filter((m) => !m.deMim).at(-1);
+    if (recebida) d.whatsappSaude?.aoMensagem(instancia, recebida.em);
+    else if (mensagens.length) d.whatsappSaude?.aoMensagem(instancia, undefined);
+    const chamadas = d.chamadas ? await registrarChamadasWhatsapp(corpo).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
+    // Se gravar na fila falhar, responde erro: a Evolution reenvia (as repetidas são ignoradas pelo id).
     return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}) };
+  });
+
+  // Faixa "WhatsApp desconectado" no app (qualquer pessoa logada vê; só a administração reconecta).
+  app.get('/api/whatsapp/saude', async (req) => {
+    if (!d.whatsappSaude) return { servidor: { ok: true }, canais: [], podeReconectar: false };
+    const r = d.whatsappSaude.resumo();
+    const u = req.usuario;
+    return {
+      servidor: { ok: r.servidor.ok, desde: r.servidor.desde },
+      canais: r.canais
+        .filter((c) => c.estado === 'desconectado')
+        .map((c) => ({ id: c.id, nome: c.nome, desde: c.desde, motivo: c.motivo, precisaParear: c.precisaParear, reconectando: c.reconectando })),
+      podeReconectar: !u || u.papel === 'admin' || u.papel === 'direcao',
+    };
   });
 
   // ---------- WhatsApp oficial (Meta) ----------
@@ -624,6 +674,11 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.setErrorHandler((erro, _req, reply) => {
     if (erro instanceof z.ZodError) return reply.code(400).send({ erro: 'Dados inválidos', detalhes: erro.issues });
     if (erro instanceof ErroAgendamento) return reply.code(400).send({ erro: erro.message, codigo: erro.codigo });
+    // Envio pelo WhatsApp não oficial que não saiu: a mensagem explicada chega à tela.
+    if (erro instanceof ErroEnvioWhatsApp) {
+      log('Envio pelo WhatsApp não saiu', { codigo: erro.codigo, detalhe: erro.detalhe.slice(0, 300) });
+      return reply.code(erro.statusCode).send({ erro: erro.message, codigo: erro.codigo });
+    }
     if (erro instanceof ErroIntegracaoPendente) return reply.code(501).send({ erro: erro.message, codigo: 'integracao_pendente', sistema: erro.tipo });
     // Recusa da Graph API (API oficial): a mensagem explicada chega à tela. Fora da janela de 24 h = 422.
     if (erro instanceof ErroMeta) {

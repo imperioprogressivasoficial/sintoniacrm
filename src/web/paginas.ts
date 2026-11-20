@@ -116,6 +116,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/chanfro.js': { arquivo: 'telas/chanfro.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },
   // Tela "Estamos atualizando melhorias" (camada do app durante uma publicação; a página inteira é /atualizando.html).
   '/telas/atualizando.js': { arquivo: 'telas/atualizando.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.

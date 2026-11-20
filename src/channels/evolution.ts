@@ -135,6 +135,85 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
   return saida;
 }
 
+/**
+ * Por que um envio pela Evolution não saiu, em palavras simples (vai direto para a tela da atendente).
+ * - temporario: vale tentar de novo sozinho (nada saiu: servidor fora, conexão caindo e voltando).
+ * - incerto: o servidor não confirmou; a mensagem pode ter saído (nunca reenviar sozinho).
+ */
+export type CodigoErroEnvio =
+  | 'sem_whatsapp'
+  | 'desconectado'
+  | 'canal_inexistente'
+  | 'chave_recusada'
+  | 'servidor_fora'
+  | 'incerto'
+  | 'recusado'
+  | 'servidor_erro';
+
+const MENSAGEM_ERRO: Record<CodigoErroEnvio, string> = {
+  sem_whatsapp: 'Não enviada: este número não tem WhatsApp.',
+  desconectado: 'Não enviada: o WhatsApp deste canal está desconectado. Reconecte em Conexões › WhatsApp.',
+  canal_inexistente: 'Não enviada: a conexão deste WhatsApp foi apagada do servidor. Conecte de novo em Conexões › WhatsApp.',
+  chave_recusada: 'Não enviada: o servidor do WhatsApp recusou a chave de acesso. Confira em Conexões › WhatsApp.',
+  servidor_fora: 'Não enviada: o servidor do WhatsApp não respondeu. Tente de novo em instantes.',
+  incerto: 'O servidor do WhatsApp não confirmou o envio: a mensagem pode ter saído. Confira no celular antes de mandar de novo.',
+  recusado: 'Não enviada: o WhatsApp recusou a mensagem.',
+  servidor_erro: 'Não enviada: o servidor do WhatsApp deu erro. Tente de novo.',
+};
+/** Status HTTP que a Sintonia devolve para a tela em cada caso. */
+const STATUS_ERRO: Record<CodigoErroEnvio, number> = {
+  sem_whatsapp: 422,
+  desconectado: 503,
+  canal_inexistente: 503,
+  chave_recusada: 502,
+  servidor_fora: 503,
+  incerto: 504,
+  recusado: 422,
+  servidor_erro: 502,
+};
+
+export class ErroEnvioWhatsApp extends Error {
+  readonly statusCode: number;
+  constructor(
+    readonly codigo: CodigoErroEnvio,
+    /** Resposta crua da Evolution (só para o log). */
+    readonly detalhe = '',
+  ) {
+    super(MENSAGEM_ERRO[codigo]);
+    this.name = 'ErroEnvioWhatsApp';
+    this.statusCode = STATUS_ERRO[codigo];
+  }
+  get temporario(): boolean {
+    return this.codigo === 'servidor_fora' || this.codigo === 'desconectado';
+  }
+}
+
+/** Erro de rede (fetch lançou): antes de chegar à Evolution (dá para tentar de novo) ou no meio (incerto). */
+export function erroDeRede(e: unknown): ErroEnvioWhatsApp {
+  const err = e as { name?: string; code?: string; cause?: { code?: string; name?: string } };
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return new ErroEnvioWhatsApp('incerto', 'tempo esgotado');
+  const codigo = err?.cause?.code ?? err?.code ?? '';
+  // Não conseguiu nem abrir a conexão: nada foi enviado.
+  if (['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'UND_ERR_CONNECT_TIMEOUT'].includes(codigo)) {
+    return new ErroEnvioWhatsApp('servidor_fora', codigo);
+  }
+  // Caiu no meio (ECONNRESET, socket fechado): pode ter saído.
+  return new ErroEnvioWhatsApp('incerto', codigo || String((e as Error)?.message ?? e).slice(0, 200));
+}
+
+/** Resposta de erro da Evolution v2.3 (status + corpo) para o motivo. */
+export function erroDaResposta(status: number, corpo: string): ErroEnvioWhatsApp {
+  const c = corpo.slice(0, 2000);
+  if (/"exists"\s*:\s*false/.test(c)) return new ErroEnvioWhatsApp('sem_whatsapp', c);
+  if (status === 404 || /instance does not exist|não existe/i.test(c)) return new ErroEnvioWhatsApp('canal_inexistente', c);
+  if (/connection closed|not connected|is not connected|connection (was )?lost|socket (is )?closed|instance.*close/i.test(c)) return new ErroEnvioWhatsApp('desconectado', c);
+  if (status === 401 || status === 403) return new ErroEnvioWhatsApp('chave_recusada', c);
+  if (status === 429 || status === 502 || status === 503) return new ErroEnvioWhatsApp('servidor_fora', `${status} ${c}`);
+  if (status === 504) return new ErroEnvioWhatsApp('incerto', `${status} ${c}`);
+  if (status >= 400 && status < 500) return new ErroEnvioWhatsApp('recusado', `${status} ${c}`);
+  return new ErroEnvioWhatsApp('servidor_erro', `${status} ${c}`);
+}
+
 export class CanalEvolution implements CanalWhatsApp {
   readonly tipo = 'evolution' as const;
 
@@ -142,6 +221,8 @@ export class CanalEvolution implements CanalWhatsApp {
     private readonly baseUrl: string,
     private readonly apiKey: string,
     private readonly fetchFn: typeof fetch = fetch,
+    /** Espera entre tentativas (troca nos testes). */
+    private readonly esperar: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {}
 
   lerWebhook(corpo: unknown): MensagemRecebida[] {
@@ -161,16 +242,31 @@ export class CanalEvolution implements CanalWhatsApp {
     });
   }
 
-  private async idDoEnvio(resp: Response): Promise<EnvioResultado> {
-    if (!resp.ok) {
-      throw new Error(`Evolution recusou o envio (${resp.status}): ${(await resp.text()).slice(0, 500)}`);
+  /**
+   * Envia com novas tentativas só quando é certo que nada saiu (servidor fora: 2 vezes, 1 s e 3 s depois;
+   * conexão caindo e voltando: 1 vez, 4 s depois). Tempo esgotado ou queda no meio nunca reenvia: não duplica.
+   */
+  private async enviarComTentativas(caminho: string, instancia: string, corpo: unknown, timeoutMs: number): Promise<EnvioResultado> {
+    for (let tentativa = 0; ; tentativa++) {
+      let erro: ErroEnvioWhatsApp;
+      try {
+        const resp = await this.postar(caminho, instancia, corpo, timeoutMs);
+        if (resp.ok) {
+          const json = (await resp.json().catch(() => ({}))) as { key?: { id?: string } };
+          return { idExterno: json.key?.id ?? '' };
+        }
+        erro = erroDaResposta(resp.status, await resp.text().catch(() => ''));
+      } catch (e) {
+        erro = e instanceof ErroEnvioWhatsApp ? e : erroDeRede(e);
+      }
+      const limite = erro.codigo === 'servidor_fora' ? 2 : erro.codigo === 'desconectado' ? 1 : 0;
+      if (tentativa >= limite) throw erro;
+      await this.esperar(erro.codigo === 'desconectado' ? 4000 : tentativa === 0 ? 1000 : 3000);
     }
-    const json = (await resp.json()) as { key?: { id?: string } };
-    return { idExterno: json.key?.id ?? '' };
   }
 
   async enviarTexto(instancia: string, telefone: string, texto: string): Promise<EnvioResultado> {
-    return this.idDoEnvio(await this.postar('message/sendText', instancia, { number: telefone, text: texto }));
+    return this.enviarComTentativas('message/sendText', instancia, { number: telefone, text: texto }, 30_000);
   }
 
   /**
@@ -180,13 +276,13 @@ export class CanalEvolution implements CanalWhatsApp {
   async enviarMidia(instancia: string, telefone: string, m: MidiaEnvio): Promise<EnvioResultado> {
     const media = m.conteudo.toString('base64');
     if (m.tipo === 'audio') {
-      return this.idDoEnvio(await this.postar('message/sendWhatsAppAudio', instancia, { number: telefone, audio: media }, 120_000));
+      return this.enviarComTentativas('message/sendWhatsAppAudio', instancia, { number: telefone, audio: media }, 120_000);
     }
     const mediatype = m.tipo === 'imagem' ? 'image' : m.tipo === 'video' ? 'video' : 'document';
     const corpo: Record<string, unknown> = { number: telefone, mediatype, mimetype: m.mimetype, media };
     if (m.legenda?.trim()) corpo.caption = m.legenda.trim();
     if (m.nomeArquivo) corpo.fileName = m.nomeArquivo;
-    return this.idDoEnvio(await this.postar('message/sendMedia', instancia, corpo, 120_000));
+    return this.enviarComTentativas('message/sendMedia', instancia, corpo, 120_000);
   }
 
   /** "digitando…"/"gravando áudio…": POST /chat/sendPresence (a Evolution mostra o aviso por `delay` ms). */

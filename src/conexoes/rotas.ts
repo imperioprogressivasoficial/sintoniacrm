@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { usuarioDaRequisicao, type OpcoesAuth } from '../auth/rotas.js';
 import { EvolutionAdmin, PREFIXO_INSTANCIA } from '../channels/evolution-admin.js';
+import type { SaudeWhatsApp } from '../channels/whatsapp-saude.js';
 import { GraphMeta } from '../channels/meta.js';
 import { CamposSociais, registrarRotasSociais } from './sociais.js';
 import { NOMES_SISTEMA } from '../agenda/sistema.js';
@@ -26,6 +27,8 @@ export interface OpcoesConexoes {
   importarHistorico?: (mensagens: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number }>;
   /** Quanto do histórico do WhatsApp já chegou depois de conectar. */
   progressoHistorico?: (canalId: string) => { mensagens: number; conversas: number; em: Date } | undefined;
+  /** Saúde do WhatsApp não oficial (selo de cada canal, reconectar, avisos). */
+  saude?: SaudeWhatsApp;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
 }
@@ -331,12 +334,32 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const novos = infos.filter((i) => !salvos.some((n) => n.canalId === i.nome)).map((i, k) => ({ canalId: i.nome, unidade: UNIDADES[0], nome: `WhatsApp ${salvos.length + k + 1}` }) as NumeroCfg);
     const todos = [...salvos, ...novos];
     if (novos.length) await salvarCanais(todos, 'sistema');
+    // O que a tela acabou de ler também atualiza a saúde (conectou: some a faixa na hora).
+    for (const i of infos) if (i.estado === 'conectada') o.saude?.marcarConectado(i.nome);
     return {
       configurada,
       erro,
       canais: todos.map((n, i) => {
         const info = infos.find((x) => x.nome === n.canalId);
-        return { id: n.canalId, nome: nomeDe(n, i), estado: erro ? 'erro' : (info?.estado ?? 'inexistente'), numero: info?.numero ?? null, perfil: info?.perfil ?? null };
+        const s = o.saude?.canal(n.canalId);
+        return {
+          id: n.canalId,
+          nome: nomeDe(n, i),
+          estado: erro ? 'erro' : (info?.estado ?? 'inexistente'),
+          numero: info?.numero ?? null,
+          perfil: info?.perfil ?? null,
+          // Selo de saúde: por que caiu, se a Sintonia está tentando religar, última mensagem recebida.
+          saude: s
+            ? {
+                estado: s.estado,
+                desde: s.desde.toISOString(),
+                motivo: s.motivo ?? null,
+                precisaParear: s.precisaParear,
+                reconectando: s.estado === 'desconectado' && !s.precisaParear && s.tentativas < 5,
+                ultimaMensagemEm: s.ultimaMensagemEm?.toISOString() ?? null,
+              }
+            : null,
+        };
       }),
     };
   });
@@ -368,6 +391,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const id = IdCanal.parse((req.params as { id: string }).id);
     if (c.get('evolutionUrl') && c.get('evolutionApiKey')) await evolution().apagar(id);
     await salvarCanais(canaisSalvos().filter((n) => n.canalId !== id), autor);
+    o.saude?.removido(id);
     return { ok: true };
   });
 
@@ -376,7 +400,23 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const id = IdCanal.parse((req.params as { id: string }).id);
     const numero = numeroDe(req);
     if (!canaisSalvos().some((n) => n.canalId === id)) await salvarCanais([...canaisSalvos(), { canalId: id, unidade: UNIDADES[0] }], autor);
-    return evolution().conectar(id, webhookDe(req), numero);
+    o.saude?.pareandoPelaPessoa(id);
+    const r = await evolution().conectar(id, webhookDe(req), numero);
+    if (r.estado === 'conectada') o.saude?.marcarConectado(id);
+    return r;
+  });
+
+  // Reconectar sem QR Code: se a sessão do aparelho ainda vale, volta na hora. Senão a tela abre o QR Code/código.
+  app.post('/api/conexoes/whatsapp/canais/:id/reconectar', async (req) => {
+    await quem(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    canalExistente(id);
+    const adm = evolution();
+    const r = await adm.reconectar(id);
+    // Instância antiga: passa a avisar quedas (CONNECTION_UPDATE) daqui para frente.
+    await adm.atualizarEventos(id).catch(() => false);
+    if (r.estado === 'conectada') o.saude?.marcarConectado(id);
+    return { estado: r.estado };
   });
 
   app.get('/api/conexoes/whatsapp/canais/:id/progresso', async (req) => {
@@ -411,8 +451,12 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     await quem(req);
     const id = IdCanal.parse((req.params as { id: string }).id);
     canalExistente(id);
+    // De propósito: sem aviso de queda nem reconexão automática.
+    o.saude?.desligadoPelaPessoa(id);
     await evolution().desconectar(id).catch((e) => {
-      if ((e as { status?: number }).status !== 404) throw e;
+      const st = (e as { status?: number }).status;
+      // 404: já não existe; 400: já estava desconectada ("is not connected").
+      if (st !== 404 && st !== 400) throw e;
     });
     return { ok: true };
   });
@@ -424,6 +468,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const bruto = String((req.body as { numero?: unknown } | undefined)?.numero ?? '').replace(/\D/g, '');
     if (bruto && (bruto.length < 10 || bruto.length > 13)) throw Object.assign(new Error('Número inválido. Use DDD + número, ex.: 71 99999-9999.'), { statusCode: 400 });
     const numero = bruto ? (bruto.length <= 11 ? `55${bruto}` : bruto) : undefined;
+    o.saude?.pareandoPelaPessoa(`${PREFIXO_INSTANCIA}${unidade}`);
     const r = await evolution().conectar(`${PREFIXO_INSTANCIA}${unidade}`, webhookDe(req), numero);
     await definirNumero(unidade, true, autor);
     return r;
@@ -432,6 +477,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
   app.post('/api/conexoes/whatsapp/:unidade/desconectar', async (req) => {
     const autor = await quem(req);
     const unidade = Unidade.parse((req.params as { unidade: string }).unidade);
+    o.saude?.desligadoPelaPessoa(`${PREFIXO_INSTANCIA}${unidade}`);
     await evolution().desconectar(`${PREFIXO_INSTANCIA}${unidade}`).catch((e) => {
       if ((e as { status?: number }).status !== 404) throw e;
     });

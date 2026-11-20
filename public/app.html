@@ -2128,7 +2128,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const t = texto.value.trim(); if (!t || !estado.aberta) return;
     $('enviar').disabled = true;
     try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); texto.value = ''; texto.style.height = ''; $('revisao').hidden = true; trocarBotao(); await atualizar(); }
-    catch (x) { toast('Não enviou: ' + x.message); }
+    catch (x) {
+      /* whatsapp-estavel: o servidor já explica ("Não enviada: …"). O aviso fica na conversa, acima da caixa, e o texto continua lá. */
+      const doWa = /^Não enviada|pode ter saído/.test(x.message);
+      if (doWa) { $('revisao-tit').textContent = /pode ter saído/.test(x.message) ? 'Envio sem confirmação' : 'Mensagem não enviada'; $('revisao-txt').textContent = x.message; $('revisao-usar').hidden = true; $('revisao').hidden = false; }
+      toast(doWa ? x.message : 'Não enviou: ' + x.message);
+    }
     finally { $('enviar').disabled = false; texto.focus(); }
   }
   const usarTexto = (t) => { texto.value = t; texto.dispatchEvent(new Event('input')); texto.focus(); };
@@ -3353,6 +3358,8 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/scripts.js" defer></script>
 <script src="/telas/chanfro.js" defer></script>
 <script src="/telas/puxar.js" defer></script>
+<!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
+<script src="/telas/whatsapp-saude.js" defer></script>
 <script>
 // imperio: presença da equipe (disponível / fora do ar)
 (() => {
