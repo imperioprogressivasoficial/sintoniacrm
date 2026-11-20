@@ -24,10 +24,11 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 20/11/2026, 21h20 (Bahia) — Claude da outra conta (Pro).
+**Última atualização:** 19/11/2026, 21h50 (Bahia) — Claude da outra conta (Pro).
 
-- **Branch de trabalho:** `claude/visual-original-evolution` (criada a partir da `producao` em `dc2f93d`). **Não publicada.**
-- **No ar:** continua o commit `73997e9` (ver `deploy/no-ar.txt`).
+- **Branch de trabalho:** `claude/visual-original-evolution` (criada a partir da `producao` em `dc2f93d`), já levada para a `producao`.
+- **No ar:** a `producao` atual, publicada em 19/11 às 21h47 (Bahia) com o ok do dono (ver `deploy/no-ar.txt`).
+  Conferido no ar: Evolution respondendo pela Sintonia, presença respondendo, visual novo nas telas.
 
 ### O que esta branch refaz (o que se perdeu em 19/11, 18h30)
 1. **`public/app.html` com o visual original** (aprovado pelo dono em 19/11). Parte do `app.html` de `b0eb07f`
@@ -58,13 +59,13 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 Testes: `npx tsc --noEmit` ok; `npx vitest run` com o Postgres de teste: 615 de 615. Telas conferidas rodando o app
 localmente (celular e computador, claro e escuro).
 
-### Antes de publicar esta branch (atenção)
-- No servidor existe um projeto Docker **avulso** `sintonia-presenca` (criado direto no servidor em 19/11, antes destas
-  regras). Ele usa a mesma rota `/api/presenca`: **apague esse projeto** antes de publicar esta branch, para não haver duas.
-- Seguir o passo 3 do `CLAUDE.md` (conferir o sha256 do que está no ar) e publicar só com o ok do dono.
+### Publicação (19/11, 21h47)
+- O projeto avulso `sintonia-presenca` foi apagado do servidor antes de publicar.
+- A Hostinger aceita receitas de no máximo 8192 caracteres: o código da presença vai dentro do pacote.
+- O fluxo do n8n que servia o pacote não existe mais; o pacote foi servido pela branch `claude/pacote-deploy`
+  (arquivo `pacote-<sha256>.b64`, conferido pela soma). Para a próxima publicação, use o mesmo caminho com o pacote novo.
 
 ### O que falta
-- Publicar (com o ok do dono).
 - Dono: chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Assia em Agentes de IA › Controle.
 - Telas de carregamento: o dono escolheu "Digitando sem a logo + barra no topo"; a versão no ar (anel com plugues) foi mantida
   como pedido. Confirmar com ele se fica assim.
