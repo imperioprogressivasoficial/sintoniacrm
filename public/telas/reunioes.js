@@ -7,7 +7,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .rn { width: 100%; min-width: 0; display: grid; gap: 16px; }
   /* layout-telas: no computador usa a largura toda — links em grade de cartões e as próximas reuniões na coluna da direita */
   .rn-grade { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-  .rn-links { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+  .rn-links .rn-bt { padding: 7px 11px; }
+  .rn-links { display: grid; gap: 12px; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
   .rn-passos { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: rn; }
   .rn-passos li { counter-increment: rn; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 2px 10px; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-size: 13.5px; color: var(--sub); }
   .rn-passos li::before { content: counter(rn); grid-row: span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
