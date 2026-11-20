@@ -8,6 +8,10 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 - Ir organizando o sistema sozinho: achar bugs, corrigir, conectar o que falta, melhorar.
 - Mudança de design: mostrar modelos (o dono pediu 10 para o pipeline) no Claude Design antes de aplicar.
 
+## Tarefas de servidor
+- [ ] **Proteger o servidor da Hostinger** (n8nimperio.tech): plano em docs/SEGURANCA-SERVIDOR.md — firewall, SSH só por chave,
+      MFA no n8n, Evolution Manager restrito, cópias fora do servidor. Aplicar com o ok do dono.
+
 ## Funcionalidades pedidas (referência: Kommo)
 - [ ] **Pipeline comercial no celular** — 10 modelos de visual para escolher (em andamento).
 - [ ] **Finalizar atendimento + pesquisa NPS**: ao encerrar, a cliente recebe a pesquisa (nota 0–10 + comentário);
@@ -26,6 +30,13 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 - [x] Botão ativo = cor invertida (Radar no escuro) e, no pipeline, fundo com o degradê azul (20/11).
 - [x] Agendamento online (como o Cal.com, dentro da Sintonia): links /r/<slug>, página pública, reuniões marcadas (20/11).
 - [x] Vendas › Scripts (roteiros por etapa) e Clientes logo abaixo de Vendas (20/11).
+- [ ] Rotina e tarefas do vendedor (Atendimento › Rotina) — em construção (agente).
+- [ ] Radar = IA monitorando o que a atendente pediu (só entra quem for colocado no radar) — em construção (agente).
+- [ ] Serena cria fluxos, scripts e links pelo chat, com prévia (artefato) e confirmação — em construção (agente).
+- [ ] Tela "Estamos atualizando melhorias" durante publicação + página 404 — em construção (agente).
+- [ ] WhatsApp não oficial à prova de quedas (avisos, reconexão, erros de envio) — em construção (agente).
+- [ ] Pipeline: botão do meio escolhido por pipeline (Agendar, Marcar como ganho, Fechar venda…), não fixo.
+- [ ] Cantos no computador: 5 variações enviadas, aguardando escolha.
 - [ ] Clientes, leads e o cartão do lead (o cartão fica dentro do lead).
 - [x] Menu: Clientes com aba própria; Vendas (CRM) = Criar novo pipeline › pipelines › Tags › Importar;
       Automações = Chatbot, Fluxos, Agente de IA, Follow-up (20/11).
