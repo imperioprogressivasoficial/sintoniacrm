@@ -1,9 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 11:39 UTC (20/11, 08h39 na Bahia)
-commit: 78d9777
-pacote sha256: bc0d6ab43b665a98d7185348dbb309d0d34e3b39622ad7077341140249fe8328
+data: 2026-11-20 11:56 UTC (20/11, 08h56 na Bahia)
+commit: d619be0
+pacote sha256: 5ae40ab6f5f505adc9d33922c2d6c0c5be78696b0752a5e23d571c9b70e7d67d
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-78d9777.b64); pode apagar depois.
-observação: em cima do 855f49c. Entra: cobrança pelo Asaas (desligada até cadastrar a chave em Conexões › Outras
-  configurações › Pagamentos; webhook /webhooks/asaas) e Agenda com os horários marcados direto no Trinks (cache de 60 s;
-  Avec/AppBarber ainda não suportam). Conferido: /saude 200, /webhooks/asaas 401 sem token.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-d619be0.b64); pode apagar depois.
+observação: em cima do 78d9777. Entra: "Mais" vira "Configurações" (barra e textos) e o rótulo da barra não corta mais g/ç.
+  Conferido: /saude 200, app servindo "Configurações".
