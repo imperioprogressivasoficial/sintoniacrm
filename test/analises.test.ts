@@ -1,13 +1,13 @@
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 import { analisarFunil, analisarHorarios, analisarRecorrencia, analisarVendas, gradeDe, resumirGrade, variacao } from '../src/analises/calculo.js';
-import { FonteAnalisesMemoria, FonteAnalisesPostgres } from '../src/analises/fonte.js';
+import { FonteAnalisesMemoria, FonteAnalisesPostgres, type FonteAnalises } from '../src/analises/fonte.js';
 import { OrigensConversa } from '../src/analises/origens.js';
 import { registrarAnalises } from '../src/analises/rotas.js';
 import type { Usuario } from '../src/auth/contas.js';
 import { ArmazemComercialMemoria } from '../src/comercial/armazem.js';
 import { ConfigComercial, type Venda } from '../src/comercial/calculo.js';
-import { FonteComercialMemoria, FonteComercialPostgres } from '../src/comercial/fonte.js';
+import { FonteComercialMemoria, FonteComercialPostgres, type FonteComercial } from '../src/comercial/fonte.js';
 import { RepositorioPostgres } from '../src/store/postgres.js';
 import { RepositorioMemoria, type Repositorio } from '../src/store/repositorio.js';
 import { bahia, DIA, HORA } from '../src/util/tempo.js';
@@ -186,7 +186,7 @@ async function cenario(repo: Repositorio = new RepositorioMemoria()) {
 
 const usuario = (empresaId: string, p: Partial<Usuario> = {}): Usuario => ({ id: 'u-' + empresaId, empresaId, nome: 'Gestora', email: 'g@x', papel: 'admin', unidades: ['norte', 'sumare'], ativo: true, ...p });
 
-async function montar(repo: Repositorio, u?: Usuario, fonte = new FonteAnalisesMemoria(repo), comercial = new FonteComercialMemoria(repo)) {
+async function montar(repo: Repositorio, u?: Usuario, fonte: FonteAnalises = new FonteAnalisesMemoria(repo), comercial: FonteComercial = new FonteComercialMemoria(repo)) {
   const app = Fastify();
   app.addHook('preHandler', async (req) => {
     if (u) (req as { usuario?: Usuario }).usuario = u;

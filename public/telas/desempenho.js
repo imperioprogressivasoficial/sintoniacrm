@@ -15,7 +15,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CSS = `
   .dp-caixa.dp-caixa { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; padding: 14px 16px 0; gap: 0; }
   .dp { --serie: var(--marca-azul); --menta: var(--marca-menta); --noite: #071d33; --coral: #ff7a59;
-        display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; max-width: 1240px; width: 100%; margin: 0 auto; }
+        display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 28px; min-width: 0; width: 100%; margin: 0; }
+  /* analises: no computador, toda a largura do painel com margem de 28px, como o Dashboard */
+  @media (min-width: 761px) { .dp-caixa.dp-caixa { padding: 22px 28px 0; } }
   html[data-tema="escuro"] .dp { --serie: #7cc4ff; }
   @media (prefers-color-scheme: dark) { html:not([data-tema="claro"]) .dp { --serie: #7cc4ff; } }
   @media (max-width: 760px) { .dp { padding-bottom: 110px; } }

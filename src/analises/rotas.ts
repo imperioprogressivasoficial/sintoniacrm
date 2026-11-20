@@ -125,6 +125,12 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
     return { unidades, atendentes };
   };
 
+  /** Só as opções dos filtros (unidades e atendentes), para as abas que não vêm daqui (Satisfação, Painel da TV). */
+  app.get('/api/analises/opcoes', async (req) => {
+    exige(req);
+    return opcoes(req);
+  });
+
   app.get('/api/analises/:tipo', async (req) => {
     exige(req);
     const tipo = z.enum(TIPOS_ANALISE).parse((req.params as { tipo: string }).tipo);
