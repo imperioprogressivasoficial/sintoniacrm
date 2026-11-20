@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 22:45 UTC (20/11, 19h45 na Bahia)
-commit: a656716
-pacote sha256: b0ecaa79c7a5225c24656bc530db67f1e2cf35b609eeb91268b032dad4a1710b
+data: 2026-11-20 23:05 UTC (20/11, 20h05 na Bahia)
+commit: c3c1a07
+pacote sha256: b39b3815f6847c5daf1ca390d8e8f9a7360f63f2a0b3657488e46b1b815eb2d0
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-a656716.b64); pode apagar depois.
-observação: em cima do a8ae1c1. Entra: chave de disponível ao lado do nome, Automações reordenadas + Pesquisa de satisfação, Treinar a Serena no menu da Serena.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-c3c1a07.b64); pode apagar depois.
+observação: em cima do a656716. Entra: fluidez (claude/fluidez: transições tipo iPhone, voltar arrastando da borda, folhas com mola, lista que só refaz a linha que mudou, lista guardada no aparelho; docs/FLUIDEZ.md).
