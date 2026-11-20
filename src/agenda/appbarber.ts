@@ -2,6 +2,7 @@ import { ClienteHttpFila } from './fila-http.js';
 import {
   ErroAgenda,
   ErroIntegracaoPendente,
+  type AgendamentoDaAgenda,
   type AgendamentoDoSistema,
   type ClienteAgenda,
   type DadosNovoAgendamento,
@@ -75,5 +76,8 @@ export class AgendaAppBarber extends ClienteHttpFila implements SistemaAgenda {
   }
   async listarAgendamentosDoCliente(): Promise<AgendamentoDoSistema[]> {
     return this.pendente('agendamentos da cliente');
+  }
+  async listarAgendamentosDoPeriodo(): Promise<AgendamentoDaAgenda[]> {
+    return this.pendente('agenda do salão');
   }
 }

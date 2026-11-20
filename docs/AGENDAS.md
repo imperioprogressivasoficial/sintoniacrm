@@ -29,6 +29,10 @@ O que é **suposição** está marcado assim e não foi testado contra a API rea
   - `GET /v1/agendamentos/profissionais/{data}?servicoId&profissionalId&intervalos`: horários vagos por profissional;
   - `GET /v1/clientes?Telefone=`: busca por trecho, por isso a Sintonia confere o número exato. `POST /v1/clientes` cadastra;
   - `GET /v1/agendamentos?clienteId&dataInicio&dataFim` e `POST /v1/agendamentos`;
+  - `GET /v1/agendamentos?dataInicio&dataFim` (sem `clienteId`): a agenda inteira do estabelecimento, usada pela aba
+    Agenda (`src/agenda/agenda-externa.ts`, cache de 1 minuto por unidade e período). **Suposição:** sem `clienteId`
+    a API devolve todos os horários do período e cada um traz `cliente { id, nome }` (o telefone pode não vir;
+    aí a conversa é achada pelo id da cliente guardado quando a Sintonia agenda). Falta validar com a chave real;
   - `PATCH /v1/agendamentos/{id}/status/cancelado`: cancelar. Há também `confirmado`, `finalizado`, `clientefaltou` e `ematendimento`.
     **Suposição:** a chamada vai sem corpo. A referência não deixa claro se aceita um motivo.
 - **Webhooks:** a referência lista eventos de agendamento (cadastro, alteração e exclusão), de cliente, de
@@ -36,7 +40,7 @@ O que é **suposição** está marcado assim e não foi testado contra a API rea
 - **Limitações:**
   - a API **não confere conflito** ao criar agendamento. A Sintonia reconsulta os horários vagos sem cache antes de gravar;
   - o limite de requisições existe, mas o valor não aparece na página. Há `GET /v1/consumo` para acompanhar o uso;
-  - não existe listagem da agenda inteira do salão por dia, só por cliente.
+  - a listagem por período sem cliente ainda não foi conferida contra a API real (ver acima).
 
 ## Avec (avec.app / Avec Salão)
 

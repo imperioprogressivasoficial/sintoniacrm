@@ -5,8 +5,8 @@ import type { Evento, Repositorio } from '../store/repositorio.js';
 
 /**
  * Agenda (aba Agenda): os horários marcados pela Sintonia (IA ou equipe pelo botão "Agendar"), lidos dos eventos
- * agendamento_ia / agendamento_equipe. A integração com o Trinks não tem listagem da agenda inteira do salão
- * (só por cliente), então o que foi marcado direto no Trinks não aparece aqui.
+ * agendamento_ia / agendamento_equipe. O que a recepção marca direto no sistema do salão vem de agenda-externa.ts,
+ * e a rota junta os dois.
  */
 
 export interface ItemAgenda {
