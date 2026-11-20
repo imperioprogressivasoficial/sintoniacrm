@@ -24,17 +24,17 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 20/11/2026 (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 19/11/2026, 22h25 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` em `f20efdd` (publicada pela outra conta em 19/11, 21h47). Conferido no ar: carregamento com anel,
-  visual original, Evolution respondendo (Norte e Sumaré prontas para QR), presença.
-- **Branch de trabalho:** `claude/paginas-vendas-login` = `producao` + commit "Serena" abaixo. **Não publicado.**
+- **No ar:** `producao` (ver `deploy/no-ar.txt`), publicada em 19/11 às 22h21 pela conta Max, em cima do trabalho da conta Pro
+  (visual original, Evolution, presença). Conferido: /saude ok, presença ok, Evolution configurada, foto /serena.jpg.
+- **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
 - **Renomeação Assia → Serena (pedido do dono em 20/11; passou por "Sincronia" antes do nome final):**
   - No ar, pelo app (banco): agente "Assia" → "Serena" (e "quem é" da persona); automação "Perdida há 30 dias: Serena tenta reativar".
   - n8n: os 5 fluxos renomeados (nomes, textos, prompt da supervisora). Endereços técnicos mantidos: webhooks `assia-*`,
     cabeçalho `x-assia-voz`, login `assia-integracao@…`, chave de memória `assia-supervisora-v2-…`. Os 3 ativos seguem ativos.
-  - Código (nesta branch, falta publicar): gestão pode renomear pessoa (`PATCH /api/acessos/usuarios/:id {nome}`), selo de IA
-    reconhece "Serena", textos de Conexões. Depois de publicar: renomear o usuário "Assia (integração)" para "Serena (integração)".
+  - Código (publicado): gestão pode renomear pessoa (`PATCH /api/acessos/usuarios/:id {nome}`), selo de IA reconhece "Serena".
+    Usuário de serviço já renomeado para "Serena (integração)" (login continua `assia-integracao@…`). Foto da Serena (recorte C) na agente e no usuário.
   - Fora daqui: agente de voz da ElevenLabs (não está na conta conectada) e textos do servidor do Espaço Rainha (outro repositório).
 - **Personagem:** a Serena é uma moça de fone de atendente (imagem do dono, feita no ChatGPT); falta a versão sem texto/fundo transparente para o avatar.
 - **Em desenho (aguardando escolha do dono):** tela do botão do meio "Serena" no estilo ChatGPT — 5 modelos em

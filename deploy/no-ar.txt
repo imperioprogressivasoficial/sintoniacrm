@@ -1,8 +1,9 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 00:47 UTC (19/11, 21h47 na Bahia)
-commit: 6b95d59
-pacote sha256: 0ce2dc9ac755054eb97e78f335fc309af415107148f401624323e32a1c4cef7c
-quem: Claude (outra conta, Pro), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com); pode apagar depois, o app já instalou no volume.
-observação: volta o visual original de 19/11, a ligação com a Evolution (chave-evolution) e a presença da equipe.
-  O projeto avulso "sintonia-presenca" foi apagado do servidor antes desta publicação.
+data: 2026-11-20 01:21 UTC (19/11, 22h21 na Bahia)
+commit: f2682d9
+pacote sha256: f57bc3c2a13f9b968c15d98961d9a122debc100336c7f38ffa3eb0a4658a762b
+quem: Claude (conta do Bruno, Max), com o ok do dono
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f2682d9.b64); pode apagar depois.
+observação: em cima do f20efdd (visual original, Evolution, presença). Entra: assistente renomeada para Serena (selo de IA,
+  textos), gestão pode renomear pessoa, foto da Serena em /serena.jpg. Depois de publicar: usuário "Assia (integração)"
+  renomeado para "Serena (integração)" e foto da Serena na agente e no usuário (pelo app).
