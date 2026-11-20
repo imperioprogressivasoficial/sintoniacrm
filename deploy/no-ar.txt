@@ -1,8 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 15:40 UTC (20/11, 12h40 na Bahia)
-commit: 1a5d78f
-pacote sha256: 55a125c4329dc7e73a213dbd6a92e1abd4926f9a167ab767fccc6f1ab8679363
+data: 2026-11-20 16:10 UTC (20/11, 13h10 na Bahia)
+commit: 1d19ca6
+pacote sha256: 74c1324eed4e70b3245d38e20739bde5a493251edce8da341e6e3eef3848ff35
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1a5d78f.b64); pode apagar depois.
-observação: em cima do 690711b. Entra: Agendamento online (/r/<slug>, migração 320_reunioes_scripts), Scripts de venda, Clientes abaixo de Vendas.
-  Conferido: /api/reunioes respondendo, /app com reunioes.js.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1d19ca6.b64); pode apagar depois.
+observação: em cima do 1a5d78f. Entra (agentes): tela "Estamos atualizando" + 404 (claude/atualizando), Serena com ações e artefatos (claude/serena-acoes), Radar novo + chip Esperando (claude/radar, migração 350), Rotina e tarefas (claude/rotina, migração 340); chanfrado só no cartão do lead.
