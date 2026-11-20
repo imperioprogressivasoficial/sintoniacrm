@@ -1,8 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 13:14 UTC (20/11, 10h14 na Bahia)
-commit: 2c191a9
-pacote sha256: 315a5b322a0cb9b1116997e29596f359813cf81446543203e0fc874c78e22d6a
+data: 2026-11-20 13:22 UTC (20/11, 10h22 na Bahia)
+commit: 17840f5
+pacote sha256: 620342f087ed4b03b10c40ff9c68d1e6c9ed2cb155280e8d64868da3004b4733
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-2c191a9.b64); pode apagar depois.
-observação: em cima do 44d749b. Entra: Dashboard no celular no modelo 3 (banco): número centralizado, curva de ponta a ponta sem eixos, cartões sem lápis/i (só no modo de editar).
-  Conferido: /saude 200, painel.js novo servido, WhatsApp respondendo.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-17840f5.b64); pode apagar depois.
+observação: em cima do 2c191a9. Entra: botão de modo escuro no topo de Dashboard, Ligações, Serena, Conversas e Configurações (celular); curva ondulada no Dashboard do celular.
+  Conferido: /saude 200, serena.js novo servido.

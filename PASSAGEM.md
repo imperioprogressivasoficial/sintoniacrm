@@ -13,6 +13,8 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
 
+- **20/11 13:22 UTC — no ar o 17840f5:** `window.SintoniaBotaoTema()` e `window.SintoniaTopoGrupo()` (app.html) põem lua/sol
+  (e o sino) no topo de todas as telas do celular. Curva do Dashboard no celular suavizada só no desenho (`sr.banco`).
 - **20/11 13:14 UTC — no ar o 2c191a9:** Dashboard do celular voltou ao modelo 3 escolhido (banco). Em `painel.js`, `blocoHeroi`
   usa `.pn-banco` quando `!s.largo && !s.editando`; `curva` com `sr.banco` tira eixos, média, legenda e o balão de vazio.
 - **20/11 12:54 UTC — no ar o commit 44d749b** (branch `claude/paginas-vendas-login`, levado para `producao`).
