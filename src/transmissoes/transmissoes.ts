@@ -333,8 +333,9 @@ export class Transmissoes {
                   then (select count(distinct x.tag_id) from sintonia.conversa_tags x where x.conversa_id = c.id and x.tag_id::text = any($3::text[])) = cardinality($3::text[])
                   else exists (select 1 from sintonia.conversa_tags x where x.conversa_id = c.id and x.tag_id::text = any($3::text[])) end))
           and not exists (select 1 from sintonia.conversa_tags x where x.conversa_id = c.id and x.tag_id::text = any($4::text[]))
-          and (cardinality($5::text[]) = 0 or c.etapa = any($5::text[]))`,
-      [this.empresaId, unidade, p.tags, p.semTags, p.etapas, p.excluirRecebeuDias, p.excluirConversaAberta, excetoCampanha, agora, p.tagsTodas],
+          and (cardinality($5::text[]) = 0 or c.etapa = any($5::text[]))
+          and (cardinality($11::uuid[]) = 0 or c.id = any($11::uuid[]))`,
+      [this.empresaId, unidade, p.tags, p.semTags, p.etapas, p.excluirRecebeuDias, p.excluirConversaAberta, excetoCampanha, agora, p.tagsTodas, p.conversas],
     );
     return rows;
   }

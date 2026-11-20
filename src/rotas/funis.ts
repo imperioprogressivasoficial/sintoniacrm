@@ -6,6 +6,7 @@ import { ehGestor, escopoDe, podeVer } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import { ehCanalTeste } from '../channels/teste.js';
 import { ACOES_PRINCIPAIS, type Funis } from '../funis/funis.js';
+import { lerFiltro } from '../funis/filtro-leads.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
 
 /**
@@ -122,12 +123,22 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
       .optional(),
     offset: z.coerce.number().int().min(0).max(100_000).default(0),
     limite: z.coerce.number().int().min(1).max(200).default(50),
+    /** Filtro completo do painel "Filtrar" (JSON; ver src/funis/filtro-leads.ts). */
+    filtro: z.string().max(6000).optional(),
   });
+  /** Filtro completo resolvido para este funil e esta pessoa (ou nada, sem filtro). */
+  async function avancado(req: FastifyRequest, funilId: string, texto: string | undefined) {
+    const f = lerFiltro(texto);
+    if (!f) return { avancado: undefined, avisos: [] as string[] };
+    const r = await funis.resolverFiltro(funilId, f, req.usuario?.id);
+    return { avancado: r.filtro, avisos: r.avisos };
+  }
   app.get('/api/funis/:id/quadro', async (req) => {
-    const q = QuadroQ.parse(req.query);
+    const { filtro, ...q } = QuadroQ.parse(req.query);
     const [em, id] = q.apos ? q.apos.split('|') : [];
     const apos = em && id && !Number.isNaN(Date.parse(em)) ? { em: new Date(em), id } : undefined;
-    const r = await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario) });
+    const av = await avancado(req, param(req, 'id'), filtro);
+    const r = { ...(await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario), avancado: av.avancado })), avisos: av.avisos };
     if (!o.origens) return r;
     const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
     return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
@@ -141,6 +152,32 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
     if (!o.origens || !achados.length) return achados;
     const mapa = await o.origens(achados.map((a) => a.conversaId)).catch(() => ({}) as Record<string, { icone: string }>);
     return achados.map((a) => ({ ...a, origem: mapa[a.conversaId] ?? { icone: 'desconhecido' } }));
+  });
+
+  // Ids de todos os leads que passam no filtro (todas as colunas, ou só uma): "Nova transmissão" do pipeline.
+  const IdsQ = z.object({ unidade: UNIDADE.optional(), etapaId: z.string().uuid().optional(), dona: z.string().min(1).max(60).optional(), filtro: z.string().max(6000).optional(), max: z.coerce.number().int().min(1).max(5000).default(5000) });
+  app.get('/api/funis/:id/ids', async (req) => {
+    const { filtro, max, ...q } = IdsQ.parse(req.query);
+    const av = await avancado(req, param(req, 'id'), filtro);
+    const ids = await funis.idsDoQuadro(param(req, 'id'), { ...q, escopo: escopoDe(req.usuario), avancado: av.avancado }, max);
+    return { ids, limite: ids.length >= max, avisos: av.avisos };
+  });
+
+  // Lixeira do pipeline: "Excluir lead" esconde o cartão (nada é apagado); "Recuperar" devolve.
+  const Ids = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) });
+  const naLixeira = async (req: FastifyRequest) => {
+    if (!pode(req, 'crm_mover')) throw proibido('Você não pode mudar o CRM. Fale com a gestão.');
+    const { ids } = Ids.parse(req.body);
+    for (const id of ids) await conversaVisivel(req, id);
+    return ids;
+  };
+  app.post('/api/funis/:id/excluidos', async (req) => {
+    const ids = await naLixeira(req);
+    return { ok: true, excluidos: await funis.excluir(param(req, 'id'), ids, quem(req)) };
+  });
+  app.post('/api/funis/:id/excluidos/recuperar', async (req) => {
+    const ids = await naLixeira(req);
+    return { ok: true, recuperados: await funis.recuperar(param(req, 'id'), ids) };
   });
 
   // ------------------------------------------------------------ cartões

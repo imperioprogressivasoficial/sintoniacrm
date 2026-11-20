@@ -267,6 +267,9 @@ describe.skipIf(!temPostgres)('Transmissões (Postgres)', () => {
     // Etapa e "sem a tag".
     expect((await a.t.previaPublico('norte', { etapas: ['agendada'] })).encontrados).toBe(0);
     expect((await a.t.previaPublico('norte', { semTags: [tag.id], excluirConversaAberta: false })).encontrados).toBe(1);
+    // crm-topo: só os leads escolhidos no Pipeline (com o filtro de lá).
+    expect((await a.t.previaPublico('norte', { tags: [tag.id], conversas: [cs[4]!.id, cs[5]!.id] })).encontrados).toBe(2);
+    expect((await a.t.previaPublico('norte', { conversas: [cs[4]!.id] })).encontrados).toBe(1);
   });
 
   it('envia no ritmo do número, só dentro da janela, com variáveis; pausa, retoma e conclui', async () => {

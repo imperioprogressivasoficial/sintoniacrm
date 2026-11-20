@@ -4,6 +4,7 @@ import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento, ty
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { sqlEscopo } from '../painel/escopo-sql.js';
 import type { Repositorio } from '../store/repositorio.js';
+import { passaFiltroLeads, sqlFiltroLeads, type FiltroLeads, type FiltroResolvido } from './filtro-leads.js';
 import { CORES_TAGS, ErroTag, validarCor, validarNome, type ArmazemTags, type DelegadoEtapas, type Tag, type TagResumo, type Tags } from '../tags/tags.js';
 
 /**
@@ -73,6 +74,8 @@ export interface Cartao {
   atualizadaEm: Date;
   /** Valor do negócio (R$), quando alguém preencheu. */
   valor: number | null;
+  /** Quando a conversa (o lead) foi criada. */
+  criadaEm?: Date;
 }
 
 /** Resultado da busca do quadro (lista que aparece debaixo do campo). */
@@ -98,6 +101,8 @@ export interface FiltroQuadro {
   apos?: { em: Date; id: string };
   /** Conta como "parada" quem está na etapa desde antes disto (padrão: 3 dias antes de agora). */
   paradaAntes?: Date;
+  /** Filtro completo (painel "Filtrar"), já resolvido pelo serviço. Sem ele, os excluídos ficam de fora. */
+  avancado?: FiltroResolvido;
   offset: number;
   limite: number;
 }
@@ -118,6 +123,12 @@ export interface ArmazemFunis {
   contar(funilId: string, escopo: EscopoVisao): Promise<Map<string, number>>;
   /** Totais por coluna (com os filtros) e a página de cartões de cada coluna. */
   quadro(funilId: string, f: FiltroQuadro): Promise<{ totais: Map<string, number>; paradas: Map<string, number>; linhas: LinhaQuadro[] }>;
+  /** Ids das conversas do quadro que passam no filtro (todas as colunas; no máximo `max`), mais recentes primeiro. */
+  ids(funilId: string, f: Omit<FiltroQuadro, 'offset' | 'limite' | 'apos'>, max: number): Promise<string[]>;
+  /** Lixeira do pipeline: esconde os leads (sem apagar nada). Devolve quantos entraram agora. */
+  excluir(empresaId: string, funilId: string, conversaIds: string[], por: string, em: Date): Promise<number>;
+  /** Tira da lixeira. Devolve quantos voltaram. */
+  recuperar(funilId: string, conversaIds: string[]): Promise<number>;
   /** Busca no quadro por nome ou dígitos do telefone (no máximo `limite`). */
   buscarCartoes(funilId: string, termo: string, escopo: EscopoVisao, limite: number): Promise<AchadoQuadro[]>;
   /** Valor do negócio (R$) de uma conversa; null apaga. */
@@ -181,12 +192,31 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
   private async conversasPorId() {
     return new Map((await this.repo.listarConversas()).map((c) => [c.id, c]));
   }
+  /** Lixeira: chave funil|conversa. */
+  private readonly excluidos = new Set<string>();
+  async excluir(_empresaId: string, funilId: string, conversaIds: string[]) {
+    let n = 0;
+    for (const id of conversaIds) if (!this.excluidos.has(`${funilId}|${id}`)) { this.excluidos.add(`${funilId}|${id}`); n++; }
+    return n;
+  }
+  async recuperar(funilId: string, conversaIds: string[]) {
+    let n = 0;
+    for (const id of conversaIds) if (this.excluidos.delete(`${funilId}|${id}`)) n++;
+    return n;
+  }
+  private excluido(funilId: string, conversaId: string) {
+    return this.excluidos.has(`${funilId}|${conversaId}`);
+  }
+  async ids(funilId: string, f: Omit<FiltroQuadro, 'offset' | 'limite' | 'apos'>, max: number) {
+    const { linhas } = await this.quadro(funilId, { ...f, offset: 0, limite: 1_000_000 });
+    return linhas.sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime()).slice(0, max).map((l) => l.conversaId);
+  }
   async contar(funilId: string, escopo: EscopoVisao) {
     const conversas = await this.conversasPorId();
     const r = new Map<string, number>();
     for (const m of await this.tags.etapasDoFunil(funilId)) {
       const c = conversas.get(m.conversaId);
-      if (c && noEscopo(escopo, c)) r.set(m.tagId, (r.get(m.tagId) ?? 0) + 1);
+      if (c && noEscopo(escopo, c) && !this.excluido(funilId, c.id)) r.set(m.tagId, (r.get(m.tagId) ?? 0) + 1);
     }
     return r;
   }
@@ -205,9 +235,14 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     const porColuna = new Map<string, LinhaQuadro[]>();
     const paradas = new Map<string, number>();
     const limiteParada = (f.paradaAntes ?? new Date(Date.now() - 3 * DIA_MS)).getTime();
+    const av = f.avancado;
+    const marcas = av ? await this.tags.marcacoes(this.empresaDoFunil(funilId) ?? '') : new Map<string, string[]>();
     for (const m of await this.tags.etapasDoFunil(funilId)) {
       const c = conversas.get(m.conversaId);
       if (!c || !noEscopo(f.escopo, c)) continue;
+      const excluido = this.excluido(funilId, c.id);
+      if (!av && excluido) continue;
+      if (av && !passaFiltroLeads(av, { conversa: c, tagId: m.tagId, excluido, tags: marcas.get(c.id) ?? [], valor: this.valores.get(c.id) ?? null, temMensagem: ultimas.has(c.id) }, new Date())) continue;
       if (f.unidade && c.unidade !== f.unidade) continue;
       if (f.etapaId && m.tagId !== f.etapaId) continue;
       if (f.dona && (f.dona === 'sem' ? c.responsavelId : c.responsavelId !== f.dona)) continue;
@@ -241,7 +276,7 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     for (const m of await this.tags.etapasDoFunil(funilId)) {
       const c = conversas.get(m.conversaId);
       const t = etapas.get(m.tagId);
-      if (!c || !t || !noEscopo(escopo, c)) continue;
+      if (!c || !t || !noEscopo(escopo, c) || this.excluido(funilId, c.id)) continue;
       const nome = (c.nome ?? '').toLowerCase();
       if (!nome.includes(busca) && !(digitos && c.telefone.includes(digitos))) continue;
       achados.push({ conversaId: c.id, nome: c.nome ?? null, telefone: c.telefone, unidade: c.unidade, modo: c.modo, dona: c.responsavelId ? { id: c.responsavelId, nome: c.responsavelNome ?? null } : null,
@@ -276,6 +311,7 @@ function cartaoBase(c: Conversa, desde: Date): Omit<Cartao, 'tags' | 'ultima' | 
     dona: c.responsavelId ? { id: c.responsavelId, nome: c.responsavelNome ?? null } : null,
     desde,
     atualizadaEm: c.atualizadaEm,
+    criadaEm: c.criadaEm,
   };
 }
 
@@ -350,15 +386,18 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
       `select ct.tag_id::text as tag_id, count(*)::int as n
          from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
         where ct.funil_id = $1 and ${onde}
+          and not exists (select 1 from sintonia.leads_excluidos lx where lx.funil_id = ct.funil_id and lx.conversa_id = c.id)
         group by ct.tag_id`,
       params,
     );
     return new Map(rows.map((r) => [r.tag_id, r.n]));
   }
   /** Filtros do quadro em SQL (conversa_tags ct + conversas c). */
-  private filtrosQuadro(funilId: string, f: Pick<FiltroQuadro, 'escopo' | 'unidade' | 'busca' | 'dona'>, params: unknown[]): string {
+  private filtrosQuadro(funilId: string, f: Pick<FiltroQuadro, 'escopo' | 'unidade' | 'busca' | 'dona' | 'avancado'>, params: unknown[]): string {
     params.push(funilId);
     const partes = [`ct.funil_id = $${params.length}`, sqlEscopo(f.escopo, 'c', params)];
+    if (f.avancado) partes.push(sqlFiltroLeads(f.avancado, params, new Date()));
+    else partes.push('not exists (select 1 from sintonia.leads_excluidos lx where lx.funil_id = ct.funil_id and lx.conversa_id = c.id)');
     if (f.unidade) {
       params.push(f.unidade);
       partes.push(`c.unidade = $${params.length}`);
@@ -431,6 +470,7 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
       responsavel_id: string | null;
       responsavel_nome: string | null;
       atualizada_em: Date;
+      criada_em: Date;
       valor: string | null;
       um_autor: string | null;
       um_autor_nome: string | null;
@@ -442,7 +482,7 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
          from unnest($${iEtapas}::uuid[]) as e(tag_id)
          cross join lateral (
            select ct.marcada_em, c.id::text as id, c.nome, c.telefone, c.unidade, c.modo, c.etapa,
-                  c.responsavel_id::text as responsavel_id, c.responsavel_nome, c.atualizada_em
+                  c.responsavel_id::text as responsavel_id, c.responsavel_nome, c.atualizada_em, c.criada_em
              from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
             where ${onde} and ct.tag_id = e.tag_id${cursor}
             order by c.atualizada_em desc, c.id
@@ -472,10 +512,45 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
           ultima: r.um_em ? { autor: r.um_autor!, autorNome: r.um_autor_nome, texto: resumir(r.um_texto ?? ''), em: r.um_em } : null,
           desde: r.marcada_em,
           atualizadaEm: r.atualizada_em,
+          criadaEm: r.criada_em,
           valor: r.valor === null ? null : Number(r.valor),
         }),
       ),
     };
+  }
+  async ids(funilId: string, f: Omit<FiltroQuadro, 'offset' | 'limite' | 'apos'>, max: number) {
+    if (f.etapaId && !UUID.test(f.etapaId)) return [];
+    const params: unknown[] = [];
+    let onde = this.filtrosQuadro(funilId, f, params);
+    if (f.etapaId) {
+      params.push(f.etapaId);
+      onde += ` and ct.tag_id = $${params.length}::uuid`;
+    }
+    params.push(max);
+    const { rows } = await this.pool.query<{ id: string }>(
+      `select c.id::text as id from sintonia.conversa_tags ct join sintonia.conversas c on c.id = ct.conversa_id
+        where ${onde} order by c.atualizada_em desc, c.id limit $${params.length}`,
+      params,
+    );
+    return rows.map((r) => r.id);
+  }
+  async excluir(empresaId: string, funilId: string, conversaIds: string[], por: string, em: Date) {
+    const ids = conversaIds.filter((x) => UUID.test(x));
+    if (!ids.length) return 0;
+    const r = await this.pool.query(
+      `insert into sintonia.leads_excluidos (funil_id, conversa_id, empresa_id, excluido_em, excluido_por)
+       select $1, x, $2, $4, $5 from unnest($3::uuid[]) as x
+        where exists (select 1 from sintonia.conversas c where c.id = x and c.empresa_id = $2)
+       on conflict (funil_id, conversa_id) do nothing`,
+      [funilId, empresaId, ids, em, por],
+    );
+    return r.rowCount ?? 0;
+  }
+  async recuperar(funilId: string, conversaIds: string[]) {
+    const ids = conversaIds.filter((x) => UUID.test(x));
+    if (!ids.length) return 0;
+    const r = await this.pool.query('DELETE FROM sintonia.leads_excluidos WHERE funil_id = $1 AND conversa_id = any($2::uuid[])', [funilId, ids]);
+    return r.rowCount ?? 0;
   }
   async buscarCartoes(funilId: string, termo: string, escopo: EscopoVisao, limite: number) {
     const params: unknown[] = [];
@@ -549,6 +624,11 @@ export interface OpcoesFunis {
   /** Trava da conversa (Sintonia.comConversa): mover manualmente acontece sob ela. */
   comConversa: <T>(conversaId: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
   log?: (msg: string, extra?: unknown) => void;
+  /**
+   * Filtro por produto (Empresa › Produtos e serviços): conversas ligadas a algum dos produtos.
+   * Sem isto ligado, o filtro por produto é ignorado e o quadro avisa (`avisos: ['produtos']`).
+   */
+  conversasComProdutos?: (produtoIds: string[]) => Promise<string[]>;
 }
 
 function validarNomeFunil(bruto: string): string {
@@ -812,6 +892,51 @@ export class Funis implements DelegadoEtapas {
         desde: m?.desde ?? null,
       };
     });
+  }
+
+  /**
+   * Resolve o filtro completo do painel para o funil: "Meus leads" vira o responsável, "Ganhos" e "Perdidos"
+   * viram etapas (Compareceu/Perdida no funil do sistema; a última etapa e as etapas "Perdid…" nos outros).
+   */
+  async resolverFiltro(funilId: string, f: FiltroLeads, usuarioId?: string): Promise<{ filtro: FiltroResolvido; avisos: string[] }> {
+    const funil = await this.exigir(funilId);
+    const etapas = await this.etapas(funilId);
+    const avisos: string[] = [];
+    let etapasOk: string[] | null = f.etapas.length ? f.etapas.filter((id) => etapas.some((e) => e.id === id)) : null;
+    if (f.situacao) {
+      const perdida = (e: EtapaFunil) => (funil.sistema ? e.chaveSistema === 'perdida' : /perd/i.test(e.nome));
+      const naoPerdidas = etapas.filter((e) => !perdida(e));
+      const ganho = funil.sistema ? etapas.filter((e) => e.chaveSistema === 'compareceu') : naoPerdidas.length > 1 ? [naoPerdidas.at(-1)!] : [];
+      const daSituacao = (f.situacao === 'ganhos' ? ganho : etapas.filter(perdida)).map((e) => e.id);
+      etapasOk = etapasOk ? etapasOk.filter((id) => daSituacao.includes(id)) : daSituacao;
+    }
+    const donas = [...f.donas];
+    if (f.meus) {
+      if (usuarioId) donas.splice(0, donas.length, ...(donas.length ? donas.filter((d) => d === usuarioId) : [usuarioId]));
+      if (!donas.length) donas.push('00000000-0000-0000-0000-000000000000'); // "meus" + outra pessoa: ninguém
+    }
+    let comProdutos: string[] | null = null;
+    if (f.produtos.length) {
+      if (this.o.conversasComProdutos) comProdutos = await this.o.conversasComProdutos(f.produtos);
+      else avisos.push('produtos');
+    }
+    return { filtro: { ...f, donas, etapasOk, usuarioId, comProdutos }, avisos };
+  }
+
+  /** Ids dos leads do quadro que passam no filtro (para a transmissão e as ações em massa). */
+  async idsDoQuadro(funilId: string, filtro: Omit<FiltroQuadro, 'offset' | 'limite' | 'apos'>, max = 5000): Promise<string[]> {
+    await this.exigir(funilId);
+    return this.o.armazem.ids(funilId, filtro, max);
+  }
+
+  /** Lixeira do pipeline: esconde (recuperável). Só conversas da empresa entram. */
+  async excluir(funilId: string, conversaIds: string[], por: string): Promise<number> {
+    await this.exigir(funilId);
+    return this.o.armazem.excluir(this.empresaId, funilId, conversaIds, por, this.agora());
+  }
+  async recuperar(funilId: string, conversaIds: string[]): Promise<number> {
+    await this.exigir(funilId);
+    return this.o.armazem.recuperar(funilId, conversaIds);
   }
 
   /** Quadro do funil: colunas (etapas) com uma página de cartões cada. */
