@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 16:40 UTC (20/11, 13h40 na Bahia)
-commit: ab191f6
-pacote sha256: 64dfa338c91666d665dbbc27608dbd3ca8bd6cb17dcf85f54b23c5a192962983
+data: 2026-11-20 17:15 UTC (20/11, 14h15 na Bahia)
+commit: 318eed6
+pacote sha256: 3435173b198149813f07b34c5a6fe3d5da1989bf1655977097f5c6d6f55b5523
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ab191f6.b64); pode apagar depois.
-observação: em cima do 1d19ca6. Entra (agentes): pipeline do celular (claude/pipeline-celular, migração 390), fluxos de mensagens (claude/respostas-fluxos, 370), WhatsApp à prova de quedas (claude/whatsapp-estavel, 330), NPS/pós-venda/régua 1-3-7 (claude/nps-posvenda, 380).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-318eed6.b64); pode apagar depois.
+observação: em cima do ab191f6. Entra: Foco do pipeline no celular como baralho (um lead por vez, por prioridade, arrastar); faixa vermelha "clientes esperando" desligada (alertas.js).
