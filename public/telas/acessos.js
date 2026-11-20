@@ -54,10 +54,50 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-ev { display: grid; gap: 2px; padding: 10px 2px; border-top: 1px solid var(--vidro-borda); font-size: 13.5px; } .ac-ev:first-child { border-top: 0; } .ac-ev small { color: var(--sub); }
   .ac-pills { display: flex; gap: 6px; flex-wrap: wrap; }
   @media (prefers-reduced-motion: reduce) { .ac-chave i, .ac-chave i::after { transition: none; } }
+  /* layout-telas: "Atendentes e acessos" dentro do painel (vista), na largura toda, com tabela de pessoas
+     e a grade "quem vê o quê" (permissões × papéis). */
+  .ac-vista { max-width: none; width: 100%; }
+  .ac-vista .ac-topo h1 { font-size: 28px; font-weight: 700; flex: 1 1 260px; }
+  .ac-dica { margin: 0; font-size: 13.5px; color: var(--sub); line-height: 1.45; }
+  .ac-papeis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+  .ac-papel { display: grid; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); min-width: 0; }
+  .ac-papel b { font-size: 14.5px; display: flex; justify-content: space-between; gap: 8px; }
+  .ac-papel b small { font-size: 12px; color: var(--sub); font-weight: 700; }
+  .ac-papel span { font-size: 12.5px; color: var(--sub); line-height: 1.35; }
+  .ac-tab { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ac-tab th { text-align: left; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding: 8px 10px; border-bottom: 1px solid var(--vidro-borda); white-space: nowrap; }
+  .ac-tab td { padding: 10px; border-bottom: 1px solid var(--vidro-borda); vertical-align: middle; min-width: 0; }
+  .ac-tab tr:last-child td { border-bottom: 0; }
+  .ac-tab tbody tr { cursor: pointer; } .ac-tab tbody tr:hover td { background: var(--sel, rgba(127,127,127,.06)); }
+  .ac-tab tbody tr.inativa { opacity: .6; }
+  .ac-quem { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .ac-ini { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+  .ac-quem div { min-width: 0; display: grid; } .ac-quem b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-quem small, .ac-tab td small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-tab .ac-botao { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+  @media (max-width: 899px) {
+    .ac-tab thead { display: none; }
+    .ac-tab, .ac-tab tbody { display: grid; gap: 10px; }
+    .ac-tab tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px; border-radius: 18px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+    .ac-tab td { padding: 0; border: 0; } .ac-tab td:first-child { grid-column: 1 / -1; }
+    .ac-tab td[data-r]::before { content: attr(data-r) ": "; color: var(--sub); font-size: 12.5px; }
+    .ac-tab td.ac-fim { grid-column: 2; grid-row: 2 / span 4; align-self: center; }
+  }
+  .ac-matriz-caixa { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+  .ac-matriz { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; min-width: 760px; }
+  .ac-matriz th:first-child { width: 24%; }
+  .ac-matriz th, .ac-matriz td { padding: 8px 10px; border-bottom: 1px solid var(--vidro-borda); text-align: center; }
+  .ac-matriz th:first-child, .ac-matriz td:first-child { text-align: left; }
+  .ac-matriz thead th { font-size: 13px; font-weight: 800; position: sticky; top: 0; background: var(--vidro-forte, var(--fundo)); }
+  .ac-matriz thead th small { display: block; font-size: 11.5px; font-weight: 600; color: var(--sub); }
+  .ac-matriz .ac-mg td { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding-top: 16px; text-align: left; }
+  .ac-matriz .ac-chave { display: inline-block; vertical-align: middle; }
+  .ac-matriz select.ac-sel { width: 100%; max-width: 220px; min-height: 36px; padding: 6px 8px; font-size: 12.5px; text-overflow: ellipsis; }
   `;
-  const MENU = { painel: 'dashboard', funil: 'crm_ver', automacoes: 'automacoes', transmissoes: 'transmissoes', relatorios: 'relatorios', email: 'email_marketing', equipe: 'equipe' };
+  const MENU = { painel: 'dashboard', funil: 'crm_ver', automacoes: 'automacoes', transmissoes: 'transmissoes', relatorios: 'relatorios', email: 'email_marketing', equipe: 'equipe', acessos: 'equipe' };
   const PAPEL = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
-  const UNID = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
+  const UNID_PADRAO = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
+  const UNID = new Proxy({}, { get: (_, u) => window.Sintonia?.ui?.UNIDADE?.[u] || UNID_PADRAO[u] || u });
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const h = (tag, props = {}, ...filhos) => {
@@ -87,7 +127,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const chave = (marcada, aoMudar, desativada) => h('span', { class: 'ac-chave' }, h('input', { type: 'checkbox', role: 'switch', checked: !!marcada, disabled: !!desativada, onchange: (e) => aoMudar(e.target.checked) }), h('i'));
   const SVG_VOLTAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 
-  let eu = null, cat = null, dados = null, aba = 'pessoas', raiz = null, perfilSel = 'atendente';
+  let eu = null, cat = null, dados = null, aba = 'pessoas', raiz = null, perfilSel = 'atendente', naVista = false;
 
   // ------------------------------------------------------------ menu e troca de senha
   function aplicarMenu() {
@@ -116,21 +156,32 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function abrir(qual = 'pessoas') {
     aba = qual;
     if (!document.getElementById('estilo-acessos')) document.head.append(h('style', { id: 'estilo-acessos', text: CSS }));
-    raiz?.remove();
+    if (!naVista) raiz?.remove();
+    naVista = false;
     raiz = h('div', { class: 'ac-fundo', role: 'region', 'aria-label': 'Usuários e acessos' });
     document.body.append(raiz);
     document.documentElement.style.overflow = 'hidden';
     await carregar();
   }
-  function fechar() { raiz?.remove(); raiz = null; document.documentElement.style.overflow = ''; }
+  function fechar() { if (naVista) return; raiz?.remove(); raiz = null; document.documentElement.style.overflow = ''; }
+  /* layout-telas: monta a mesma tela dentro de uma vista do painel (Empresa e conta › Atendentes e acessos). */
+  async function desenharNaVista(caixa) {
+    if (!document.getElementById('estilo-acessos')) document.head.append(h('style', { id: 'estilo-acessos', text: CSS }));
+    if (!naVista) raiz?.remove();
+    document.documentElement.style.overflow = '';
+    if (!eu) { try { eu = await api('/api/auth/eu'); } catch {} }
+    naVista = true; raiz = caixa;
+    await carregar();
+  }
+  const largo = () => matchMedia('(min-width: 900px)').matches;
   async function carregar() {
     try { [cat, dados] = await Promise.all([api('/api/acessos/catalogo'), api('/api/acessos/usuarios')]); }
-    catch (x) { raiz.replaceChildren(h('div', { class: 'ac-tela' }, cabecalho(), h('p', { class: 'ac-erro', text: x.message }))); return; }
+    catch (x) { raiz.replaceChildren(h('div', { class: 'ac-tela' + (naVista ? ' ac-vista' : '') }, cabecalho(), h('p', { class: 'ac-erro', text: x.message }))); return; }
     if (!cat.perfisEditaveis.includes(perfilSel)) perfilSel = cat.perfisEditaveis[0] || 'atendente';
     desenhar();
   }
   function cabecalho() {
-    return h('div', { class: 'ac-topo' }, h('button', { class: 'ac-voltar', 'aria-label': 'Voltar', html: SVG_VOLTAR, onclick: fechar }), h('h1', { text: 'Usuários e acessos' }),
+    return h('div', { class: 'ac-topo' }, naVista ? null : h('button', { class: 'ac-voltar', 'aria-label': 'Voltar', html: SVG_VOLTAR, onclick: fechar }), h('h1', { text: naVista ? 'Atendentes e acessos' : 'Usuários e acessos' }),
       aba === 'pessoas' ? h('button', { class: 'ac-botao', text: '+ Convidar pessoa', onclick: () => abrirPessoa(null) }) : null);
   }
   async function desenhar() {
@@ -140,10 +191,49 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (aba === 'pessoas') corpo = telaPessoas();
     else if (aba === 'perfis') corpo = telaPerfis();
     else corpo = await telaAuditoria();
-    raiz.replaceChildren(h('div', { class: 'ac-tela' }, cabecalho(), abas, corpo));
+    raiz.replaceChildren(h('div', { class: 'ac-tela' + (naVista ? ' ac-vista' : '') }, cabecalho(), abas, corpo));
   }
 
+  const nomesUnidades = (p) => p.unidades.map((u) => UNID[u]).join(', ') || (['admin', 'direcao'].includes(p.papel) ? 'Todas as unidades' : 'Sem unidade');
+  const nivelNome = (id) => cat?.niveis?.find((n) => n.id === id)?.nome || id;
+  function resumoPapeis() {
+    return h('div', { class: 'ac-papeis' }, ...cat.papeis.map((pp) => {
+      const perms = cat.perfis[pp.id] || {};
+      const pode = cat.catalogo.filter((c) => perms[c.chave]).length;
+      const qtd = dados.pessoas.filter((p) => p.papel === pp.id && p.ativo).length;
+      return h('div', { class: 'ac-papel' }, h('b', {}, pp.nome, h('small', { text: `${qtd} ${qtd === 1 ? 'pessoa' : 'pessoas'}` })),
+        h('span', { text: `Conversas: ${nivelNome(perms.conversas)}` }), h('span', { text: `${pode} de ${cat.catalogo.length} permissões ligadas` }));
+    }));
+  }
+  function tabelaPessoas() {
+    const linhas = dados.pessoas.map((p) => {
+      const ini = p.nome.split(/\s+/).filter(Boolean); const sigla = ((ini[0] || '?')[0] + (ini.length > 1 ? ini[ini.length - 1][0] : '')).toUpperCase();
+      const conv = { ...(cat.perfis[p.papel] || {}), ...(p.ajustes || {}) }.conversas;
+      const selos = h('div', { class: 'ac-selos' },
+        p.ativo ? h('span', { class: 'ac-selo menta', text: 'Ativa' }) : h('span', { class: 'ac-selo coral', text: 'Desativada' }),
+        p.trocarSenha ? h('span', { class: 'ac-selo', text: 'Troca de senha pendente' }) : null,
+        p.horario ? h('span', { class: 'ac-selo', text: `${p.horario.inicio}–${p.horario.fim}` }) : null,
+        Object.keys(p.ajustes || {}).length ? h('span', { class: 'ac-selo', text: 'Permissões próprias' }) : null);
+      return h('tr', { class: p.ativo ? '' : 'inativa', tabindex: '0', onclick: () => abrirPessoa(p), onkeydown: (e) => { if (e.key === 'Enter') abrirPessoa(p); } },
+        h('td', {}, h('div', { class: 'ac-quem' }, h('span', { class: 'ac-ini', 'aria-hidden': 'true', text: sigla }), h('div', {}, h('b', { text: p.eu ? `${p.nome} (você)` : p.nome }), h('small', { text: p.email })))),
+        h('td', { 'data-r': 'Papel', text: PAPEL[p.papel] || p.papel }),
+        h('td', { 'data-r': 'Unidades', text: nomesUnidades(p) }),
+        h('td', { 'data-r': 'Vê conversas', text: nivelNome(conv) }),
+        h('td', { 'data-r': 'Último acesso' }, document.createTextNode(quando(p.ultimoAcesso)), p.sessoesAtivas ? h('small', { style: 'display:block', text: `${p.sessoesAtivas} aparelho${p.sessoesAtivas > 1 ? 's' : ''} conectado${p.sessoesAtivas > 1 ? 's' : ''}` }) : null),
+        h('td', {}, selos),
+        h('td', { class: 'ac-fim' }, p.podeGerenciar ? h('button', { class: 'ac-botao leve', type: 'button', text: 'Editar acesso', onclick: (e) => { e.stopPropagation(); abrirPessoa(p); } }) : null));
+    });
+    return h('table', { class: 'ac-tab' },
+      h('thead', {}, h('tr', {}, ...['Pessoa', 'Papel', 'Unidades', 'Vê conversas', 'Último acesso', 'Situação', ''].map((t) => h('th', { text: t })))),
+      h('tbody', {}, ...linhas));
+  }
   function telaPessoas() {
+    if (naVista) {
+      const ativas = dados.pessoas.filter((p) => p.ativo).length;
+      return h('div', { style: 'display:grid;gap:16px;min-width:0' },
+        h('section', { class: 'ac-painel' }, h('h2', {}, 'Como funciona o acesso', h('small', { text: 'Convide por link (a pessoa cria a própria senha). O papel diz o que ela pode fazer; as unidades dizem de onde ela vê as conversas. Toque numa pessoa para mudar.' })), resumoPapeis()),
+        h('section', { class: 'ac-painel' }, h('h2', {}, `${dados.pessoas.length} pessoas · ${ativas} ativas`, h('small', { text: eu?.papel === 'gerente' ? 'Quem trabalha nas suas unidades. Você cadastra atendentes e recepcionistas.' : 'Quem entra no Sintonia, o que cada pessoa vê e quando.' })), tabelaPessoas()));
+    }
     const cartoes = dados.pessoas.map((p) => h('button', { class: 'ac-pessoa' + (p.ativo ? '' : ' inativa'), onclick: () => abrirPessoa(p) },
       h('b', { text: p.eu ? `${p.nome} (você)` : p.nome }),
       h('span', { text: `${PAPEL[p.papel]} · ${p.unidades.map((u) => UNID[u] || u).join(', ') || (['admin', 'direcao'].includes(p.papel) ? 'Todas as unidades' : 'Sem unidade')}` }),
@@ -169,7 +259,29 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return linhas;
   }
 
+  function matrizPerfis() {
+    const editaveis = cat.perfisEditaveis;
+    const salvar = async (papel, k, v) => {
+      try { const r = await enviar(`/api/acessos/perfis/${papel}`, 'PUT', { permissoes: { [k]: v } }); cat.perfis[papel] = r.perfil; toast(`Perfil ${PAPEL[papel]} atualizado.`); }
+      catch (x) { toast(x.message); }
+      desenhar();
+    };
+    const linhas = [h('tr', {}, h('td', { text: 'Ver conversas' }), ...cat.papeis.map((pp) => h('td', {},
+      h('select', { class: 'ac-sel', 'aria-label': `Ver conversas: ${pp.nome}`, disabled: !editaveis.includes(pp.id), onchange: (e) => salvar(pp.id, 'conversas', e.target.value) },
+        ...cat.niveis.map((n) => h('option', { value: n.id, text: n.nome, selected: cat.perfis[pp.id]?.conversas === n.id }))))))];
+    let grupo = '';
+    for (const c of cat.catalogo) {
+      if (c.grupo !== grupo) { grupo = c.grupo; linhas.push(h('tr', { class: 'ac-mg' }, h('td', { colspan: String(cat.papeis.length + 1), text: grupo }))); }
+      linhas.push(h('tr', {}, h('td', { text: c.nome }), ...cat.papeis.map((pp) => h('td', {}, chave(cat.perfis[pp.id]?.[c.chave], (v) => salvar(pp.id, c.chave, v), !editaveis.includes(pp.id))))));
+    }
+    return h('section', { class: 'ac-painel' },
+      h('h2', {}, 'Quem vê o quê', h('small', { text: editaveis.length ? 'Cada coluna é um papel. Ligue e desligue o que cada papel pode fazer: vale para todo mundo desse papel (menos quem tem permissões próprias).' : 'Só a direção e a administração mudam os perfis. Aqui você vê como estão.' })),
+      h('div', { class: 'ac-matriz-caixa' }, h('table', { class: 'ac-matriz' },
+        h('thead', {}, h('tr', {}, h('th', { text: 'Permissão' }), ...cat.papeis.map((pp) => h('th', {}, pp.nome, h('small', { text: editaveis.includes(pp.id) ? 'editável' : 'fixo' }))))),
+        h('tbody', {}, ...linhas))));
+  }
   function telaPerfis() {
+    if (naVista && largo()) return matrizPerfis();
     const editaveis = cat.perfisEditaveis;
     const pills = h('div', { class: 'ac-pills' }, ...cat.papeis.map((p) => h('button', { class: 'ac-aba', 'aria-selected': String(perfilSel === p.id), style: 'box-shadow: inset 0 0 0 1px var(--vidro-borda)', text: p.nome, onclick: () => { perfilSel = p.id; desenhar(); } })));
     const perms = cat.perfis[perfilSel];
@@ -305,7 +417,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     cab.append(h('button', { class: 'botao ac-entrar', type: 'button', text: 'Usuários e acessos', onclick: () => abrir('pessoas') }));
   }
 
-  window.SintoniaTelas.acessos = { abrir, fechar };
+  window.SintoniaTelas.acessos = { abrir, fechar, desenhar: (caixa) => desenharNaVista(caixa) };
   addEventListener('load', async () => {
     try { eu = await api('/api/auth/eu'); } catch { return; }
     aplicarMenu();

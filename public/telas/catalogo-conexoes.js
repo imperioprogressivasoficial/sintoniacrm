@@ -55,6 +55,18 @@
   body.cx-detalhe main > section:not(.cx-aberta), body.cx-detalhe main > .grupo, body.cx-detalhe .atalhos { display: none !important; }
   body:not(.cx-detalhe) main > section:not(#catalogo), body:not(.cx-detalhe) main > .grupo, body:not(.cx-detalhe) .atalhos { display: none !important; }
   body.cx-detalhe #cx-voltar-bar { display: block; } #cx-voltar-bar { display: none; }
+  /* layout-telas: no computador, grade de cartões na largura toda (logo + botão em cima, nome e descrição embaixo) */
+  @media (min-width: 900px) {
+    .cx-busca { max-width: 560px; }
+    .cx-lista { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 6px; }
+    .cx-item { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: "logo . bt" "tx tx tx"; align-items: center; align-content: start; gap: 12px 14px; padding: 16px; border-radius: 22px;
+      background: var(--vidro-fundo, rgba(255,255,255,.7)); box-shadow: inset 0 0 0 1px var(--vidro-borda, rgba(8,36,63,.08)), var(--vidro-brilho, none); transition: transform .15s ease; }
+    .cx-item:hover { transform: translateY(-1px); }
+    .cx-item:focus-visible { outline: 2px solid var(--marca-azul, #106ebe); outline-offset: 2px; }
+    .cx-logo { grid-area: logo; } .cx-bt { grid-area: bt; } .cx-tx { grid-area: tx; align-self: start; }
+    .cx-tx span { -webkit-line-clamp: 3; }
+  }
+  @media (min-width: 900px) and (prefers-reduced-motion: reduce) { .cx-item { transition: none; } .cx-item:hover { transform: none; } }
   `;
   document.head.append(css);
 
