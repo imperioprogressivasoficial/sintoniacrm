@@ -872,6 +872,24 @@ html[data-tema="escuro"] { --barra-fundo: rgba(14,41,69,.94); --barra-borda: rgb
   .trilho .nav[aria-current="page"] .contador { top: -4px !important; right: -2px !important; }
   .trilho:has(#nav-equipe:not([hidden])) .nav:not([aria-current="page"]) { padding: 0 9px !important; min-width: 40px !important; }
 }
+/* imperio: barra fluida — a pílula ativa cresce/encolhe suave e o nome desliza (sem cortar) */
+@media (max-width: 760px) {
+  .trilho .nav { gap: 0 !important; transition: background-color .32s cubic-bezier(.3,.7,.2,1), color .25s ease, padding .34s cubic-bezier(.3,.7,.2,1), box-shadow .32s ease !important; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .trilho .nav .rotulo { display: block !important; max-width: 0 !important; opacity: 0; margin-left: 0; overflow: hidden !important; text-overflow: clip !important;
+    transition: max-width .34s cubic-bezier(.3,.7,.2,1), margin-left .34s cubic-bezier(.3,.7,.2,1), opacity .18s ease; }
+  .trilho .nav[aria-current="page"] .rotulo { max-width: 120px !important; opacity: 1; margin-left: 8px; transition: max-width .34s cubic-bezier(.3,.7,.2,1), margin-left .34s cubic-bezier(.3,.7,.2,1), opacity .22s ease .1s; }
+  .trilho .nav:active > svg, .trilho .nav:active .ia-bola { transform: scale(.9); }
+  .trilho .nav > svg, .trilho .nav .ia-bola { transition: transform .18s ease; }
+  @media (prefers-reduced-motion: reduce) { .trilho .nav, .trilho .nav .rotulo { transition: none !important; } }
+}
+/* imperio: barra em celular estreito — tudo cabe sem cortar */
+@media (max-width: 374px) {
+  .trilho { left: 10px !important; right: 10px !important; padding: 0 6px !important; }
+  .trilho .nav { min-width: 40px !important; padding: 0 9px !important; }
+  .trilho .nav[aria-current="page"] { padding: 0 13px 0 10px !important; }
+  .trilho .nav .rotulo { font-size: 13px !important; }
+}
+@media (max-width: 339px) { .trilho .nav[aria-current="page"] .rotulo { max-width: 0 !important; margin-left: 0 !important; opacity: 0; } }
 /* imperio: barra v5 icones B */
 @media (max-width: 760px) {
   .trilho .nav[aria-current="page"][data-vista="conversas"] > svg, .trilho .nav[aria-current="page"][data-vista="funil"] > svg, .trilho .nav[aria-current="page"][data-vista="painel"] > svg, .trilho .nav-ia[aria-current="page"] .ia-bola svg { fill: currentColor !important; }
@@ -1530,7 +1548,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const esperando = (c) => { const cl = c.ultimaMensagemCliente && new Date(c.ultimaMensagemCliente).getTime(); if (!cl) return false; const resp = Math.max(new Date(c.ultimaMensagemEquipe || 0).getTime(), new Date(c.ultimaMensagemIa || 0).getTime()); return cl > resp; };
 
   // navegação
-  document.querySelectorAll('.nav[data-vista]').forEach((b) => b.addEventListener('click', () => mostrar(b.dataset.vista)));
+  // A barra responde na hora (a pílula já anda) e a tela nova é montada no quadro seguinte, para a animação não engasgar.
+  document.querySelectorAll('.nav[data-vista]').forEach((b) => b.addEventListener('click', () => {
+    const v = b.dataset.vista;
+    if (b.closest('.trilho') && innerWidth <= 760) {
+      document.querySelectorAll('.trilho .nav[data-vista]').forEach((x) => (x === b ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
+      requestAnimationFrame(() => setTimeout(() => mostrar(v), 0));
+    } else mostrar(v);
+  }));
   function mostrar(v) {
     if (!document.getElementById('v-' + v)) { toast('Essa área chega na próxima atualização.'); return; }
     // Configurar a IA é da gestão; para a atendente, o botão IA abre o chat "Ajuda da IA".
