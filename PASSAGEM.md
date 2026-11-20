@@ -24,14 +24,14 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 19/11/2026, 23h10 (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 19/11/2026, 23h40 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` = a4c6c8a (ver `deploy/no-ar.txt`), publicada 19/11 23h05. Inclui tela da Serena (estilo ChatGPT),
-  barra Dashboard · Ligações · Serena · Conversas · Mais, Lista | Funil, filtro Radar com contador, tema "curto-circuito",
-  anel/selo de presença e agenda no jeito do Google. Conferido no ar.
+- **No ar:** `producao` = a82575b (ver `deploy/no-ar.txt`). Inclui Serena estilo ChatGPT, Radar, curto-circuito, agenda Google,
+  puxar para atualizar, Ligações modelo 5, sino/lua novos. "Lista | Funil" foi removido a pedido do dono (CRM fica em Mais › CRM).
 - **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
-- **Padrão de design aprovado:** cor "brilho" = `--brilho-1 #0ffcbe` + `--brilho-2 #3aa0ff` (fio fino, 0.5–1.5px). Usar em todo destaque com brilho.
-- **Regra do dono:** toda mudança de design = 5 modelos para comparar antes de aplicar.
-- **Fora daqui ainda dizendo "Assia":** agente de voz da ElevenLabs e servidor do Espaço Rainha (outro repositório).
-- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Serena em Agentes de IA › Controle;
-  imagem da Serena sem fundo (opcional). Agenda ainda sem remarcar/cancelar (precisa de rota nova + Trinks).
+- **Fazendo agora:** barra de baixo do celular mais fluida ao trocar de aba e sem cortar o texto "Ligações".
+- **Aguardando o dono:** qual dos 5 jeitos da barra encolher (ou nenhum); animações contínuas (Radar, foto da Serena):
+  rodar só quando importa ou rodar 2–3 vezes e parar.
+- **Regras de design do dono:** 5 modelos antes de aplicar; cor "brilho" `#0ffcbe`→`#3aa0ff` em fio fino; ícones sempre no padrão
+  do menu lateral (traço 1,8, cantos arredondados, `ic-cheio` enche quando ativo); evitar mini animações rodando o tempo todo (peso).
+- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Serena em Agentes de IA › Controle.
