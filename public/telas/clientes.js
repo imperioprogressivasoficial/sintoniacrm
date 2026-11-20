@@ -41,7 +41,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ct-busca { flex: 1 1 240px; display: flex; align-items: center; gap: 8px; }
   .ct-busca input { all: unset; flex: 1; min-width: 0; font-size: 14px; color: var(--texto); }
   .ct-busca svg { width: 18px; height: 18px; color: var(--sub); flex: none; }
-  @media (max-width: 760px) { .ct-filtros { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px; } .ct-filtros .ct-busca { flex: 0 0 220px; } .ct-filtros select { flex: none; } }
+  @media (max-width: 760px) { .ct-filtros { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px; } .ct-filtros .ct-busca { flex: 0 0 220px; } .ct-filtros .ct-busca:only-child { flex: 1 1 auto; } .ct-filtros select { flex: none; } }
   .ct-link { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--marca-azul); padding: 0 6px; white-space: nowrap; }
   html[data-tema="escuro"] .ct-link { color: #6cb8ff; }
   .ct-linha-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; color: var(--sub); min-height: 24px; }
