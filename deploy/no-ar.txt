@@ -1,8 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 13:45 UTC (20/11, 10h45 na Bahia)
-commit: 805f6df
-pacote sha256: 9369e5320cb8dd16f61efe563b8e3723f65490ffce866284bcbe2b234bbd941a
+data: 2026-11-20 14:56 UTC (20/11, 11h56 na Bahia)
+commit: 032a359
+pacote sha256: eaf697e2dd4812cb25ead252f432e1567207d9c28d74720e90e10cd3807ed3a5
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-805f6df.b64); pode apagar depois.
-observação: em cima do 17840f5. Entra: menu lateral do computador nas mesmas categorias da cascata do celular.
-  Conferido: /saude 200, /app com o grupo Atendimento.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-032a359.b64); pode apagar depois.
+observação: em cima do 805f6df. Entra: menu reorganizado (Clientes próprio, Vendas com Criar pipeline no topo, Automações: Chatbot/Fluxos/Agente de IA/Follow-up), Dashboard do computador com a curva do modelo 3, falhas internas fora das movimentações.
+  Conferido: /saude 200, /app com o item Follow-up.
