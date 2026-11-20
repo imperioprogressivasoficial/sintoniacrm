@@ -77,7 +77,7 @@ html[data-tema="escuro"] .ag, html[data-tema="escuro"] dialog.ag-dlg {
 .ag-uni-norte { --c: var(--ag-c0); --t: var(--ag-t0); } .ag-uni-sumare { --c: var(--ag-c1); --t: var(--ag-t1); } .ag-uni-feira { --c: var(--ag-c5); --t: var(--ag-t5); }
 
 .ag { flex: 1; min-height: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--ag-fundo); position: relative; overflow: hidden; }
-.ag button { font: inherit; }
+:where(.ag) button { font: inherit; }
 .ag-lado { display: none; }
 .ag-principal { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
 
