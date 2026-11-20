@@ -15,6 +15,9 @@ import { referenciaDaEvolution } from '../rastreio/referencia.js';
 const MensagemEvolution = z.object({
   key: z.object({
     remoteJid: z.string(),
+    // WhatsApp novo (LID): o remoteJid vira um código "@lid" e o número vem aqui.
+    remoteJidAlt: z.string().nullish(),
+    senderPn: z.string().nullish(),
     fromMe: z.boolean().optional().default(false),
     id: z.string(),
   }),
@@ -101,7 +104,9 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
   const lista = Array.isArray(r.data.data) ? r.data.data : [r.data.data];
   const saida: MensagemRecebida[] = [];
   for (const m of lista) {
-    const telefone = telefoneDoJid(m.key.remoteJid);
+    // Contato identificado por LID ("…@lid"): o número verdadeiro vem em remoteJidAlt (ou senderPn).
+    const jid = m.key.remoteJid.endsWith('@lid') ? (m.key.remoteJidAlt ?? m.key.senderPn ?? '') : m.key.remoteJid;
+    const telefone = telefoneDoJid(jid);
     const conteudo = lerConteudo(m.message);
     if (!telefone || !conteudo) continue;
     const ts = Number(m.messageTimestamp ?? 0);

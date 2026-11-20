@@ -173,3 +173,18 @@ describe('cliente do Trinks', () => {
     expect((await t.buscarClientePorTelefone('240643', '5571988124471'))?.id).toBe(2);
   });
 });
+
+describe('Evolution: contatos por LID', () => {
+  it('usa o número de remoteJidAlt quando o remoteJid é @lid', async () => {
+    const { lerWebhookEvolution } = await import('../src/channels/evolution.js');
+    const corpo = { event: 'messages.upsert', instance: 'sintonia-norte', data: { key: { remoteJid: '231941253132490@lid', remoteJidAlt: '5571988887777@s.whatsapp.net', fromMe: false, id: 'X1' }, pushName: 'Ana', message: { conversation: 'Oi' }, messageTimestamp: 1795186567 } };
+    const r = lerWebhookEvolution(corpo);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ telefone: '5571988887777', texto: 'Oi', nome: 'Ana' });
+  });
+  it('ignora LID sem número e grupos', async () => {
+    const { lerWebhookEvolution } = await import('../src/channels/evolution.js');
+    expect(lerWebhookEvolution({ event: 'messages.upsert', instance: 'i', data: { key: { remoteJid: '231941253132490@lid', id: 'X2' }, message: { conversation: 'Oi' } } })).toHaveLength(0);
+    expect(lerWebhookEvolution({ event: 'messages.upsert', instance: 'i', data: { key: { remoteJid: '120363334258749766@g.us', id: 'X3' }, message: { conversation: 'Oi' } } })).toHaveLength(0);
+  });
+});
