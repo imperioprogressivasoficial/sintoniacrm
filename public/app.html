@@ -1186,6 +1186,7 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
             </div>
           </header>
           <div class="fu-faixa" id="fu-selo" hidden></div>
+          <div class="fx-faixa" id="fx-faixa" hidden></div><!-- respostas-fluxos: "Enviando fluxo 2 de 5 · Parar" -->
           <div class="msgs" id="msgs"></div>
           <div class="sugestao" id="sugestao" hidden><div class="citacao"><div class="t"><b>Sugestão da IA</b><span id="sugestao-txt"></span></div><button id="usar-sugestao">Usar</button></div></div>
           <div class="revisao" id="revisao" hidden><div class="citacao"><div class="t"><b id="revisao-tit"></b><span id="revisao-txt"></span></div><button id="revisao-usar" hidden>Usar</button></div></div>
@@ -1886,6 +1887,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     // 404: a conversa passou para outra pessoa (ou sumiu) e esta pessoa não a vê mais.
     const d = await api('/api/conversas/' + estado.aberta).catch((x) => { if (x.status === 404) fecharConversa('Esta conversa passou para outra pessoa.'); return null; });
     if (!d) return;
+    /* respostas-fluxos: faixa do fluxo de mensagens em andamento */
+    window.SintoniaFluxos?.faixa?.(estado.aberta);
     const assinatura = JSON.stringify(d);
     if (assinatura === estado.assinatura) return;
     estado.assinatura = assinatura; estado.detalhe = d;
@@ -3343,6 +3346,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/rastreio.js" defer></script>
 <script src="/telas/acessos.js" defer></script>
 <script src="/telas/clientes.js" defer></script>
+<script src="/telas/fluxos-mensagens.js" defer></script><!-- respostas-fluxos -->
 <script src="/telas/respostas.js" defer></script>
 <script src="/telas/reunioes.js" defer></script>
 <script src="/telas/rotina.js" defer></script>

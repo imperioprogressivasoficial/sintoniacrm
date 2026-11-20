@@ -4,7 +4,7 @@
  */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
-  const s = { caixa: null, ui: null, lista: [], editando: null, erro: '', busca: '' };
+  const s = { caixa: null, ui: null, lista: [], editando: null, erro: '', busca: '', aba: 'respostas' };
 
   async function carregar() {
     try { s.lista = await s.ui.api('/api/respostas-rapidas'); s.erro = ''; } catch (x) { s.erro = x.message; }
@@ -72,15 +72,28 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function desenhar() {
     const u = s.ui, el = u.el;
     if (!s.caixa) return;
+    const F = window.SintoniaFluxos;
+    const fluxos = s.aba === 'fluxos' && F;
+    const trocar = (aba) => { if (aba === s.aba) return; s.aba = aba; try { localStorage.setItem('sintonia.respostas.aba', aba); } catch { /* sem armazenamento */ } desenhar(); };
+    const cab = el('div', { class: 'ds-cab-tela' },
+      el('div', { class: 'ds-cab-txt' }, el('h1', { class: 'titulo-grande', text: 'Respostas rápidas' }),
+        el('p', { text: fluxos ? 'Fluxos: uma sequência de mensagens, áudios e fotos que sai sozinha, com tempo entre elas. Escolha na conversa digitando /.' : 'Textos prontos para a conversa: digite / no campo de mensagem e escolha.' })),
+      el('div', { class: 'ds-cab-acoes' }, F ? F.abas(s.aba, trocar) : null,
+        fluxos ? null : el('button', { class: 'botao', type: 'button', text: 'Nova resposta', onclick: () => { s.editando = null; desenhar(); s.caixa.querySelector('input[name="atalho"]')?.focus(); } })));
+    /* respostas-fluxos: aba "Fluxos" (public/telas/fluxos-mensagens.js) */
+    if (fluxos) {
+      const corpo = el('div', { style: 'display:grid;gap:16px' });
+      s.caixa.replaceChildren(el('div', { class: 'ds-tela' }, cab, corpo));
+      F.editor(corpo);
+      return;
+    }
     const busca = el('input', { type: 'search', placeholder: 'Buscar atalho ou texto', 'aria-label': 'Buscar resposta' });
     busca.value = s.busca;
     const caixaLista = el('div');
     busca.addEventListener('input', () => { s.busca = busca.value; caixaLista.replaceChildren(lista()); });
     caixaLista.append(lista());
     s.caixa.replaceChildren(el('div', { class: 'ds-tela' },
-      el('div', { class: 'ds-cab-tela' },
-        el('div', { class: 'ds-cab-txt' }, el('h1', { class: 'titulo-grande', text: 'Respostas rápidas' }), el('p', { text: 'Textos prontos para a conversa: digite / no campo de mensagem e escolha.' })),
-        el('div', { class: 'ds-cab-acoes' }, el('button', { class: 'botao', type: 'button', text: 'Nova resposta', onclick: () => { s.editando = null; desenhar(); s.caixa.querySelector('input[name="atalho"]')?.focus(); } }))),
+      cab,
       el('div', { class: 'ds-filtros' }, el('label', { class: 'ds-campo ds-busca', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' }, busca)),
       el('div', { class: 'rr-tela-grade' }, caixaLista, formulario())));
   }
@@ -93,6 +106,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         st.textContent = '.rr-tela-grade { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; } @media (min-width: 1100px) { .rr-tela-grade { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); } } .rr-tela-grade tr[aria-current="true"] { background: var(--vidro-ativo); }';
         document.head.append(st);
       }
+      try { if (localStorage.getItem('sintonia.respostas.aba') === 'fluxos') s.aba = 'fluxos'; } catch { /* sem armazenamento */ }
       await carregar();
       desenhar();
     },

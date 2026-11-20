@@ -233,6 +233,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         return;
       }
       filtradas.forEach((r, i) => {
+        /* respostas-fluxos: fluxo de mensagens na mesma lista */
+        if (r._fluxo) {
+          itens.append(el('button', { type: 'button', class: 'rr-item fx-op', role: 'option', 'aria-selected': String(i === sel), onmousedown: (e) => e.preventDefault(), onclick: () => escolher(r) },
+            el('b', { text: '/' + r.atalho }), el('span', { text: r.nome }), el('small', { text: 'Fluxo · ' + window.SintoniaFluxos.resumo(r) + ' · sai sozinho' })));
+          return;
+        }
         const b = el('button', { type: 'button', class: 'rr-item', role: 'option', 'aria-selected': String(i === sel), onmousedown: (e) => e.preventDefault(), onclick: () => escolher(r) },
           el('b', { text: '/' + r.atalho }), el('span', { text: preencher(r.texto, opcoes.conversa?.(), opcoes.nome?.()).replace(/\s+/g, ' ') }),
           r.pessoal ? el('small', { text: 'Minha' }) : null);
@@ -245,9 +251,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!b) { fechar(); return; }
       alvo = b;
       const todas = await carregarRespostas();
+      /* respostas-fluxos: fluxos entram no "/" do campo da conversa */
+      const fluxos = opcoes.fluxos && window.SintoniaFluxos ? (await window.SintoniaFluxos.carregar()).map((f) => ({ ...f, _fluxo: true, texto: f.nome })) : [];
       if (!alvo) return;
       const q = semAcento(alvo.busca);
-      filtradas = todas.filter((r) => r.atalho.includes(q) || (q.length > 1 && semAcento(r.texto).includes(q)))
+      filtradas = [...todas, ...fluxos].filter((r) => r.atalho.includes(q) || (q.length > 1 && semAcento(r.texto).includes(q)))
         .sort((a, b2) => Number(!a.atalho.startsWith(q)) - Number(!b2.atalho.startsWith(q)) || Number(!a.atalho.includes(q)) - Number(!b2.atalho.includes(q)));
       sel = Math.min(sel, Math.max(0, filtradas.length - 1));
       lista.hidden = false;
@@ -255,6 +263,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
     function escolher(r) {
       const b = alvo || barraNoCursor(area); if (!b) return;
+      if (r._fluxo) {
+        // Tira o "/atalho" do campo e dispara: quem envia é o servidor.
+        area.value = area.value.slice(0, b.inicio) + area.value.slice(b.fim);
+        fechar(); area.dispatchEvent(new Event('input', { bubbles: true }));
+        const c = opcoes.conversa?.(); if (c) window.SintoniaFluxos.iniciar(c.id, r);
+        return;
+      }
       const texto = preencher(r.texto, opcoes.conversa?.(), opcoes.nome?.());
       area.value = area.value.slice(0, b.inicio) + texto + area.value.slice(b.fim);
       const pos = b.inicio + texto.length;
@@ -279,7 +294,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }, true);
     return { fechar };
   }
-  const rrComposer = ligarRespostas(campo, document.querySelector('.compor'), { conversa });
+  const rrComposer = ligarRespostas(campo, document.querySelector('.compor'), { conversa, fluxos: true });
 
   // Gerenciar (folha de vidro)
   let editando = null;
@@ -426,8 +441,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     abrirFolha(d);
     const lista = await carregarRespostas(true);
     const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => abrirGestao({ empurrar: true }) });
+    /* respostas-fluxos: os fluxos aparecem acima das respostas; tocar dispara o envio pelo servidor */
+    const fluxos = window.SintoniaFluxos ? await window.SintoniaFluxos.carregar(true) : [];
+    const blocoFluxos = fluxos.length ? [el('div', { class: 'cx-secao', text: 'Fluxos (saem sozinhos)' }), el('div', { class: 'folha-lista' }, ...fluxos.map((f) => el('button', { type: 'button', onclick: () => {
+      d.close(); const c = conversa(); if (c) window.SintoniaFluxos.iniciar(c.id, f);
+    } }, el('span', {}, el('b', { class: 'rr-at', text: `/${f.atalho} · ${f.nome}` }), el('small', { text: window.SintoniaFluxos.resumo(f) }))))), el('div', { class: 'cx-secao', text: 'Respostas' })] : [];
+    if (!lista.length && blocoFluxos.length) { corpo.replaceChildren(...blocoFluxos, el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
     if (!lista.length) { corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
-    corpo.replaceChildren(el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
+    corpo.replaceChildren(...blocoFluxos, el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
       d.close();
       const t = preencher(r.texto);
       const i = campo.selectionStart ?? campo.value.length, f = campo.selectionEnd ?? i;

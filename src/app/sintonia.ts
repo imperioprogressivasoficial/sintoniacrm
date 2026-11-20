@@ -548,6 +548,14 @@ export class Sintonia {
     return id;
   }
 
+  /** Fluxos de mensagens: mostra "digitando…"/"gravando áudio…" para a cliente. Canal sem esse recurso: não faz nada. */
+  async mostrarPresenca(conversaId: string, tipo: 'digitando' | 'gravando', segundos: number): Promise<void> {
+    const c = await this.d.repo.buscarConversa(conversaId);
+    if (!c) return;
+    const n = this.numeroDa(c);
+    await n.canal.enviarPresenca?.(n.canalId, c.telefone, tipo, segundos * 1000);
+  }
+
   /** Foto/arquivo automático (bot), já sob a trava: envia, guarda o arquivo e grava como da IA (com `autorNome`). Quem chama grava a conversa. */
   async enviarMidiaAutomatico(c: Conversa, midia: MidiaEnvio, autorNome: string): Promise<string> {
     const n = this.numeroDa(c);
