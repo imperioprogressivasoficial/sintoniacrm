@@ -1708,7 +1708,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     return [JSON.stringify(c), sel ? (sel.has(c.id) ? 2 : 1) : 0, c.id === estado.aberta, estado.filtro, estado.eu?.id, semFoto.has(c.id),
       window.SintoniaFotos?.url(c.responsavelId) || '', selo, !!ra,
       estado.filtro === 'radar' ? (rd?.etiqueta(c.id)?.outerHTML || '') : '',
-      estado.filtro === 'aguardando' && esperando(c) ? esperaTxt(c) : ''].join('|');
+      estado.filtro === 'aguardando' && esperando(c) ? esperaTxt(c) : '', !!window.SintoniaSerenaFoto, !!window.SintoniaTelas?.esperaSelo].join('|'); /* foto da Serena e cronômetro podem carregar depois */
   }
   function desenharLista() {
     if (window.SintoniaTelas?.conversasGestos?.segurar?.()) return; /* conversas-gestos: linha aberta/arrastando — redesenha quando fechar */
