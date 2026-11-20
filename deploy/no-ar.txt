@@ -1,8 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 15:25 UTC (20/11, 12h25 na Bahia)
-commit: 690711b
-pacote sha256: 2c890ac9f0022ec50cb6fcc1a2e7dc3b0a4a69312e409eebfa763611b55be6ff
+data: 2026-11-20 15:40 UTC (20/11, 12h40 na Bahia)
+commit: 1a5d78f
+pacote sha256: 55a125c4329dc7e73a213dbd6a92e1abd4926f9a167ab767fccc6f1ab8679363
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-690711b.b64); pode apagar depois.
-observação: em cima do 032a359. Entra: WhatsApp aceita contatos por LID; histórico de conversas ao conectar (MESSAGES_SET) com tela "Sincronizando"; botão Sincronizar no canal; Radar ativo visível no escuro; diagnóstico /api/conexoes/whatsapp/canais/:id/diagnostico.
-  Conferido: /saude 200, /progresso respondendo, webhook do canal WhatsApp 1 atualizado com MESSAGES_SET.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1a5d78f.b64); pode apagar depois.
+observação: em cima do 690711b. Entra: Agendamento online (/r/<slug>, migração 320_reunioes_scripts), Scripts de venda, Clientes abaixo de Vendas.
+  Conferido: /api/reunioes respondendo, /app com reunioes.js.
