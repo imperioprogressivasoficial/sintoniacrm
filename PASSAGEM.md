@@ -24,7 +24,18 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 19/11/2026, 22h25 (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 20/11/2026, madrugada (Bahia) — Claude da conta do Bruno (Max).
+
+- **Feito na branch `claude/paginas-vendas-login` (NÃO publicado):**
+  - Tela **Serena** (botão do meio): estilo ChatGPT, `public/telas/serena.js`. Abrir NÃO chama a IA: só `GET /api/serena/resumo`
+    (novo, `src/serena/resumo.ts`, guardado 60 s). A IA só roda ao mandar mensagem (`POST /api/ia/chat`, agora aceita 1 imagem na última pergunta
+    e devolve `clientes` citadas `[[c1]]`). Menu lateral (empurra a tela), seletor do título, folhas Precisa de você/Resumo/Agendado,
+    histórico no aparelho (fixar/apagar segurando), ditado por voz (Web Speech; sem suporte avisa), anexo de print/foto.
+  - Barra do celular: Dashboard · Ligações · Serena · Conversas · Mais. CRM: Conversas › Lista | Funil e Mais › CRM.
+    Configuração da IA: Mais › Inteligência Artificial e Configurações › Inteligência Artificial (gestão). Lateral do PC: "Serena".
+  - Chip **Radar** (esperando resposta, contador vermelho), troca de tema "curto-circuito", presença forte (anel + selo Online/Offline).
+  - Testes: 622 passando; `tsc` ok.
+- **Falta:** vídeo de demonstração; versão sem fundo da foto da Serena.
 
 - **No ar:** `producao` (ver `deploy/no-ar.txt`), publicada em 19/11 às 22h21 pela conta Max, em cima do trabalho da conta Pro
   (visual original, Evolution, presença). Conferido: /saude ok, presença ok, Evolution configurada, foto /serena.jpg.

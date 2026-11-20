@@ -90,7 +90,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-faixa { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; margin: 2px 14px 4px; padding: 8px 12px; border-radius: 18px; flex: none;
     background: var(--vidro-item); box-shadow: inset 0 0 0 1px rgba(229,56,59,.24), 0 6px 22px rgba(8,36,63,.06); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); position: relative; overflow: hidden; }
   .srn-faixa[hidden] { display: none; }
-  .srn-faixa span { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.3; }
+  .srn-faixa > .txt { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.3; }
   .srn-faixa em { font-style: normal; font-size: 13.5px; font-weight: 600; color: var(--srn-azul); padding: 4px 2px; }
 
   /* miolo */
@@ -126,8 +126,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-cartao .rot { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--sub); }
   .srn-cartao .rot.alerta { color: #c2410c; } html[data-tema="escuro"] .srn-cartao .rot.alerta { color: #ff9b73; }
   .srn-cartao .linha { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .srn-cartao .linha span { font-size: 13px; color: var(--sub); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .srn-cartao b.num { font-size: 15px; font-weight: 700; }
+  .srn-cartao .linha > .nomes { font-size: 13px; color: var(--sub); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srn-cartao b.srn-num { font-size: 15px; font-weight: 700; }
   .srn-cartao small { font-size: 12.5px; color: var(--sub); }
   .srn-marca { width: 8px; height: 8px; border-radius: 50%; background: var(--srn-vermelho); flex: none; }
   .srn-pilha { display: flex; flex: none; }
@@ -530,7 +530,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!R.faixa.hidden) {
       const lista = resumo.precisa.lista;
       const quem = lista[0]?.nome || 'Uma cliente';
-      R.faixa.replaceChildren(pilha(lista.slice(0, 3), n), el('span', {}, el('b', { text: n > 1 ? `${quem} e mais ${n - 1}` : quem }), document.createTextNode(n > 1 ? ' precisam de você' : ' precisa de você')), el('em', { text: 'Ver' }));
+      R.faixa.replaceChildren(pilha(lista.slice(0, 3), n), el('span', { class: 'txt' }, el('b', { text: n > 1 ? `${quem} e mais ${n - 1}` : quem }), document.createTextNode(n > 1 ? ' precisam de você' : ' precisa de você')), el('em', { text: 'Ver' }));
       R.faixa.setAttribute('aria-label', `${n > 1 ? `${quem} e mais ${n - 1} precisam` : `${quem} precisa`} de você. Ver.`);
     }
   }
@@ -561,11 +561,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const n = r?.precisa?.total || 0;
     const precisa = el('button', { type: 'button', class: 'srn-cartao srn-vidro srn-toca srn-entra', style: '--i:2', onclick: folhaPrecisa, 'aria-label': n ? `${plural(n, 'conversa precisa', 'conversas precisam')} de você` : 'Ninguém precisa de você agora' },
       el('span', { class: 'rot' + (n ? ' alerta' : '') }, n ? el('i', { class: 'srn-marca' }) : el('span', { html: SVG.certo, style: 'display:grid;width:15px;color:#16c784' }), document.createTextNode(n ? 'Precisa de você' : 'Tudo em dia')),
-      n ? el('span', { class: 'linha' }, pilha(r.precisa.lista, n), el('span', { text: n > 1 ? `${r.precisa.lista[0]?.nome || 'Cliente'} e mais ${n - 1}` : r.precisa.lista[0]?.nome || 'Uma cliente' }))
+      n ? el('span', { class: 'linha' }, pilha(r.precisa.lista, n), el('span', { class: 'nomes', text: n > 1 ? `${r.precisa.lista[0]?.nome || 'Cliente'} e mais ${n - 1}` : r.precisa.lista[0]?.nome || 'Uma cliente' }))
         : el('small', { text: r ? 'Ninguém esperando você agora.' : '…' }));
     const hoje = el('button', { type: 'button', class: 'srn-cartao srn-vidro srn-toca srn-entra', style: '--i:3', onclick: folhaResumo, 'aria-label': 'Resumo de hoje' },
       el('span', { class: 'rot', text: 'Hoje' }),
-      el('b', { class: 'num' + (r ? '' : ' srn-esqueleto'), text: r ? plural(h.marcados, 'horário', 'horários') : '0 horários' }),
+      el('b', { class: 'srn-num' + (r ? '' : ' srn-esqueleto'), text: r ? plural(h.marcados, 'horário', 'horários') : '0 horários' }),
       el('small', { text: r ? plural(h.respostas, 'resposta', 'respostas') : '' }));
     const sug = el('div', { class: 'srn-sug' }, ...SUGESTOES.map((s, i) => el('button', { type: 'button', class: 'srn-vidro srn-toca srn-entra', style: `--i:${5 + i}`, onclick: () => usarSugestao(s) }, document.createTextNode(s.t), el('small', { text: s.s }))));
     R.coluna.replaceChildren(
