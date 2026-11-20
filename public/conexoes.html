@@ -80,6 +80,68 @@
   .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
 
   .oficial-trava .estado { flex: none; }
+  /* imperio: WhatsApp — lista em linhas e conexão em 3 etapas (vidro com brilho) */
+  #nao-oficial { --brilho-1: #0ffcbe; --brilho-2: #3aa0ff; }
+  .wa-rotulo { font-size: 13px; font-weight: 600; color: var(--sub); margin: 4px 2px 6px; }
+  .wa-lista { display: grid; }
+  .wa-linha { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--vidro-borda); }
+  .wa-linha:last-child { border-bottom: 0; }
+  .wa-linha:focus-visible { outline: 2px solid var(--marca-menta); border-radius: 12px; }
+  .wa-linha .wa-logo { width: 42px; height: 42px; border-radius: 12px; }
+  .wa-linha .wa-logo.off { background: #b9c5d6; }
+  .wa-linha .wa-logo svg { width: 22px; height: 22px; }
+  .wa-linha b { display: block; font-size: 15px; }
+  .wa-linha small { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--sub); }
+  .wa-linha small i { width: 8px; height: 8px; border-radius: 50%; background: #f2a93b; flex: none; }
+  .wa-linha small i.ok { background: #16c47f; }
+  .wa-linha .seta { margin-left: auto; color: var(--sub); font-size: 22px; line-height: 1; }
+  .wa-novo { display: block; width: 100%; margin-top: 12px; padding: 13px 18px; font-size: 15px; }
+  .wa-logo { width: 58px; height: 58px; border-radius: 16px; background: #25d366; display: grid; place-items: center; flex: none; }
+  .wa-logo svg { width: 30px; height: 30px; }
+  .wa-si { width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center; position: relative; overflow: hidden; background: #0d2240; }
+  .wa-si img { width: 100%; height: 100%; border-radius: 20px; padding: 0; background: none; aspect-ratio: auto; }
+  .wa-si::after, .wa-folha::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, var(--brilho-1, #0ffcbe), var(--brilho-2, #3aa0ff)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+  .wa-logos { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 4px; }
+  .wa-troca { color: var(--sub); font-size: 18px; }
+  dialog.wa-folha { position: fixed; overflow: visible; text-align: center; padding: 12px 22px calc(22px + env(safe-area-inset-bottom)); width: min(420px, 100vw); max-width: 100vw; max-height: 92vh; overflow-y: auto; border-radius: 28px 28px 0 0; margin: auto auto 0; background: color-mix(in srgb, var(--vidro-forte) 88%, transparent); -webkit-backdrop-filter: blur(24px) saturate(1.3); backdrop-filter: blur(24px) saturate(1.3); }
+  dialog.wa-folha[open] { animation: wa-sobe .28s cubic-bezier(.2,.8,.2,1); }
+  @keyframes wa-sobe { from { transform: translateY(40px); opacity: 0; } }
+  @media (min-width: 720px) { dialog.wa-folha { margin: auto; border-radius: 28px; padding: 22px 28px 24px; width: 460px; } .wa-etapas { margin-top: 6px; margin-bottom: 22px; } }
+  .wa-folha { --brilho-1: #0ffcbe; --brilho-2: #3aa0ff; }
+  .wa-puxa { width: 40px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--sub) 40%, transparent); margin: 0 auto 12px; }
+  @media (min-width: 720px) { .wa-puxa { display: none; } }
+  .wa-etapas { display: flex; gap: 6px; margin: 0 34px 16px; }
+  .wa-etapas i { flex: 1; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--sub) 22%, transparent); transition: background .25s; }
+  .wa-etapas i.feita { background: linear-gradient(90deg, var(--brilho-1), var(--brilho-2)); }
+  .wa-etapa { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .wa-etapa h2 { display: block; text-align: center; white-space: normal; font-size: 22px; line-height: 1.2; margin: 0; padding: 0 8px; }
+  .wa-sub { font-size: 13.5px; margin-top: -8px; }
+  .wa-chk { all: unset; display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 12.5px; line-height: 1.4; color: var(--sub); cursor: pointer; }
+  .wa-chk input { width: 20px; height: 20px; flex: none; margin: 1px 0 0; accent-color: var(--marca-azul); padding: 0; }
+  .wa-botoes { display: grid; gap: 6px; }
+  .wa-pri { padding: 14px 18px; font-size: 15px; }
+  .wa-pri:disabled { opacity: .45; pointer-events: none; }
+  .wa-link { all: unset; cursor: pointer; padding: 10px; font-size: 14px; font-weight: 600; color: var(--marca-azul); text-align: center; }
+  .wa-link:disabled { opacity: .45; pointer-events: none; }
+  @media (prefers-color-scheme: dark) { .wa-link { color: #8fe9de; } }
+  @media (min-width: 720px) { #wa-e1 .wa-botoes { grid-template-columns: 1fr 1fr; } #wa-ir-qr { all: unset; box-sizing: border-box; cursor: pointer; border-radius: 999px; padding: 14px 18px; font-size: 15px; font-weight: 700; background: var(--vidro-ativo); color: var(--texto); box-shadow: inset 0 0 0 1px var(--vidro-borda); text-align: center; } #wa-ir-qr:disabled { opacity: .45; } }
+  .wa-campo { display: flex; align-items: center; gap: 10px; height: 52px; border-radius: 14px; padding: 0 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-size: 17px; font-weight: 600; }
+  .wa-campo span { color: var(--sub); }
+  .wa-campo input { all: unset; flex: 1; min-width: 0; font-size: 17px; font-weight: 600; text-align: left; color: var(--texto); }
+  .wa-codigo { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; justify-content: space-between; height: 68px; border-radius: 16px; padding: 0 18px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho-1) 55%, transparent); font-size: 28px; font-weight: 700; letter-spacing: .16em; font-variant-numeric: tabular-nums; color: var(--texto); }
+  .wa-codigo svg { width: 22px; height: 22px; color: var(--sub); flex: none; }
+  .wa-codigo.copiado svg { color: var(--ok); }
+  .wa-passos { text-align: left; font-size: 13px; color: var(--sub); padding-left: 20px; margin: 0; line-height: 1.75; }
+  .wa-passos b { color: var(--texto); font-weight: 600; }
+  .wa-qr { display: grid; place-items: center; min-height: 120px; font-size: 14px; color: var(--sub); }
+  .wa-erro { color: var(--erro); font-size: 13px; margin: -4px 0 0; }
+  .wa-check { width: 64px; height: 64px; border-radius: 50%; margin: 8px auto 0; display: grid; place-items: center; background: var(--ok-fundo); color: var(--ok); }
+  .wa-check svg { width: 32px; height: 32px; }
+  .wa-fechar, .wa-voltar { all: unset; cursor: pointer; position: absolute; top: 14px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; color: var(--sub); background: var(--vidro-item); }
+  .wa-fechar { right: 14px; } .wa-voltar { left: 14px; font-size: 17px; }
+  .wa-menu .wa-botoes .botao { padding: 13px 18px; }
+  .wa-menu h2 { justify-content: center; margin: 0 0 4px; }
+  .wa-menu .wa-sub { margin: 0 0 14px; }
   .vazio-canais { color: var(--sub); font-size: 14px; }
   #lojas .linha { flex-wrap: nowrap; gap: 6px; }
   #lojas .linha .botao:not(.leve) { flex: 1; }
@@ -202,11 +264,10 @@
 
   <section id="nao-oficial" aria-labelledby="t-nao-oficial">
     <h2 id="t-nao-oficial"><span class="ic tinta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg></span><span>WhatsApp — API não oficial<small>QR Code ou código, sem custo por mensagem</small></span></h2>
-    <p>Cada canal é um número de WhatsApp. Crie quantos quiser, dê o nome que preferir e ligue lendo o <b>QR Code</b> ou digitando um <b>código</b> no celular. Leva menos de um minuto.</p>
-    <div class="oficial-trava"><span class="estado">Bloqueado</span><span><b>WhatsApp oficial (Meta)</b> — fica para depois. Por enquanto, os canais ligam por QR Code ou código.</span></div>
-    <div class="linha" style="justify-content:space-between;margin-top:6px"><h3 style="margin:0">Seus canais</h3><button class="botao" type="button" id="canal-novo">+ Novo canal</button></div>
     <p id="wa-sem-evolution">O servidor de WhatsApp ainda não está configurado. Abra "Servidor do WhatsApp" logo abaixo.</p>
-    <div class="cartoes" id="lojas"></div>
+    <div class="wa-rotulo">Seus canais</div>
+    <div id="lojas" class="wa-lista"></div>
+    <button class="botao wa-novo" type="button" id="canal-novo">+ Novo canal</button>
     <details class="avancado" id="evo-servidor">
       <summary>Servidor do WhatsApp (Evolution) <span class="estado" id="evo-ok">…</span></summary>
       <p>O servidor da Evolution que já roda no VPS. Endereço e chave global. Só mexa aqui se o suporte pedir.</p>
@@ -439,32 +500,67 @@
   <section id="email" aria-labelledby="t-email"></section>
 </main>
 
-<dialog id="d-qr">
-  <h2 style="justify-content:center">Conectar <span id="qr-loja"></span></h2>
-  <div class="abas-conectar" role="group" aria-label="Como conectar"><button type="button" id="aba-qr" aria-pressed="true">QR Code</button><button type="button" id="aba-cod" aria-pressed="false">Código</button></div>
-  <div id="modo-qr">
-    <div id="qr-area" style="margin-top:14px"></div>
-    <ol>
-      <li>Abra o WhatsApp no celular</li>
-      <li>Toque em <b>Mais opções</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
-      <li>Toque em <b>Conectar dispositivo</b> e aponte para este código</li>
-    </ol>
-  </div>
-  <div id="modo-cod" hidden>
-    <form id="cod-form">
-      <label style="font-size:13.5px;color:var(--sub)">Número do WhatsApp (com DDD)<input id="cod-numero" inputmode="tel" autocomplete="off" placeholder="71 99999-9999"></label>
-      <button class="botao" type="submit" id="cod-gerar">Gerar código</button>
-    </form>
-    <div id="cod-area" hidden><div class="codigo-pareamento" id="cod-valor"></div>
-      <ol>
-        <li>Abra o WhatsApp no celular › <b>Dispositivos conectados</b></li>
-        <li>Toque em <b>Conectar dispositivo</b> › <b>Conectar com número de telefone</b></li>
-        <li>Digite este código</li>
-      </ol>
+<dialog id="d-wa" class="wa-folha" aria-labelledby="wa-titulo">
+  <div class="wa-puxa" aria-hidden="true"></div>
+  <div class="wa-etapas" aria-hidden="true"><i></i><i></i><i></i></div>
+  <!-- 1: autorizar -->
+  <div id="wa-e1" class="wa-etapa">
+    <div class="wa-logos"><span class="wa-logo"><svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.7-.1 1.2Z"/></svg></span><span class="wa-troca" aria-hidden="true">⇄</span><span class="wa-si"><img src="/icone-192.png" alt=""></span></div>
+    <h2 id="wa-titulo">Conecte o seu WhatsApp</h2>
+    <p class="wa-sub">Para a Sintonia atender suas clientes por esse número<span id="wa-canal-nome"></span></p>
+    <label class="wa-chk"><input type="checkbox" id="wa-aceite"><span>Autorizo a Sintonia a atender no meu WhatsApp e não vou usar para envio em massa ou spam.</span></label>
+    <div class="wa-botoes">
+      <button class="botao wa-pri" type="button" id="wa-ir-cod" disabled>Conectar WhatsApp</button>
+      <button class="wa-link" type="button" id="wa-ir-qr" disabled>Prefiro ler o QR Code</button>
     </div>
   </div>
-  <p id="qr-estado">Aguardando a leitura…</p>
-  <div class="linha" style="justify-content:center;margin-top:12px"><button class="botao leve" id="qr-fechar">Fechar</button></div>
+  <!-- 2: número -->
+  <form id="wa-e2" class="wa-etapa" hidden>
+    <h2>Qual é o número do WhatsApp?</h2>
+    <p class="wa-sub">O mesmo que está no celular que vai ser conectado.</p>
+    <div class="wa-campo"><span>+55</span><input id="wa-numero" inputmode="tel" autocomplete="tel-national" placeholder="71 99999-9999"></div>
+    <p class="wa-erro" id="wa-erro2" hidden></p>
+    <button class="botao wa-pri" type="submit" id="wa-gerar">Gerar código</button>
+  </form>
+  <!-- 3a: código -->
+  <div id="wa-e3c" class="wa-etapa" hidden>
+    <h2>Digite este código no WhatsApp</h2>
+    <p class="wa-sub">Confira se o número está certo.</p>
+    <div class="wa-campo wa-num" id="wa-num-mostra"></div>
+    <button class="wa-codigo" type="button" id="wa-copiar" aria-label="Copiar código"><span id="wa-cod"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></button>
+    <ol class="wa-passos"><li>Abra o WhatsApp e toque em <b>Você</b> (ou <b>⋮</b>)</li><li><b>Aparelhos conectados</b></li><li><b>Conectar aparelho</b></li><li><b>Conectar com número de telefone</b></li><li>Digite ou cole o código</li></ol>
+    <p class="wa-erro" id="wa-erro3" hidden></p>
+    <button class="botao wa-pri" type="button" id="wa-ja">Já inseri o código</button>
+    <button class="wa-link" type="button" id="wa-novo-cod">Gerar novo código</button>
+  </div>
+  <!-- 3b: QR Code -->
+  <div id="wa-e3q" class="wa-etapa" hidden>
+    <h2>Leia o QR Code</h2>
+    <div id="qr-area" class="wa-qr"></div>
+    <ol class="wa-passos"><li>Abra o WhatsApp e toque em <b>Você</b> (ou <b>⋮</b>)</li><li><b>Aparelhos conectados</b> › <b>Conectar aparelho</b></li><li>Aponte a câmera para este código</li></ol>
+    <button class="wa-link" type="button" id="wa-pra-cod">Prefiro digitar um código</button>
+  </div>
+  <!-- pronto -->
+  <div id="wa-ok" class="wa-etapa" hidden>
+    <div class="wa-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <h2>WhatsApp conectado</h2>
+    <p class="wa-sub">As mensagens desse número já chegam na Sintonia.</p>
+  </div>
+  <button class="wa-fechar" type="button" id="wa-fechar" aria-label="Fechar">✕</button>
+  <button class="wa-voltar" type="button" id="wa-voltar" aria-label="Voltar" hidden>←</button>
+</dialog>
+
+<dialog id="d-canal" class="wa-folha wa-menu" aria-labelledby="dc-nome">
+  <div class="wa-puxa" aria-hidden="true"></div>
+  <h2 id="dc-nome"></h2>
+  <p class="wa-sub" id="dc-info"></p>
+  <div class="wa-botoes">
+    <button class="botao wa-pri" type="button" id="dc-conectar">Conectar</button>
+    <button class="botao leve" type="button" id="dc-renomear">Renomear</button>
+    <button class="botao leve" type="button" id="dc-desconectar">Desconectar</button>
+    <button class="botao perigo" type="button" id="dc-apagar">Apagar canal</button>
+    <button class="wa-link" type="button" id="dc-fechar">Fechar</button>
+  </div>
 </dialog>
 
 <script>
@@ -650,19 +746,28 @@
     if (!r.canais.length) { caixa.replaceChildren(el('p', { className: 'vazio-canais', textContent: 'Nenhum canal ainda. Toque em “+ Novo canal” para ligar o primeiro WhatsApp.' })); return; }
     caixa.replaceChildren(...r.canais.map((k) => {
       const ok = k.estado === 'conectada';
-      const est = el('span', { className: 'estado' + (ok ? ' ok' : ''), textContent: ok ? 'Conectado' : k.estado === 'conectando' ? 'Aguardando conexão' : k.estado === 'erro' ? 'Sem resposta' : 'Desconectado' });
-      const b = el('button', { className: ok ? 'botao perigo' : 'botao', textContent: ok ? 'Desconectar' : 'Conectar' });
-      b.addEventListener('click', () => (ok ? desconectar(k, b) : conectar(k)));
-      const ren = el('button', { className: 'botao leve', type: 'button', textContent: 'Renomear' });
-      ren.addEventListener('click', () => renomear(k));
-      const apg = el('button', { className: 'botao leve', type: 'button', textContent: 'Apagar' });
-      apg.addEventListener('click', () => apagarCanal(k, apg));
-      return el('div', { className: 'cartao' },
-        el('div', { className: 'cab' }, el('b', { textContent: k.nome }), est),
-        ok && k.numero ? el('p', { textContent: `${formatarTel(k.numero)}${k.perfil ? ' · ' + k.perfil : ''}` }) : null,
-        el('div', { className: 'linha' }, b, ren, apg));
+      const logo = el('span', { className: 'wa-logo' + (ok ? '' : ' off'), innerHTML: LOGO_WA });
+      const ponto = el('i', { className: ok ? 'ok' : '' });
+      const info = ok ? `Conectado${k.numero ? ' · ' + formatarTel(k.numero) : ''}` : k.estado === 'erro' ? 'Sem resposta' : 'Não conectado';
+      const linha = el('button', { className: 'wa-linha', type: 'button' }, logo, el('span', {}, el('b', { textContent: k.nome }), el('small', {}, ponto, info)), el('span', { className: 'seta', textContent: '›' }));
+      linha.addEventListener('click', () => menuCanal(k, ok, info));
+      return linha;
     }));
   }
+  const LOGO_WA = '<svg viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l2 .9c.3.1.5.2.5.3.1.2.1.7-.1 1.2Z"/></svg>';
+  let canalMenu = null;
+  function menuCanal(k, ok, info) {
+    canalMenu = k;
+    $('dc-nome').textContent = k.nome; $('dc-info').textContent = info;
+    $('dc-conectar').hidden = ok; $('dc-desconectar').hidden = !ok;
+    $('d-canal').showModal();
+  }
+  $('dc-fechar').addEventListener('click', () => $('d-canal').close());
+  $('dc-conectar').addEventListener('click', () => { $('d-canal').close(); conectar(canalMenu); });
+  $('dc-renomear').addEventListener('click', () => { $('d-canal').close(); renomear(canalMenu); });
+  $('dc-desconectar').addEventListener('click', (e) => desconectar(canalMenu, e.currentTarget).then(() => $('d-canal').close()));
+  $('dc-apagar').addEventListener('click', (e) => apagarCanal(canalMenu, e.currentTarget).then(() => $('d-canal').close()));
+  $('d-canal').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('canal-novo').addEventListener('click', async () => {
     const nome = prompt('Nome do canal (opcional). Ex.: Atendimento, Vendas, Loja Centro', '');
     if (nome === null) return;
@@ -683,62 +788,90 @@
     finally { botao.removeAttribute('aria-busy'); }
   }
 
-  let espera = null, lojaAtual = null; const urlConectar = () => `/api/conexoes/whatsapp/canais/${lojaAtual}/conectar`;
-  const modo = (m) => {
-    $('aba-qr').setAttribute('aria-pressed', String(m === 'qr')); $('aba-cod').setAttribute('aria-pressed', String(m === 'cod'));
-    $('modo-qr').hidden = m !== 'qr'; $('modo-cod').hidden = m !== 'cod';
-    if (m === 'qr' && lojaAtual && !$('qr-area').querySelector('img')) pedirQr();
-    if (m === 'cod') setTimeout(() => $('cod-numero').focus(), 50);
-  };
-  $('aba-qr').addEventListener('click', () => modo('qr'));
-  $('aba-cod').addEventListener('click', () => modo('cod'));
+  // Conectar em 3 etapas: 1 autorizar · 2 número · 3 código (ou QR Code).
+  let espera = null, lojaAtual = null, numeroAtual = '', telaAtual = 'e1', voltasEspera = 0;
+  const urlConectar = () => `/api/conexoes/whatsapp/canais/${lojaAtual}/conectar`;
+  const TELAS = ['e1', 'e2', 'e3c', 'e3q', 'ok'];
+  const ETAPA = { e1: 1, e2: 2, e3c: 3, e3q: 3, ok: 3 };
+  function tela(t) {
+    telaAtual = t;
+    for (const x of TELAS) $('wa-' + x).hidden = x !== t;
+    $('d-wa').querySelectorAll('.wa-etapas i').forEach((i, n) => i.classList.toggle('feita', n < ETAPA[t]));
+    $('wa-voltar').hidden = t === 'e1' || t === 'ok';
+    if (t === 'e2') setTimeout(() => $('wa-numero').focus(), 80);
+  }
+  $('wa-aceite').addEventListener('change', (e) => { $('wa-ir-cod').disabled = $('wa-ir-qr').disabled = !e.target.checked; });
+  $('wa-ir-cod').addEventListener('click', () => { $('wa-erro2').hidden = true; tela('e2'); });
+  $('wa-ir-qr').addEventListener('click', () => { tela('e3q'); pedirQr(); });
+  $('wa-pra-cod').addEventListener('click', () => tela('e2'));
+  $('wa-voltar').addEventListener('click', () => tela(telaAtual === 'e3c' || telaAtual === 'e3q' ? (telaAtual === 'e3c' ? 'e2' : 'e1') : 'e1'));
   async function pedirQr() {
     $('qr-area').textContent = 'Gerando o QR Code…';
     try { const r = await api(urlConectar(), { method: 'POST', body: '{}' }); if (r.estado === 'conectada') return pronto(); mostrarQr(r.qr); }
     catch (x) { $('qr-area').textContent = x.message; }
   }
-  $('cod-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const b = $('cod-gerar'); b.setAttribute('aria-busy', 'true');
-    $('cod-area').hidden = true; $('qr-estado').textContent = 'Gerando o código… leva até 20 segundos.';
+  async function gerarCodigo(botao, erro) {
+    botao.setAttribute('aria-busy', 'true'); const texto = botao.textContent; botao.textContent = 'Gerando código…';
+    erro.hidden = true;
     try {
-      const r = await api(urlConectar(), { method: 'POST', body: JSON.stringify({ numero: $('cod-numero').value }) });
+      const r = await api(urlConectar(), { method: 'POST', body: JSON.stringify({ numero: numeroAtual }) });
       if (r.estado === 'conectada') return pronto();
-      if (!r.codigo) { $('cod-area').hidden = true; $('qr-estado').textContent = 'O servidor não devolveu o código. Tente de novo ou use o QR Code.'; return; }
-      mostrarCodigo(r.codigo);
-      $('cod-area').hidden = false; $('qr-estado').textContent = 'No celular: WhatsApp › Aparelhos conectados › Conectar aparelho › Conectar com número de telefone, e digite o código.';
-    } catch (x) { $('qr-estado').textContent = x.message; }
-    finally { b.removeAttribute('aria-busy'); }
-  });
-  const mostrarCodigo = (c) => { $('cod-valor').textContent = c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c; };
-  async function pronto() {
-    clearInterval(espera); $('qr-estado').textContent = 'Conectado ✓';
-    setTimeout(() => $('d-qr').close(), 1200); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas();
+      if (!r.codigo) throw new Error('O WhatsApp não mandou o código agora. Toque de novo em alguns segundos ou use o QR Code.');
+      mostrarCodigo(r.codigo); $('wa-num-mostra').textContent = formatarTel(numeroAtual.length <= 11 ? '55' + numeroAtual : numeroAtual);
+      tela('e3c');
+    } catch (x) { erro.textContent = x.message; erro.hidden = false; }
+    finally { botao.removeAttribute('aria-busy'); botao.textContent = texto; }
   }
-  async function conectar(k) {
-    lojaAtual = k.id;
-    $('qr-loja').textContent = k.nome; $('qr-area').replaceChildren(); $('cod-area').hidden = true; $('cod-numero').value = '';
-    $('qr-estado').textContent = 'Aguardando a leitura…';
-    $('d-qr').showModal(); modo('qr');
-    let voltas = 0;
-    clearInterval(espera);
+  $('wa-e2').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const n = $('wa-numero').value.replace(/\D/g, '');
+    if (n.length < 10 || n.length > 13) { $('wa-erro2').textContent = 'Digite o DDD e o número, ex.: 71 99999-9999.'; $('wa-erro2').hidden = false; return; }
+    numeroAtual = n; gerarCodigo($('wa-gerar'), $('wa-erro2'));
+  });
+  $('wa-novo-cod').addEventListener('click', (e) => gerarCodigo(e.currentTarget, $('wa-erro3')));
+  $('wa-copiar').addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    try { await navigator.clipboard.writeText($('wa-cod').textContent.replace('-', '')); b.classList.add('copiado'); setTimeout(() => b.classList.remove('copiado'), 1500); } catch {}
+  });
+  $('wa-ja').addEventListener('click', async (e) => {
+    const b = e.currentTarget; b.setAttribute('aria-busy', 'true');
+    const lista = await api('/api/conexoes/whatsapp/canais').catch(() => null);
+    b.removeAttribute('aria-busy');
+    if (lista?.canais.find((x) => x.id === lojaAtual)?.estado === 'conectada') return pronto();
+    $('wa-erro3').textContent = 'Ainda não conectou. Confira se digitou o código certo; se ele mudou, use o novo que está na tela.'; $('wa-erro3').hidden = false;
+  });
+  const mostrarCodigo = (c) => { $('wa-cod').textContent = c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c; };
+  async function pronto() {
+    clearInterval(espera); tela('ok');
+    setTimeout(() => $('d-wa').close(), 1800); resumo = await api('/api/conexoes'); carregarLojas(); desenharEscolhas();
+  }
+  function conectar(k) {
+    lojaAtual = k.id; numeroAtual = '';
+    $('wa-canal-nome').textContent = ''; $('qr-area').replaceChildren(); $('wa-numero').value = ''; $('wa-erro3').hidden = true;
+    $('wa-aceite').checked = false; $('wa-ir-cod').disabled = $('wa-ir-qr').disabled = true;
+    const pc = matchMedia('(min-width: 720px)').matches;
+    $('wa-ir-cod').textContent = pc ? 'Usar código' : 'Conectar WhatsApp'; $('wa-ir-qr').textContent = pc ? 'Ler QR Code' : 'Prefiro ler o QR Code';
+    tela('e1'); $('d-wa').showModal();
+    voltasEspera = 0; clearInterval(espera);
     espera = setInterval(async () => {
-      voltas++;
+      if (telaAtual !== 'e3c' && telaAtual !== 'e3q') return;
+      voltasEspera++;
       const lista = await api('/api/conexoes/whatsapp/canais').catch(() => null);
-      const u = lista?.canais.find((x) => x.id === k.id);
-      if (u?.estado === 'conectada') return pronto();
-      // O QR Code vence em ~40 s: renova sozinho enquanto a aba QR estiver aberta.
-      // O código também é trocado pela Evolution de tempos em tempos: mostra sempre o que vale agora.
-      if (!$('modo-cod').hidden && !$('cod-area').hidden) { const c = await api(`/api/conexoes/whatsapp/canais/${k.id}/codigo`).catch(() => null); if (c?.codigo) mostrarCodigo(c.codigo); }
-      if (voltas % 8 === 0 && !$('modo-qr').hidden) { const n = await api(urlConectar(), { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
+      if (lista?.canais.find((x) => x.id === k.id)?.estado === 'conectada') return pronto();
+      // A Evolution troca o código de tempos em tempos: mostra sempre o que vale agora.
+      if (telaAtual === 'e3c') { const c = await api(`/api/conexoes/whatsapp/canais/${k.id}/codigo`).catch(() => null); if (c?.codigo) mostrarCodigo(c.codigo); }
+      // O QR Code vence em ~40 s: renova sozinho.
+      if (telaAtual === 'e3q' && voltasEspera % 8 === 0) { const n = await api(urlConectar(), { method: 'POST', body: '{}' }).catch(() => null); if (n?.qr) mostrarQr(n.qr); }
     }, 3000);
   }
   function mostrarQr(qr) {
     const area = $('qr-area'); area.replaceChildren();
-    if (!qr) { area.textContent = 'A Evolution não devolveu o QR Code. Tente de novo.'; return; }
+    if (!qr) { area.textContent = 'O WhatsApp não mandou o QR Code agora. Tente de novo.'; return; }
     area.append(el('img', { alt: 'QR Code para conectar', src: qr.startsWith('data:') ? qr : 'data:image/png;base64,' + qr }));
   }
-  $('qr-fechar').addEventListener('click', () => { clearInterval(espera); $('d-qr').close(); carregarLojas(); });
+  const fecharWa = () => { clearInterval(espera); $('d-wa').close(); carregarLojas(); };
+  $('wa-fechar').addEventListener('click', fecharWa);
+  $('d-wa').addEventListener('cancel', () => { clearInterval(espera); carregarLojas(); });
   async function desconectar(k, botao) {
     if (!confirm(`Desconectar o WhatsApp do canal “${k.nome}”? As mensagens desse número deixam de chegar na Sintonia até conectar de novo.`)) return;
     botao.setAttribute('aria-busy', 'true');
