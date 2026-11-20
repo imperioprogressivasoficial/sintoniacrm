@@ -88,6 +88,11 @@ try {
   const comWhisper = process.env.WHISPER !== '0';
   // Cópia do banco todo dia (pg_dump), um arquivo por dia da semana (sobrescreve: guarda 7 dias). COPIA=0 desliga.
   const comCopia = process.env.COPIA !== '0';
+  // Monitor de queda (Uptime Kuma) em status.<raiz> e estatísticas do site (Umami) em estatisticas.<raiz>. EXTRAS=0 desliga.
+  const comExtras = process.env.EXTRAS !== '0';
+  const RAIZ = DOMINIO.split('.').slice(1).join('.');
+  // Segredo do Umami derivado da senha do banco (estável entre publicações, nunca escrito no código).
+  const segredoUmami = createHash('sha256').update(`umami:${process.env.SENHA_BANCO ?? ''}`).digest('hex');
   // SINTONIA_SEGREDO (chave das conexões salvas) fica sempre com o endereço original do banco, mesmo se o nome mudar.
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
@@ -218,6 +223,55 @@ ${comPresenca ? `
       - copias:/copias
     networks:
       - interna
+` : ''}${comExtras ? `
+  umami-banco:
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${senha}
+    command: ["sh", "-c", "psql -h db -U sintonia -d sintonia -tc \\"select 1 from pg_database where datname='umami'\\" | grep -q 1 || psql -h db -U sintonia -d sintonia -c 'create database umami'"]
+    networks:
+      - interna
+
+  umami:
+    image: umamisoftware/umami:3.4.1
+    restart: unless-stopped
+    mem_limit: 512m
+    depends_on:
+      umami-banco:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://sintonia:${senha}@db:5432/umami
+      APP_SECRET: ${segredoUmami}
+    networks:
+      - interna
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=sintonia_interna"
+      - "traefik.http.routers.sintonia-umami.rule=Host(\`estatisticas.${RAIZ}\`)"
+      - "traefik.http.routers.sintonia-umami.entrypoints=websecure"
+      - "traefik.http.routers.sintonia-umami.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sintonia-umami.loadbalancer.server.port=3000"
+
+  status:
+    image: louislam/uptime-kuma:2.2.0-slim
+    restart: unless-stopped
+    mem_limit: 384m
+    volumes:
+      - status:/app/data
+    networks:
+      - interna
+      - evolution
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=sintonia_interna"
+      - "traefik.http.routers.sintonia-status.rule=Host(\`status.${RAIZ}\`)"
+      - "traefik.http.routers.sintonia-status.entrypoints=websecure"
+      - "traefik.http.routers.sintonia-status.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sintonia-status.loadbalancer.server.port=3001"
 ` : ''}
 volumes:
   banco:
@@ -235,6 +289,8 @@ ${comEvolution ? `  chave:
     name: sintonia_whisper
 ` : ''}${comCopia ? `  copias:
     name: sintonia_copias
+` : ''}${comExtras ? `  status:
+    name: sintonia_status
 ` : ''}
 networks:
   interna:
