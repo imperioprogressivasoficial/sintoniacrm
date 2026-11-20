@@ -189,6 +189,12 @@ export class CanalEvolution implements CanalWhatsApp {
     return this.idDoEnvio(await this.postar('message/sendMedia', instancia, corpo, 120_000));
   }
 
+  /** "digitando…"/"gravando áudio…": POST /chat/sendPresence (a Evolution mostra o aviso por `delay` ms). */
+  async enviarPresenca(instancia: string, telefone: string, tipo: 'digitando' | 'gravando', ms: number): Promise<void> {
+    const resp = await this.postar('chat/sendPresence', instancia, { number: telefone, presence: tipo === 'gravando' ? 'recording' : 'composing', delay: Math.round(ms) }, ms + 15_000);
+    if (!resp.ok) throw new Error(`Evolution recusou o aviso de digitando (${resp.status})`);
+  }
+
   /** Baixa a mídia de uma mensagem já recebida. A Evolution procura a mensagem pelo id no banco dela. */
   async baixarMidia(instancia: string, idExterno: string): Promise<MidiaBaixada> {
     const resp = await this.postar('chat/getBase64FromMediaMessage', instancia, { message: { key: { id: idExterno } }, convertToMp4: false }, 60_000);

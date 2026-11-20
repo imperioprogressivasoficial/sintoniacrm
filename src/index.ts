@@ -48,6 +48,8 @@ import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
+import { FluxosMemoria, FluxosPostgres, MotorFluxos } from './conversa/fluxos.js';
+import { registrarFluxos } from './conversa/fluxos-rotas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorComReserva, TranscritorLocal, TranscritorOpenAI } from './conversa/transcricao.js';
 import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
@@ -657,6 +659,22 @@ registrarConversa(app, {
   controleIa: () => agentesIa.servico.controle(),
 });
 
+/* respostas-fluxos: fluxos de mensagens (Respostas rápidas › Fluxos). O servidor envia os passos sozinho, com espera e "digitando…". */
+const armazemFluxos = pool ? new FluxosPostgres(pool) : new FluxosMemoria();
+const motorFluxos = new MotorFluxos({
+  armazem: armazemFluxos,
+  log,
+  enviador: {
+    conversa: (id) => repo.buscarConversa(id),
+    texto: (id, texto, atendente) => sintonia.equipeEnviou(id, texto, atendente),
+    midia: async (id, m, atendente) => {
+      await sintonia.equipeEnviouMidia(id, m, atendente);
+    },
+    presenca: (id, tipo, seg) => sintonia.mostrarPresenca(id, tipo, seg),
+  },
+});
+registrarFluxos(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: armazemFluxos, motor: motorFluxos, conferirVez: (id, quem) => sintonia.conferirVez(id, quem) });
+
 // Dados de demonstração: só administração e direção (src/demo/rotas.ts).
 const demo = new Demo({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -707,6 +725,12 @@ const relogioTransmissoes = setInterval(() => {
   transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
 }, 2_000);
 
+// respostas-fluxos: passos dos fluxos de mensagens (esperas de segundos), a cada 1 s.
+const relogioFluxos = setInterval(() => {
+  motorFluxos.tick().catch((e) => log('Falha no relógio dos fluxos de mensagens', String(e)));
+  void motorFluxos.limpar(cfg.SINTONIA_EMPRESA_ID);
+}, 1_000);
+
 trabalhador.iniciar();
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
@@ -717,6 +741,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     log(`Recebido ${sinal}: encerrando`);
     clearInterval(relogio);
     clearInterval(relogioTransmissoes);
+    clearInterval(relogioFluxos);
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
