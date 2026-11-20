@@ -51,6 +51,8 @@ export type TipoEvento =
   | 'atendimento_finalizado'
   /** Nota da pesquisa de satisfação (src/nps; dados: pesquisaId, nota, categoria, atendenteId, atendenteNome, motivo, comentario). */
   | 'nps'
+  /** Radar (src/radar): dados.acao = 'disparou' (motivo, origem, vigiar, donoId, iaResponde). */
+  | 'radar'
   | 'falha';
 
 export interface Evento {

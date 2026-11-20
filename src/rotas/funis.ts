@@ -5,7 +5,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import { ehGestor, escopoDe, podeVer } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import { ehCanalTeste } from '../channels/teste.js';
-import type { Funis } from '../funis/funis.js';
+import { ACOES_PRINCIPAIS, type Funis } from '../funis/funis.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
 
 /**
@@ -50,8 +50,13 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
   const EtapaNova = z.object({ nome: z.string().max(60), cor: z.string().max(10).optional() });
   const FunilNovo = z.object({ nome: z.string().max(80), etapas: z.array(EtapaNova).max(30).optional() });
   const FunilAlteracao = z
-    .object({ nome: z.string().max(80).optional(), ordem: z.number().int().min(0).max(1000).optional() })
-    .refine((v) => v.nome !== undefined || v.ordem !== undefined, 'Informe o nome ou a ordem.');
+    .object({
+      nome: z.string().max(80).optional(),
+      ordem: z.number().int().min(0).max(1000).optional(),
+      /** Botão do meio do cartão no celular; null volta ao padrão. */
+      acaoPrincipal: z.enum(ACOES_PRINCIPAIS).nullable().optional(),
+    })
+    .refine((v) => v.nome !== undefined || v.ordem !== undefined || v.acaoPrincipal !== undefined, 'Informe o nome, a ordem ou o botão.');
   const EtapaAlteracao = z
     .object({ nome: z.string().max(60).optional(), cor: z.string().max(10).optional() })
     .refine((v) => v.nome !== undefined || v.cor !== undefined, 'Informe o nome ou a cor.');

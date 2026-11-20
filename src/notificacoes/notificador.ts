@@ -179,6 +179,18 @@ export class Notificador {
         }
         return;
       }
+      case 'radar': {
+        // Radar (src/radar): avisa quem colocou a conversa no radar; sem dona do radar (ou ela não vê mais), a dona da conversa ou a unidade.
+        if (d.acao !== 'disparou') return;
+        const dono = d.donoId ? us.filter((u) => u.id === String(d.donoId) && podeVer(u, c)) : [];
+        const alvos = dono.length ? dono : this.donaOuUnidade(us, c);
+        const resolvido = d.origem === 'resolvido';
+        const texto = `${String(d.motivo ?? '')}${d.iaResponde ? ' A IA vai responder.' : ''}`.trim() || `Vigiando: ${String(d.vigiar ?? '')}`;
+        for (const u of alvos) {
+          await this.criar(u, { tipo: 'radar', titulo: resolvido ? `Radar: ${nome} — não precisa mais vigiar` : `Radar: aconteceu com ${nome}`, texto: curto(texto), conversaId: c.id });
+        }
+        return;
+      }
       case 'lembrete_ligacao': {
         if (d.teste) return;
         const quando = typeof d.quando === 'string' ? new Date(d.quando) : this.agora();

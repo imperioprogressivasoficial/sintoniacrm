@@ -47,7 +47,10 @@ import { registrarFunis } from './rotas/funis.js';
 import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
+import { fontesDoBanco, funisComEtapas } from './serena/acoes.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
+import { FluxosMemoria, FluxosPostgres, MotorFluxos } from './conversa/fluxos.js';
+import { registrarFluxos } from './conversa/fluxos-rotas.js';
 import { TranscricoesMemoria, TranscricoesPostgres, TranscritorComReserva, TranscritorLocal, TranscritorOpenAI } from './conversa/transcricao.js';
 import { montarExtras, registrarExtras } from './rotas/extras.js';
 import { ArmazemNotificacoesMemoria, ArmazemNotificacoesPostgres } from './notificacoes/armazem.js';
@@ -87,6 +90,10 @@ import { registrarFollowup } from './followup/rotas.js';
 import { Nps } from './nps/nps.js';
 import { ArmazemNpsMemoria, ArmazemNpsPostgres } from './nps/armazem.js';
 import { registrarNps } from './nps/rotas.js';
+import { Radar } from './radar/radar.js';
+import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
+import { juizClaude } from './radar/juiz.js';
+import { registrarRadar } from './radar/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -324,12 +331,30 @@ const followup = new Followup({
 observarEventos(repo, (e) => followup.aoEvento(e));
 // Finalizar atendimento + pesquisa de satisfação (src/nps): lê a nota na resposta da cliente; dispara as automações.
 const nps = new Nps({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: pool ? new ArmazemNpsPostgres(pool) : new ArmazemNpsMemoria(), repo, sintonia: () => sintonia, automacoes: () => automacoes, log });
+// Radar (src/radar): a equipe coloca a conversa no radar; a IA confere cada mensagem nova e o prazo; avisa e, se pedido, responde.
+const radar = new Radar({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemRadarPostgres(pool) : new ArmazemRadarMemoria(),
+  repo,
+  sintonia: () => sintonia,
+  agente: { executar: (p) => agentesIa.agente.executar(p) },
+  juiz: juizClaude(claude, { modelo: cfg.SINTONIA_MODELO }),
+  iaDisponivel: () => iaLigada,
+  log,
+});
+observarEventos(repo, (e) => radar.aoEvento(e));
 const ganchos: typeof ganchosBase = {
   ...ganchosBase,
+  // radar: a instrução do radar que acabou de disparar vai junto com o objetivo dos fluxos de IA.
+  objetivoIa: async (c) => {
+    const partes = [await ganchosBase.objetivoIa?.(c), await radar.objetivo(c).catch(() => undefined)].filter(Boolean);
+    return partes.length ? partes.join('\n\n') : undefined;
+  },
   mensagemCliente: async (c, m) => {
     await ganchosBase.mensagemCliente?.(c, m);
     await nps.mensagemCliente(c, m).catch((e) => log('Falha na pesquisa de satisfação (resposta da cliente)', String(e)));
     await followup.mensagemCliente(c, m).catch((e) => log('Falha no follow-up (resposta da cliente)', String(e)));
+    await radar.mensagemCliente(c, m).catch((e) => log('Falha no radar (resposta da cliente)', String(e)));
     await transmissoes?.mensagemCliente(c, m).catch((e) => log('Falha nas respostas das transmissões', String(e)));
   },
 };
@@ -498,7 +523,7 @@ const app = criarServidor({
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
-  ...(pool ? { poolReunioes: pool } : {}),
+  ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
   presencas: pool ? new PresencasPostgres(pool) : new PresencasMemoria(),
   gestao: {
     tags,
@@ -663,7 +688,30 @@ registrarConversa(app, {
   },
   modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
   controleIa: () => agentesIa.servico.controle(),
+  // Serena cria coisas no CRM (sempre com prévia e "Salvar"): scripts, fluxos, links de agendamento e etiquetas.
+  serenaAcoes: (empresaId) => ({
+    ...(pool ? fontesDoBanco(pool, empresaId) : {}),
+    funis: async () => funisComEtapas(await funis.listar(), await tags.listar()),
+    tags: () => tags.listar(),
+    conferirAutomacao: (d) => automacoes.conferir(d),
+  }),
 });
+
+/* respostas-fluxos: fluxos de mensagens (Respostas rápidas › Fluxos). O servidor envia os passos sozinho, com espera e "digitando…". */
+const armazemFluxos = pool ? new FluxosPostgres(pool) : new FluxosMemoria();
+const motorFluxos = new MotorFluxos({
+  armazem: armazemFluxos,
+  log,
+  enviador: {
+    conversa: (id) => repo.buscarConversa(id),
+    texto: (id, texto, atendente) => sintonia.equipeEnviou(id, texto, atendente),
+    midia: async (id, m, atendente) => {
+      await sintonia.equipeEnviouMidia(id, m, atendente);
+    },
+    presenca: (id, tipo, seg) => sintonia.mostrarPresenca(id, tipo, seg),
+  },
+});
+registrarFluxos(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: armazemFluxos, motor: motorFluxos, conferirVez: (id, quem) => sintonia.conferirVez(id, quem) });
 
 // Dados de demonstração: só administração e direção (src/demo/rotas.ts).
 const demo = new Demo({
@@ -685,6 +733,7 @@ const demo = new Demo({
 registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
 registrarNps(app, { nps, repo, automacoes });
+registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
@@ -699,6 +748,7 @@ const relogio = setInterval(async () => {
   await rastreio.tick().catch((e) => log('Falha ao buscar nomes de anúncios', String(e)));
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
   await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
+  await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);
@@ -717,6 +767,12 @@ const relogioTransmissoes = setInterval(() => {
   transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
 }, 2_000);
 
+// respostas-fluxos: passos dos fluxos de mensagens (esperas de segundos), a cada 1 s.
+const relogioFluxos = setInterval(() => {
+  motorFluxos.tick().catch((e) => log('Falha no relógio dos fluxos de mensagens', String(e)));
+  void motorFluxos.limpar(cfg.SINTONIA_EMPRESA_ID);
+}, 1_000);
+
 trabalhador.iniciar();
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
@@ -727,6 +783,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     log(`Recebido ${sinal}: encerrando`);
     clearInterval(relogio);
     clearInterval(relogioTransmissoes);
+    clearInterval(relogioFluxos);
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});

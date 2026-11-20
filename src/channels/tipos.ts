@@ -116,6 +116,8 @@ export interface CanalWhatsApp {
   marcarLida?(canalId: string, idExterno: string): Promise<void>;
   /** Envia foto, vídeo, documento ou nota de voz. Opcional: canal sem suporte recusa o envio de arquivo. */
   enviarMidia?(canalId: string, telefone: string, midia: MidiaEnvio): Promise<EnvioResultado>;
+  /** "digitando…" (ou "gravando áudio…") para a cliente por alguns segundos (fluxos de mensagens). Opcional. */
+  enviarPresenca?(canalId: string, telefone: string, tipo: 'digitando' | 'gravando', ms: number): Promise<void>;
   /** Foto de perfil do WhatsApp da cliente (null quando ela não tem foto ou esconde). Opcional: a API oficial não oferece. */
   buscarFoto?(canalId: string, telefone: string): Promise<FotoPerfil | null>;
   /** Nome (e foto) da cliente na rede social (Messenger/Instagram). Opcional. */

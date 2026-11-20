@@ -555,6 +555,14 @@ export class Automacoes {
     return a;
   }
 
+  /** Confere uma automação nova (formato, etapas, tags, pessoas) sem gravar: a Serena usa para a prévia. */
+  async conferir(bruto: unknown): Promise<AutomacaoNova> {
+    const d = AutomacaoNova.parse(bruto);
+    const agora = this.agora();
+    await this.validar({ id: 'previa', empresaId: this.empresaId, funilId: d.funilId ?? null, nome: d.nome, ligada: d.ligada, gatilho: d.gatilho, passos: d.passos, opcoes: d.opcoes, criadaPor: 'serena', criadaEm: agora, atualizadaEm: agora });
+    return d;
+  }
+
   async alterar(id: string, bruto: unknown): Promise<Automacao> {
     const atual = await this.exigir(id);
     const d = AutomacaoAlteracao.parse(bruto);
