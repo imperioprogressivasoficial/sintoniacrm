@@ -339,15 +339,15 @@ describe.each(ambientes)('Origem do lead e CAPI ($nome)', (amb) => {
     expect(destino.origin + destino.pathname).toBe('https://wa.me/5571999998888');
     const texto = destino.searchParams.get('text')!;
     const ref = codigoNaMensagem(texto)!;
-    expect(texto).toBe(`Olá! Quero saber mais sobre a progressiva. (ref: ${ref})`);
+    expect(texto).toBe(`Olá! Vim pelo link e quero saber mais. (ref: ${ref})`);
     // Robô de pré-visualização não conta clique; link desconhecido é 404 e não revela nada.
-    expect((await x.app.inject({ method: 'GET', url: '/l/bio', headers: { 'user-agent': 'facebookexternalhit/1.1' } })).headers.location).toBe('https://wa.me/5571999998888?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20a%20progressiva.');
+    expect((await x.app.inject({ method: 'GET', url: '/l/bio', headers: { 'user-agent': 'facebookexternalhit/1.1' } })).headers.location).toBe('https://wa.me/5571999998888?text=Ol%C3%A1!%20Vim%20pelo%20link%20e%20quero%20saber%20mais.');
     expect((await x.app.inject({ method: 'GET', url: '/l/nada' })).statusCode).toBe(404);
 
     await x.receber({ telefone: '5571977776666', nome: 'Paula', texto });
     const c = await x.conversa('5571977776666');
     const msgs = await x.repo.mensagens(c.id);
-    expect(msgs[0]!.texto).toBe('Olá! Quero saber mais sobre a progressiva.');
+    expect(msgs[0]!.texto).toBe('Olá! Vim pelo link e quero saber mais.');
     const { primeiro } = await x.armazem.origem(c.id);
     expect(primeiro).toMatchObject({ canal: 'link', detalhe: 'Link Bio', codigo: ref, utmSource: 'instagram', utmMedium: 'bio', utmCampaign: 'Progressiva Nov', fbclid: 'IwAR123abc' });
     const links = (await x.app.inject({ method: 'GET', url: '/api/rastreio/links' })).json().links;

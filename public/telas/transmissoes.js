@@ -133,6 +133,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .tx-arquivo b { color: var(--texto); }
   .tx-arquivo svg { width: 28px; height: 28px; color: var(--marca-azul); }
   details.tx-dobra > summary { cursor: pointer; list-style: none; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; min-height: 30px; }
+  details.tx-dobra > summary > svg { width: 20px; height: 20px; flex: none; }
   details.tx-dobra > summary::-webkit-details-marker { display: none; }
   details.tx-dobra > summary::after { content: "▾"; margin-left: auto; color: var(--sub); transition: transform .2s; }
   details.tx-dobra[open] > summary::after { transform: rotate(180deg); }
@@ -341,7 +342,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return {
       id: null, nome: '', unidade, canal, modo: 'manual', status: 'rascunho',
       publico: { tags: [], tagsTodas: false, semTags: [], etapas: [], quantidade: null, ordem: 'recentes', excluirRecebeuDias: 7, excluirConversaAberta: true },
-      mensagem: { texto: '{Oi|Olá|Oie} {primeiro_nome}! 💙\n\nAqui é da Império Progressivas ({unidade}). ', modelo: null, variaveis: [] },
+      mensagem: { texto: `{Oi|Olá|Oie} {primeiro_nome}! 💙\n\nAqui é da ${(document.getElementById('lt-empresa')?.textContent || '').trim() || 'nossa equipe'} ({unidade}). `, modelo: null, variaveis: [] },
       envio: padroes(canal, {}), agendarPara: '', quandoEnviar: 'agora',
     };
   }
@@ -826,7 +827,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     desenhar();
     s.timer = setInterval(async () => { if (s.vista !== 'modelos' || !s.modelos.some((m) => m.status === 'pendente')) return; await carregarModelos(s.modelosUnidade, true); desenharSemPerderFoco(); }, 15000);
   }
-  const modeloVazio = () => ({ nome: '', categoria: 'MARKETING', idioma: 'pt_BR', cab: 'nenhum', cabTexto: '', cabImagem: null, cabUrl: null, corpo: 'Olá, {{1}}! A Black Friday da Império chegou: progressiva com 30% de desconto até domingo. Quer garantir seu horário?', exemplos: ['Maria'], rodape: 'Responda SAIR para não receber mais', botoes: [{ tipo: 'resposta', texto: 'Quero agendar' }, { tipo: 'resposta', texto: 'Parar promoções' }], erro: '', ocupado: false });
+  const modeloVazio = () => ({ nome: '', categoria: 'MARKETING', idioma: 'pt_BR', cab: 'nenhum', cabTexto: '', cabImagem: null, cabUrl: null, corpo: 'Olá, {{1}}! A Black Friday chegou: 30% de desconto até domingo. Quer garantir seu horário?', exemplos: ['Maria'], rodape: 'Responda SAIR para não receber mais', botoes: [{ tipo: 'resposta', texto: 'Quero agendar' }, { tipo: 'resposta', texto: 'Parar promoções' }], erro: '', ocupado: false });
   function vistaModelos() {
     const n = s.numeros.find((x) => x.unidade === s.modelosUnidade);
     const cor = { aprovado: 'menta', pendente: 'ambar', rejeitado: 'coral', pausado: 'ambar', desativado: 'coral' };

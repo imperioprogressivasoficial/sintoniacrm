@@ -75,6 +75,8 @@ export const CAMPOS = {
   capiEventos: { segredo: false },
   /** Token com ads_read para ler os nomes de campanha/conjunto/anúncio (vazio = o token da CAPI). */
   metaAdsToken: { segredo: true },
+  /** marketing: conta de anúncios (só os números do act_...) para a Central de criativos ler gasto, cliques e CTR. */
+  metaAdsConta: { segredo: false },
 
   // ---------- Redes sociais (src/conexoes/sociais.ts). "Ligado" = "1"; unidade = quem recebe as conversas. ----------
   messengerLigado: { segredo: false },

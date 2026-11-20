@@ -67,6 +67,7 @@ import { ArmazemRastreioMemoria, ArmazemRastreioPostgres } from './rastreio/arma
 import { Capi } from './rastreio/capi.js';
 import { Rastreio } from './rastreio/rastreio.js';
 import { configCapiDe, registrarRastreio } from './rastreio/rotas.js';
+import { FonteCriativosMemoria, FonteCriativosPostgres } from './rastreio/criativos.js';
 import { Transmissoes } from './transmissoes/transmissoes.js';
 import { registrarTransmissoes } from './transmissoes/rotas.js';
 import { EmailMarketing } from './email/email.js';
@@ -654,7 +655,12 @@ registrarPlanos(app, {
     }),
 });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
-registrarRastreio(app, { repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID });
+registrarRastreio(app, {
+  repo, rastreio, capi, conexoes, empresaId: cfg.SINTONIA_EMPRESA_ID,
+  // marketing: Central de criativos (leads, agendamentos e vendas por anúncio; gasto vem da conta de anúncios nas Conexões).
+  criativos: pool ? new FonteCriativosPostgres(pool) : new FonteCriativosMemoria(repo, armazemRastreio, { valor: (id) => funis.valor({ id } as never) }),
+  precos: async () => (await armazemComercial.ler(cfg.SINTONIA_EMPRESA_ID)).cfg.precos,
+});
 
 // Transmissões: campanhas, público, modelos da Meta e a fila de envio com ritmo por número.
 if (pool) {

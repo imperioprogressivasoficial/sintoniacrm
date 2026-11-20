@@ -36,8 +36,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ra-painel { border-radius: 24px; padding: 18px; display: grid; gap: 14px; min-width: 0; background: var(--vidro-fundo); border: 1px solid var(--vidro-borda); box-shadow: var(--vidro-brilho); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
   .ra-painel h2 { margin: 0; font-size: 16px; font-weight: 800; }
   .ra-painel h2 small { display: block; font-size: 12.5px; font-weight: 500; color: var(--sub); margin-top: 3px; line-height: 1.4; }
-  .ra-form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-  .ra-form label { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--sub); min-width: 0; }
+  .ra-form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: end; }
+  .ra-form select { height: 44px; }
+  .ra-form label { display: grid; align-content: start; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--sub); min-width: 0; }
   .ra-form input, .ra-form select { font: inherit; font-size: 15px; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 12px; padding: 10px 12px; min-width: 0; width: 100%; box-sizing: border-box; }
   .ra-form .ra-largo { grid-column: 1 / -1; }
   .ra-botao { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--marca-menta, #0ffcbe); color: #071d33; font-weight: 800; font-size: 14.5px; }
@@ -232,13 +233,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const campo = (rot, nome, extra = {}) => el('label', { class: extra.largo ? 'ra-largo' : '' }, rot, el(extra.tag || 'input', { name: nome, ...extra.at }, ...(extra.opcoes || [])));
     form.append(
       campo('Nome do link', 'nome', { at: { required: '', maxlength: '60', placeholder: 'Ex.: Link Bio Instagram' } }),
-      campo('Unidade', 'unidade', { tag: 'select', opcoes: [el('option', { value: 'norte', text: 'Salvador Norte' }), el('option', { value: 'sumare', text: 'Sumaré' })] }),
+      campo('Unidade', 'unidade', { tag: 'select', opcoes: Object.entries(u.UNIDADE || { norte: 'Salvador Norte', sumare: 'Sumaré' }).map(([v, t]) => el('option', { value: v, text: t })) }),
       campo('WhatsApp da unidade (com DDD)', 'numero', { at: { required: '', inputmode: 'tel', placeholder: '71 99999-9999' } }),
       campo('Código no endereço (opcional)', 'codigo', { at: { maxlength: '40', placeholder: 'bio-insta', pattern: '[a-z0-9][a-z0-9-]{1,39}' } }),
-      campo('Mensagem que a cliente envia', 'mensagem', { largo: true, at: { maxlength: '300', value: 'Olá! Quero saber mais sobre a progressiva.' } }),
+      campo('Mensagem que a cliente envia', 'mensagem', { largo: true, at: { maxlength: '300', value: 'Olá! Vim pelo link e quero saber mais.' } }),
       campo('utm_source', 'utmSource', { at: { placeholder: 'instagram' } }),
       campo('utm_medium', 'utmMedium', { at: { placeholder: 'bio' } }),
-      campo('utm_campaign', 'utmCampaign', { at: { placeholder: 'progressiva-nov' } }),
+      campo('utm_campaign', 'utmCampaign', { at: { placeholder: 'promo-novembro' } }),
       campo('utm_content', 'utmContent', { at: { placeholder: 'video-antes-depois' } }),
       el('div', { class: 'ra-largo', style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, el('button', { class: 'ra-botao', type: 'submit', text: 'Criar link' }), el('span', { class: 'ra-erro', id: 'ra-erro' })));
     const unid = form.elements.unidade; const num = form.elements.numero;
@@ -259,7 +260,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const url = `${base}/l/${l.codigo}`;
       const inp = el('input', { readonly: '', value: url, 'aria-label': `Endereço do link ${l.nome}` });
       return el('div', { class: 'ra-item' },
-        el('div', { class: 'ra-l1' }, el('b', { text: l.nome }), el('span', { text: [l.unidade === 'norte' ? 'Salvador Norte' : 'Sumaré', l.utmSource && `utm_source=${l.utmSource}`, l.utmCampaign && `utm_campaign=${l.utmCampaign}`, l.ativo ? '' : 'desligado'].filter(Boolean).join(' · ') })),
+        el('div', { class: 'ra-l1' }, el('b', { text: l.nome }), el('span', { text: [(u.UNIDADE && u.UNIDADE[l.unidade]) || l.unidade, l.utmSource && `utm_source=${l.utmSource}`, l.utmCampaign && `utm_campaign=${l.utmCampaign}`, l.ativo ? '' : 'desligado'].filter(Boolean).join(' · ') })),
         el('div', { class: 'ra-copia' }, inp, el('button', { class: 'ra-botao leve', type: 'button', text: 'Copiar', onclick: async () => { try { await navigator.clipboard.writeText(url); u.toast('Link copiado'); } catch { inp.select(); } } })),
         el('div', { class: 'ra-numeros' }, el('span', {}, el('b', { text: String(l.cliques) }), 'cliques'), el('span', {}, el('b', { text: String(l.leads) }), 'conversas'), el('span', {}, el('b', { text: l.cliques ? `${Math.round((l.leads / l.cliques) * 100)}%` : '—' }), 'viraram conversa'),
           el('button', { class: 'ra-botao leve', type: 'button', style: 'min-height:36px;padding:0 14px;margin-left:auto', text: l.ativo ? 'Desligar' : 'Ligar', onclick: async () => { try { await u.api(`/api/rastreio/links/${l.id}`, { method: 'PATCH', body: JSON.stringify({ ativo: !l.ativo }) }); carregarLinks(); } catch (x) { u.toast(x.message); } } })));

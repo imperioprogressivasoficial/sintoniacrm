@@ -108,6 +108,9 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/alertas.js': { arquivo: 'telas/alertas.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/espera-selo.js': { arquivo: 'telas/espera-selo.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/rastreio.js': { arquivo: 'telas/rastreio.js', tipo: 'text/javascript; charset=utf-8' },
+  // marketing: Central de criativos e a conexão de anúncios (Conexões › Meta Ads)
+  '/telas/criativos.js': { arquivo: 'telas/criativos.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/anuncios-conexao.js': { arquivo: 'telas/anuncios-conexao.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/comercial.js': { arquivo: 'telas/comercial.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/planos.js': { arquivo: 'telas/planos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/desempenho.js': { arquivo: 'telas/desempenho.js', tipo: 'text/javascript; charset=utf-8' },

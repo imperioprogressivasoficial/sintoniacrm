@@ -4,7 +4,9 @@
  */
 (() => {
   const ICONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>';
-  const s = { contas: [], pre: {}, editando: null, res: {} };
+  const s = { contas: [], pre: {}, editando: null, res: {}, empresa: '' };
+  // marketing: nome da empresa da conta para os padrões (antes vinha fixo "Império").
+  fetch('/api/empresa').then((r) => (r.ok ? r.json() : null)).then((e) => { if (e?.nome) s.empresa = String(e.nome); }).catch(() => {});
 
   const el = (tag, props = {}, ...filhos) => {
     const e = document.createElement(tag);
@@ -26,7 +28,7 @@
 
   function vazia(pre = 'hostinger') {
     const p = s.pre[pre] || {};
-    return { id: null, nome: p.nome ? `Império (${p.nome.split(' ')[0]})` : 'Império', provedor: 'smtp', predefinicao: pre, smtpHost: p.smtpHost || '', smtpPorta: p.smtpPorta || 465, smtpSeguranca: p.smtpSeguranca || 'ssl', usuario: '', senha: '', apiChave: '', remetenteNome: 'Império Progressivas', remetenteEmail: '', responderPara: '', imapLigado: false, imapHost: p.imapHost || '', imapPorta: p.imapPorta || 993, porMinuto: p.porMinuto || 20, limiteDiario: p.limiteDiario || 300, ativa: true, senhaDefinida: false, apiChaveDefinida: false };
+    return { id: null, nome: p.nome ? `${s.empresa || 'Conta'} (${p.nome.split(' ')[0]})` : s.empresa || 'Conta de e-mail', provedor: 'smtp', predefinicao: pre, smtpHost: p.smtpHost || '', smtpPorta: p.smtpPorta || 465, smtpSeguranca: p.smtpSeguranca || 'ssl', usuario: '', senha: '', apiChave: '', remetenteNome: s.empresa || '', remetenteEmail: '', responderPara: '', imapLigado: false, imapHost: p.imapHost || '', imapPorta: p.imapPorta || 993, porMinuto: p.porMinuto || 20, limiteDiario: p.limiteDiario || 300, ativa: true, senhaDefinida: false, apiChaveDefinida: false };
   }
 
   function campo(rotulo, nome, attrs = {}, dica) {
@@ -139,7 +141,7 @@
     if (!sec) return;
     sec.replaceChildren(
       el('h2', { id: 't-email' }, el('span', { class: 'ic menta', html: ICONE }), el('span', {}, 'Contas de e-mail', el('small', { text: 'Remetentes das campanhas e dos e-mails automáticos' }))),
-      el('p', { text: 'Conecte a caixa de e-mail da Império (Hostinger, Gmail/Google Workspace ou Outlook). A Sintonia envia pelo seu próprio servidor, no ritmo que você escolher, com descadastro em um clique.' }),
+      el('p', { text: 'Conecte a caixa de e-mail da empresa (Hostinger, Gmail/Google Workspace ou Outlook). A Sintonia envia pelo seu próprio servidor, no ritmo que você escolher, com descadastro em um clique.' }),
       s.contas.length ? el('div', { class: 'cartoes' }, ...s.contas.map(cartaoConta)) : el('p', { class: 'aviso', text: 'Nenhuma conta ainda. Adicione uma para começar a mandar e-mails.' }),
       s.editando ? formulario() : el('div', { class: 'linha' }, el('button', { class: 'botao', type: 'button', onclick: () => { s.editando = vazia('hostinger'); desenhar(); document.getElementById('email-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, text: '+ Adicionar conta de e-mail' })),
       el('details', { class: 'passos' }, el('summary', { text: 'Hostinger: passo a passo' }), el('ol', {},
