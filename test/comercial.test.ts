@@ -224,10 +224,11 @@ describe('vendido no mês (topo do Dashboard)', () => {
     expect(r.mes).toBe('2026-11');
     expect(r.valor).toBe(300 + 200 + 150);
     expect(r.agendamentos).toBe(4);
-    expect(r.anterior).toMatchObject({ mes: '2026-10', valor: 400, agendamentos: 1 });
+    expect(r.comparecimentos).toBe(3);
+    expect(r.anterior).toMatchObject({ mes: '2026-10', valor: 400, agendamentos: 1, comparecimentos: 1 });
     expect(r.anterior.ate).toEqual(bahia(2026, 10, 20, 15));
     expect(r.porDia).toHaveLength(30);
-    expect(r.porDia.at(-1)).toEqual({ dia: '2026-11-20', valor: 200, agendamentos: 2 });
+    expect(r.porDia.at(-1)).toEqual({ dia: '2026-11-20', valor: 200, agendamentos: 2, comparecimentos: 1 });
     expect(r.porDia[0]!.dia).toBe('2026-10-22');
     expect(r.porDia.find((d) => d.dia === '2026-10-25')).toMatchObject({ valor: 999, agendamentos: 1 });
   });

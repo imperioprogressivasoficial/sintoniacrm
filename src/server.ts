@@ -5,6 +5,7 @@ import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
+import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
@@ -73,6 +74,8 @@ export interface DependenciasServidor {
   notificacoes?: OpcoesNotificacoes;
   /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
   leituras?: Leituras;
+  /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
+  layoutsPainel?: LayoutsPainel;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
@@ -489,6 +492,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return { ok: true };
   });
   if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
+
+  if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
 
   // ---------- Tags, aba IA, painel completo e empresa ----------
   registrarGestao(app, {

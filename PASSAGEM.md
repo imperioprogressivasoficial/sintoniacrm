@@ -28,10 +28,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 - **No ar:** `producao` = 698dfa3 (ver `deploy/no-ar.txt`): Dashboard escuro (celular), WhatsApp em canais, Conexões em lista.
 - **Em obra (pedidos do dono em 20/11):**
-  - Dashboard no computador = modelo C "duas colunas" + modo claro E escuro (segue o tema) + personalizar (arrastar,
-    lápis para trocar métrica, "i" explicando) + botão cinza "+ Criar" no fim que abre a biblioteca de relatórios
-    (comercial, marketing…). Branch `claude/dashboard-colunas` (worktree /home/user/wt-dash).
-  - Transcrição de áudio grátis no próprio servidor (Whisper local), botão para transcrever sem ouvir.
+  - Dashboard novo (colunas no computador, claro/escuro, personalizar, biblioteca de relatórios): pronto na branch
+    `claude/paginas-vendas-login` (veio de `claude/dashboard-colunas`), aguardando o ok do dono para publicar.
 - **Decisões do dono:** canais de WhatsApp sem loja fixa; oficial bloqueado; Claude fora da lista de Conexões;
   beta interna com um acesso só; evitar animações rodando o tempo todo; cor "brilho" #0ffcbe→#3aa0ff; 5 modelos antes de design.
 - **Pendente com o dono:** QR Code do WhatsApp; chave do Claude; ligar a Serena.

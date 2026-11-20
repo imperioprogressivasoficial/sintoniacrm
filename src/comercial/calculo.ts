@@ -416,6 +416,8 @@ export interface DiaVendido {
   dia: string; // AAAA-MM-DD (Bahia)
   valor: number | null;
   agendamentos: number;
+  /** Quantas compareceram (dos agendamentos marcados naquele dia). */
+  comparecimentos: number;
 }
 
 export interface VendidoDoMes {
@@ -423,8 +425,10 @@ export interface VendidoDoMes {
   /** Vendido = valor de quem compareceu (o mesmo critério das metas). null = a pessoa não vê dinheiro. */
   valor: number | null;
   agendamentos: number;
+  /** Agendamentos do mês que compareceram (a base do vendido e do ticket médio). */
+  comparecimentos: number;
   /** O mês anterior, do dia 1 até o mesmo ponto (mesmo dia e hora), para comparar sem desvantagem. */
-  anterior: { mes: string; valor: number | null; agendamentos: number; ate: Date };
+  anterior: { mes: string; valor: number | null; agendamentos: number; comparecimentos: number; ate: Date };
   /** Últimos 30 dias, um ponto por dia (o último é hoje). */
   porDia: DiaVendido[];
   podeVerValor: boolean;
@@ -463,7 +467,7 @@ export function vendidoDoMes(vendas: Venda[], cfg: ConfigComercial, agora: Date,
   const dias: DiaVendido[] = [];
   const indice = new Map<string, DiaVendido>();
   for (let i = 29; i >= 0; i--) {
-    const d: DiaVendido = { dia: isoBahia(bahia(p.ano, p.mes, p.dia - i, 12)), valor: o.podeVerValor ? 0 : null, agendamentos: 0 };
+    const d: DiaVendido = { dia: isoBahia(bahia(p.ano, p.mes, p.dia - i, 12)), valor: o.podeVerValor ? 0 : null, agendamentos: 0, comparecimentos: 0 };
     dias.push(d);
     indice.set(d.dia, d);
   }
@@ -472,13 +476,15 @@ export function vendidoDoMes(vendas: Venda[], cfg: ConfigComercial, agora: Date,
     const d = indice.get(isoBahia(v.em));
     if (!d) continue;
     d.agendamentos++;
+    if (v.compareceu) d.comparecimentos++;
     if (d.valor !== null && v.compareceu) d.valor = centavos(d.valor + valorDe(v, cfg.precos));
   }
   return {
     mes: `${p.ano}-${p2(p.mes)}`,
     valor: o.podeVerValor ? soma(doMes) : null,
     agendamentos: doMes.length,
-    anterior: { mes: `${pa.ano}-${p2(pa.mes)}`, valor: o.podeVerValor ? soma(doAnt) : null, agendamentos: doAnt.length, ate: ateAnt },
+    comparecimentos: doMes.filter((v) => v.compareceu).length,
+    anterior: { mes: `${pa.ano}-${p2(pa.mes)}`, valor: o.podeVerValor ? soma(doAnt) : null, agendamentos: doAnt.length, comparecimentos: doAnt.filter((v) => v.compareceu).length, ate: ateAnt },
     porDia: dias,
     podeVerValor: o.podeVerValor,
     de: o.de,
