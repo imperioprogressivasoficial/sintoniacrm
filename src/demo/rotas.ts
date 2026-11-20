@@ -4,7 +4,7 @@ import { pode } from '../auth/permissoes.js';
 import type { Demo } from './demo.js';
 
 /**
- * Dados de demonstração (Mais › Dados de demonstração). Só administração e direção, sempre com login.
+ * Dados de demonstração (Configurações › Dados de demonstração). Só administração e direção, sempre com login.
  * GET    /api/demo          existe demonstração? quantos registros
  * POST   /api/demo/popular  preenche (substitui a anterior) e devolve as contagens
  * DELETE /api/demo          apaga só a demonstração e devolve o que apagou

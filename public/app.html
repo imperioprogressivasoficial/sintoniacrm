@@ -886,6 +886,12 @@ html[data-tema="escuro"] { --barra-fundo: rgba(14,41,69,.94); --barra-borda: rgb
   .trilho .nav > svg, .trilho .nav .ia-bola { transition: transform .18s ease; }
   @media (prefers-reduced-motion: reduce) { .trilho .nav, .trilho .nav .rotulo { transition: none !important; } }
 }
+/* imperio: "Configurações" é o nome mais longo da barra — até 400px a barra aperta um pouco para caber */
+@media (max-width: 400px) {
+  .trilho .nav { min-width: 42px !important; padding: 0 10px !important; }
+  .trilho .nav[aria-current="page"] { padding: 0 14px 0 11px !important; }
+  .trilho .nav .rotulo { font-size: 13.5px !important; }
+}
 /* imperio: barra em celular estreito — tudo cabe sem cortar */
 @media (max-width: 374px) {
   .trilho { left: 10px !important; right: 10px !important; padding: 0 6px !important; }
@@ -1084,7 +1090,7 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
     <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
-    <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Mais</span></button>
+    <button class="nav" data-vista="configuracoes" id="nav-config" title="Configurações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Configurações</span></button>
   </nav>
 
   <div class="area">
@@ -1622,7 +1628,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const lista = filtradas();
     if (!lista.length) {
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
-      if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Mais › Conexões. Para mostrar o sistema, use Mais › Dados de demonstração.' }));
+      if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Configurações › Conexões. Para mostrar o sistema, use Configurações › Dados de demonstração.' }));
       else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
     }
@@ -2873,7 +2879,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: papelUnidade })), el('span', { class: 'mais-seta', html: IC.seta }));
     $('configuracoes').replaceChildren(el('div', { class: 'mais' },
       el('div', { class: 'mais-barra' }, btBusca),
-      el('h1', { class: 'titulo-grande', text: 'Mais' }),
+      el('h1', { class: 'titulo-grande', text: 'Configurações' }),
       busca, perfil, caixaGrupos, semNada));
 
     // ---- páginas do painel lateral (Conta, Aparência, Acesso rápido)

@@ -2,7 +2,7 @@
  * - Som (e vibração) a cada mensagem nova da cliente em qualquer conversa que a pessoa vê, com o app aberto.
  * - Cliente esperando além do limite (regras por unidade, /api/espera): faixa vermelha fixa no topo que leva à conversa,
  *   alarme repetido até alguém responder ou a pessoa silenciar, e destaque vermelho na lista com o tempo correndo.
- * - Seções "Cada mensagem" e "Cliente esperando" das preferências (Mais › Notificações).
+ * - Seções "Cada mensagem" e "Cliente esperando" das preferências (Configurações › Notificações).
  * Sons em Web Audio (sem arquivo). Estilos com prefixo .esp-, só tokens do ds.css (mais o vermelho de alerta local).
  */
 window.SintoniaTelas = window.SintoniaTelas || {};
@@ -297,7 +297,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   setInterval(buscarEspera, 15000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) buscarEspera(); });
 
-  // ---------------------------------------------------------------- preferências (Mais › Notificações)
+  // ---------------------------------------------------------------- preferências (Configurações › Notificações)
   async function salvar(campos) {
     try { prefs = await api('/api/notificacoes/preferencias', { method: 'PUT', body: JSON.stringify(campos) }); dispatchEvent(new CustomEvent('sintonia:preferencias', { detail: prefs })); }
     catch (x) { toast(x.message); }

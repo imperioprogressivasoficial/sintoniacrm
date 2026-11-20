@@ -247,7 +247,7 @@ const midias = new Midias(repo, (canalId) => numeros.find((n) => n.canalId === c
 // Fichas (contatos) e respostas rápidas (também usadas pela demonstração).
 const armazemContatos = pool ? new ContatosPostgres(pool) : new ContatosMemoria();
 const armazemRespostas = pool ? new RespostasPostgres(pool) : new RespostasMemoria();
-// Dados de demonstração (Mais › Dados de demonstração): registro do que foi criado, para apagar só isso.
+// Dados de demonstração (Configurações › Dados de demonstração): registro do que foi criado, para apagar só isso.
 const armazemDemo: ArmazemDemo = pool
   ? new ArmazemDemoPostgres(pool)
   : new ArmazemDemoMemoria({
@@ -578,7 +578,7 @@ registrarDesempenho(app, {
   unidades: ['norte', 'sumare'],
   agora: () => new Date(),
 });
-// Plano e uso da IA (Mais › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
+// Plano e uso da IA (Configurações › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
 // Pagamento: Asaas quando a chave está salva em Conexões › Pagamentos; sem chave, só registra o pedido (manual).
 const asaas = new PagamentoAsaas({ conexoes, nomeEmpresa: async () => (await empresa.dados()).nome, log });
 const pagamento = new PagamentoEscolhido(asaas);

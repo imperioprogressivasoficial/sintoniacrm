@@ -86,7 +86,7 @@
       if (!P) return;
       const limpar = () => { editando = null; corpoEditor = null; };
       const op = { id: 'atalhos', titulo: 'Atalhos da bolinha', montar: (corpo) => { corpoEditor = corpo; corpo.classList.add('are'); desenharEditor(); } };
-      // Vindo de Mais › Acesso rápido (painel já aberto): entra como subpágina, e Esc/voltar volta para lá.
+      // Vindo de Configurações › Acesso rápido (painel já aberto): entra como subpágina, e Esc/voltar volta para lá.
       empilhado = Boolean(P.aberto());
       if (empilhado) P.empurrar({ ...op, aoSair: limpar }); else P.abrir({ ...op, aoFechar: limpar });
     }

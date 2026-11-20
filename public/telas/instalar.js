@@ -57,7 +57,7 @@
         li(`Toque em <b>Compartilhar</b> ${ICONE.compartilhar} na barra do Safari (embaixo ou em cima da tela).`),
         li(`Role a lista e toque em <b>Adicionar à Tela de Início</b> ${ICONE.mais}.`),
         li('Toque em <b>Adicionar</b>, no canto de cima.'),
-        li('Abra a Sintonia pelo ícone novo e, em <b>Mais › Notificações</b>, toque em <b>Ativar notificações</b>.')),
+        li('Abra a Sintonia pelo ícone novo e, em <b>Configurações › Notificações</b>, toque em <b>Ativar notificações</b>.')),
       el('p', { class: 'ins-dica', text: 'Não achou "Adicionar à Tela de Início"? Confira se está no Safari (no Chrome do iPhone fica no menu Compartilhar também) e se o iPhone está no iOS 16.4 ou mais novo, para receber as notificações.' })));
   }
 

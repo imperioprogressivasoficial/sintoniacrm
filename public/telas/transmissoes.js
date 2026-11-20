@@ -531,7 +531,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('button', { type: 'button', 'aria-pressed': String(Boolean(p.quantidade)), onclick: () => mudar((x) => { x.publico.quantidade = x.publico.quantidade || Math.min(200, s.previa?.disponiveis || 200) || 200; }, true) }, 'Só uma parte'));
     return el('div', { class: 'tx-bloco' },
       el('h2', {}, 'Público', el('small', { text: 'Quem tiver QUALQUER uma das tags marcadas (ou todas, se preferir). Sem tag marcada = toda a unidade.' })),
-      soltas.length ? el('div', { class: 'tx-chips', role: 'group', 'aria-label': 'Tags' }, ...soltas.map((t) => chipTag(t, 'tags'))) : el('div', { class: 'tx-nota', text: 'Nenhuma tag ainda: suba uma lista acima ou crie tags em Mais › Tags.' }),
+      soltas.length ? el('div', { class: 'tx-chips', role: 'group', 'aria-label': 'Tags' }, ...soltas.map((t) => chipTag(t, 'tags'))) : el('div', { class: 'tx-nota', text: 'Nenhuma tag ainda: suba uma lista acima ou crie tags em Configurações › Tags.' }),
       p.tags.length > 1 ? el('label', { class: 'tx-marcar' }, el('input', { type: 'checkbox', ...(p.tagsTodas ? { checked: '' } : {}), onchange: (e) => mudar((x) => { x.publico.tagsTodas = e.target.checked; }, true) }), el('span', { text: 'Precisa ter TODAS as tags marcadas' })) : null,
       el('details', { class: 'tx-dobra', ...(p.etapas.length || p.semTags.length || p.tags.some((id) => etapas.some((e) => e.id === id)) ? { open: '' } : {}) }, el('summary', { text: 'Etapa do funil e exclusões por tag' }),
         el('div', {},

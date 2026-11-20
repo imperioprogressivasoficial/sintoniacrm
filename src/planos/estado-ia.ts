@@ -24,7 +24,7 @@ export function estadoDaIa(o: {
   if (ativos.some((a) => Boolean(a.chaveCifrada) || o.chaveGeral(a.provedor))) return { atendendo: true };
   if (o.chaveGeral('anthropic') && o.modoPadrao !== 'humano') return { atendendo: true };
   if (!o.chaveGeral('anthropic') && !o.chaveGeral('openai')) {
-    return { atendendo: false, motivo: 'sem_chave', texto: 'Falta a chave da IA. Cadastre em Mais › Conexões.' };
+    return { atendendo: false, motivo: 'sem_chave', texto: 'Falta a chave da IA. Cadastre em Configurações › Conexões.' };
   }
   return { atendendo: false, motivo: 'sem_agente', texto: 'Nenhum agente de IA está ligado e as conversas novas começam com a equipe.' };
 }
