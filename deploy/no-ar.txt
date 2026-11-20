@@ -1,9 +1,9 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 04:18 UTC (20/11, 01h18 na Bahia)
-commit: 698dfa3
-pacote sha256: 5cb9a835cf1a49ae98f2ad79f544367e8f17ee37e8e2b2b5e89e0f19a3b70142
+data: 2026-11-20 04:28 UTC (20/11, 01h28 na Bahia)
+commit: 38779ef
+pacote sha256: beff19e4f090ea0ad0653a6d86db9d21f690b161363af97a1ac88f4bd8a873e0
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-698dfa3.b64); pode apagar depois.
-observação: em cima do 3b133f7. Entra: Dashboard banco digital escuro (modelo 3, celular), WhatsApp em canais livres
-  (criar/nomear/QR ou código/apagar; oficial bloqueado), Conexões no jeito "Adicionar um conector" (logo, nome,
-  descrição, botão). Conferido: /saude 200, catalogo-conexoes.js servido.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-38779ef.b64); pode apagar depois.
+observação: em cima do 698dfa3. Entra: sem zoom com os dedos no celular; transcrição grátis no servidor (serviço novo
+  "whisper", faster-whisper small, até 2 GB de memória, volume sintonia_whisper); cópia diária do banco (serviço "copia",
+  volume sintonia_copias, um arquivo por dia da semana). Conferido: whisper no ar (porta 9000 interna), "copia ok 5-Fri".
