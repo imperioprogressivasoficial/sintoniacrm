@@ -17,3 +17,11 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 - [ ] **Pós-venda**: mensagens depois do serviço (cuidados, retoque, avaliação Google).
 - [ ] **Follow-ups**: lembretes automáticos para quem parou de responder, em sequência (ex.: 1 dia, 3 dias, 7 dias).
 - [ ] Leads: tudo que o CRM atual (Kommo) faz no atendimento e nos leads.
+- [ ] **Fluxos de mensagens nas Respostas rápidas** (como o "fluxo" do WhatsApp Voice): além da resposta rápida (uma mensagem),
+      criar um fluxo = sequência de mensagens de texto, áudio e arquivos, com tempo entre elas (timer). Na conversa,
+      o atendente escolhe o fluxo e ele vai sendo enviado sozinho.
+- [ ] Clientes, leads e o cartão do lead (o cartão fica dentro do lead).
+- [x] Menu: Clientes com aba própria; Vendas (CRM) = Criar novo pipeline › pipelines › Tags › Importar;
+      Automações = Chatbot, Fluxos, Agente de IA, Follow-up (20/11).
+- [ ] Pipeline no celular: modelo "Junção" aprovado (Foco/Lista/Colunas com ícones de contorno verde→azul,
+      métrica principal escolhida pela pessoa). Canvas: https://claude.ai/artifact/4yhSyAvGmsEMWvw4yvW6jo

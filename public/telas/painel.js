@@ -194,6 +194,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-banco .pn-valor { font-size: 46px; letter-spacing: -2px; }
   .pn-banco .pn-curva { width: calc(100% + 32px); margin: 8px -16px 0; }
   .pn-grafico-banco { height: 190px; }
+  @container (min-width: 560px) { .pn-grafico-banco { height: 260px; } }
   .pn-grafico-banco .pn-t-1 { stroke-width: 2.8; }
   .pn-heroi-n { display: grid; gap: 8px; justify-items: start; min-width: 0; }
   .pn-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -1671,7 +1672,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       esquerda: [sel],
       info: botaoInfo(ui, 'heroi', nome, m.explica(c)),
       dica: baseDe(m, c),
-      corpo: [el('div', { class: 'pn-heroi-n' }, valor, chipHeroi(ui, m, c, x) || (m.sub ? el('span', { class: 'pn-cartao-s', text: m.sub(c) }) : null)), sr ? curva(ui, c.d, sr) : null],
+      corpo: [el('div', { class: 'pn-heroi-n' }, valor, chipHeroi(ui, m, c, x) || (m.sub ? el('span', { class: 'pn-cartao-s', text: m.sub(c) }) : null)), sr ? curva(ui, c.d, s.editando ? sr : { ...sr, banco: true }) : null],
     });
   }
 
@@ -1860,7 +1861,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       s.falhou = painel.reason?.status && painel.reason.status !== 0 && painel.reason.message ? painel.reason.message : true;
     }
     s.extra = {
-      atualizacoes: atualizacoes.status === 'fulfilled' ? atualizacoes.value : s.extra?.atualizacoes ?? null,
+      // Falhas internas (tentativas automáticas) não são movimento do negócio: ficam fora do Dashboard.
+      atualizacoes: atualizacoes.status === 'fulfilled' ? (Array.isArray(atualizacoes.value) ? atualizacoes.value.filter((f) => f.tipo !== 'falha') : atualizacoes.value) : s.extra?.atualizacoes ?? null,
       ligacoes: ligacoes.status === 'fulfilled' ? ligacoes.value : s.extra?.ligacoes ?? null,
     };
     s.meta = meta.status === 'fulfilled' ? meta.value : s.meta || null;
