@@ -71,3 +71,17 @@
   .abertura, .abertura.ab-saindo { transition-duration: .2s; }
   @keyframes ab-cartao-some { to { opacity: 0; } }
 }
+
+/* Abertura "Brilho" (escolha do dono 20/11): a logo com uma faixa de luz passando e o nome embaixo.
+ * O texto "Abrindo suas conversas" fica só para leitores de tela (o role=status já anuncia). */
+.ab-brilho { position: relative; width: 104px; height: 104px; }
+.ab-brilho img { width: 100%; height: 100%; display: block; }
+.ab-brilho::after { content: ""; position: absolute; inset: 0;
+  -webkit-mask: url(/simbolo-escuro.png) center / contain no-repeat; mask: url(/simbolo-escuro.png) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .85) 50%, transparent 65%) no-repeat; background-size: 250% 100%;
+  animation: ab-brilho-passa 2.2s ease-in-out infinite; }
+@keyframes ab-brilho-passa { 0% { background-position: 120% 0; } 60%, 100% { background-position: -30% 0; } }
+.ab-nome { font-size: 22px; font-weight: 700; letter-spacing: -.3px; margin-top: -6px; }
+.ab-nome i { color: var(--ab-menta); font-style: normal; }
+.abertura .ab-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .ab-brilho::after { animation: none; opacity: 0; } }
