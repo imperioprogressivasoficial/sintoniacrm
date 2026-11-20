@@ -183,6 +183,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .pn-valor { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pn-valor small { font-size: .5em; font-weight: 700; opacity: .6; letter-spacing: -.5px; }
   @container (min-width: 560px) { .pn-valor { font-size: 52px; } }
+  /* imperio: número grande estilo app de banco (celular) */
+  .pn-banco { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 6px 0 0; min-width: 0; }
+  .pn-banco-linha { display: flex; align-items: center; gap: 4px; font-size: 14.5px; color: var(--sub); }
+  .pn-banco-rot { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+  .pn-banco-rot svg { width: 15px; height: 15px; opacity: .7; }
+  .pn-banco-olho { all: unset; cursor: pointer; font-weight: 500; }
+  .pn-banco-olho::before { content: "·"; margin: 0 6px 0 2px; }
+  .pn-banco-rot:focus-visible, .pn-banco-olho:focus-visible { outline: 2px solid var(--pn-g2); border-radius: 6px; }
+  .pn-banco .pn-valor { font-size: 46px; letter-spacing: -2px; }
+  .pn-banco .pn-curva { width: calc(100% + 32px); margin: 8px -16px 0; }
+  .pn-grafico-banco { height: 190px; }
+  .pn-grafico-banco .pn-t-1 { stroke-width: 2.8; }
   .pn-heroi-n { display: grid; gap: 8px; justify-items: start; min-width: 0; }
   .pn-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .pn-chip.pn-bom { background: var(--pn-bom-fundo); color: var(--pn-bom-txt); }
@@ -897,7 +909,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const pontos = sr.pontos;
     const vis = sr.corte != null ? pontos.slice(0, sr.corte + 1) : pontos; // hoje: a curva para na hora atual
     const max = teto(Math.max(1, ...vis.map((p) => Math.max(p.v, p.v2 || 0))));
-    const esq = 12, dir = 12, topo = 16, baixo = 24;
+    const esq = sr.banco ? 2 : 12, dir = sr.banco ? 8 : 12, topo = 16, baixo = 24;
     const W = largura - esq - dir, H = altura - topo - baixo;
     const x = (i) => esq + (pontos.length > 1 ? (i / (pontos.length - 1)) * W : W / 2);
     const y = (v) => topo + H - (v / max) * H;
@@ -910,7 +922,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     let h = `<svg viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${esc(rotuloAcessivel(d, sr, vis, soma))}" preserveAspectRatio="none">
       <defs><linearGradient id="pn-linha" x1="0" x2="1" y1="0" y2="0"><stop offset="0" class="pn-g-1"/><stop offset="1" class="pn-g-2"/></linearGradient>
       <linearGradient id="pn-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="pn-g-2" stop-opacity=".22"/><stop offset="1" class="pn-g-2" stop-opacity="0"/></linearGradient></defs>`;
-    for (const f of [0.5, 1]) {
+    for (const f of sr.banco ? [] : [0.5, 1]) {
       const v = max * f;
       h += `<line class="pn-grade-l" x1="${esq}" x2="${largura - dir}" y1="${y(v)}" y2="${y(v)}"/>`;
       const t = fmtEixo(v);
@@ -926,7 +938,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         h += `<text class="pn-eixo-t" x="${x(i)}" y="${altura - 4}" text-anchor="${ancora}">${esc(p.rotulo)}</text>`;
       }
     });
-    if (soma) {
+    if (soma && !sr.banco) {
       const ym = y(media);
       h += `<line class="pn-meta-l" x1="${esq}" x2="${largura - dir}" y1="${ym}" y2="${ym}"/>`;
       h += `<text class="pn-meta-t" x="${largura - dir}" y="${ym - 6}" text-anchor="end">${esc(`média ${fmtV(media)}/${sr.porHora ? 'h' : 'dia'}`)}</text>`;
@@ -946,6 +958,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     dica.hidden = true;
     host.append(dica);
     if (!soma && !vis.some((p) => p.v2 || p.extra)) {
+      if (sr.banco) return; // banco: sem movimento fica só a linha reta, sem balão
       const sem = document.createElement('div');
       sem.className = 'pn-sem-dado';
       sem.innerHTML = `<span>${esc(sr.semDado || (sr.tipo === 'brl' || d.escopo === 'pessoal' ? 'Nada no período ainda. A curva aparece com os primeiros agendamentos.' : `Nenhum lead ${NO_PERIODO[d.periodo]} ainda. A curva aparece quando as clientes chamarem.`))}</span>`;
@@ -1046,8 +1059,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       { nome: 'Exportar CSV', icone: IC.baixar, acao: () => exportarCsv(d, sr) },
       { nome: 'Atualizar agora', icone: IC.recarregar, acao: () => carregar(true) },
       { nome: 'Abrir as conversas', icone: IC.abrir, acao: () => ui.mostrar('conversas') }]); };
-    const host = el('div', { class: 'pn-grafico' });
-    bloco.append(host, el('div', { class: 'pn-curva-cab' }, leg, bMais));
+    const host = el('div', { class: 'pn-grafico' + (sr.banco ? ' pn-grafico-banco' : '') });
+    if (sr.banco) bloco.append(host); else bloco.append(host, el('div', { class: 'pn-curva-cab' }, leg, bMais));
     // Desenha quando já tem largura e redesenha quando a largura muda (sem esticar o texto).
     requestAnimationFrame(() => desenharCurva(host, d, sr));
     s.observador?.disconnect();
@@ -1636,6 +1649,19 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (conteudo instanceof Node) valor.append(conteudo); else valor.textContent = conteudo;
     if (m.tipo === 'brl' && s.ocultar) valor.setAttribute('aria-label', 'Valor escondido');
     const sr = serieHeroi(c, mid);
+    // Celular: estilo app de banco (modelo 3). Sem caixa, número centralizado e a curva de ponta a ponta.
+    if (!s.largo && !s.editando) {
+      const base = baseDe(m, c);
+      const rot = el('button', { class: 'pn-banco-rot', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Trocar o que aparece aqui',
+        html: `<span>${esc(nome)}${base ? (m.base === 'mes' ? ' em ' : ' · ') + esc(base) : ''}</span>${IC.baixo}` });
+      rot.onclick = (ev) => { ev.stopPropagation(); abrir(rot); };
+      const linha = el('div', { class: 'pn-banco-linha' }, rot);
+      if (m.tipo === 'brl') linha.append(el('button', { class: 'pn-banco-olho', type: 'button', 'aria-pressed': String(s.ocultar), text: s.ocultar ? 'mostrar' : 'ocultar', onclick: () => { s.ocultar = !s.ocultar; gravarOlho(s.ocultar); desenharTudo(); } }));
+      const secao = el('section', { class: 'pn-banco' + (s.entrou ? '' : ' pn-entra'), 'data-id': 'heroi', 'aria-label': nome });
+      secao.append(linha, valor, chipHeroi(ui, m, c, x) || (m.sub ? el('span', { class: 'pn-cartao-s', text: m.sub(c) }) : null));
+      if (sr) secao.append(curva(ui, c.d, { ...sr, banco: true }));
+      return secao;
+    }
     return moldura(ui, c, b, {
       titulo: nome, acoes,
       esquerda: [sel],
@@ -1667,7 +1693,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       return cartao(ui, nome, conteudo, seloDe(ui, m, c, x), {
         nada: x.v == null, aria: m.tipo === 'tempo' ? fmtTempo(x.v) : undefined,
         sub: m.sub ? m.sub(c) : m.base === 'mes' ? `em ${baseDe(m, c)}` : '',
-        acoes: [botaoInfo(ui, 'cartao-' + i, nome, m.explica(c)), lapis],
+        // Celular fora do modo de editar: cartão limpo como no app de banco (troca pelo botão de personalizar).
+        acoes: !s.largo && !s.editando ? [] : [botaoInfo(ui, 'cartao-' + i, nome, m.explica(c)), lapis],
       });
     }).filter(Boolean);
     const temMes = escolhidas.some((id) => METRICAS[id]?.base === 'mes');
@@ -1772,7 +1799,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       } else raiz.append(esqueleto(ui));
     } else {
       if (s.falhou) raiz.append(el('div', { class: 'pn-nota', role: 'status', text: 'Sem conexão no momento: mostrando os últimos números. Tentamos de novo a cada 30 segundos.' }));
-      if (vazio(d) && !s.editando) raiz.append(el('div', { class: 'pn-aviso' }, el('span', { class: 'pn-mov-ic', html: IC.grafico, 'aria-hidden': 'true' }),
+      if (vazio(d) && !s.editando && s.largo) raiz.append(el('div', { class: 'pn-aviso' }, el('span', { class: 'pn-mov-ic', html: IC.grafico, 'aria-hidden': 'true' }),
         el('div', {}, el('b', { text: c.pessoal ? `Seus números ${NO_PERIODO[d.periodo]} ainda estão zerados` : `Ainda sem movimento ${NO_PERIODO[d.periodo]}` }),
           c.pessoal ? 'Quando as clientes começarem a chamar e você responder, seus leads, tempo de resposta e agendamentos aparecem aqui.' : 'Os números aparecem aqui assim que as clientes começarem a chamar no WhatsApp: leads, tempo de resposta, agendamentos e o ranking da equipe.')));
       const visiveis = blocosAtuais(c).filter((b) => !b.oculto && BLOCOS[b.id].pode(c));
