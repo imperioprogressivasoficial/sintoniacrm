@@ -19,6 +19,27 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .gp .avatar.gp-av svg { width: 56%; height: 56%; }
   .gp .avatar.gp-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .gp .item .previa b { font-weight: 500; color: var(--texto); }
+  /* Arquivadas (como no WhatsApp): linha no topo da lista e a lista própria */
+  .gp .avatar.gp-arq-av { background: transparent; color: var(--sub); }
+  .gp .avatar.gp-arq-av svg { width: 24px; height: 24px; }
+  .gp .item.gp-arq-linha { height: 56px; min-height: 56px; }
+  .gp .item.gp-arq-linha .corpo { min-height: 56px; padding-top: 0; padding-bottom: 0; justify-content: center; }
+  .gp .item.gp-arq-linha .nome { font-weight: 600; font-size: 16px; }
+  .gp .item.gp-arq-linha .hora { color: var(--sub); font-weight: 600; }
+  .gp .item.gp-arq-linha .badge { margin-left: 6px; }
+  @media (max-width: 760px) {
+    .gp .item.gp-arq-linha { align-items: center; min-height: 60px; height: 60px; }
+    .gp .item.gp-arq-linha .avatar { margin-top: 0; width: 54px; height: 32px; }
+    .gp .item.gp-arq-linha .corpo { min-height: 60px; padding: 0 14px 0 0; }
+  }
+  .gp-volta-arq { all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--painel); flex: none; }
+  .gp-volta-arq svg { width: 22px; height: 22px; }
+  .gp-buscando { padding: 2px 16px 8px; font-size: 13px; color: var(--sub); }
+  .gp-arq-aviso { padding: 4px 16px 10px; font-size: 13px; line-height: 18px; color: var(--sub); }
+  .gp-chat .chat-topo .gp-acao { all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); flex: none; }
+  .gp-chat .chat-topo .gp-acao:hover { background: var(--hover); }
+  .gp-chat .chat-topo .gp-acao svg { width: 21px; height: 21px; }
+  .gp-chat .chat-topo .gp-acao:disabled { opacity: .5; cursor: default; }
   .gp-vazio { padding: 40px 24px; text-align: center; color: var(--sub); font-size: 14px; line-height: 20px; display: grid; gap: 12px; justify-items: center; }
   .gp-vazio b { color: var(--texto); font-weight: 600; font-size: 15px; }
   .gp-chat .chat-topo .quem { cursor: default; }
@@ -73,6 +94,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ICONE_MIC = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg>';
   const ICONE_ENVIAR = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg>';
   const ICONE_LIXO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg>';
+  const ICONE_ARQUIVO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="M10 12.5h4"/></svg>';
+  const ICONE_DESARQUIVAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4.5" rx="1.2"/><path d="M5 8.5V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5M12 12v5"/></svg>';
   const ICONE_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/></svg>';
   const CHECK = '<svg viewBox="0 0 16 11" fill="currentColor"><path d="M11.07.65 4.98 8.15 2.7 5.92a.5.5 0 0 0-.7.71l2.67 2.6a.5.5 0 0 0 .73-.04L11.84 1.3a.5.5 0 0 0-.77-.64Zm3.79 0-6.08 7.5-.9-.88-.7.71 1.29 1.25a.5.5 0 0 0 .73-.04L15.63 1.3a.5.5 0 0 0-.77-.64Z"/></svg>';
   const LIMITE = 16 * 1024 * 1024;
@@ -82,6 +105,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const s = {
     ui: null, caixa: null, raiz: null,
     grupos: [], carregou: false, podeSincronizar: false, busca: '',
+    arquivo: false, arquivadas: { total: 0, naoLidas: 0 }, buscando: false,
     aberto: null, msgs: [], mais: false, assinatura: '',
     linhas: new Map(), avatares: new Map(),
     timerLista: 0, timerChat: 0, enviando: false, grav: null,
@@ -145,6 +169,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     try { r = await (s.ui ? s.ui.api('/api/grupos') : fetch('/api/grupos').then((x) => (x.ok ? x.json() : Promise.reject(x)))); } catch { return; }
     s.grupos = Array.isArray(r.grupos) ? r.grupos : [];
     s.podeSincronizar = Boolean(r.podeSincronizar);
+    s.arquivadas = r.arquivadas || { total: 0, naoLidas: 0 };
+    s.buscando = Boolean(r.buscando);
     s.carregou = true;
     atualizarMenu(Number(r.naoLidas) || 0);
     if (s.raiz && ativa()) desenharLista();
@@ -156,12 +182,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     busca.addEventListener('input', () => { s.busca = busca.value.toLowerCase(); desenharLista(); });
     const sinc = el('button', { class: 'gp-sinc', type: 'button', title: 'Buscar grupos do WhatsApp', 'aria-label': 'Buscar grupos do WhatsApp', html: ICONE_SINC, hidden: '' });
     sinc.addEventListener('click', sincronizar);
+    const voltaArq = el('button', { class: 'gp-volta-arq', type: 'button', title: 'Voltar aos grupos', 'aria-label': 'Voltar aos grupos', html: ICONE_VOLTAR, hidden: '' });
+    voltaArq.addEventListener('click', () => trocarArquivo(false));
     const topo = el('div', { class: 'lista-topo' },
-      el('div', { class: 'titulo-linha' }, el('h1', { class: 'titulo-grande', text: 'Grupos' }), sinc),
+      el('div', { class: 'titulo-linha' }, voltaArq, el('h1', { class: 'titulo-grande gp-titulo', text: 'Grupos' }), sinc),
       el('div', { class: 'linha-busca' }, el('label', { class: 'busca' }, Object.assign(el('span'), { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' }).firstChild, busca)));
     const abas = window.SintoniaAbasConversas?.barra?.('grupos');
     if (abas) topo.insertBefore(abas, topo.children[1]);
-    const lista = el('div', { class: 'lista gp-lista' }, topo, el('div', { class: 'itens gp-itens', role: 'list' }));
+    const lista = el('div', { class: 'lista gp-lista' }, topo,
+      el('div', { class: 'gp-arq-aviso', hidden: '', text: 'Grupos arquivados ficam aqui, mesmo quando chega mensagem nova. Eles não contam no número do menu.' }),
+      el('div', { class: 'gp-buscando', hidden: '', role: 'status', text: 'Buscando todos os grupos do WhatsApp…' }),
+      el('div', { class: 'itens gp-itens', role: 'list' }));
     const chat = el('div', { class: 'chat gp-chat' });
     s.raiz = el('div', { class: 'gp' }, lista, chat);
     s.caixa.replaceChildren(s.raiz);
@@ -177,15 +208,32 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('p', { text: 'Os grupos do WhatsApp da loja aparecem aqui. Escolha um grupo para ler e responder. Aqui não tem IA, funil nem alarme de cliente esperando.' }))));
   }
 
+  function trocarArquivo(sim) {
+    s.arquivo = sim;
+    const caixa = $('.gp-itens'); if (caixa) caixa.scrollTop = 0;
+    desenharLista();
+  }
+
   function desenharLista() {
     const caixa = $('.gp-itens'); if (!caixa) return;
-    const sinc = $('.gp-sinc'); if (sinc) sinc.hidden = !s.podeSincronizar;
-    const lista = s.grupos.filter((g) => !s.busca || String(g.nome || '').toLowerCase().includes(s.busca));
-    if (!lista.length) {
+    if (s.arquivo && !s.arquivadas.total) s.arquivo = false;
+    const sinc = $('.gp-sinc'); if (sinc) sinc.hidden = !s.podeSincronizar || s.arquivo;
+    const volta = $('.gp-volta-arq'); if (volta) volta.hidden = !s.arquivo;
+    const titulo = $('.gp-titulo'); const t = s.arquivo ? 'Arquivadas' : 'Grupos'; if (titulo && titulo.textContent !== t) titulo.textContent = t;
+    const abas = $('.cv-abas'); if (abas) abas.style.display = s.arquivo ? 'none' : '';
+    const aviso = $('.gp-arq-aviso'); if (aviso) aviso.hidden = !s.arquivo;
+    const busc = $('.gp-buscando'); if (busc) busc.hidden = !s.buscando || s.arquivo;
+    const lista = s.grupos.filter((g) => Boolean(g.arquivado) === s.arquivo && (!s.busca || String(g.nome || '').toLowerCase().includes(s.busca)));
+    // Linhas da lista: "Arquivadas (N)" no topo (como no WhatsApp) e os grupos.
+    const itens = [];
+    if (!s.arquivo && !s.busca && s.arquivadas.total > 0) itens.push({ id: 'arquivadas', ass: JSON.stringify(s.arquivadas), criar: linhaArquivadas });
+    for (const g of lista) itens.push({ id: g.id, ass: JSON.stringify([g.nome, g.temFoto, g.naoLidas, g.ultima, g.ultimaEm, g.participantes, s.aberto === g.id]), criar: () => linhaGrupo(g) });
+    if (!itens.length) {
       s.linhas.clear();
       const v = el('div', { class: 'gp-vazio' });
       if (!s.carregou) v.append(el('span', { text: 'Carregando grupos…' }));
-      else if (s.grupos.length) v.append(el('b', { text: 'Nenhum grupo com esse nome.' }));
+      else if (s.busca && (s.grupos.length)) v.append(el('b', { text: 'Nenhum grupo com esse nome.' }));
+      else if (s.buscando) v.append(el('b', { text: 'Buscando os grupos do WhatsApp…' }), el('span', { text: 'Com muitos grupos, isso pode levar alguns minutos. Eles vão aparecendo aqui.' }));
       else {
         v.append(el('b', { text: 'Nenhum grupo ainda.' }), el('span', { text: 'Assim que alguém escrever num grupo do WhatsApp da loja, ele aparece aqui.' }));
         if (s.podeSincronizar) v.append(el('button', { class: 'botao leve', type: 'button', text: 'Buscar grupos do WhatsApp', onclick: sincronizar }));
@@ -196,15 +244,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     caixa.querySelector('.gp-vazio')?.remove();
     const vistos = new Set();
     let anterior = null;
-    for (const g of lista) {
-      vistos.add(g.id);
-      let linha = s.linhas.get(g.id);
-      const assinatura = JSON.stringify([g.nome, g.temFoto, g.naoLidas, g.ultima, g.ultimaEm, s.aberto === g.id]);
-      if (!linha || linha.dataset.ass !== assinatura) {
-        const nova = linhaGrupo(g);
-        nova.dataset.ass = assinatura;
+    for (const it of itens) {
+      vistos.add(it.id);
+      let linha = s.linhas.get(it.id);
+      if (!linha || linha.dataset.ass !== it.ass) {
+        const nova = it.criar();
+        nova.dataset.ass = it.ass;
         if (linha) linha.replaceWith(nova);
-        linha = nova; s.linhas.set(g.id, linha);
+        linha = nova; s.linhas.set(it.id, linha);
       }
       // Ordem: só move o que mudou de lugar.
       const esperado = anterior ? anterior.nextSibling : caixa.firstChild;
@@ -212,6 +259,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       anterior = linha;
     }
     for (const [id, linha] of s.linhas) if (!vistos.has(id)) { linha.remove(); s.linhas.delete(id); }
+  }
+
+  function linhaArquivadas() {
+    const a = s.arquivadas;
+    return el('button', { class: 'item gp-arq-linha', type: 'button', role: 'listitem', 'aria-label': `Arquivadas: ${a.total} grupo${a.total === 1 ? '' : 's'}${a.naoLidas ? `, ${a.naoLidas} com mensagem não lida` : ''}`, onclick: () => trocarArquivo(true) },
+      el('span', { class: 'avatar gp-av gp-arq-av', html: ICONE_ARQUIVO }),
+      el('div', { class: 'corpo' },
+        el('div', { class: 'l1' }, el('span', { class: 'nome', text: 'Arquivadas' }),
+          a.naoLidas ? el('span', { class: 'badge', text: a.naoLidas > 99 ? '99+' : String(a.naoLidas), title: 'Grupos arquivados com mensagem não lida' }) : el('span', { class: 'hora', text: String(a.total) }))));
   }
 
   function linhaGrupo(g) {
@@ -236,7 +292,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.ui.toast('Buscando os grupos do WhatsApp…');
     try {
       const r = await s.ui.post('/api/grupos/sincronizar');
-      s.ui.toast(r.grupos ? `${r.grupos} grupo${r.grupos === 1 ? '' : 's'} encontrado${r.grupos === 1 ? '' : 's'}.` : 'Nenhum grupo encontrado neste WhatsApp.');
+      if (r.emAndamento) s.ui.toast('Ainda buscando: com muitos grupos demora um pouco. Eles vão aparecendo na lista.');
+      else s.ui.toast(r.grupos ? `${r.grupos} grupo${r.grupos === 1 ? '' : 's'} no WhatsApp${r.novos ? ` (${r.novos} novo${r.novos === 1 ? '' : 's'})` : ''}.` : 'Nenhum grupo encontrado neste WhatsApp.');
       await carregarLista();
     } catch (e) { s.ui.toast(e.message || 'Não deu para buscar os grupos agora.'); }
     finally { if (bt) { bt.disabled = false; bt.classList.remove('girando'); } }
@@ -289,10 +346,34 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'linha-compor gp-linha' }, el('span', { class: 'espaco' }), btArq, btFoto, btEnviar),
       arq, foto);
     chat.replaceChildren(
-      el('header', { class: 'chat-topo' }, voltar, avatarGrupo(g || { id: s.aberto }, 'p'), quem),
+      el('header', { class: 'chat-topo' }, voltar, avatarGrupo(g || { id: s.aberto }, 'p'), quem, botaoArquivar(g)),
       msgs, compor);
     s.trocarBotao = trocar;
     if (!ehCelular()) texto.focus({ preventScroll: true });
+  }
+
+  function botaoArquivar(g) {
+    const bt = el('button', { class: 'gp-acao gp-bt-arq', type: 'button' });
+    const pintar = (arq) => { bt.dataset.arq = String(arq); bt.innerHTML = arq ? ICONE_DESARQUIVAR : ICONE_ARQUIVO; bt.title = arq ? 'Desarquivar grupo' : 'Arquivar grupo'; bt.setAttribute('aria-label', bt.title); };
+    pintar(Boolean(g?.arquivado));
+    bt.pintar = pintar;
+    bt.addEventListener('click', async () => {
+      const id = s.aberto; if (!id) return;
+      const arquivar = bt.dataset.arq !== 'true';
+      bt.disabled = true;
+      try {
+        const r = await s.ui.post(`/api/grupos/${id}/arquivar`, { arquivar });
+        pintar(r.arquivado);
+        const x = s.grupos.find((y) => y.id === id); if (x) x.arquivado = r.arquivado;
+        s.ui.toast(r.arquivado
+          ? (r.noCelular ? 'Grupo arquivado aqui e no WhatsApp do celular.' : 'Grupo arquivado na Sintonia (o celular não aceitou agora).')
+          : (r.noCelular ? 'Grupo desarquivado aqui e no WhatsApp do celular.' : 'Grupo desarquivado na Sintonia.'));
+        await carregarLista();
+        if (ehCelular()) fechar();
+      } catch (e) { s.ui.toast(e.message || 'Não deu para arquivar agora.'); }
+      finally { bt.disabled = false; }
+    });
+    return bt;
   }
 
   const subtitulo = (g) => [g?.participantes ? `${g.participantes} pessoas` : '', 'Grupo do WhatsApp'].filter(Boolean).join(' · ');
@@ -311,6 +392,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ass = novas.map((m) => m.id).join(',') + '|' + s.mais;
     const nome = $('.gp-nome'); if (nome && nome.textContent !== r.grupo.nome) nome.textContent = r.grupo.nome;
     const sub = $('.gp-sub'); const st = subtitulo(r.grupo); if (sub && sub.textContent !== st) sub.textContent = st;
+    const btArq = $('.gp-bt-arq'); if (btArq && !btArq.disabled && btArq.dataset.arq !== String(Boolean(r.grupo.arquivado))) btArq.pintar(Boolean(r.grupo.arquivado));
     if (ass === s.assinatura) return;
     const chegou = !primeira && novas.length > s.msgs.length;
     s.msgs = novas; s.assinatura = ass;

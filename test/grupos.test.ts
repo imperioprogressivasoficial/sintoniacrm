@@ -49,15 +49,36 @@ class AgenteFalso {
 class AdminFalso implements AdminGrupos {
   liberadas: string[] = [];
   infos = 0;
+  listagens = 0;
+  /** Resposta falsa do fetchAllGroups (todos os grupos, arquivados ou não). */
+  todos: InfoGrupo[] = [{ jid: GRUPO, nome: 'Equipe Norte', participantes: 12, fotoUrl: null }];
+  /** Resposta falsa do findChats (só os grupos com conversa guardada). */
+  chats: Array<{ jid: string; nome: string | null }> = [];
+  /** Mensagens guardadas na Evolution por grupo (findMessages). */
+  guardadas: Record<string, unknown[]> = {};
+  recentes: unknown[] = [];
+  arquivadas: Array<{ jid: string; arquivar: boolean }> = [];
+  celularRecusa = false;
   async infoGrupo(_i: string, jid: string): Promise<InfoGrupo | null> {
     this.infos++;
-    return { jid, nome: 'Equipe Norte', participantes: 12, fotoUrl: null };
+    return this.todos.find((g) => g.jid === jid) ?? { jid, nome: 'Equipe Norte', participantes: 12, fotoUrl: null };
   }
   async listarGrupos(): Promise<InfoGrupo[]> {
-    return [{ jid: GRUPO, nome: 'Equipe Norte', participantes: 12, fotoUrl: null }, { jid: '999@g.us', nome: 'Fornecedores', participantes: 4, fotoUrl: null }];
+    this.listagens++;
+    return this.todos;
+  }
+  async chatsDeGrupo() {
+    return this.chats;
+  }
+  async mensagensDoGrupo(_i: string, jid: string) {
+    return this.guardadas[jid] ?? [];
   }
   async historicoGrupos(): Promise<unknown[]> {
-    return [msgGrupo({ id: 'H-ANTIGA', texto: 'mensagem antiga do grupo', ts: 1_700_000_000, jid: '999@g.us' })];
+    return this.recentes;
+  }
+  async arquivarConversa(_i: string, jid: string, arquivar: boolean) {
+    if (this.celularRecusa) throw new Error('Evolution respondeu 500: Messages not found');
+    this.arquivadas.push({ jid, arquivar });
   }
   async liberarGrupos(i: string) {
     this.liberadas.push(i);
@@ -163,7 +184,12 @@ async function montar(a: Ambiente) {
   const admin = new AdminFalso();
   const numeros = [{ canalId: INST, unidade: 'norte' as const, canal }];
   const sintonia = new Sintonia({ empresaId: 'imperio', repo, numeros, agente, configIa: async () => ({ modoPadrao: 'ia' }) });
-  const grupos = new Grupos({ empresaId: 'imperio', armazem, numeros: () => numeros, admin: () => admin });
+  const fotosBaixadas: string[] = [];
+  const fetchFn = (async (url: string) => {
+    fotosBaixadas.push(url);
+    return new Response(Buffer.from('89504e470d0a1a0a', 'hex'), { status: 200, headers: { 'content-type': 'image/png' } });
+  }) as unknown as typeof fetch;
+  const grupos = new Grupos({ empresaId: 'imperio', armazem, numeros: () => numeros, admin: () => admin, fetchFn });
   const app = criarServidor({ sintonia, repo, auth: { contas }, evolution: { canal }, grupos });
   registrarGrupos(app, { grupos, armazem, empresaId: 'imperio' });
   const h = await hashPadrao;
@@ -181,7 +207,7 @@ async function montar(a: Ambiente) {
     await grupos.ocioso();
     return r;
   };
-  return { repo, canal, agente, admin, grupos, armazem, app, gente, como, webhook };
+  return { repo, canal, agente, admin, grupos, armazem, app, gente, como, webhook, fotosBaixadas };
 }
 
 for (const a of ambientes) {
@@ -265,13 +291,68 @@ for (const a of ambientes) {
 
     it('sincronizar traz os grupos e as mensagens antigas (só a gestão)', async () => {
       const m = await montar(a);
+      m.admin.todos = [{ jid: GRUPO, nome: 'Equipe Norte', participantes: 12, fotoUrl: null }, { jid: '999@g.us', nome: 'Fornecedores', participantes: 4, fotoUrl: null }];
+      m.admin.recentes = [msgGrupo({ id: 'H-ANTIGA', texto: 'mensagem antiga do grupo', ts: 1_700_000_000, jid: '999@g.us' })];
       expect((await m.como(m.gente.carla, 'POST', '/api/grupos/sincronizar')).statusCode).toBe(403);
       const r = await m.como(m.gente.admin, 'POST', '/api/grupos/sincronizar');
-      expect(r.json()).toEqual({ grupos: 2, mensagens: 1 });
+      expect(r.json()).toEqual({ grupos: 2, novos: 2, mensagens: 1 });
       const lista = (await m.como(m.gente.admin, 'GET', '/api/grupos')).json();
       expect(lista.grupos.map((g: { nome: string }) => g.nome).sort()).toEqual(['Equipe Norte', 'Fornecedores']);
       expect(lista.naoLidas).toBe(0);
       expect(await m.repo.listarConversas()).toEqual([]);
+    });
+
+    it('ao abrir a tela, lista TODOS os grupos (arquivados e sem mensagem) e traz o histórico dos vazios, sem notificar', async () => {
+      const m = await montar(a);
+      m.admin.chats = [{ jid: '777@g.us', nome: 'Grupo da Família' }];
+      m.admin.todos = [
+        { jid: GRUPO, nome: 'Equipe Norte', participantes: 12, fotoUrl: 'https://pps.whatsapp.net/a.jpg' },
+        { jid: '777@g.us', nome: 'Grupo da Família', participantes: 8, fotoUrl: null },
+        { jid: '888@g.us', nome: 'Arquivado no celular', participantes: 3, fotoUrl: null },
+      ];
+      m.admin.guardadas['888@g.us'] = [msgGrupo({ id: 'V1', texto: 'mensagem guardada', ts: 1_700_000_100, jid: '888@g.us' })];
+      await m.como(m.gente.carla, 'GET', '/api/grupos');
+      await m.grupos.ocioso();
+      const lista = (await m.como(m.gente.carla, 'GET', '/api/grupos')).json();
+      expect(lista.grupos.map((g: { nome: string }) => g.nome).sort()).toEqual(['Arquivado no celular', 'Equipe Norte', 'Grupo da Família']);
+      expect(lista.grupos.find((g: { nome: string }) => g.nome === 'Grupo da Família').participantes).toBe(8);
+      expect(lista.grupos.find((g: { nome: string }) => g.nome === 'Arquivado no celular').ultima.texto).toBe('mensagem guardada');
+      expect(lista.naoLidas).toBe(0);
+      expect(lista.grupos.find((g: { nome: string }) => g.nome === 'Equipe Norte').temFoto).toBe(true);
+      expect(m.fotosBaixadas).toEqual(['https://pps.whatsapp.net/a.jpg']);
+      // Cache de 30 min: abrir de novo não pergunta outra vez à Evolution.
+      await m.grupos.ocioso();
+      expect(m.admin.listagens).toBe(1);
+      // "Buscar grupos" refaz, mas a foto igual não é baixada de novo.
+      await m.como(m.gente.admin, 'POST', '/api/grupos/sincronizar');
+      expect(m.admin.listagens).toBe(2);
+      expect(m.fotosBaixadas).toHaveLength(1);
+      expect(await m.repo.listarConversas()).toEqual([]);
+    });
+
+    it('arquivar: sai do contador do menu, vai para Arquivadas e é aplicado no celular quando a Evolution aceita', async () => {
+      const m = await montar(a);
+      await m.webhook(upsert(msgGrupo({ id: 'G1', texto: 'oi' })));
+      const g = (await m.como(m.gente.carla, 'GET', '/api/grupos')).json().grupos[0];
+      const r = await m.como(m.gente.carla, 'POST', `/api/grupos/${g.id}/arquivar`, { arquivar: true });
+      expect(r.json()).toEqual({ ok: true, arquivado: true, noCelular: true });
+      expect(m.admin.arquivadas).toEqual([{ jid: GRUPO, arquivar: true }]);
+      let lista = (await m.como(m.gente.carla, 'GET', '/api/grupos')).json();
+      expect(lista.grupos[0].arquivado).toBe(true);
+      expect(lista.naoLidas).toBe(0);
+      expect(lista.arquivadas).toEqual({ total: 1, naoLidas: 1 });
+      // Mensagem nova não tira do arquivo (como "manter arquivadas" do WhatsApp).
+      await m.webhook(upsert(msgGrupo({ id: 'G2', texto: 'mais uma' })));
+      expect((await m.como(m.gente.carla, 'GET', '/api/grupos')).json().grupos[0].arquivado).toBe(true);
+      // Celular recusou (sem mensagem guardada na Evolution): desarquiva só na Sintonia.
+      m.admin.celularRecusa = true;
+      expect((await m.como(m.gente.carla, 'POST', `/api/grupos/${g.id}/arquivar`, { arquivar: false })).json()).toEqual({ ok: true, arquivado: false, noCelular: false });
+      lista = (await m.como(m.gente.carla, 'GET', '/api/grupos')).json();
+      expect(lista.grupos[0].arquivado).toBe(false);
+      expect(lista.naoLidas).toBe(1);
+      // Outra unidade não arquiva o que não vê.
+      expect((await m.como(m.gente.sofia, 'POST', `/api/grupos/${g.id}/arquivar`, { arquivar: true })).statusCode).toBe(404);
+      expect((await m.como(m.gente.carla, 'POST', `/api/grupos/${g.id}/arquivar`, {})).statusCode).toBe(400);
     });
   });
 }
@@ -290,5 +371,25 @@ describe('conversas de grupo: WhatsApp desconectado', () => {
     expect(r.statusCode).toBe(503);
     expect(r.json().erro).toContain('desconectado');
     expect((await app.inject({ method: 'POST', url: '/api/grupos/sincronizar' })).statusCode).toBe(422);
+  });
+});
+
+describe('EvolutionAdmin: lista completa e arquivar', () => {
+  it('findChats só com grupos, findMessages do grupo e archiveChat', async () => {
+    const chamadas: Array<{ url: string; corpo?: Record<string, unknown> }> = [];
+    const fetchFn = (async (url: string, init?: RequestInit) => {
+      const corpo = init?.body ? JSON.parse(String(init.body)) : undefined;
+      chamadas.push({ url, corpo });
+      if (url.includes('/chat/findChats/')) return new Response(JSON.stringify([{ remoteJid: GRUPO, pushName: 'Equipe Norte' }, { remoteJid: '5571988124471@s.whatsapp.net', pushName: 'Ana' }, { remoteJid: '777@g.us', pushName: null }]), { status: 200 });
+      if (url.includes('/chat/findMessages/')) return new Response(JSON.stringify({ messages: { records: [msgGrupo({ id: 'X', texto: 'oi' })] } }), { status: 200 });
+      return new Response('{}', { status: 201 });
+    }) as typeof fetch;
+    const adm = new EvolutionAdmin('http://evo', 'k', fetchFn);
+    expect(await adm.chatsDeGrupo(INST)).toEqual([{ jid: GRUPO, nome: 'Equipe Norte' }, { jid: '777@g.us', nome: null }]);
+    expect(await adm.mensagensDoGrupo(INST, GRUPO, 50)).toHaveLength(1);
+    expect(chamadas.at(-1)?.corpo).toMatchObject({ where: { key: { remoteJid: GRUPO } }, offset: 50 });
+    await adm.arquivarConversa(INST, GRUPO, true);
+    expect(chamadas.at(-1)).toMatchObject({ url: `http://evo/chat/archiveChat/${INST}`, corpo: { chat: GRUPO, archive: true } });
+    await expect(adm.arquivarConversa('outra', GRUPO, true)).rejects.toThrow();
   });
 });
