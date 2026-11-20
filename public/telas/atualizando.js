@@ -174,7 +174,7 @@ html.atz-ativo .toast{visibility:hidden!important}
     const estado = el('span', 'atz-estado', 'Verificando…');
     const botao = el('button', '', 'Tentar agora');
     botao.type = 'button';
-    rodape.append(estado, botao);
+    rodape.append(estado); /* sem o botão "Tentar agora" (pedido do dono 20/11): só "Verificando"; ele volta sozinho */
     cartao.append(h1, sub, term, barra, rodape);
     raiz.append(cod, cartao);
     return { raiz, term, estado, botao, sub, h1 };
