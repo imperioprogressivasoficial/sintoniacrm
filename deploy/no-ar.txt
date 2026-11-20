@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 17:35 UTC (20/11, 14h35 na Bahia)
-commit: 4bcbe20
-pacote sha256: 8f2ffddb6327ed42d179d39a156237a08a65dbd450ff27b6f4ee8f336f3eb0e7
+data: 2026-11-20 20:25 UTC (20/11, 17h25 na Bahia)
+commit: ff41414
+pacote sha256: cb81cbfba0b461ac3a810b64a94543b2f99d2f43efb8b53fbf2e8b19611ba65b
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-4bcbe20.b64); pode apagar depois.
-observação: em cima do 318eed6. Entra: pipeline do celular mais sóbrio (topo limpo, busca + botão Ver como, barra fina num tom).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ff41414.b64); pode apagar depois.
+observação: em cima do 4bcbe20. Entra: gestos nas Conversas (claude/conversas-gestos, migração 400): arrastar para os lados, segurar para prévia, botão direito no computador.
