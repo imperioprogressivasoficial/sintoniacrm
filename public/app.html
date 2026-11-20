@@ -886,6 +886,15 @@ html[data-tema="escuro"] { --barra-fundo: rgba(14,41,69,.94); --barra-borda: rgb
   .trilho .nav > svg, .trilho .nav .ia-bola { transition: transform .18s ease; }
   @media (prefers-reduced-motion: reduce) { .trilho .nav, .trilho .nav .rotulo { transition: none !important; } }
 }
+/* imperio: Configurações em sanfona (categorias no padrão dos CRMs) */
+.mais-grupos.sanfona { display: grid; gap: 10px; }
+.sanfona-grupo .sanfona-corpo { display: none; margin-top: 6px; }
+.sanfona-grupo.aberto .sanfona-corpo, .sanfona-grupo.buscando .sanfona-corpo { display: block; }
+.sanfona-cab small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sanfona-seta { margin-left: auto; color: var(--sub); display: grid; place-items: center; transition: transform .2s ease; }
+.sanfona-seta svg { width: 18px; height: 18px; }
+.sanfona-grupo.aberto .sanfona-seta, .sanfona-grupo.buscando .sanfona-seta { transform: rotate(90deg); }
+.sanfona-grupo .sanfona-cab b { font-weight: 700; }
 /* imperio: "Configurações" é o nome mais longo da barra — até 400px a barra aperta um pouco para caber */
 @media (max-width: 400px) {
   .trilho .nav { min-width: 42px !important; padding: 0 10px !important; }
@@ -2814,45 +2823,56 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const gestor = ehGestor(eu), adm = ['admin', 'direcao'].includes(eu.papel), pode = (k) => Boolean(eu.permissoes?.[k]);
     const temaTxt = { claro: 'Claro', escuro: 'Escuro', auto: 'Automático' }[window.SintoniaTema?.get?.() || 'auto'] || 'Automático';
     const bolinhaLigada = window.Sintonia.acessoRapido?.ligada?.() ?? true;
-    // Grupos como as Configurações do WhatsApp: só o que existe e o que o perfil pode usar.
+    // Categorias no padrão dos CRMs (como o Kommo): cada coisa dentro da sua área, em sanfona. Só o que o perfil pode usar.
     const grupos = [
-      { titulo: 'Trabalho', itens: [
-        { nome: 'CRM', sub: 'Funil das clientes', ic: IC.funil, cor: '#106ebe', acao: () => mostrar('funil') },
+      { id: 'atendimento', titulo: 'Atendimento', ic: IC.respostas, cor: '#106ebe', itens: [
         { nome: 'Agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('agenda') },
         { nome: 'Ligações', ic: IC.ligacoes, cor: '#16a34a', acao: () => mostrar('ligacoes') },
-        { nome: 'Clientes', ic: IC.clientes, cor: '#6366f1', acao: () => mostrar('clientes') },
         { nome: 'Respostas rápidas', ic: IC.respostas, cor: '#0a8f7a', acao: () => mostrar('respostas') },
-        gestor && { nome: 'Importar e exportar leads', ic: IC.leads, cor: '#64748b', acao: () => mostrar('leads') },
-        gestor && pode('transmissoes') && { nome: 'Transmissões', ic: IC.transmissoes, cor: '#f97316', acao: () => mostrar('transmissoes') },
-        gestor && pode('email_marketing') && { nome: 'E-mail marketing', ic: IC.email, cor: '#ea4335', acao: () => mostrar('email') },
       ] },
-      gestor && { titulo: 'Gestão', itens: [
-        pode('relatorios') && { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
-        pode('relatorios') && { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
-        { nome: 'Inteligência Artificial', sub: 'Agentes, treinamento e memória da Serena', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
-        pode('automacoes') && { nome: 'Automações e bots', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
-        { nome: 'Funis e etapas', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.menu?.(), 300); } },
-        { nome: 'Etiquetas', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
-        { nome: 'Rastreamento e links', ic: IC.link, cor: '#0369a1', acao: () => mostrar('links') },
+      { id: 'vendas', titulo: 'Vendas (CRM)', ic: IC.funil, cor: '#6366f1', itens: [
+        { nome: 'CRM', sub: 'Funil das clientes', ic: IC.funil, cor: '#106ebe', acao: () => mostrar('funil') },
+        { nome: 'Clientes', ic: IC.clientes, cor: '#6366f1', acao: () => mostrar('clientes') },
+        gestor && { nome: 'Funis e etapas', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.menu?.(), 300); } },
+        gestor && { nome: 'Etiquetas', ic: IC.tag, cor: '#0bb5a0', acao: abrirTags },
+        gestor && { nome: 'Importar e exportar leads', ic: IC.leads, cor: '#64748b', acao: () => mostrar('leads') },
+      ] },
+      gestor && { id: 'marketing', titulo: 'Marketing', ic: IC.transmissoes, cor: '#f97316', itens: [
+        pode('transmissoes') && { nome: 'Transmissões', sub: 'Mensagem para muitas clientes', ic: IC.transmissoes, cor: '#f97316', acao: () => mostrar('transmissoes') },
+        pode('email_marketing') && { nome: 'E-mail marketing', ic: IC.email, cor: '#ea4335', acao: () => mostrar('email') },
+        { nome: 'Rastreamento e links', sub: 'De onde vieram as clientes', ic: IC.link, cor: '#0369a1', acao: () => mostrar('links') },
+      ] },
+      { id: 'inteligencia', titulo: 'Inteligência e automação', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, itens: [
+        { nome: 'Serena', sub: 'Pergunte sobre o dia e o app', ic: IC.ia, cor: '#1a8be0', acao: () => mostrar('serena') },
+        gestor && { nome: 'Inteligência Artificial', sub: 'Agentes, treinamento e memória', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
+        gestor && pode('automacoes') && { nome: 'Automações e bots', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
+      ] },
+      gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
+        { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
+        { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
+      ] },
+      gestor && { id: 'empresa', titulo: 'Empresa e conta', ic: IC.empresa, cor: '#475569', itens: [
         { nome: 'Equipe e acessos', ic: IC.equipe, cor: '#334155', acao: () => mostrar('equipe') },
         adm && { nome: 'Empresa e unidades', ic: IC.empresa, cor: '#475569', acao: abrirEmpresa },
-        adm && { nome: 'Conexões', sub: 'WhatsApp, Instagram, chave da IA, agenda', ic: IC.link, cor: '#25d366', acao: () => { location.href = '/conexoes'; } },
+        adm && { nome: 'Conexões', sub: 'WhatsApp, Instagram, agenda, pagamentos', ic: IC.link, cor: '#25d366', acao: () => { location.href = '/conexoes'; } },
         adm && { nome: 'Plano e uso da IA', ic: IC.plano, cor: '#0f766e', acao: () => window.SintoniaPlanos?.abrir() },
-      ] },
-      { titulo: 'Você', itens: [
-        { nome: 'Conta', sub: 'Foto, senha e dados', ic: IC.conta, cor: '#106ebe', acao: abrirConta },
-        { nome: 'Notificações', ic: IC.sino, cor: '#ef4444', acao: () => window.SintoniaTelas?.notificacoes?.preferencias() },
-        { nome: 'Aparência', valor: temaTxt, ic: IC.aparencia, cor: '#1e293b', acao: abrirAparencia },
-        { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
-        ...(window.SintoniaInstalar?.itens?.() || []), // Instalar o app / Ativar notificações (public/telas/instalar.js)
         adm && { nome: 'Dados de demonstração', ic: IC.campos, cor: '#94a3b8', acao: abrirDemo },
       ] },
-      { titulo: '', itens: [
-        { nome: 'Serena', sub: 'Pergunte sobre o dia e o app', ic: IC.ia, cor: '#1a8be0', acao: () => mostrar('serena') },
-        { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } },
-      ] },
     ].filter(Boolean).map((g) => ({ ...g, itens: g.itens.filter(Boolean) })).filter((g) => g.itens.length);
-
+    // "Minha conta" abre tocando na foto (perfil): foto, senha, notificações, aparência, atalhos, instalar e sair.
+    const itensConta = [
+      { nome: 'Foto, nome e senha', ic: IC.conta, cor: '#106ebe', acao: abrirConta },
+      { nome: 'Notificações', ic: IC.sino, cor: '#ef4444', acao: () => window.SintoniaTelas?.notificacoes?.preferencias() },
+      { nome: 'Aparência', valor: temaTxt, ic: IC.aparencia, cor: '#1e293b', acao: abrirAparencia },
+      { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
+      ...(window.SintoniaInstalar?.itens?.() || []),
+    ].filter(Boolean);
+    const sair = { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } };
+    function abrirMinhaConta() {
+      window.SintoniaPainel.abrir({ id: 'minha-conta', titulo: 'Minha conta', montar: (corpo) => corpo.append(
+        el('div', { class: 'mais-lista' }, ...itensConta.map(linhaItem)),
+        el('div', { class: 'mais-lista', style: 'margin-top:14px' }, linhaItem(sair))) });
+    }
     const linhaItem = (it) => {
       const b = el('button', { class: 'mais-item' + (it.perigo ? ' perigo' : ''), type: 'button', 'data-nome': it.nome.toLowerCase(), onclick: it.acao },
         el('i', { class: 'mais-ic' + (it.escuroIc ? ' escuro' : ''), html: it.ic }),
@@ -2862,7 +2882,25 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       b.querySelector('.mais-ic').style.setProperty('--cor', it.cor);
       return b;
     };
-    const caixaGrupos = el('div', { class: 'mais-grupos' }, ...grupos.map((g) => el('section', { class: 'mais-grupo' }, g.titulo ? el('h2', { text: g.titulo }) : null, el('div', { class: 'mais-lista' }, ...g.itens.map(linhaItem)))));
+    // Sanfona: cada categoria abre e fecha; lembra o que ficou aberto neste aparelho.
+    const CHAVE_ABERTOS = 'sintonia.config.abertos';
+    let abertos; try { abertos = new Set(JSON.parse(localStorage.getItem(CHAVE_ABERTOS) || '["atendimento"]')); } catch { abertos = new Set(['atendimento']); }
+    const guardarAbertos = () => { try { localStorage.setItem(CHAVE_ABERTOS, JSON.stringify([...abertos])); } catch {} };
+    const caixaGrupos = el('div', { class: 'mais-grupos sanfona' }, ...grupos.map((g) => {
+      const lista = el('div', { class: 'mais-lista sanfona-corpo' }, ...g.itens.map(linhaItem));
+      const cab = el('button', { class: 'mais-item sanfona-cab', type: 'button', 'aria-expanded': String(abertos.has(g.id)) },
+        el('i', { class: 'mais-ic' + (g.escuroIc ? ' escuro' : ''), html: g.ic }),
+        el('span', { class: 'mais-txt' }, el('b', { text: g.titulo }), el('small', { text: g.itens.map((x) => x.nome).slice(0, 3).join(', ') + (g.itens.length > 3 ? '…' : '') })),
+        el('span', { class: 'sanfona-seta', html: IC.seta }));
+      cab.querySelector('.mais-ic').style.setProperty('--cor', g.cor);
+      const sec = el('section', { class: 'mais-grupo sanfona-grupo' + (abertos.has(g.id) ? ' aberto' : ''), 'data-grupo': g.id }, el('div', { class: 'mais-lista' }, cab), lista);
+      cab.addEventListener('click', () => {
+        const ab = !sec.classList.contains('aberto');
+        sec.classList.toggle('aberto', ab); cab.setAttribute('aria-expanded', String(ab));
+        ab ? abertos.add(g.id) : abertos.delete(g.id); guardarAbertos();
+      });
+      return sec;
+    }), el('section', { class: 'mais-grupo' }, el('div', { class: 'mais-lista' }, linhaItem(sair))));
     const busca = el('input', { type: 'search', placeholder: 'Buscar', 'aria-label': 'Buscar nas opções', hidden: '' });
     const semNada = el('p', { class: 'mais-nada', text: 'Nada com esse nome.', hidden: '' });
     busca.addEventListener('input', () => {
@@ -2870,14 +2908,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       let algum = false;
       caixaGrupos.querySelectorAll('.mais-grupo').forEach((g) => {
         let n = 0;
-        g.querySelectorAll('.mais-item').forEach((b) => { const ok = !q || b.dataset.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q); b.hidden = !ok; if (ok) n++; });
+        g.querySelectorAll('.mais-item:not(.sanfona-cab)').forEach((b) => { const ok = !q || (b.dataset.nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q); b.hidden = !ok; if (ok) n++; });
         g.hidden = !n; if (n) algum = true;
+        if (g.classList.contains('sanfona-grupo')) g.classList.toggle('buscando', Boolean(q && n));
       });
       semNada.hidden = algum;
     });
     const btBusca = el('button', { class: 'icone redondo', type: 'button', title: 'Buscar nas opções', 'aria-label': 'Buscar nas opções', html: IC.busca, onclick: () => { busca.hidden = !busca.hidden; if (!busca.hidden) busca.focus(); else { busca.value = ''; busca.dispatchEvent(new Event('input')); } } });
     const papelUnidade = [PAPEL[eu.papel] || eu.papel, nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : '')].filter(Boolean).join(' · ');
-    const perfil = el('button', { class: 'mais-perfil', type: 'button', onclick: abrirConta }, avatarPessoa(eu.nome, '', eu.id),
+    const perfil = el('button', { class: 'mais-perfil', type: 'button', title: 'Minha conta', onclick: () => abrirMinhaConta() }, avatarPessoa(eu.nome, '', eu.id),
       el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: papelUnidade })), el('span', { class: 'mais-seta', html: IC.seta }));
     $('configuracoes').replaceChildren(el('div', { class: 'mais' },
       el('div', { class: 'mais-barra' }, btBusca),
