@@ -1,9 +1,9 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 03:42 UTC (20/11, 00h42 na Bahia)
-commit: 3b133f7
-pacote sha256: 1ba0c8b8e75bca45f1cfda54ed82f4800492b215024c444de24172029711d9b9
+data: 2026-11-20 04:18 UTC (20/11, 01h18 na Bahia)
+commit: 698dfa3
+pacote sha256: 5cb9a835cf1a49ae98f2ad79f544367e8f17ee37e8e2b2b5e89e0f19a3b70142
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-3b133f7.b64); pode apagar depois.
-observação: em cima do dafa1b9. Entra: som de mensagem "Plump Sintonia" (padrão), puxar para atualizar só com o arco
-  colorido, troca de tema sem piscar e sem falha (faíscas + esmaecer suave). Publicado de uma cópia limpa do 3b133f7
-  (o Dashboard estilo banco estava em obra na branch de trabalho e NÃO entrou). Conferido: /saude 200, alertas.js novo.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-698dfa3.b64); pode apagar depois.
+observação: em cima do 3b133f7. Entra: Dashboard banco digital escuro (modelo 3, celular), WhatsApp em canais livres
+  (criar/nomear/QR ou código/apagar; oficial bloqueado), Conexões no jeito "Adicionar um conector" (logo, nome,
+  descrição, botão). Conferido: /saude 200, catalogo-conexoes.js servido.

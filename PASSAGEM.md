@@ -24,14 +24,14 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 19/11/2026, 23h40 (Bahia) — Claude da conta do Bruno (Max).
+**Última atualização:** 20/11/2026, 01h20 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` = 3b133f7 (Plump, puxar só com arco, tema com faíscas + esmaecer); antes dafa1b9 (ver `deploy/no-ar.txt`). Inclui Serena estilo ChatGPT, Radar, curto-circuito, agenda Google,
-  puxar para atualizar, Ligações modelo 5, sino/lua novos. "Lista | Funil" foi removido a pedido do dono (CRM fica em Mais › CRM).
-- **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
-- **Em obra:** Dashboard estilo banco digital escuro (modelo 3 escolhido), em `public/telas/painel.js`.
-- **Aguardando o dono:** qual dos 5 jeitos da barra encolher (ou nenhum); animações contínuas (Radar, foto da Serena):
-  rodar só quando importa ou rodar 2–3 vezes e parar.
-- **Regras de design do dono:** 5 modelos antes de aplicar; cor "brilho" `#0ffcbe`→`#3aa0ff` em fio fino; ícones sempre no padrão
-  do menu lateral (traço 1,8, cantos arredondados, `ic-cheio` enche quando ativo); evitar mini animações rodando o tempo todo (peso).
-- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Serena em Agentes de IA › Controle.
+- **No ar:** `producao` = 698dfa3 (ver `deploy/no-ar.txt`): Dashboard escuro (celular), WhatsApp em canais, Conexões em lista.
+- **Em obra (pedidos do dono em 20/11):**
+  - Dashboard no computador = modelo C "duas colunas" + modo claro E escuro (segue o tema) + personalizar (arrastar,
+    lápis para trocar métrica, "i" explicando) + botão cinza "+ Criar" no fim que abre a biblioteca de relatórios
+    (comercial, marketing…). Branch `claude/dashboard-colunas` (worktree /home/user/wt-dash).
+  - Transcrição de áudio grátis no próprio servidor (Whisper local), botão para transcrever sem ouvir.
+- **Decisões do dono:** canais de WhatsApp sem loja fixa; oficial bloqueado; Claude fora da lista de Conexões;
+  beta interna com um acesso só; evitar animações rodando o tempo todo; cor "brilho" #0ffcbe→#3aa0ff; 5 modelos antes de design.
+- **Pendente com o dono:** QR Code do WhatsApp; chave do Claude; ligar a Serena.
