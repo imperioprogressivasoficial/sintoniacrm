@@ -1109,6 +1109,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       item(SVG.grafico, 'Resumo de hoje', folhaResumo, resumo ? el('span', { class: 'lado', text: `${resumo.hoje.marcados} · ${resumo.hoje.respostas}`, 'aria-hidden': 'true' }) : ''),
       item(SVG.relogio, 'Agendado', folhaAgendado, resumo?.agendado?.total ? el('span', { class: 'lado', text: String(resumo.agendado.total) }) : ''),
       item(SVG.respostas, 'Respostas rápidas', () => { fecharMenu(); ui.mostrar('respostas'); }),
+      /* Treinar a Serena (pedido do dono 20/11): abre o Agente de IA direto na parte de treinamento */
+      ehGestao() ? item(SVG.nova, 'Treinar a Serena', () => { fecharMenu(); ui.mostrar('ia'); let n = 0; const ir = () => { const b = document.querySelector('#v-ia .iax-o4'); if (b) b.scrollIntoView({ block: 'start', behavior: 'smooth' }); else if (n++ < 20) setTimeout(ir, 150); }; setTimeout(ir, 120); }) : '',
       ehGestao() ? item(SVG.ajustes, 'Personalizar', () => { fecharMenu(); ui.mostrar('ia'); }) : '');
     [...menu.children].forEach((c, i) => c.style.setProperty('--i', i));
     const com = historico.filter((c) => c.msgs.length);

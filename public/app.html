@@ -1001,6 +1001,18 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
 @media (prefers-reduced-motion: reduce) {
   #filtros .chip-radar::before, #filtros .chip-radar .feixe, .curto-fx, .choque, .pres-pulso, .pres-env::after { animation: none !important; }
 }
+/* presenca-no-nome: chave de disponível ao lado do nome, no rodapé do menu */
+.lt-eu-caixa { position: relative; }
+.lt-eu-caixa .lt-eu > svg { display: none; }
+.lt-eu-caixa .lt-eu { padding-right: 56px; width: 100%; }
+.lt-pres-chave { position: absolute; right: 10px; top: 50%; margin-top: 4px; transform: translateY(-50%); cursor: pointer; display: flex; }
+.lt-pres-chave input { position: absolute; opacity: 0; pointer-events: none; }
+.lt-pres-chave .lt-chave { width: 36px; height: 22px; }
+.lt-pres-chave .lt-chave::after { width: 16px; height: 16px; }
+.lt-pres-chave input:checked + .lt-chave { background: #16a34a; }
+.lt-pres-chave input:checked + .lt-chave::after { transform: translateX(14px); }
+.lt-pres-chave input:focus-visible + .lt-chave { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
+.recolhida .lt-pres-chave { display: none; }
 /* largura-total (pedido do dono 20/11): no computador as telas ocupam toda a largura do painel, sem faixa vazia
    dos lados (como Conversas). A Serena mantém a coluna de leitura no centro. */
 @media (min-width: 761px) {
@@ -1096,10 +1108,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       <div class="lt-grupo" data-grupo="automacoes">
         <button class="lt-cab" type="button" aria-expanded="false" title="Automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
+          <!-- automacoes-ordem: Chatbot, Fluxos, Follow-up, Agente de IA, Pesquisa de satisfação -->
           <button class="so-gestao nav lt-item" data-vista="bot" title="Chatbot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span class="lt-rot">Chatbot</span></button>
           <button class="so-gestao nav lt-item" data-vista="automacoes" title="Fluxos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 3 3v6.5M6 8.5V15a3 3 0 0 0 3 3h6.5"/></svg><span class="lt-rot">Fluxos</span></button>
-          <button class="so-gestao nav lt-item" data-vista="ia" id="lt-ia-config" title="Agente de IA: agentes, treinamento e memória"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Agente de IA</span></button>
           <button class="so-gestao lt-item" id="lt-followup" type="button" title="Follow-up: lembretes para quem parou de responder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2.5h6"/></svg><span class="lt-rot">Follow-up</span></button>
+          <button class="so-gestao nav lt-item" data-vista="ia" id="lt-ia-config" title="Agente de IA: agentes, treinamento e memória"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Agente de IA</span></button>
+          <button class="so-gestao lt-item" id="lt-nps" type="button" title="Pesquisa de satisfação: nota de 0 a 10 ao finalizar o atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg><span class="lt-rot">Pesquisa de satisfação</span></button>
         </div></div>
       </div>
 
@@ -3169,6 +3183,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       desenharFunis();
     }
     $('lt-followup')?.addEventListener('click', () => mostrar('automacoes'));
+    $('lt-nps')?.addEventListener('click', () => { if (window.SintoniaTelas?.nps?.configurar) window.SintoniaTelas.nps.configurar(window.Sintonia.ui); else toast('A pesquisa de satisfação ainda está carregando. Tente de novo.'); });
     $('lt-novo-funil').addEventListener('click', async () => {
       mostrar('funil');
       await window.SintoniaTelas?.funil?.novoFunil?.();
@@ -3450,16 +3465,18 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
   }
   function montar() {
     if (!eu) return;
-    const noite = document.querySelector('.lateral .lt-noite:not(#lt-presenca)');
-    if (noite && !document.getElementById('lt-presenca')) {
-      const l = noite.cloneNode(true);
-      l.id = 'lt-presenca';
-      l.title = 'Disponível para atender';
-      const svg = l.querySelector('svg'); if (svg) svg.outerHTML = PONTO;
-      const rot = l.querySelector('.lt-rot'); if (rot) rot.textContent = 'Disponível';
-      const i = l.querySelector('input'); i.id = 'lt-online'; i.checked = ligado();
+    /* presenca-no-nome (pedido do dono 20/11): em vez da linha "Disponível" no menu, uma chave só ao lado do nome
+       (no lugar da setinha). Ligada = Online (pílula verde na foto); desligada = Offline (vermelha). */
+    const euBt = document.getElementById('lt-eu');
+    if (euBt && !document.getElementById('lt-online')) {
+      document.getElementById('lt-presenca')?.remove();
+      const caixa = document.createElement('div'); caixa.className = 'lt-eu-caixa';
+      euBt.before(caixa); caixa.append(euBt);
+      const l = document.createElement('label'); l.className = 'lt-pres-chave'; l.title = 'Disponível para atender (ligar/desligar)';
+      const i = document.createElement('input'); i.type = 'checkbox'; i.id = 'lt-online'; i.setAttribute('role', 'switch'); i.setAttribute('aria-label', 'Disponível para atender'); i.checked = ligado();
       i.addEventListener('change', () => definir(i.checked));
-      noite.after(l);
+      l.append(i, Object.assign(document.createElement('i'), { className: 'lt-chave' }));
+      caixa.append(l);
     }
     document.querySelectorAll('.mais-perfil').forEach((p) => {
       if (p.nextElementSibling && p.nextElementSibling.classList.contains('mais-presenca-caixa')) return;
