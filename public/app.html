@@ -3091,7 +3091,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
 
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
-  window.Sintonia.ui = { api, post, el, toast, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
+  window.Sintonia.ui = { api, post, el, toast, atualizar, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
   Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
 
@@ -3214,6 +3214,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/acessos.js" defer></script>
 <script src="/telas/clientes.js" defer></script>
 <script src="/telas/respostas.js" defer></script>
+<script src="/telas/puxar.js" defer></script>
 <script>
 // imperio: presença da equipe (disponível / fora do ar)
 (() => {
