@@ -35,7 +35,7 @@ try {
     ['--yes', 'esbuild@0.25.0', 'src/index.ts', '--bundle', '--platform=node', '--format=esm', '--packages=external', '--minify', '--legal-comments=none', `--outfile=${path.join(pasta, 'dist/app/sintonia.mjs')}`, '--log-level=warning'],
     { cwd: raiz, stdio: ['ignore', 'ignore', 'inherit'] },
   );
-  for (const p of ['public', 'db', 'knowledge']) cpSync(path.join(raiz, p), path.join(pasta, p), { recursive: true });
+  for (const p of ['public', 'db', 'knowledge', 'deploy/presenca']) cpSync(path.join(raiz, p), path.join(pasta, p), { recursive: true });
   // Fotos da demonstração: o código lê ./rostos e ./clientes ao lado do arquivo do servidor (dist/app).
   for (const p of ['rostos', 'clientes']) cpSync(path.join(raiz, 'src/demo', p), path.join(pasta, 'dist/app', p), { recursive: true });
   const pkg = JSON.parse(readFileSync(path.join(raiz, 'package.json'), 'utf8'));
@@ -81,9 +81,10 @@ try {
   const REDE_EVOLUTION = process.env.EVOLUTION_REDE ?? 'rainha-saas_default';
   const VOLUME_CHAVE = process.env.EVOLUTION_VOLUME_CHAVE ?? 'rainha-saas_app';
   const comEvolution = Boolean(REDE_EVOLUTION);
-  // Presença da equipe (disponível / fora do ar): serviço pequeno à parte (deploy/presenca). PRESENCA=0 desliga.
+  // Presença da equipe (disponível / fora do ar): serviço pequeno à parte (deploy/presenca, vai dentro do pacote
+  // e roda do volume do app, já conferido pela soma). PRESENCA=0 desliga.
   const comPresenca = process.env.PRESENCA !== '0';
-  const presencaB64 = readFileSync(path.join(raiz, 'deploy/presenca/presenca.mjs')).toString('base64');
+  // SINTONIA_SEGREDO (chave das conexões salvas) fica sempre com o endereço original do banco, mesmo se o nome mudar.
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
 
@@ -112,7 +113,6 @@ ${comEvolution ? `      chave-evolution:
       NODE_ENV: production
       PORT: "3333"
       DATABASE_URL: postgres://sintonia:${senha}@${hostBanco}:5432/sintonia
-      # Chave que protege as conexões salvas: sempre o endereço original do banco, mesmo se o nome do banco mudar.
       SINTONIA_SEGREDO: postgres://sintonia:${senha}@db:5432/sintonia
 ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       EVOLUTION_API_KEY_ARQUIVO: /chave/evolution.key
@@ -162,12 +162,15 @@ ${comPresenca ? `
     image: node:22-alpine
     restart: unless-stopped
     mem_limit: 128m
+    depends_on:
+      app:
+        condition: service_healthy
     environment:
       APP_URL: http://app:3333
       ORIGEM: https://${DOMINIO}
-      S: ${presencaB64}
-    command: ["sh", "-c", "echo $$S | base64 -d > /srv/presenca.mjs && node /srv/presenca.mjs"]
+    command: ["node", "/home/node/app/deploy/presenca/presenca.mjs"]
     volumes:
+      - app:/home/node:ro
       - presenca:/dados
     networks:
       - interna
