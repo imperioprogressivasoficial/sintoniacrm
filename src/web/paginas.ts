@@ -21,6 +21,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/marca.svg': { arquivo: 'marca.svg', tipo: 'image/svg+xml' },
   '/simbolo.png': { arquivo: 'simbolo.png', tipo: 'image/png' },
   '/simbolo-escuro.png': { arquivo: 'simbolo-escuro.png', tipo: 'image/png' },
+  '/serena.jpg': { arquivo: 'serena.jpg', tipo: 'image/jpeg' },
   '/icone-512.png': { arquivo: 'icone-512.png', tipo: 'image/png' },
   '/icone-192.png': { arquivo: 'icone-192.png', tipo: 'image/png' },
   '/icone-180.png': { arquivo: 'icone-180.png', tipo: 'image/png' },
