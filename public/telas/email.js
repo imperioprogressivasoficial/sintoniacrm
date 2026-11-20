@@ -23,7 +23,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     divisor: () => ({ tipo: 'divisor' }),
     espaco: () => ({ tipo: 'espaco', altura: 24 }),
   };
-  const TEMA_PADRAO = { fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: 'Império Progressivas · Salvador, Bahia' };
+  // marketing: o rodapé padrão leva o nome da empresa da conta (antes vinha fixo "Império Progressivas" para todas).
+  const nomeEmpresa = () => (document.getElementById('lt-empresa')?.textContent || '').trim();
+  const temaPadrao = () => ({ fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: nomeEmpresa() });
   const VARIAVEIS = ['{primeiro_nome}', '{nome}', '{unidade}', '{email}'];
 
   const IC = {
@@ -308,7 +310,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function novaCampanha(pronto) {
     const base = pronto || s.prontos[0];
     try {
-      const c = await post('/api/email/campanhas', { nome: base ? `${base.nome} · ${new Date().toLocaleDateString('pt-BR')}` : 'Nova campanha', assunto: base?.assunto || '', preheader: base?.preheader || '', conteudo: base ? copia(base.conteudo) : { tema: TEMA_PADRAO, blocos: [NOVO.titulo(), NOVO.texto(), NOVO.botao()] }, contaId: s.contas.find((x) => x.ativa)?.id || null });
+      const c = await post('/api/email/campanhas', { nome: base ? `${base.nome} · ${new Date().toLocaleDateString('pt-BR')}` : 'Nova campanha', assunto: base?.assunto || '', preheader: base?.preheader || '', conteudo: base ? copia(base.conteudo) : { tema: temaPadrao(), blocos: [NOVO.titulo(), NOVO.texto(), NOVO.botao()] }, contaId: s.contas.find((x) => x.ativa)?.id || null });
       await abrirCampanha(c.id);
       carregarTudo();
     } catch (e) { s.ui.toast(e.message); }
@@ -316,7 +318,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function novoModelo(pronto) {
     const base = pronto || s.prontos[0];
     try {
-      const m = await post('/api/email/modelos', { nome: base ? base.nome : 'Novo modelo', assunto: base?.assunto || '', preheader: base?.preheader || '', conteudo: copia(base?.conteudo || { tema: TEMA_PADRAO, blocos: [NOVO.texto()] }) });
+      const m = await post('/api/email/modelos', { nome: base ? base.nome : 'Novo modelo', assunto: base?.assunto || '', preheader: base?.preheader || '', conteudo: copia(base?.conteudo || { tema: temaPadrao(), blocos: [NOVO.texto()] }) });
       s.modelos.push(m);
       abrirModelo(m);
     } catch (e) { s.ui.toast(e.message); }
@@ -356,7 +358,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function painelConteudo() {
     const d = s.doc;
-    const tema = (d.conteudo.tema = { ...TEMA_PADRAO, ...(d.conteudo.tema || {}) });
+    const tema = (d.conteudo.tema = { ...temaPadrao(), ...(d.conteudo.tema || {}) });
     const m = () => mudou(false);
     const contas = [['', s.contas.length ? 'Escolha a conta' : 'Nenhuma conta — configure em Conexões'], ...s.contas.map((c) => [c.id, `${c.nome} · ${c.remetenteEmail}`])];
     const dados = el('div', { class: 'em-bloco' }, el('h2', {}, s.tipoDoc === 'campanha' ? 'Campanha' : 'Modelo', el('small', { text: s.tipoDoc === 'modelo' ? 'Modelos são usados nas automações (passo "Enviar e-mail") e para começar campanhas.' : 'O assunto e a prévia aparecem na caixa de entrada.' })),
@@ -565,7 +567,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const semConta = !s.contas.length;
     const aviso = semConta ? el('div', { class: 'em-bloco' }, el('h2', {}, 'Primeiro, conecte uma conta de e-mail', el('small', { text: 'Hostinger, Gmail/Google Workspace ou Outlook. A direção ou a administração faz isso em Conexões → E-mail.' })), el('div', { class: 'em-acoes' }, el('a', { class: 'em-botao em-leve', href: '/conexoes#email', text: 'Abrir Conexões' }))) : null;
     const topo = el('div', { class: 'em-acoes' }, botao('Nova campanha', () => novaCampanha(), '', IC.mais));
-    if (!s.lista.length) return [aviso, topo, el('div', { class: 'em-vazio em-vidro' }, el('b', { text: 'Nenhuma campanha ainda' }), el('span', { text: 'Comece por um modelo pronto com a cara da Império: promoção, aniversário ou pós-atendimento.' }), el('div', { class: 'em-modelos-prontos', style: 'width:100%;margin-top:8px' }, ...s.prontos.map((p) => el('button', { type: 'button', class: 'em-pronto', onclick: () => novaCampanha(p) }, el('b', { text: p.nome }), el('span', { text: p.descricao })))))];
+    if (!s.lista.length) return [aviso, topo, el('div', { class: 'em-vazio em-vidro' }, el('b', { text: 'Nenhuma campanha ainda' }), el('span', { text: 'Comece por um modelo pronto: promoção, aniversário ou pós-atendimento.' }), el('div', { class: 'em-modelos-prontos', style: 'width:100%;margin-top:8px' }, ...s.prontos.map((p) => el('button', { type: 'button', class: 'em-pronto', onclick: () => novaCampanha(p) }, el('b', { text: p.nome }), el('span', { text: p.descricao })))))];
     return [aviso, topo, el('div', { class: 'em-lista' }, ...s.lista.map((c) => {
       const [rot, cls] = ESTADOS[c.estado] || [c.estado, ''];
       return el('button', { type: 'button', class: 'em-card', onclick: () => abrirCampanha(c.id) },
@@ -611,7 +613,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { caixa } = s;
     if (!caixa) return;
     const r = s.resumo || {};
-    const topo = el('div', { class: 'em-topo' }, el('h1', { class: 'titulo-grande' }, 'E-mail marketing', el('small', { text: 'Campanhas e e-mails automáticos para as clientes da Império.' })),
+    const topo = el('div', { class: 'em-topo' }, el('h1', { class: 'titulo-grande' }, 'E-mail marketing', el('small', { text: 'Campanhas e e-mails automáticos para as suas clientes.' })),
       el('div', { class: 'em-numeros', role: 'list', 'aria-label': 'Últimos 30 dias' },
         numero(IC.enviar, fmtN(r.enviados30), 'enviados em 30 dias'),
         numero(IC.olho, pct(r.abertos30, r.enviados30), 'abertura'),
