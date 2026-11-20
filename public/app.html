@@ -1387,7 +1387,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('ver'), 2800); };
   const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k === 'html') e.innerHTML = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== undefined && v !== null) e.setAttribute(k, v); } for (const f of filhos) if (f != null) e.append(f); return e; };
   const iniciais = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
-  const ehIA = (n) => /(^|\s)assia(\s|$)|\(integra/i.test(String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  const ehIA = (n) => /(^|\s)(assia|sincronia)(\s|$)|\(integra/i.test(String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   const cor = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CORES[h % CORES.length]; };
   const BONECO = '<svg viewBox="0 0 212 212"><path fill="currentColor" d="M106 106c19.9 0 36-16.1 36-36s-16.1-36-36-36-36 16.1-36 36 16.1 36 36 36Zm0 18c-33.4 0-90 16.7-90 50v24h180v-24c0-33.3-56.6-50-90-50Z" transform="translate(0 14)"/></svg>';
   const semFoto = new Set();

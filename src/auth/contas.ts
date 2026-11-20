@@ -59,7 +59,7 @@ export interface Contas {
   listarUsuarios(empresaId: string): Promise<Usuario[]>;
   buscarPorId(id: string): Promise<UsuarioComSenha | undefined>;
   /** Muda papel, unidades e/ou se está ativa. Devolve a usuária atualizada (undefined se não existe). */
-  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>): Promise<Usuario | undefined>;
+  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>): Promise<Usuario | undefined>;
   definirSenha(id: string, senhaHash: string): Promise<void>;
   /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
   encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
@@ -159,9 +159,10 @@ export class ContasMemoria implements Contas {
     return u ? { ...u } : undefined;
   }
 
-  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>) {
     const u = this.usuarios.find((x) => x.id === id);
     if (!u) return undefined;
+    if (campos.nome !== undefined) u.nome = campos.nome;
     if (campos.papel !== undefined) u.papel = campos.papel;
     if (campos.unidades !== undefined) u.unidades = [...campos.unidades];
     if (campos.ativo !== undefined) u.ativo = campos.ativo;
@@ -320,12 +321,12 @@ export class ContasPostgres implements Contas {
     return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
   }
 
-  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo'>>) {
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>) {
     const { rows } = await this.pool.query<LinhaUsuario>(
       `update sintonia.usuarios set
-         papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo)
+         papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo), nome = coalesce($5, nome)
        where id = $1 returning *`,
-      [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null],
+      [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null, campos.nome ?? null],
     );
     return rows[0] ? paraUsuario(rows[0]) : undefined;
   }

@@ -3,7 +3,7 @@
  * saber se está conectada e desconectar. Usa a chave global da Evolution.
  *
  * Só mexe nas instâncias da própria Sintonia (nomes "sintonia-<unidade>"): nunca altera o webhook de
- * instâncias que já existem para outros fluxos (ex.: a Assia no n8n).
+ * instâncias que já existem para outros fluxos (ex.: a Sincronia no n8n).
  */
 
 export type EstadoInstancia = 'conectada' | 'conectando' | 'desconectada' | 'inexistente';

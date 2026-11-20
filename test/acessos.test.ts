@@ -169,6 +169,17 @@ describe.each(ambientes)('Usuários e acessos ($nome)', (amb) => {
     expect((await como(gente.gerente, 'POST', `/api/acessos/usuarios/${gente.direcao.id}/desativar`)).statusCode).toBe(404);
   });
 
+  it('gestão renomeia uma pessoa (ex.: a conta de serviço da IA vira "Sincronia (integração)")', async () => {
+    const { gente, como } = await montar(amb);
+    const r = await como(gente.admin, 'PATCH', `/api/acessos/usuarios/${gente.carla.id}`, { nome: 'Sincronia (integração)' });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().nome).toBe('Sincronia (integração)');
+    const lista = (await como(gente.admin, 'GET', '/api/acessos/usuarios')).json();
+    expect(lista.pessoas.find((x: { id: string }) => x.id === gente.carla.id).nome).toBe('Sincronia (integração)');
+    // Nome vazio ou curto demais é recusado.
+    expect((await como(gente.admin, 'PATCH', `/api/acessos/usuarios/${gente.carla.id}`, { nome: ' ' })).statusCode).toBe(400);
+  });
+
   it('último admin não sai; desativado não entra e perde as sessões', async () => {
     const { app, gente, como, entrar } = await montar(amb);
     expect((await como(gente.admin, 'POST', `/api/acessos/usuarios/${gente.admin.id}/desativar`)).statusCode).toBe(403);

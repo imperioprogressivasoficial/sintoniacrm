@@ -52,6 +52,7 @@ const Nova = z.object({
   horario: HorarioZ,
 });
 const Edicao = z.object({
+  nome: z.string().trim().min(2).max(80).optional(),
   papel: z.enum(PAPEIS).optional(),
   unidades: Unidades.optional(),
   ajustes: z.record(z.string(), z.unknown()).optional(),
@@ -225,6 +226,10 @@ export function registrarUsuarios(app: FastifyInstance, o: OpcoesUsuarios): void
     }
     const mudancas: string[] = [];
     let u: Usuario = alvo;
+    if (b.data.nome !== undefined && b.data.nome !== alvo.nome) {
+      u = (await contas.atualizarUsuario(alvo.id, { nome: b.data.nome }))!;
+      mudancas.push(`nome ${alvo.nome} → ${b.data.nome}`);
+    }
     if (papel !== alvo.papel || unidades.join() !== alvo.unidades.join()) {
       u = (await contas.atualizarUsuario(alvo.id, { papel, unidades }))!;
       if (papel !== alvo.papel) mudancas.push(`papel ${NOME_PAPEL[alvo.papel]} → ${NOME_PAPEL[papel]}`);

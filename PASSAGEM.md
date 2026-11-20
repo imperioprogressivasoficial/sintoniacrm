@@ -24,48 +24,19 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
-**Última atualização:** 19/11/2026, 21h50 (Bahia) — Claude da outra conta (Pro).
+**Última atualização:** 20/11/2026 (Bahia) — Claude da conta do Bruno (Max).
 
-- **Branch de trabalho:** `claude/visual-original-evolution` (criada a partir da `producao` em `dc2f93d`), já levada para a `producao`.
-- **No ar:** a `producao` atual, publicada em 19/11 às 21h47 (Bahia) com o ok do dono (ver `deploy/no-ar.txt`).
-  Conferido no ar: Evolution respondendo pela Sintonia, presença respondendo, visual novo nas telas.
-
-### O que esta branch refaz (o que se perdeu em 19/11, 18h30)
-1. **`public/app.html` com o visual original** (aprovado pelo dono em 19/11). Parte do `app.html` de `b0eb07f`
-   (antes dos commits `091499c` e `73997e9`, que foram descartados no `app.html`) e reaplica, na ordem original:
-   - ícones do menu Mais numa cor só (sem cor por item);
-   - barra do celular escura e flutuante: só a aba ativa mostra o nome, em cápsula (clara no escuro, azul-escura no claro);
-     IA em menta e, ativa, em cápsula azul; "Mais" em três linhas;
-   - ícones que enchem quando ativos (`ic-cheio` / `ic-det`) na barra e no menu lateral: Conversas balão quadrado,
-     CRM funil, pipeline quadro de colunas, Dashboard blocos, IA estrelas, Agenda calendário, Clientes pessoas;
-   - iniciais sem parênteses ("Assia (integração)" vira AI) e selo azul-claro (#9fd4ff) com estrelas nas contas de IA;
-   - contorno de 2px na cor de destaque em toda foto de perfil.
-   A animação de carregamento (anel com os dois plugues, `b0eb07f`) ficou como estava.
-   Os ajustes de iniciais do `091499c` em `public/telas/*.js` e `public/tv.html` foram mantidos (não conflitam).
-2. **Ligação com a Evolution (WhatsApp)** em `scripts/gerar-deploy.mjs`, ligada por padrão:
-   - serviço `chave-evolution` copia a chave do volume do Espaço Rainha (`rainha-saas_app`, arquivo `evolution/api.key`)
-     para o volume `sintonia_chave_evolution`; o app lê com `EVOLUTION_API_KEY_ARQUIVO` (novo em `src/config.ts`).
-     **Nenhuma chave no código nem na receita.**
-   - o app entra também na rede `rainha-saas_default` e usa `EVOLUTION_URL=http://evolution:8080`.
-   - o banco ganha o nome `sintonia-db` (o Espaço Rainha também tem um `db` nessa rede) e `SINTONIA_SEGREDO` fica
-     com o endereço original (`...@db:5432/sintonia`), para as conexões já salvas continuarem legíveis.
-   - Mais › Conexões continua valendo por cima (endereço e chave da Evolution salvos na tela).
-   - `EVOLUTION_REDE=` (vazio) desliga tudo isso na geração.
-3. **Presença da equipe (novo, pedido do dono em 19/11):** cada pessoa liga/desliga "Disponível" (menu lateral e Mais);
-   fora do ar, a foto ganha borda vermelha. Serviço pequeno em `deploy/presenca/presenca.mjs`, entra na receita
-   pelo `gerar-deploy.mjs` (`PRESENCA=0` desliga) na rota `/api/presenca`; confere quem pede pela própria Sintonia.
-4. `docs/sistema-vivo.md`: anotações da Sintonia que estavam no repositório do Espaço Rainha (agora só aqui).
-
-Testes: `npx tsc --noEmit` ok; `npx vitest run` com o Postgres de teste: 615 de 615. Telas conferidas rodando o app
-localmente (celular e computador, claro e escuro).
-
-### Publicação (19/11, 21h47)
-- O projeto avulso `sintonia-presenca` foi apagado do servidor antes de publicar.
-- A Hostinger aceita receitas de no máximo 8192 caracteres: o código da presença vai dentro do pacote.
-- O fluxo do n8n que servia o pacote não existe mais; o pacote foi servido pela branch `claude/pacote-deploy`
-  (arquivo `pacote-<sha256>.b64`, conferido pela soma). Para a próxima publicação, use o mesmo caminho com o pacote novo.
-
-### O que falta
-- Dono: chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Assia em Agentes de IA › Controle.
-- Telas de carregamento: o dono escolheu "Digitando sem a logo + barra no topo"; a versão no ar (anel com plugues) foi mantida
-  como pedido. Confirmar com ele se fica assim.
+- **No ar:** `producao` em `f20efdd` (publicada pela outra conta em 19/11, 21h47). Conferido no ar: carregamento com anel,
+  visual original, Evolution respondendo (Norte e Sumaré prontas para QR), presença.
+- **Branch de trabalho:** `claude/paginas-vendas-login` = `producao` + commit "Sincronia" abaixo. **Não publicado.**
+- **Renomeação Assia → Sincronia (pedido do dono em 20/11):**
+  - No ar, pelo app (banco): agente "Assia" → "Sincronia" (e "quem é" da persona); automação "Perdida há 30 dias: Sincronia tenta reativar".
+  - n8n: os 5 fluxos renomeados (nomes, textos, prompt da supervisora). Endereços técnicos mantidos: webhooks `assia-*`,
+    cabeçalho `x-assia-voz`, login `assia-integracao@…`, chave de memória `assia-supervisora-v2-…`. Os 3 ativos seguem ativos.
+  - Código (nesta branch, falta publicar): gestão pode renomear pessoa (`PATCH /api/acessos/usuarios/:id {nome}`), selo de IA
+    reconhece "Sincronia", textos de Conexões. Depois de publicar: renomear o usuário "Assia (integração)" para "Sincronia (integração)".
+  - Fora daqui: agente de voz da ElevenLabs (não está na conta conectada) e textos do servidor do Espaço Rainha (outro repositório).
+- **Em desenho (aguardando escolha do dono):** tela do botão do meio "Sincronia" no estilo ChatGPT — 5 modelos em
+  `scratchpad` da sessão (sugestão: menu lateral + faixa de aviso); barra na ordem Dashboard, Ligações, Sincronia, Conversas, Mais
+  (falta o dono dizer para onde vai o CRM).
+- **Pendente com o dono:** chave do Claude em Mais › Conexões; QR Code do WhatsApp; ligar a Sincronia em Agentes de IA › Controle.
