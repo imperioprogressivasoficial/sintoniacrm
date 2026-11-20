@@ -11,7 +11,7 @@ import { ArmazemRastreioMemoria, ArmazemRastreioPostgres, type ArmazemRastreio }
 import { Capi, sha256 } from '../src/rastreio/capi.js';
 import { iconeDe, Rastreio } from '../src/rastreio/rastreio.js';
 import { codigoNaMensagem, referenciaDaEvolution, referenciaDaMeta, tirarCodigo } from '../src/rastreio/referencia.js';
-import { configCapiDe, registrarRastreio } from '../src/rastreio/rotas.js';
+import { configCapiDe, numeroComPais, registrarRastreio } from '../src/rastreio/rotas.js';
 import { criarServidor } from '../src/server.js';
 import { RepositorioPostgres } from '../src/store/postgres.js';
 import { RepositorioMemoria, type Repositorio } from '../src/store/repositorio.js';
@@ -308,6 +308,23 @@ describe.each(ambientes)('Origem do lead e CAPI ($nome)', (amb) => {
     expect(compra.custom_data).toEqual({ currency: 'BRL', value: 350 });
     const registro = await x.armazem.eventosCapi(10);
     expect(registro.every((e) => e.situacao === 'enviado')).toBe(true);
+  });
+
+  it('link rastreado: aceita o número só com DDD (põe o 55) e explica o erro de verdade', async () => {
+    const x = await montar(amb);
+    const so = await x.app.inject({ method: 'POST', url: '/api/rastreio/links', payload: { nome: 'Só DDD', codigo: 'so-ddd', unidade: 'norte', numero: '71999990000' } });
+    expect(so.statusCode).toBe(201);
+    expect(so.json().numero).toBe('5571999990000');
+    const fixo = await x.app.inject({ method: 'POST', url: '/api/rastreio/links', payload: { nome: 'Fixo', codigo: 'fixo', unidade: 'norte', numero: '(71) 3333-4444' } });
+    expect(fixo.json().numero).toBe('557133334444');
+    const curto = await x.app.inject({ method: 'POST', url: '/api/rastreio/links', payload: { nome: 'Curto', unidade: 'norte', numero: '9999-0000' } });
+    expect(curto.statusCode).toBe(400);
+    expect(curto.json()).toMatchObject({ campo: 'numero' });
+    expect(curto.json().erro).toMatch(/DDD/);
+    expect(curto.json().erro).not.toBe('Dados inválidos');
+    const semNome = await x.app.inject({ method: 'POST', url: '/api/rastreio/links', payload: { nome: 'a', unidade: 'norte', numero: '71999990000' } });
+    expect(semNome.json()).toMatchObject({ campo: 'nome' });
+    expect(numeroComPais('55 71 99999-8888')).toBe('5571999998888');
   });
 
   it('link rastreado: clique → código na mensagem → conversa ligada, UTMs do endereço e Lead com hash', async () => {

@@ -233,7 +233,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     form.append(
       campo('Nome do link', 'nome', { at: { required: '', maxlength: '60', placeholder: 'Ex.: Link Bio Instagram' } }),
       campo('Unidade', 'unidade', { tag: 'select', opcoes: [el('option', { value: 'norte', text: 'Salvador Norte' }), el('option', { value: 'sumare', text: 'Sumaré' })] }),
-      campo('WhatsApp da unidade (com DDD)', 'numero', { at: { required: '', inputmode: 'tel', placeholder: '55 71 99999-9999' } }),
+      campo('WhatsApp da unidade (com DDD)', 'numero', { at: { required: '', inputmode: 'tel', placeholder: '71 99999-9999' } }),
       campo('Código no endereço (opcional)', 'codigo', { at: { maxlength: '40', placeholder: 'bio-insta', pattern: '[a-z0-9][a-z0-9-]{1,39}' } }),
       campo('Mensagem que a cliente envia', 'mensagem', { largo: true, at: { maxlength: '300', value: 'Olá! Quero saber mais sobre a progressiva.' } }),
       campo('utm_source', 'utmSource', { at: { placeholder: 'instagram' } }),

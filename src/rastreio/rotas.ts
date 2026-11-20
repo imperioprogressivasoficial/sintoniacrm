@@ -37,12 +37,23 @@ export function configCapiDe(c: Pick<Conexoes, 'get'>): ConfigCapi {
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
 const ADMIN = new Set(['admin', 'direcao']);
 const Utm = z.string().trim().max(200).optional();
+/**
+ * Número do WhatsApp só com dígitos e com o código do país: quem digita só o DDD e o número
+ * (10 ou 11 dígitos, ex.: 71 99999-9999) ganha o 55 do Brasil na frente.
+ */
+export function numeroComPais(entrada: string): string {
+  const d = entrada.replace(/\D/g, '').replace(/^0+/, '');
+  return d.length === 10 || d.length === 11 ? '55' + d : d;
+}
 const NovoLink = z.object({
-  nome: z.string().trim().min(2).max(60),
+  nome: z.string({ message: 'Dê um nome ao link.' }).trim().min(2, 'Dê um nome ao link (2 letras ou mais).').max(60, 'Nome do link: até 60 letras.'),
   codigo: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,39}$/, 'Código: letras minúsculas, números e hífen (2 a 40)').optional(),
-  unidade: z.enum(['norte', 'sumare']),
-  numero: z.string().transform((s) => s.replace(/\D/g, '')).refine((s) => s.length >= 12 && s.length <= 13, 'Número do WhatsApp com DDI e DDD, ex.: 55 71 99999-9999'),
-  mensagem: z.string().trim().min(2).max(300).default('Olá! Quero saber mais sobre a progressiva.'),
+  unidade: z.enum(['norte', 'sumare'], { message: 'Escolha a unidade.' }),
+  numero: z
+    .string({ message: 'Informe o WhatsApp da unidade, com DDD.' })
+    .transform(numeroComPais)
+    .refine((s) => s.length >= 12 && s.length <= 13, 'Número do WhatsApp inválido. Use o DDD e o número, ex.: 71 99999-9999'),
+  mensagem: z.string().trim().min(2, 'A mensagem precisa de 2 letras ou mais.').max(300, 'Mensagem: até 300 letras.').default('Olá! Quero saber mais sobre a progressiva.'),
   utmSource: Utm,
   utmMedium: Utm,
   utmCampaign: Utm,
@@ -144,7 +155,10 @@ export function registrarRastreio(app: FastifyInstance, o: OpcoesRotasRastreio):
   });
   app.post('/api/rastreio/links', async (req, reply) => {
     exigeGestao(req);
-    const b = NovoLink.parse(req.body);
+    const r = NovoLink.safeParse(req.body ?? {});
+    // A primeira coisa errada, dita em português (em vez de um "Dados inválidos" genérico).
+    if (!r.success) return reply.code(400).send({ erro: r.error.issues[0]?.message ?? 'Confira os dados do link.', campo: String(r.error.issues[0]?.path[0] ?? '') });
+    const b = r.data;
     const codigo = b.codigo ?? (b.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'link') + '-' + Math.random().toString(36).slice(2, 6);
     const link = await o.rastreio.armazem.criarLink(o.empresaId, { ...b, codigo, ativo: true, criadoPor: req.usuario?.nome ?? 'teste' });
     return reply.code(201).send(link);
