@@ -215,11 +215,13 @@ export class Planos {
   }
 
   /**
-   * Pagamento confirmado (hoje à mão; no futuro, o webhook do PagamentoProvider): marca o pedido como pago
-   * e aplica: recarga soma créditos; mudar_plano troca o plano. Pedidos antigos de adicional só ficam pagos.
+   * Pagamento confirmado (à mão ou pelo webhook do pagamento): marca o pedido como pago e aplica: recarga soma
+   * créditos; mudar_plano troca o plano. Pedidos antigos de adicional só ficam pagos.
+   * Só vale uma vez: pedido que já estava pago (ou cancelado) devolve null e nada muda (webhook repetido não credita
+   * de novo).
    */
   async confirmarPedido(empresaId: string, id: string, agora: Date, por: string | null = null) {
-    const p = await this.armazem.marcarPedido(empresaId, id, 'pago', agora);
+    const p = await this.armazem.pagarSePendente(empresaId, id, agora);
     if (!p) return null;
     if (p.tipo === 'mudar_plano' && typeof p.dados.plano === 'string') {
       const a = await this.assinatura(empresaId);

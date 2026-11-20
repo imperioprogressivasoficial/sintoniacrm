@@ -99,6 +99,17 @@ export const CAMPOS = {
   tiktokClientSecret: { segredo: true },
   /** Vai na URL do webhook de leads (?token=...). */
   tiktokVerifyToken: { segredo: false },
+
+  // ---------- Pagamentos (Asaas: src/planos/asaas.ts). Sem chave, nada é cobrado (pedido manual). ----------
+  asaasApiKey: { segredo: true },
+  /** Vai no cabeçalho asaas-access-token do webhook; gerado pela Sintonia (Conexões › Pagamentos). */
+  asaasWebhookToken: { segredo: true },
+  /** "1" = sandbox (testes). Chave com "_hmlg_" já é sandbox. */
+  asaasSandbox: { segredo: false },
+  /** Quem paga: nome (vazio = nome da empresa), e-mail e CPF/CNPJ (só números). */
+  cobrancaNome: { segredo: false },
+  cobrancaEmail: { segredo: false },
+  cobrancaCpfCnpj: { segredo: false },
 } as const;
 export type Campo = keyof typeof CAMPOS;
 export type ValoresConexao = Partial<Record<Campo, string>>;

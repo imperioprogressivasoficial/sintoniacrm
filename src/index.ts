@@ -75,7 +75,7 @@ import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fo
 import { registrarDesempenho } from './desempenho/rotas.js';
 import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
 import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type PorteiroCliente } from './planos/medidor.js';
-import { PagamentoManual } from './planos/pagamento.js';
+import { PagamentoAsaas, PagamentoEscolhido, registrarAsaas } from './planos/asaas.js';
 import { Planos } from './planos/porteiro.js';
 import { registrarPlanos } from './planos/rotas.js';
 import { estadoDaIa } from './planos/estado-ia.js';
@@ -576,9 +576,13 @@ registrarDesempenho(app, {
   agora: () => new Date(),
 });
 // Plano e uso da IA (Mais › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
+// Pagamento: Asaas quando a chave está salva em Conexões › Pagamentos; sem chave, só registra o pedido (manual).
+const asaas = new PagamentoAsaas({ conexoes, nomeEmpresa: async () => (await empresa.dados()).nome, log });
+const pagamento = new PagamentoEscolhido(asaas);
+registrarAsaas(app, { asaas, conexoes, planos, agora: () => new Date(), log, urlPublica: process.env.SINTONIA_URL_PUBLICA });
 registrarPlanos(app, {
   planos,
-  pagamento: new PagamentoManual(),
+  pagamento,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
   fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),

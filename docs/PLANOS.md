@@ -75,20 +75,36 @@ Dados do Desempenho (`src/desempenho`) no período (7, 30 ou 90 dias):
 - `src/planos/medidor.ts`: `medirCliente` (medição + porteiro por chamada), `comPorteiro`, `IaBloqueada`.
 - Tabelas: `db/migrations/250_planos.sql` e `270_planos_creditos.sql` (`tokens_credito`; `gratis` → `essencial`).
 - API (admin e direção): `GET /api/planos` (plano, limites, créditos, uso, padrões da calculadora),
-  `POST /api/planos/pedidos` (`mudar_plano` | `recarga`; só registra), `PUT /api/planos/custo-clt`,
+  `POST /api/planos/pedidos` (`mudar_plano` | `recarga`; registra e, com o Asaas ligado, devolve o link de pagamento), `PUT /api/planos/custo-clt`,
   `GET /api/planos/comparativo`.
 - Tela: `public/telas/planos.js` → `window.SintoniaPlanos.abrir()` (item "Plano e uso da IA" no menu Mais).
 
+## Cobrança pelo Asaas (`src/planos/asaas.ts`)
+
+Desligada até alguém salvar a chave em **Conexões › Outras configurações › Pagamentos**. Sem chave vale o
+`PagamentoManual` (só registra o pedido, "em breve: pagamento"); a escolha é feita a cada pedido
+(`PagamentoEscolhido`), sem reiniciar.
+
+- Campos (tabela `sintonia.conexoes`, cifrados como os outros): `asaasApiKey` e `asaasWebhookToken` (segredos),
+  `asaasSandbox` ("1" = sandbox; chave com `_hmlg_` já é sandbox), `cobrancaNome` (vazio = nome da empresa),
+  `cobrancaEmail` e `cobrancaCpfCnpj` (quem paga; a empresa não tem CPF/CNPJ no cadastro).
+- Pedido (`POST /api/planos/pedidos`): sem CPF/CNPJ, responde `precisaCpfCnpj` antes de registrar e a tela pede o
+  documento (mandado de volta em `cpfCnpj` e guardado). Com ele: `GET /customers?cpfCnpj=` (ou `POST /customers`) →
+  `POST /payments` com `billingType: UNDEFINED` (Pix, boleto ou cartão), vencimento em 3 dias, `externalReference` =
+  id do pedido → devolve `invoiceUrl`. A tela abre o link em outra aba, mostra "Aguardando pagamento" e confere a
+  cada 10 s se o pedido foi pago. Pedido sem valor (Empresarial, Essencial) não gera cobrança.
+- Webhook `POST /webhooks/asaas`: confere o cabeçalho `asaas-access-token` (tempo constante); `PAYMENT_CONFIRMED` e
+  `PAYMENT_RECEIVED` confirmam o pedido da `externalReference` com `Planos.confirmarPedido`, que só aplica pedido
+  **pendente** (`pagarSePendente`, de uma vez no banco): aviso repetido não credita de novo. Outros eventos: 200.
+  Valor pago menor que o do pedido não libera.
+- **Mudar de plano é uma cobrança avulsa** (o 1º mês do plano novo). Ainda não há assinatura recorrente.
+
 ## O que falta para cobrar de verdade
 
-1. **Provedor de pagamento**: implementar `PagamentoProvider` (`src/planos/pagamento.ts`). Hoje o `PagamentoManual`
-   só registra o pedido e responde "em breve: pagamento".
-   - **Stripe**: Checkout Session (`mode: subscription` para plano, `payment` para recarga) + webhook
-     `checkout.session.completed` / `invoice.paid`. Pix no Brasil via Stripe tem restrições: conferir.
-   - **Mercado Pago**: Preapproval (assinatura) + Checkout Pro para recarga; webhook `payment`/`preapproval`.
-   - **Asaas**: `/subscriptions` (boleto, Pix, cartão) e `/payments` para recarga; webhook `PAYMENT_CONFIRMED`.
-2. **Webhook** autenticado que chama `Planos.confirmarPedido(empresaId, pedidoId, agora)`: marca pago e aplica
-   (recarga soma créditos; mudar_plano troca o plano).
+1. **Renovação mensal**: hoje cada mudança de plano é uma cobrança avulsa. Próximo passo: `/subscriptions` do
+   Asaas (ou uma cobrança gerada todo mês) e o webhook de vencida (`PAYMENT_OVERDUE`) suspender a assinatura.
+2. Guardar o link da cobrança no pedido (para "Pagar" de novo na lista de pedidos) e cancelar a cobrança no Asaas
+   quando o pedido for cancelado.
 3. **Renovação e inadimplência**: assinatura vencida → `status: 'suspensa'` (o porteiro já bloqueia).
 4. **Avisos de limite** (80% e 100% de cada janela) por e-mail/WhatsApp para a direção; hoje só a tela mostra.
 5. **Multiempresa**: o app atende uma empresa por processo (`SINTONIA_EMPRESA_ID`); as tabelas já têm `empresa_id`.

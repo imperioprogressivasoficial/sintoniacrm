@@ -15,7 +15,8 @@ import type { EstadoIa } from './estado-ia.js';
  * Plano e uso da IA (só administração e direção):
  * GET  /api/planos               plano atual, limites (5 h, semana, mês) com quando renovam, créditos, uso do mês,
  *                                pedidos e o padrão da calculadora (conversas/mês e tokens por conversa reais)
- * POST /api/planos/pedidos       { tipo: mudar_plano | recarga, plano?, recargaId? } → registra o pedido
+ * POST /api/planos/pedidos       { tipo: mudar_plano | recarga, plano?, recargaId?, cpfCnpj? } → registra o pedido e,
+ *                                com o Asaas ligado, devolve o link de pagamento (`url`) ou `precisaCpfCnpj`
  * PUT  /api/planos/custo-clt     { salario, encargosPct, beneficios, horasSemana } → custo do atendente da empresa
  * GET  /api/planos/comparativo   ?dias=30 → IA × atendente humano com os dados do Desempenho
  */
@@ -102,8 +103,8 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
   });
 
   const CorpoPedido = z.discriminatedUnion('tipo', [
-    z.object({ tipo: z.literal('mudar_plano'), plano: z.enum(['essencial', 'gratis', 'expediente', 'empresarial']).transform((p) => (p === 'gratis' ? 'essencial' : p)) }),
-    z.object({ tipo: z.literal('recarga'), recargaId: z.string().min(1).max(40) }),
+    z.object({ tipo: z.literal('mudar_plano'), plano: z.enum(['essencial', 'gratis', 'expediente', 'empresarial']).transform((p) => (p === 'gratis' ? 'essencial' : p)), cpfCnpj: z.string().max(30).optional() }),
+    z.object({ tipo: z.literal('recarga'), recargaId: z.string().min(1).max(40), cpfCnpj: z.string().max(30).optional() }),
   ]);
 
   app.post('/api/planos/pedidos', async (req) => {
@@ -128,6 +129,12 @@ export function registrarPlanos(app: FastifyInstance, o: OpcoesRotasPlanos): voi
       valor = destino.preco ?? 0;
       dados = { plano: corpo.plano, de: a.plano, valor, sobMedida: destino.preco === null };
       descricao = `Plano ${destino.nome}`;
+    }
+    // Cobrança real (Asaas): o CPF/CNPJ informado na tela fica guardado; faltando, a tela pede antes de registrar.
+    if (o.pagamento.ativo && valor > 0) {
+      if (corpo.cpfCnpj) await o.pagamento.guardarCpfCnpj?.(corpo.cpfCnpj, u.nome);
+      const falta = await o.pagamento.pendencia?.();
+      if (falta) return { pedido: null, ...falta, pagamentoAtivo: true };
     }
     const pedido = await o.planos.armazem.criarPedido({ empresaId: emp, tipo: corpo.tipo, dados, status: 'pendente', criadoEm: o.agora(), pagoEm: null, por: u.nome });
     const r = await o.pagamento.iniciar(pedido, valor, descricao);

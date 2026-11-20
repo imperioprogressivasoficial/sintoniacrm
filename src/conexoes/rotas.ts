@@ -68,6 +68,16 @@ const Salvar = z.object({
   metaTokenSumare: Segredo,
   metaAppSecretSumare: Segredo,
   ...CamposSociais,
+  asaasApiKey: Segredo,
+  asaasWebhookToken: Segredo,
+  asaasSandbox: z.enum(['', '1']).optional(),
+  cobrancaNome: z.string().trim().max(120).optional(),
+  cobrancaEmail: z.union([z.literal(''), z.string().trim().email('E-mail de cobrança inválido').max(200)]).optional(),
+  cobrancaCpfCnpj: z
+    .string()
+    .transform((s) => s.replace(/\D/g, ''))
+    .refine((s) => s === '' || s.length === 11 || s.length === 14, 'CPF tem 11 números e CNPJ tem 14')
+    .optional(),
 });
 const NOMES: Record<UnidadeWhatsApp, string> = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré' };
 

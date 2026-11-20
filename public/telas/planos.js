@@ -2,7 +2,7 @@
  * (abre em painel próprio, por cima do app) ou window.SintoniaTelas.planos.desenhar(caixa) para montar numa vista.
  * Mostra o plano atual, os limites de uso (5 h, semana, mês) com quando renovam, o saldo de créditos, os 3 planos,
  * a calculadora "Quanto custa ter a IA no seu negócio", o uso por dia (SVG), o comparativo IA × atendente humano
- * e os pedidos (mudar de plano, comprar créditos: sem cobrança real ainda).
+ * e os pedidos (mudar de plano, comprar créditos: com o Asaas ligado, abre o link de pagamento).
  * A calculadora usa a mesma fórmula de src/planos/catalogo.ts (calcularCalculadora); window.SintoniaPlanos.calcular.
  * Dados: GET /api/planos, POST /api/planos/pedidos, GET /api/planos/comparativo, PUT /api/planos/custo-clt.
  * Estilos em <style id="estilo-planos">, prefixo .pl-.
@@ -168,6 +168,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     </div>`).join('')}</div>`;
   }
 
+  /** Depois de abrir o link de pagamento: confere a cada 10 s (por até 15 min) se o pedido já foi pago. */
+  let acompanhando = null;
+  function acompanhar(caixa, id) {
+    clearInterval(acompanhando);
+    const ate = Date.now() + 15 * 60 * 1000;
+    acompanhando = setInterval(async () => {
+      if (!caixa.isConnected || Date.now() > ate) { clearInterval(acompanhando); return; }
+      try {
+        const d = await api('/api/planos');
+        const p = d.pedidos.find((x) => x.id === id);
+        if (p && p.status !== 'pendente') {
+          clearInterval(acompanhando);
+          if (p.status === 'pago') aviso('Pagamento confirmado ✓');
+          desenhar(caixa);
+        }
+      } catch {}
+    }, 10_000);
+  }
+
   async function desenhar(caixa) {
     estilo();
     caixa.innerHTML = '<div class="pl"><p class="pl-sub">Carregando…</p></div>';
@@ -248,17 +267,31 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       <section class="pl-c">
         <h2>Pedidos</h2>
         ${d.pedidos.length ? `<ul class="pl-lista">${d.pedidos.map((x) => `<li><span>${TIPO[x.tipo] || x.tipo}${x.dados.plano ? `: ${esc(NOME_PLANO[x.dados.plano] || x.dados.plano)}` : ''}${x.dados.tokens ? `: ${tok(x.dados.tokens)} tokens` : ''}</span><span>${new Date(x.criadoEm).toLocaleDateString('pt-BR')} · ${STATUS[x.status] || x.status}</span></li>`).join('')}</ul>` : '<p class="pl-sub">Nenhum pedido ainda.</p>'}
-        <p class="pl-sug" style="margin-top:8px">${d.pagamento.ativo ? '' : 'Em breve: pagamento pela plataforma. Os pedidos ficam registrados e a equipe Sintonia ativa.'}</p>
+        <p class="pl-sug" style="margin-top:8px">${d.pagamento.ativo ? 'Pagamento por Pix, boleto ou cartão (Asaas). O pedido é liberado assim que o pagamento é confirmado.' : 'Em breve: pagamento pela plataforma. Os pedidos ficam registrados e a equipe Sintonia ativa.'}</p>
       </section>`;
     caixa.replaceChildren(raiz);
 
     const escolha = raiz.querySelector('[data-escolha]');
     const pedir = async (corpo) => {
+      // Cobrança real (Asaas): a aba do pagamento abre já no clique; aberta depois da resposta, o navegador bloqueia.
+      const aba = d.pagamento.ativo ? window.open('', '_blank') : null;
+      if (aba) { try { aba.opener = null; aba.document.title = 'Pagamento'; aba.document.body.textContent = 'Gerando a cobrança…'; } catch {} }
+      const fechar = () => { try { aba?.close(); } catch {} };
       try {
-        const r = await api('/api/planos/pedidos', { method: 'POST', body: JSON.stringify(corpo) });
-        aviso(r.mensagem || 'Pedido registrado.');
+        let r = await api('/api/planos/pedidos', { method: 'POST', body: JSON.stringify(corpo) });
+        if (r.precisaCpfCnpj) {
+          const doc = prompt(r.mensagem || 'Informe o CPF ou o CNPJ de quem paga (só os números).');
+          if (!doc) { fechar(); return; }
+          r = await api('/api/planos/pedidos', { method: 'POST', body: JSON.stringify({ ...corpo, cpfCnpj: doc }) });
+          if (r.precisaCpfCnpj) { fechar(); aviso(r.mensagem); return; }
+        }
+        if (r.url) {
+          if (aba && !aba.closed) aba.location.href = r.url; else window.open(r.url, '_blank', 'noopener');
+          aviso('Aguardando pagamento. Pague na aba que abriu (Pix, boleto ou cartão): o pedido é liberado assim que o pagamento cair.');
+          if (r.pedido?.id) acompanhar(caixa, r.pedido.id);
+        } else { fechar(); aviso(r.mensagem || 'Pedido registrado.'); }
         desenhar(caixa);
-      } catch (e) { aviso(e.message); }
+      } catch (e) { fechar(); aviso(e.message); }
     };
     const opcoes = (itens) => {
       escolha.innerHTML = `<div class="pl-escolha">${itens.map((x, i) => `<button data-i="${i}"><b>${esc(x.titulo)}</b><span>${esc(x.sub)}</span></button>`).join('')}</div>`;

@@ -84,6 +84,10 @@ export interface ArmazemPlanos {
   gravarAssinatura(a: Assinatura): Promise<void>;
   criarPedido(p: Omit<Pedido, 'id'>): Promise<Pedido>;
   marcarPedido(empresaId: string, id: string, status: Pedido['status'], em: Date): Promise<Pedido | null>;
+  /** Marca como pago só se ainda está pendente (de uma vez, sem corrida). null = não achou ou já não estava pendente. */
+  pagarSePendente(empresaId: string, id: string, em: Date): Promise<Pedido | null>;
+  /** Um pedido pelo id, de qualquer empresa (webhook do pagamento). */
+  pedidoPorId(id: string): Promise<Pedido | null>;
   pedidos(empresaId: string, limite?: number): Promise<Pedido[]>;
   /** Tokens das recargas pagas no período (créditos comprados). */
   tokensRecargas(empresaId: string, inicio: Date, fim: Date): Promise<number>;
@@ -154,6 +158,17 @@ export class ArmazemPlanosMemoria implements ArmazemPlanos {
     p.status = status;
     p.pagoEm = status === 'pago' ? em : p.pagoEm;
     return { ...p };
+  }
+  async pagarSePendente(empresaId: string, id: string, em: Date) {
+    const p = this.ped.find((x) => x.id === id && x.empresaId === empresaId && x.status === 'pendente');
+    if (!p) return null;
+    p.status = 'pago';
+    p.pagoEm = em;
+    return { ...p };
+  }
+  async pedidoPorId(id: string) {
+    const p = this.ped.find((x) => x.id === id);
+    return p ? { ...p } : null;
   }
   async pedidos(empresaId: string, limite = 20) {
     return this.ped.filter((p) => p.empresaId === empresaId).sort((a, b) => b.criadoEm.getTime() - a.criadoEm.getTime()).slice(0, limite).map((p) => ({ ...p }));
@@ -263,6 +278,21 @@ export class ArmazemPlanosPostgres implements ArmazemPlanos {
       `update sintonia.ia_pedidos set status = $3, pago_em = case when $3 = 'pago' then $4 else pago_em end where empresa_id = $1 and id = $2 returning *`,
       [empresaId, id, status, em],
     );
+    return rows[0] ? pedidoDe(rows[0]) : null;
+  }
+
+  async pagarSePendente(empresaId: string, id: string, em: Date) {
+    if (!UUID.test(id)) return null;
+    const { rows } = await this.pool.query<LinhaPedido>(
+      `update sintonia.ia_pedidos set status = 'pago', pago_em = $3 where empresa_id = $1 and id = $2 and status = 'pendente' returning *`,
+      [empresaId, id, em],
+    );
+    return rows[0] ? pedidoDe(rows[0]) : null;
+  }
+
+  async pedidoPorId(id: string) {
+    if (!UUID.test(id)) return null;
+    const { rows } = await this.pool.query<LinhaPedido>('select * from sintonia.ia_pedidos where id = $1', [id]);
     return rows[0] ? pedidoDe(rows[0]) : null;
   }
 
