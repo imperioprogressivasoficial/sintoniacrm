@@ -1,9 +1,8 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 02:36 UTC (19/11, 23h36 na Bahia)
-commit: a82575b
-pacote sha256: da0feab02a55b149fc5c12b2f10588b75a7d533c9dec10181c1361928d06db4b
+data: 2026-11-20 02:51 UTC (19/11, 23h51 na Bahia)
+commit: dafa1b9
+pacote sha256: b9d40cfe82f58455b0450ff770865112d806207770d14706be064e9cd1a375b7
 quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-a82575b.b64); pode apagar depois.
-observação: em cima do 1fb4414. Entra: puxar para atualizar (círculo de vidro), sem o botão Lista | Funil,
-  Ligações no jeito do WhatsApp (modelo 5: anel menta, Todas | Perdidas), sino (modelo 5) e lua novos
-  numa pílula de vidro com fio brilho. Conferido no ar: /saude 200, puxar.js servido.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-dafa1b9.b64); pode apagar depois.
+observação: em cima do a82575b. Entra: barra de baixo fluida (pílula e nome deslizam, tela monta no quadro seguinte,
+  cabe sem cortar de 320 a 430 de largura). Conferido no ar: /saude 200 e o app novo servido.

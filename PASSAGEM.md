@@ -26,10 +26,9 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 ## Onde parei
 **Última atualização:** 19/11/2026, 23h40 (Bahia) — Claude da conta do Bruno (Max).
 
-- **No ar:** `producao` = a82575b (ver `deploy/no-ar.txt`). Inclui Serena estilo ChatGPT, Radar, curto-circuito, agenda Google,
+- **No ar:** `producao` = dafa1b9 (barra fluida); antes a82575b (ver `deploy/no-ar.txt`). Inclui Serena estilo ChatGPT, Radar, curto-circuito, agenda Google,
   puxar para atualizar, Ligações modelo 5, sino/lua novos. "Lista | Funil" foi removido a pedido do dono (CRM fica em Mais › CRM).
 - **Branch de trabalho:** `claude/paginas-vendas-login` = `producao`.
-- **Fazendo agora:** barra de baixo do celular mais fluida ao trocar de aba e sem cortar o texto "Ligações".
 - **Aguardando o dono:** qual dos 5 jeitos da barra encolher (ou nenhum); animações contínuas (Radar, foto da Serena):
   rodar só quando importa ou rodar 2–3 vezes e parar.
 - **Regras de design do dono:** 5 modelos antes de aplicar; cor "brilho" `#0ffcbe`→`#3aa0ff` em fio fino; ícones sempre no padrão
