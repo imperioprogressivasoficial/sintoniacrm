@@ -51,12 +51,6 @@
   .com-foto { position: relative; }
   .com-foto > img.foto-pessoa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .avatar.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  /* Conta de IA: selo azul-claro com estrelas no canto do avatar */
-  .conta-ia { position: relative; overflow: visible !important; }
-  .selo-ia { position: absolute; right: -3px; bottom: -3px; width: 42%; height: 42%; min-width: 12px; min-height: 12px; max-width: 22px; max-height: 22px; border-radius: 50%; display: grid; place-items: center;
-    background: #9fd4ff; color: #06263f; box-shadow: 0 0 0 2px var(--fundo); z-index: 1; font-style: normal; pointer-events: none; }
-  .selo-ia svg { width: 70%; height: 70%; }
-  .atende .selo-ia { right: -4px; bottom: -4px; width: 12px; height: 12px; min-width: 0; min-height: 0; box-shadow: 0 0 0 1.5px var(--fundo); }
 
   .area { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .topo-pc { display: none; }
@@ -468,6 +462,10 @@
   .badge, .contador { background: var(--badge) !important; color: var(--badge-txt) !important; box-shadow: 0 0 10px rgba(15, 252, 190, .5); }
   .item .hora.nova { color: var(--verde); }
 
+  /* aba IA no meio, com brilho */
+  .nav-ia .ia-bola { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--marca-gradiente); box-shadow: 0 0 0 1px rgba(15,252,190,.35), 0 0 18px rgba(15, 252, 190, .55); }
+  .nav-ia .ia-bola svg { width: 20px; height: 20px; }
+  .nav-ia[aria-current="page"] .ia-bola { box-shadow: 0 0 0 2px var(--marca-menta), 0 0 24px rgba(15, 252, 190, .8); }
 
   /* topo da conversa */
   .voltar { all: unset; cursor: pointer; display: none; align-items: center; gap: 2px; height: 40px; padding: 0 10px 0 6px; border-radius: 999px; background: var(--painel); color: var(--texto); font-size: 16px; font-weight: 600; flex: none; }
@@ -546,6 +544,9 @@
     .chat-topo .quem span { font-size: 12.5px; }
     .trilho { justify-content: space-between; }
     .nav { min-width: 0; }
+    .nav-ia { margin-top: -8px; }
+    .nav-ia .ia-bola { width: 40px; height: 40px; }
+    .nav-ia .ia-bola svg { width: 22px; height: 22px; }
     .menu-mais { bottom: 110px; }
   }
 
@@ -784,62 +785,10 @@
     .recolhida .lt-qtd { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; font-size: 10px; padding: 0 5px; }
     .recolhida .lt-eu { padding: 6px; }
   }
-  /* ===== Padrão dos ícones (aprovado em 19/11) =====
-     "Preenche quando ativo": contorno (traço 1,8) no normal; cheio com aria-current="page".
-     .ic-cheio = parte que enche; .ic-det = detalhe recortado por cima do ícone cheio (pintado na cor do fundo). */
-  :root {
-    --barra-fundo: #0b1726;            /* barra do celular: escura nos dois temas */
-    --barra-borda: rgba(255,255,255,.08);
-    --barra-sombra: 0 10px 30px rgba(4,12,22,.35);
-    --barra-raio: 999px;
-    --barra-altura: 64px;
-    --barra-folga: 6px;                /* espaço entre a borda da barra e as abas */
-    --barra-icone: 24px;
-    --barra-ic: rgba(255,255,255,.78); /* um só tom para os ícones */
-    --barra-rotulo-fs: 14px;
-    --barra-rotulo-peso: 700;
-    --capsula-pad: 0 16px 0 14px;
-    --capsula-fundo: #0a4c86;          /* claro: cápsula azul-escura */
-    --capsula-txt: #ffffff;
-    --capsula-ia-fundo: #106ebe;       /* IA ativa: cápsula azul */
-    --capsula-ia-txt: #ffffff;
-    --ia-cor: #0ffcbe;                 /* IA em menta */
-    --ic-recorte-lateral: #ffffff;     /* recorte do .ic-det no item ativo do menu lateral */
-  }
-  html[data-tema="escuro"] {
-    --barra-fundo: #0b1726;
-    --barra-borda: rgba(255,255,255,.12);
-    --capsula-fundo: #ffffff;          /* escuro: cápsula clara */
-    --capsula-txt: #071d33;
-    --ic-recorte-lateral: #1d3a57;
-  }
-  .ic-cheio { fill: none; }
-  [aria-current="page"] .ic-cheio { fill: currentColor; }
-  [aria-current="page"] .ic-det { stroke: var(--ic-recorte, var(--fundo)); }
-  .lt-item[aria-current="page"] { --ic-recorte: var(--ic-recorte-lateral); }
-
-  /* celular: barra escura flutuante; só a aba ativa mostra o nome, dentro da cápsula */
+  /* celular: barra de abas de vidro */
   @media (max-width: 760px) {
+    .trilho { background: var(--vidro-forte) !important; border: 1px solid var(--vidro-borda) !important; box-shadow: var(--vidro-brilho) !important; }
     .lista { border-right: 0; }
-    .trilho { background: var(--barra-fundo) !important; border: 1px solid var(--barra-borda) !important; box-shadow: var(--barra-sombra) !important;
-      -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: var(--barra-raio); height: var(--barra-altura); box-sizing: border-box;
-      padding: var(--barra-folga); gap: 4px; align-items: stretch; justify-content: space-between; }
-    .trilho .nav { flex: 1 1 0; min-width: 44px; height: auto; min-height: 44px; margin: 0; padding: 0; border-radius: var(--barra-raio); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
-      color: var(--barra-ic); background: transparent; font-size: var(--barra-rotulo-fs); font-weight: var(--barra-rotulo-peso); --ic-recorte: var(--barra-fundo); }
-    .trilho .nav[hidden] { display: none; }
-    .trilho .nav:hover { background: transparent; }
-    .trilho .nav > svg { width: var(--barra-icone); height: var(--barra-icone); flex: none; }
-    .trilho .nav .rotulo { display: none; }
-    .trilho .nav[aria-current="page"] { flex: 0 0 auto; padding: var(--capsula-pad); background: var(--capsula-fundo); color: var(--capsula-txt); --ic-recorte: var(--capsula-fundo); }
-    .trilho .nav[aria-current="page"] .rotulo { display: block; font-size: var(--barra-rotulo-fs); white-space: nowrap; }
-    .trilho .nav-ia { color: var(--ia-cor); }
-    .trilho .nav-ia[aria-current="page"] { background: var(--capsula-ia-fundo); color: var(--capsula-ia-txt); --ic-recorte: var(--capsula-ia-fundo); }
-    .trilho .nav-ia[aria-current="page"] > svg { color: var(--ia-cor); }
-    .trilho .nav[aria-current="page"] .ic-linhas { stroke-width: 2.4; }
-    .trilho .nav:focus-visible { outline: 2px solid var(--ia-cor); outline-offset: 2px; }
-    .trilho .contador { position: absolute; top: 4px; left: 50%; margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; font-size: 11px; border: 2px solid var(--barra-fundo); }
-    /* na aba ativa o número sai de cima do ícone e entra depois do nome, sem cobrir o texto */
-    .trilho .nav[aria-current="page"] .contador { position: static; margin: 0 0 0 -2px; height: 20px; min-width: 20px; padding: 0 6px; border: 0; font-size: 11.5px; line-height: 20px; box-shadow: none; }
   }
 
   /* quem atende (ao lado do nome) */
@@ -891,6 +840,58 @@
   @media (max-width: 760px) { .acoes-selecao { position: fixed; left: 0; right: 0; bottom: calc(86px + env(safe-area-inset-bottom)); } }
   #tema-cel .ic-sol { display: none; } [data-tema="escuro"] #tema-cel .ic-sol { display: block; } [data-tema="escuro"] #tema-cel .ic-lua { display: none; }
   @media (min-width: 761px) { #tema-cel { display: none !important; } }
+/* imperio: icones padrao (sem cores por item) */
+.mais-ic{background:color-mix(in srgb, var(--texto, #e9edef) 8%, transparent)!important;color:var(--texto, #e9edef)!important;box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--texto, #e9edef) 14%, transparent)}
+.mais-ic svg{opacity:.92}
+.mais-item.perigo .mais-ic{background:rgba(234,0,56,.10)!important;color:#ea0038!important;box-shadow:inset 0 0 0 1px rgba(234,0,56,.22)}
+/* imperio: barra v5 (aba que se abre) */
+:root { --barra-fundo: rgba(255,255,255,.94); --barra-borda: rgba(8,36,63,.10); --barra-icone: #4a6580; --barra-ativa-fundo: #08243f; --barra-ativa-texto: #ffffff; --barra-ia: #106ebe; --barra-sombra: 0 12px 32px rgba(8,36,63,.18); }
+html[data-tema="escuro"] { --barra-fundo: rgba(14,41,69,.94); --barra-borda: rgba(255,255,255,.10); --barra-icone: #c3d3e3; --barra-ativa-fundo: #eaf3fc; --barra-ativa-texto: #08243f; --barra-ia: #0ffcbe; --barra-sombra: 0 14px 36px rgba(0,0,0,.45); }
+@media (max-width: 760px) {
+  .trilho { left: 16px !important; right: 16px !important; height: 64px !important; box-sizing: border-box !important; padding: 0 9px !important; align-items: center !important; justify-content: space-between !important; gap: 0 !important;
+    background: var(--barra-fundo) !important; border: 1px solid var(--barra-borda) !important; box-shadow: var(--barra-sombra) !important; -webkit-backdrop-filter: blur(20px) saturate(1.6) !important; backdrop-filter: blur(20px) saturate(1.6) !important; }
+  .trilho .nav { flex: none !important; box-sizing: border-box !important; height: 46px !important; min-width: 46px !important; margin: 0 !important; padding: 0 12px !important; border-radius: 23px !important;
+    display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 8px !important;
+    background: transparent !important; color: var(--barra-icone) !important; font-weight: 600 !important; transition: background .25s, color .25s, padding .25s; }
+  .trilho .nav[hidden] { display: none !important; }
+  .trilho .nav > svg { width: 22px !important; height: 22px !important; flex: none; }
+  .trilho .nav .rotulo { display: none !important; font-size: 14px !important; line-height: 1 !important; white-space: nowrap; max-width: 88px; overflow: hidden; text-overflow: ellipsis; }
+  .trilho .nav[aria-current="page"] { background: var(--barra-ativa-fundo) !important; color: var(--barra-ativa-texto) !important; padding: 0 16px 0 12px !important; }
+  .trilho .nav[aria-current="page"] .rotulo { display: block !important; }
+  .trilho .nav-ia { margin-top: 0 !important; color: var(--barra-ia) !important; }
+  .trilho .nav-ia .ia-bola { width: 22px !important; height: 22px !important; background: none !important; box-shadow: none !important; color: inherit !important; border-radius: 0 !important; }
+  .trilho .nav-ia .ia-bola svg { width: 22px !important; height: 22px !important; }
+  .trilho .nav-ia[aria-current="page"] { background: linear-gradient(135deg, #1f7fd6, #0b9fb3) !important; color: #ffffff !important; }
+  .trilho .nav .contador { position: absolute !important; top: 3px !important; left: auto !important; right: 2px !important; margin: 0 !important; min-width: 17px !important; height: 17px !important; padding: 0 4px !important; font-size: 10px !important; border: 2px solid var(--barra-fundo) !important; box-shadow: none !important; }
+  .trilho .nav[aria-current="page"] .contador { top: -4px !important; right: -2px !important; }
+  .trilho:has(#nav-equipe:not([hidden])) .nav:not([aria-current="page"]) { padding: 0 9px !important; min-width: 40px !important; }
+}
+/* imperio: barra v5 icones B */
+@media (max-width: 760px) {
+  .trilho .nav[aria-current="page"][data-vista="conversas"] > svg, .trilho .nav[aria-current="page"][data-vista="funil"] > svg, .trilho .nav[aria-current="page"][data-vista="painel"] > svg, .trilho .nav-ia[aria-current="page"] .ia-bola svg { fill: currentColor !important; }
+}
+/* imperio: icones preenchem quando ativos (padrao B) */
+:root { --ic-recorte: #feffff; }
+html[data-tema="escuro"] { --ic-recorte: #254462; }
+.lt-item[aria-current="page"] svg .ic-cheio { fill: currentColor; }
+.lt-item[aria-current="page"] svg .ic-det { stroke: var(--ic-recorte); }
+/* imperio: selo de IA no avatar */
+.avatar.com-selo-ia { position: relative; overflow: visible !important; }
+.avatar.com-selo-ia::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 38%; height: 38%; min-width: 13px; min-height: 13px; max-width: 22px; max-height: 22px; border-radius: 50%; background: #9fd4ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='4 2 16 16'%3E%3Cpath fill='%2308243f' d='M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z'/%3E%3C/svg%3E") center / 60% no-repeat; box-shadow: 0 0 0 2px var(--fundo, #061527); pointer-events: none; }
+/* imperio: contorno de destaque nas fotos de perfil */
+:root { --anel-foto: var(--marca-azul, #106ebe); }
+html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
+.avatar.com-foto, .avatar:has(> img) { box-shadow: 0 0 0 2px var(--anel-foto) !important; }
+/* imperio: presença da equipe */
+.avatar.off-line { box-shadow: 0 0 0 2px #ef4444 !important; }
+.mais-presenca-caixa { margin-bottom: 18px; }
+.pres-chave { width: 44px; height: 26px; border-radius: 999px; background: var(--vidro-item, rgba(128,128,128,.25)); box-shadow: inset 0 0 0 1px var(--vidro-borda, rgba(128,128,128,.3)); position: relative; flex: none; transition: background .2s ease; }
+.pres-chave::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s ease; }
+.mais-presenca[aria-checked="true"] .pres-chave { background: #16a34a; }
+.mais-presenca[aria-checked="true"] .pres-chave::after { transform: translateX(18px); }
+#lt-presenca input:checked + .lt-chave { background: #16a34a; }
+#lt-presenca > svg { color: #16a34a; }
+#lt-presenca.fora > svg { color: #ef4444; }
 </style>
 <link rel="stylesheet" href="/responsivo.css">
 </head>
@@ -928,15 +929,15 @@
     </div>
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
     <nav class="lt-grupos" id="lt-grupos" aria-label="Seções">
-      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path class="ic-cheio" d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
-      <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="3" width="7" height="9" rx="2"/><rect class="ic-cheio" x="14" y="3" width="7" height="5" rx="2"/><rect class="ic-cheio" x="14" y="12" width="7" height="9" rx="2"/><rect class="ic-cheio" x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Dashboard</span></button>
-      <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
-      <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
+      <button class="nav lt-item lt-ia" data-vista="ia" id="lt-ia" title="Inteligência Artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Inteligência Artificial</span><span class="lt-luz"></span></button>
+      <button class="nav lt-item" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M5 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 4h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/></svg><span class="lt-rot">Dashboard</span></button>
+      <button class="nav lt-item" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="lt-rot">Conversas</span><span class="lt-qtd" id="lt-qtd" hidden></span></button>
+      <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
 
       <div class="lt-grupo" data-grupo="crm">
-        <button class="lt-cab" type="button" aria-expanded="false" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="lt-rot">CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="lt-cab" type="button" aria-expanded="false" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M4 4.5h16a.8.8 0 0 1 .6 1.3L14 13.5V19l-4 2v-7.5L3.4 5.8A.8.8 0 0 1 4 4.5Z"/></svg><span class="lt-rot">CRM</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in" id="lt-funis">
-          <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
+          <button class="nav lt-item lt-so-recolhido" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M4 4.5h16a.8.8 0 0 1 .6 1.3L14 13.5V19l-4 2v-7.5L3.4 5.8A.8.8 0 0 1 4 4.5Z"/></svg><span class="lt-rot">CRM</span><span class="lt-ponto" id="lt-ligar" hidden></span></button>
           <button class="so-gestao lt-item lt-novo" id="lt-novo-funil" type="button" title="Criar novo pipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="lt-rot">Criar novo pipeline</span></button>
         </div></div>
       </div>
@@ -992,13 +993,13 @@
   </aside>
   <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
-    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
-    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M3.5 4.5h17l-6.5 8v6l-4 2v-8Z"/></svg><span class="rotulo">CRM</span></button>
-    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path class="ic-cheio" d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg><span class="rotulo">IA</span></button>
-    <button class="nav" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="3" width="7" height="9" rx="2"/><rect class="ic-cheio" x="14" y="3" width="7" height="5" rx="2"/><rect class="ic-cheio" x="14" y="12" width="7" height="9" rx="2"/><rect class="ic-cheio" x="3" y="16" width="7" height="5" rx="2"/></svg><span class="rotulo">Dashboard</span></button>
+    <button class="nav" data-vista="conversas" aria-current="page" title="Conversas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/></svg><span class="rotulo">Conversas</span><span class="contador" id="contador" hidden></span></button>
+    <button class="nav" data-vista="funil" title="CRM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h16a.8.8 0 0 1 .6 1.3L14 13.5V19l-4 2v-7.5L3.4 5.8A.8.8 0 0 1 4 4.5Z"/></svg><span class="rotulo">CRM</span></button>
+    <button class="nav nav-ia" data-vista="ia" title="Inteligência artificial"><span class="ia-bola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg></span><span class="rotulo">IA</span></button>
+    <button class="nav" data-vista="painel" title="Dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 4h4a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z M15 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1Z"/></svg><span class="rotulo">Dashboard</span></button>
     <button class="nav" data-vista="equipe" id="nav-equipe" title="Equipe" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></svg><span class="rotulo">Equipe</span></button>
     <span class="espaco"></span>
-    <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-linhas" d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Mais</span></button>
+    <button class="nav" data-vista="configuracoes" id="nav-config" title="Mais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="rotulo">Mais</span></button>
   </nav>
 
   <div class="area">
@@ -1385,28 +1386,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const post = (url, corpo) => api(url, { method: 'POST', body: JSON.stringify(corpo ?? {}) });
   const toast = (t) => { const e = $('toast'); e.textContent = t; e.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove('ver'), 2800); };
   const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k === 'html') e.innerHTML = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== undefined && v !== null) e.setAttribute(k, v); } for (const f of filhos) if (f != null) e.append(f); return e; };
-  // Iniciais sem parênteses nem símbolos: "Assia (integração)" vira AI.
-  const palavrasNome = (n) => String(n || '').replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(Boolean);
-  const iniciais = (n) => palavrasNome(n).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
-  // Conta de IA (como a Assia): o nome traz "(integração)", "(IA)", "(bot)"... ou é o nome de um agente de IA configurado.
-  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  const nomesAgentesIa = new Set();
-  const ehContaIa = (nome) => {
-    const n = semAcento(nome); if (!n) return false;
-    if (/\((?:[^)]*\b)?(integracao|ia|ai|bot|robo|agente|servico|automacao)\b[^)]*\)/.test(n)) return true;
-    const base = n.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
-    return nomesAgentesIa.has(base);
-  };
-  const SELO_IA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/></svg>';
-  /** Selo azul-claro com estrelas no canto do avatar das contas de IA; pessoas ficam só com as iniciais ou a foto. */
-  const seloIa = (caixa, nome) => {
-    if (!caixa) return caixa;
-    caixa.querySelector(':scope > .selo-ia')?.remove();
-    const ia = ehContaIa(nome);
-    caixa.classList.toggle('conta-ia', ia);
-    if (ia) caixa.append(el('i', { class: 'selo-ia', 'aria-hidden': 'true', html: SELO_IA }));
-    return caixa;
-  };
+  const iniciais = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+  const ehIA = (n) => /(^|\s)assia(\s|$)|\(integra/i.test(String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   const cor = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return CORES[h % CORES.length]; };
   const BONECO = '<svg viewBox="0 0 212 212"><path fill="currentColor" d="M106 106c19.9 0 36-16.1 36-36s-16.1-36-36-36-36 16.1-36 36 16.1 36 36 36Zm0 18c-33.4 0-90 16.7-90 50v24h180v-24c0-33.3-56.6-50-90-50Z" transform="translate(0 14)"/></svg>';
   const semFoto = new Set();
@@ -1522,8 +1503,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   function quemAtende(c) {
     if (c.modo === 'ia') return el('span', { class: 'atende atende-ia', title: 'A IA está atendendo', text: 'IA' });
     if (!c.responsavelId) return '';
-    const n = palavrasNome(c.responsavelNome); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
-    return seloIa(fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId), c.responsavelNome);
+    const n = (c.responsavelNome || '?').trim().split(/\s+/); const ini = ((n[0] || '?')[0] + (n.length > 1 ? n[n.length - 1][0] : '')).toUpperCase();
+    return fotoPessoa(el('span', { class: 'atende' + (c.responsavelId === estado.eu?.id ? ' atende-eu' : ''), title: 'Atendida por ' + (c.responsavelId === estado.eu?.id ? 'você' : c.responsavelNome || 'outra pessoa'), text: ini }), c.responsavelId);
   }
   function desenharLista() {
     const caixa = $('itens'); caixa.replaceChildren();
@@ -2085,8 +2066,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const tempo = el('span', { class: 'tempo', text: duracao(a.duracaoSeg) });
     const botao = el('button', { class: 'tocar', type: 'button', 'aria-label': 'Tocar áudio', html: PLAY });
     const foto = m.autor === 'cliente' ? avatar(c)
-      : m.autor === 'ia' ? el('span', { class: 'avatar', style: 'background:var(--ia)', text: 'IA' })
-      : el('span', { class: 'avatar', style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') });
+      : m.autor === 'ia' ? el('span', { class: 'avatar com-selo-ia', style: 'background:var(--ia)', text: 'IA' })
+      : el('span', { class: 'avatar' + (ehIA(m.autorNome) ? ' com-selo-ia' : ''), style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') });
     const quem = el('span', { class: 'quem-aud' }, foto, el('span', { class: 'selo', html: a.voz ? MIC : NOTA }));
     const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(a.duracaoSeg) || 0);
     const pintar = (p) => {
@@ -2549,7 +2530,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const ehGestor = (u) => ['gerente', 'direcao', 'admin'].includes(u?.papel);
   const nomesUnidades = (l) => (l && l.length ? l.map((u) => UNIDADE[u] || u).join(', ') : '');
   const primeiroNome = (n) => String(n || '').split(/\s+/)[0];
-  const avatarPessoa = (nome, classe = 'p', id) => seloIa(fotoPessoa(el('span', { class: 'avatar ' + classe, text: iniciais(nome), style: `background:${cor(nome)}` }), id), nome);
+  const avatarPessoa = (nome, classe = 'p', id) => fotoPessoa(el('span', { class: 'avatar ' + classe + (ehIA(nome) ? ' com-selo-ia' : ''), 'data-pessoa': id || '', text: iniciais(nome), style: `background:${cor(nome)}` }), id);
 
   function fecharConversa(aviso) {
     estado.aberta = null; estado.detalhe = null; estado.assinatura = '';
@@ -2923,7 +2904,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     // ---------- CRM: um item por pipeline (funil), vindos de /api/funis ----------
     const caixaFunis = $('lt-funis');
     let funis = [], funisEm = 0, assinatura = '';
-    const ICONE_FUNIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect class="ic-cheio" x="3" y="4" width="5" height="16" rx="1.5"/><rect class="ic-cheio" x="10" y="4" width="5" height="11" rx="1.5"/><rect class="ic-cheio" x="17" y="4" width="4" height="7" rx="1.5"/></svg>'; // cada pipeline: quadro de colunas
+    const ICONE_FUNIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M4.5 4h2A1.5 1.5 0 0 1 8 5.5v13A1.5 1.5 0 0 1 6.5 20h-2A1.5 1.5 0 0 1 3 18.5v-13A1.5 1.5 0 0 1 4.5 4Z M11.5 4h2A1.5 1.5 0 0 1 15 5.5v8a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 10 13.5v-8A1.5 1.5 0 0 1 11.5 4Z M18.5 4h1A1.5 1.5 0 0 1 21 5.5v4a1.5 1.5 0 0 1-1.5 1.5h-1A1.5 1.5 0 0 1 17 9.5v-4A1.5 1.5 0 0 1 18.5 4Z"/></svg>';
     function marcarFunil() {
       const atual = estado.vista === 'funil' ? (window.SintoniaTelas?.funil?.atual?.() || funis[0]?.id) : null;
       for (const b of caixaFunis.querySelectorAll('[data-funil]')) {
@@ -3008,7 +2989,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   addEventListener('tema', sincronizarNoite); sincronizarNoite();
   function preencherLateral() {
     const eu = estado.eu; if (!eu) return;
-    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-avatar').querySelector('img')?.remove(); fotoPessoa($('lt-avatar'), eu.id); seloIa($('lt-avatar'), eu.nome); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
+    $('lt-avatar').textContent = iniciais(eu.nome); $('lt-avatar').classList.toggle('com-selo-ia', ehIA(eu.nome)); $('lt-avatar').dataset.pessoa = eu.id || ''; $('lt-avatar').querySelector('img')?.remove(); fotoPessoa($('lt-avatar'), eu.id); $('lt-eu-nome').textContent = eu.nome; $('lt-eu-email').textContent = eu.email;
     document.querySelectorAll('#lateral .so-relatorios').forEach((e) => { e.hidden = !eu.permissoes?.relatorios; });
     document.querySelectorAll('#lateral .so-gestao').forEach((e) => { e.hidden = !ehGestor(eu); });
     document.querySelectorAll('#lateral .so-admin').forEach((e) => { e.hidden = !['admin', 'direcao'].includes(eu.papel); });
@@ -3027,8 +3008,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('nav-config').title = `Conta · ${estado.eu.nome}`;
     preencherLateral();
     $('nav-equipe').hidden = true;
-    // Nomes dos agentes de IA (só a gestão lê): contas com esses nomes ganham o selo de IA no avatar.
-    if (ehGestor(estado.eu)) api('/api/agentes-ia').then((d) => { for (const a of d?.agentes || []) if (a?.nome) nomesAgentesIa.add(semAcento(a.nome)); seloIa($('lt-avatar'), estado.eu.nome); }).catch(() => {});
     estado.situacao = await api('/api/situacao').catch(() => ({}));
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
@@ -3120,5 +3099,77 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/acessos.js" defer></script>
 <script src="/telas/clientes.js" defer></script>
 <script src="/telas/respostas.js" defer></script>
+<script>
+// imperio: presença da equipe (disponível / fora do ar)
+(() => {
+  const PONTO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg>';
+  let mapa = {}, eu = null, t = 0;
+  const ligado = () => mapa[eu] !== 'offline';
+  function marcar() {
+    document.querySelectorAll('.avatar[data-pessoa]').forEach((a) => {
+      const id = a.dataset.pessoa;
+      a.classList.toggle('off-line', !!id && mapa[id] === 'offline' && !a.classList.contains('com-selo-ia'));
+    });
+    const on = ligado();
+    const chk = document.getElementById('lt-online');
+    if (chk && chk.checked !== on) chk.checked = on;
+    const lt = document.getElementById('lt-presenca');
+    if (lt) lt.classList.toggle('fora', !on);
+    document.querySelectorAll('.mais-presenca').forEach((b) => {
+      b.setAttribute('aria-checked', String(on));
+      b.querySelector('.mais-ic').style.setProperty('--cor', on ? '#16a34a' : '#ef4444');
+      const s = b.querySelector('small');
+      if (s) s.textContent = on ? 'Você aparece disponível para a equipe' : 'Você aparece fora do ar (borda vermelha)';
+    });
+  }
+  async function definir(on) {
+    if (!eu) return;
+    mapa[eu] = on ? 'online' : 'offline';
+    marcar();
+    try {
+      const r = await fetch('/api/presenca', { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status: on ? 'online' : 'offline' }) });
+      if (!r.ok) throw new Error();
+    } catch { carregar(); }
+  }
+  function montar() {
+    if (!eu) return;
+    const noite = document.querySelector('.lateral .lt-noite:not(#lt-presenca)');
+    if (noite && !document.getElementById('lt-presenca')) {
+      const l = noite.cloneNode(true);
+      l.id = 'lt-presenca';
+      l.title = 'Disponível para atender';
+      const svg = l.querySelector('svg'); if (svg) svg.outerHTML = PONTO;
+      const rot = l.querySelector('.lt-rot'); if (rot) rot.textContent = 'Disponível';
+      const i = l.querySelector('input'); i.id = 'lt-online'; i.checked = ligado();
+      i.addEventListener('change', () => definir(i.checked));
+      noite.after(l);
+    }
+    document.querySelectorAll('.mais-perfil').forEach((p) => {
+      if (p.nextElementSibling && p.nextElementSibling.classList.contains('mais-presenca-caixa')) return;
+      const caixa = document.createElement('div');
+      caixa.className = 'mais-lista mais-presenca-caixa';
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'mais-item mais-presenca'; b.setAttribute('role', 'switch');
+      b.innerHTML = '<i class="mais-ic">' + PONTO + '</i><span class="mais-txt"><b>Disponível para atender</b><small></small></span><span class="pres-chave" aria-hidden="true"></span>';
+      b.addEventListener('click', () => definir(!ligado()));
+      caixa.append(b);
+      p.after(caixa);
+    });
+  }
+  async function carregar() {
+    try {
+      const r = await fetch('/api/presenca', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      const j = await r.json();
+      mapa = j.status || {}; eu = j.eu;
+      montar(); marcar();
+    } catch {}
+  }
+  new MutationObserver(() => { clearTimeout(t); t = setTimeout(() => { montar(); marcar(); }, 150); }).observe(document.body, { childList: true, subtree: true });
+  carregar();
+  setInterval(carregar, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
+})();
+</script>
 </body>
 </html>

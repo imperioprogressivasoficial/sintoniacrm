@@ -75,30 +75,57 @@ try {
   const iniciar = `cd /home/node && { [ -f ${marca} ] || { ${instalar}; }; } && cd /home/node/app && exec node dist/app/sintonia.mjs`;
   if (iniciar.includes('$') || iniciar.includes('"')) throw new Error('comando não pode ter $ ou aspas duplas');
 
+  // Ligação com a Evolution (WhatsApp), que roda no projeto do Espaço Rainha: o app entra na rede dela e lê a chave
+  // de um arquivo no volume do Espaço Rainha (a chave nunca entra no código nem na receita). EVOLUTION_REDE= (vazio) desliga.
+  // O que for salvo em Mais › Conexões (endereço e chave da Evolution) vale por cima disto.
+  const REDE_EVOLUTION = process.env.EVOLUTION_REDE ?? 'rainha-saas_default';
+  const VOLUME_CHAVE = process.env.EVOLUTION_VOLUME_CHAVE ?? 'rainha-saas_app';
+  const comEvolution = Boolean(REDE_EVOLUTION);
+  // Presença da equipe (disponível / fora do ar): serviço pequeno à parte (deploy/presenca). PRESENCA=0 desliga.
+  const comPresenca = process.env.PRESENCA !== '0';
+  const presencaB64 = readFileSync(path.join(raiz, 'deploy/presenca/presenca.mjs')).toString('base64');
+  // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
+  const hostBanco = comEvolution ? 'sintonia-db' : 'db';
+
   process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
-  app:
+${comEvolution ? `  chave-evolution:
+    image: alpine:3.20
+    restart: "no"
+    user: root
+    volumes:
+      - rainha_app:/rainha:ro
+      - chave:/chave
+    command: ["sh", "-c", "cp /rainha/evolution/api.key /chave/evolution.key && chown 1000:1000 /chave/evolution.key && chmod 400 /chave/evolution.key"]
+
+` : ''}  app:
     image: node:22-alpine
     restart: unless-stopped
     user: node
     depends_on:
       db:
         condition: service_healthy
-    command: ["sh", "-c", "${iniciar}"]
+${comEvolution ? `      chave-evolution:
+        condition: service_completed_successfully
+` : ''}    command: ["sh", "-c", "${iniciar}"]
     environment:
       NODE_ENV: production
       PORT: "3333"
-      DATABASE_URL: postgres://sintonia:${senha}@db:5432/sintonia
-      COOKIE_SEGURO: "1"
+      DATABASE_URL: postgres://sintonia:${senha}@${hostBanco}:5432/sintonia
+      # Chave que protege as conexões salvas: sempre o endereço original do banco, mesmo se o nome do banco mudar.
+      SINTONIA_SEGREDO: postgres://sintonia:${senha}@db:5432/sintonia
+${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
+      EVOLUTION_API_KEY_ARQUIVO: /chave/evolution.key
+` : ''}      COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
       SINTONIA_URL_PUBLICA: https://${DOMINIO}
 ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node
-    networks:
+${comEvolution ? '      - chave:/chave:ro\n' : ''}    networks:
       - interna
-    healthcheck:
+${comEvolution ? '      - evolution\n' : ''}    healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3333/saude || exit 1"]
       interval: 30s
       timeout: 5s
@@ -106,6 +133,7 @@ ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Admi
       start_period: 120s
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=sintonia_interna"
       - "traefik.http.routers.sintonia.rule=Host(\`${DOMINIO}\`)"
       - "traefik.http.routers.sintonia.entrypoints=websecure"
       - "traefik.http.routers.sintonia.tls.certresolver=letsencrypt"
@@ -121,23 +149,57 @@ ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Admi
     volumes:
       - banco:/var/lib/postgresql/data
     networks:
-      - interna
+      interna:
+        aliases:
+          - sintonia-db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sintonia -d sintonia"]
       interval: 5s
       timeout: 3s
       retries: 20
-
+${comPresenca ? `
+  presenca:
+    image: node:22-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    environment:
+      APP_URL: http://app:3333
+      ORIGEM: https://${DOMINIO}
+      S: ${presencaB64}
+    command: ["sh", "-c", "echo $$S | base64 -d > /srv/presenca.mjs && node /srv/presenca.mjs"]
+    volumes:
+      - presenca:/dados
+    networks:
+      - interna
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=sintonia_interna"
+      - "traefik.http.routers.sintonia-presenca.rule=Host(\`${DOMINIO}\`) && Path(\`/api/presenca\`)"
+      - "traefik.http.routers.sintonia-presenca.entrypoints=websecure"
+      - "traefik.http.routers.sintonia-presenca.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.sintonia-presenca.priority=1000"
+      - "traefik.http.services.sintonia-presenca.loadbalancer.server.port=3400"
+` : ''}
 volumes:
   banco:
     name: sintonia_banco
   app:
     name: sintonia_app
-
+${comEvolution ? `  chave:
+    name: sintonia_chave_evolution
+  rainha_app:
+    external: true
+    name: ${VOLUME_CHAVE}
+` : ''}${comPresenca ? `  presenca:
+    name: sintonia_presenca
+` : ''}
 networks:
   interna:
     name: sintonia_interna
-`);
+${comEvolution ? `  evolution:
+    external: true
+    name: ${REDE_EVOLUTION}
+` : ''}`);
 } finally {
   rmSync(pasta, { recursive: true, force: true });
 }

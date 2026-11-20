@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import type { UnidadeId } from './domain.js';
 
@@ -8,6 +9,8 @@ const Env = z.object({
   SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('low'),
   EVOLUTION_URL: z.string().url().optional(),
   EVOLUTION_API_KEY: z.string().optional(),
+  /** Arquivo com a chave da Evolution (lida de um volume no servidor); só vale se EVOLUTION_API_KEY não vier. */
+  EVOLUTION_API_KEY_ARQUIVO: z.string().optional(),
   EVOLUTION_WEBHOOK_TOKEN: z.string().optional(),
   META_TOKEN: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
@@ -48,7 +51,18 @@ export function lerConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const e = Env.parse(env);
   return {
     ...e,
+    EVOLUTION_API_KEY: e.EVOLUTION_API_KEY || lerChaveDeArquivo(e.EVOLUTION_API_KEY_ARQUIVO),
     numeros: NumerosConfig.parse(JSON.parse(e.SINTONIA_NUMEROS)),
     destinosRelatorio: e.RELATORIO_DESTINOS.split(',').map((s) => s.trim()).filter(Boolean),
   };
+}
+
+/** Lê uma chave guardada num arquivo (primeira linha, sem espaços). Sem arquivo ou vazio: undefined. */
+export function lerChaveDeArquivo(caminho?: string): string | undefined {
+  if (!caminho) return undefined;
+  try {
+    return readFileSync(caminho, 'utf8').trim() || undefined;
+  } catch {
+    return undefined;
+  }
 }
