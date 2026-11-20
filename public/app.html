@@ -3246,7 +3246,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
       troca(a, 'pres-eu', minha);
       troca(a, 'pres-on', !!id && !ia && mapa[id] !== 'offline' && (minha || !!a.closest('#equipe, #v-equipe, .lista-equipe')));
     });
-    pilulas(on);
+    if (eu) pilulas(on); // sem o serviço de presença (eu desconhecido) não mostra selo
     if (mudou) document.querySelectorAll('.avatar.pres-eu, .pres-pilula').forEach((x) => { x.classList.remove('pres-pulso'); void x.offsetWidth; x.classList.add('pres-pulso'); setTimeout(() => x.classList.remove('pres-pulso'), 800); });
     const chk = document.getElementById('lt-online');
     if (chk && chk.checked !== on) chk.checked = on;
