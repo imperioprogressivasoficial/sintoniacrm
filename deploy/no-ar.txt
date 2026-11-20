@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-20 20:25 UTC (20/11, 17h25 na Bahia)
-commit: ff41414
-pacote sha256: cb81cbfba0b461ac3a810b64a94543b2f99d2f43efb8b53fbf2e8b19611ba65b
-quem: Claude (conta do Bruno, Max), com o ok do dono
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ff41414.b64); pode apagar depois.
-observação: em cima do 4bcbe20. Entra: gestos nas Conversas (claude/conversas-gestos, migração 400): arrastar para os lados, segurar para prévia, botão direito no computador.
+data: 2026-11-20 21:55 UTC (20/11, 18h55 na Bahia)
+commit: 963e38f
+pacote sha256: 205ac90bb0156df01efa2e75d89828c6f469bab77658848bd9f4c06befb693ce
+quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-963e38f.b64); pode apagar depois.
+observação: em cima do ebf8b21. Entra: cronômetro de espera na lista de Conversas (public/telas/espera-selo.js; branco/amarelo 10 min/vermelho 1 h/verde finalizado; /api/conversas traz finalizadaEm) e foto da Serena embutida (abre na hora).

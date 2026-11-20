@@ -42,6 +42,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
+- **20/11 18h55 (Bahia):** no ar 963e38f — cronômetro de espera na lista (espera-selo.js) e foto da Serena embutida. Agente `fluidez` (branch claude/fluidez) ainda trabalhando: juntar, testar e publicar.
 **Última atualização:** 20/11/2026, 02h10 (Bahia) — Claude da conta do Bruno (Max).
 
 - **No ar:** `producao` = d619be0 ("Configurações" na barra); antes 78d9777 (ver `deploy/no-ar.txt`): Dashboard novo, consertos da auditoria, transcrição grátis,
