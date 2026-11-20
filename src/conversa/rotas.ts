@@ -10,7 +10,10 @@ import { DadosResposta, ErroAtalhoRepetido, type ArmazemRespostas, type Resposta
 import { ErroTranscricao, type ArmazemTranscricoes, type Transcritor } from './transcricao.js';
 import { ACOES_IA, ajudarComIa, ErroAssistente } from './assistente.js';
 import { relatorioDaConversa } from './relatorio.js';
-import { conversarComIa, LIMITE_TEXTO } from './chat-ia.js';
+import { conversarComIa, LIMITE_IMAGEM_B64, LIMITE_TEXTO, TIPOS_IMAGEM } from './chat-ia.js';
+import { quemLigar } from '../app/ligacoes.js';
+import { resumoSerena, type ControleSerena } from '../serena/resumo.js';
+import { pode } from '../auth/permissoes.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
@@ -42,6 +45,8 @@ export interface OpcoesConversa {
   canalDa: (unidade: UnidadeId) => { canalId: string } | { erro: string };
   /** Modo em que a conversa criada aqui nasce. */
   modoInicial?: () => Promise<ModoAtendimento>;
+  /** "IA atende primeiro" por unidade (agentes de IA), para a tela Serena mostrar se ela está ligada. */
+  controleIa?: () => Promise<ControleSerena>;
 }
 
 const UNIDADE = z.enum(['norte', 'sumare', 'feira']);
@@ -195,28 +200,39 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     }
   });
 
-  // ------------------------------------------------------------ chat "Ajuda da IA" (bolinha de acesso rápido)
+  // ------------------------------------------------------------ tela Serena: resumo barato (não chama a IA)
+  app.get('/api/serena/resumo', async (req) => {
+    const ve = (c: Conversa) => c.empresaId === o.empresaId && visivel(req, c);
+    const controle = o.controleIa ? await o.controleIa().catch(() => null) : null;
+    return resumoSerena(o.repo, agora(), ve, { controle, podeLigar: pode(req, 'agentes_ia') });
+  });
+
+  // ------------------------------------------------------------ chat da Serena (botão do meio; antes "Ajuda da IA")
+  const Imagem = z.object({ tipo: z.enum(TIPOS_IMAGEM), dados: z.string().min(1).max(LIMITE_IMAGEM_B64, 'A imagem ficou grande demais. Mande um print menor.').regex(/^[A-Za-z0-9+/]+={0,2}$/, 'Imagem inválida.') });
   const PedidoChat = z.object({
     mensagens: z
-      .array(z.object({ papel: z.enum(['usuario', 'ia']), texto: z.string().max(LIMITE_TEXTO * 3) }))
+      .array(z.object({ papel: z.enum(['usuario', 'ia']), texto: z.string().max(LIMITE_TEXTO * 3), imagem: Imagem.optional() }))
       .min(1)
       .max(200),
   });
-  app.post('/api/ia/chat', async (req) => {
+  // Serena (botão do meio): o mesmo chat; aceita um print/foto na última pergunta (por isso o corpo maior).
+  app.post('/api/ia/chat', { bodyLimit: 3 * 1024 * 1024 }, async (req) => {
     const b = PedidoChat.parse(req.body);
     const ultima = b.mensagens.at(-1)!;
-    if (ultima.papel !== 'usuario' || !ultima.texto.trim()) throw erro('Escreva sua pergunta.', 400);
+    if (ultima.papel !== 'usuario' || (!ultima.texto.trim() && !ultima.imagem)) throw erro('Escreva sua pergunta.', 400);
+    if (b.mensagens.slice(0, -1).some((m) => m.imagem)) throw erro('Só a última pergunta pode levar imagem.', 400);
     if (ultima.texto.length > LIMITE_TEXTO) throw erro(`A pergunta ficou longa demais (máximo ${LIMITE_TEXTO} letras).`, 400);
     if (!o.ia || !o.ia.ligada()) throw erro('A IA está desligada: configure a chave da IA (Anthropic) em Conexões.', 501, { codigo: 'sem_chave' });
     const ag = agora();
     const ve = (c: Conversa) => c.empresaId === o.empresaId && visivel(req, c);
     const p = partesBahia(ag);
     const inicioHoje = bahia(p.ano, p.mes, p.dia);
-    const [baseConhecimento, hoje, todas, agenda] = await Promise.all([
+    const [baseConhecimento, hoje, todas, agenda, ligar] = await Promise.all([
       o.ia.base().catch(() => ''),
       iaHoje(o.repo, ag, ve),
       o.repo.listarConversas(),
       agendamentosEntre(o.repo, inicioHoje, new Date(inicioHoje.getTime() + 2 * DIA), { ...escopoDe(req.usuario), empresaId: o.empresaId }).catch(() => []),
+      quemLigar(o.repo, ag, ve).catch(() => undefined),
     ]);
     const esperando = todas.filter(ve).filter((c) => {
       const cli = c.ultimaMensagemCliente?.getTime() ?? 0;
@@ -230,6 +246,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
         hoje,
         esperando,
         agenda,
+        ligar,
       });
     } catch (e) {
       if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);

@@ -635,6 +635,7 @@ registrarConversa(app, {
     return { erro: 'Esta unidade ainda não tem WhatsApp conectado. Conecte o número em Conexões.' };
   },
   modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+  controleIa: () => agentesIa.servico.controle(),
 });
 
 // Dados de demonstração: só administração e direção (src/demo/rotas.ts).

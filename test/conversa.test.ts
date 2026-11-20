@@ -13,6 +13,8 @@ import { ErroTranscricao, TranscricoesMemoria, TranscricoesPostgres, Transcritor
 import { separarMensagem } from '../src/conversa/assistente.js';
 import type { ClienteClaude } from '../src/ai/agente.js';
 import { poolDeTeste, temPostgres } from './repos.js';
+import { precisaDeVoce, type ControleSerena } from '../src/serena/resumo.js';
+import { imagemValida, paraMensagensClaude } from '../src/conversa/chat-ia.js';
 
 /** Whisper de mentira: nunca chama a rede; conta quantas vezes foi chamado. */
 class TranscritorFalso implements Transcritor {
@@ -50,6 +52,7 @@ interface Montagem {
   semChaveOpenAI?: boolean;
   iaLigada?: boolean;
   textoIa?: string;
+  controle?: ControleSerena;
 }
 
 async function montar(m: Montagem = {}) {
@@ -85,6 +88,7 @@ async function montar(m: Montagem = {}) {
     ia: { claude: ia.claude, modelo: 'claude-opus-5-5', base: async () => 'Progressiva: R$ 180.', ligada: () => m.iaLigada !== false },
     canalDa: (u) => (u === 'norte' ? { canalId: 'teste-norte' } : { erro: 'Esta unidade ainda não tem WhatsApp conectado.' }),
     modoInicial: async () => 'humano',
+    controleIa: m.controle ? async () => m.controle! : undefined,
   });
   const entrar = async (email: string) =>
     String((await app.inject({ method: 'POST', url: '/api/auth/entrar', payload: { email, senha: 'Imperio2026xyz' } })).headers['set-cookie']).split(';')[0]!;
@@ -425,5 +429,95 @@ describe('Chat "Ajuda da IA" (bolinha)', () => {
     expect(r.statusCode).toBe(501);
     expect(r.json().erro).toMatch(/chave da IA \(Anthropic\) em Conexões/);
     expect(ia.pedidos).toHaveLength(0);
+  });
+});
+
+describe('Serena (botão do meio)', () => {
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+  it('resumo: não chama a IA, respeita o que a pessoa vê e junta quem precisa da equipe', async () => {
+    const { app, repo, norte, sumare, carla, admin, ia } = await montar({ controle: { norte: { ligado: true, agenteId: 'a1' }, sumare: { ligado: false } } });
+    expect((await app.inject({ method: 'GET', url: '/api/serena/resumo' })).statusCode).toBe(401);
+    const agora = Date.now();
+    // Juliana (Norte) espera a equipe há 15 min; Bia (Sumaré) foi passada pela Serena há 5 min.
+    await repo.salvarConversa({ ...norte, modo: 'humano', ultimaMensagemCliente: new Date(agora - 15 * 60_000) });
+    await repo.salvarConversa({ ...sumare, modo: 'humano', ultimaMensagemIa: new Date(agora - 6 * 60_000) });
+    await repo.registrarEvento({ tipo: 'passou_para_humano', conversaId: sumare.id, unidade: 'sumare', em: new Date(agora - 5 * 60_000), dados: { motivo: 'Quer desconto na progressiva.' } });
+    await repo.registrarEvento({ tipo: 'ia_respondeu', conversaId: sumare.id, unidade: 'sumare', em: new Date(agora - 6 * 60_000), dados: { tempoRespostaMs: 40_000 } });
+    await repo.registrarEvento({ tipo: 'agendamento_ia', conversaId: sumare.id, unidade: 'sumare', em: new Date(agora - 6 * 60_000), dados: {} });
+    await repo.registrarEvento({ tipo: 'lembrete_ligacao', conversaId: norte.id, unidade: 'norte', em: new Date(agora - 60_000), dados: { quando: new Date(agora + 2 * 3600_000).toISOString(), texto: 'Ligar para confirmar' } });
+
+    const r = await app.inject({ method: 'GET', url: '/api/serena/resumo', headers: { cookie: admin } });
+    expect(r.statusCode).toBe(200);
+    const b = r.json();
+    expect(b.ligada).toBe(true);
+    expect(b.podeLigar).toBe(true);
+    expect(b.unidades).toEqual([expect.objectContaining({ unidade: 'norte', ligada: true }), expect.objectContaining({ unidade: 'sumare', ligada: false })]);
+    expect(b.precisa.total).toBe(2);
+    // A passagem da Serena vem primeiro, com o motivo dela.
+    expect(b.precisa.lista[0]).toMatchObject({ conversaId: sumare.id, tipo: 'passou', motivo: 'Quer desconto na progressiva.' });
+    expect(b.precisa.lista[1]).toMatchObject({ conversaId: norte.id, tipo: 'esperando', motivo: 'Sem resposta há 15 min.' });
+    expect(b.hoje).toEqual({ marcados: 1, respostas: 1, conversas: 1, tempoMedioSeg: 40 });
+    expect(b.agendado.total).toBe(1);
+    expect(b.agendado.proximas[0]).toMatchObject({ conversaId: norte.id, texto: 'Ligar para confirmar' });
+    expect(ia.pedidos).toHaveLength(0);
+
+    // Carla é do Norte: não vê a Bia, e não liga/desliga a Serena.
+    const c = (await app.inject({ method: 'GET', url: '/api/serena/resumo', headers: { cookie: carla } })).json();
+    expect(c.precisa.lista.map((x: { conversaId: string }) => x.conversaId)).toEqual([norte.id]);
+    expect(c.hoje.respostas).toBe(0);
+    expect(c.podeLigar).toBe(false);
+  });
+
+  it('resumo sem os agentes de IA: status desconhecido; quem a equipe já respondeu sai da lista', async () => {
+    const { app, repo, norte, admin } = await montar();
+    const agora = Date.now();
+    await repo.salvarConversa({ ...norte, modo: 'humano', ultimaMensagemCliente: new Date(agora - 30 * 60_000), ultimaMensagemEquipe: new Date(agora - 60_000) });
+    const b = (await app.inject({ method: 'GET', url: '/api/serena/resumo', headers: { cookie: admin } })).json();
+    expect(b.ligada).toBeNull();
+    expect(b.podeLigar).toBe(false);
+    expect(b.precisa.total).toBe(0);
+  });
+
+  it('precisaDeVoce ignora espera curta, conversa com a IA e passagem já respondida', () => {
+    const agora = new Date();
+    const base = { empresaId: 'imperio', canalId: 'x', etapa: 'em_conversa' as const, etiquetas: [] as string[], criadaEm: agora, atualizadaEm: agora };
+    const lista = precisaDeVoce(
+      [
+        { ...base, id: 'a', unidade: 'norte', telefone: '1', modo: 'humano', ultimaMensagemCliente: new Date(agora.getTime() - 5 * 60_000) },
+        { ...base, id: 'b', unidade: 'norte', telefone: '2', modo: 'ia', ultimaMensagemCliente: new Date(agora.getTime() - 50 * 60_000) },
+        { ...base, id: 'c', unidade: 'norte', telefone: '3', modo: 'humano', ultimaMensagemEquipe: new Date(agora.getTime() - 60_000) },
+      ],
+      [{ tipo: 'passou_para_humano', conversaId: 'c', em: new Date(agora.getTime() - 10 * 60_000) }],
+      agora,
+    );
+    expect(lista).toEqual([]);
+  });
+
+  it('chat: a resposta traz as clientes citadas (só as do contexto) e a pergunta pode levar um print', async () => {
+    const { app, repo, norte, carla, ia } = await montar({ textoIa: 'Ligue para:\n- Juliana Lima [[c1]]: esperando resposta\n- Fulana [[c9]]' });
+    await repo.salvarConversa({ ...norte, ultimaMensagemCliente: new Date(Date.now() - 12 * 60_000) });
+    const r = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'Quem eu ligo hoje?', imagem: { tipo: 'image/png', dados: PNG } }] } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().clientes).toEqual({ c1: { conversaId: norte.id, nome: 'Juliana Lima', unidade: 'norte' } });
+    const pedido = ia.pedidos.at(-1)! as unknown as { system: Array<{ text: string }>; messages: Array<{ role: string; content: unknown }> };
+    const sistema = pedido.system.map((s) => s.text).join('\n');
+    expect(sistema).toContain('Você é a Serena');
+    expect(sistema).toMatch(/- Juliana Lima · .* · ref c1/);
+    expect(sistema).toContain('<quem_ligar_hoje');
+    expect(pedido.messages).toEqual([{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: PNG } }, { type: 'text', text: 'Quem eu ligo hoje?' }] }]);
+    // Imagem só na última pergunta; tipo e conteúdo conferidos.
+    const antiga = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'oi', imagem: { tipo: 'image/png', dados: PNG } }, { papel: 'ia', texto: 'oi!' }, { papel: 'usuario', texto: 'e aí?' }] } });
+    expect(antiga.statusCode).toBe(400);
+    const gif = await app.inject({ method: 'POST', url: '/api/ia/chat', headers: { cookie: carla }, payload: { mensagens: [{ papel: 'usuario', texto: 'oi', imagem: { tipo: 'image/gif', dados: PNG } }] } });
+    expect(gif.statusCode).toBe(400);
+  });
+
+  it('só a imagem, sem texto, também vale (e imagem inválida é ignorada na montagem)', () => {
+    const PNG2 = PNG;
+    const m = paraMensagensClaude([{ papel: 'usuario', texto: '', imagem: { tipo: 'image/png', dados: PNG2 } }]);
+    expect(m[0]!.content).toEqual([expect.objectContaining({ type: 'image' }), { type: 'text', text: 'O que você vê nesta imagem? Me ajude com ela.' }]);
+    expect(imagemValida({ tipo: 'image/png', dados: 'não é base64!' })).toBe(false);
+    expect(paraMensagensClaude([{ papel: 'usuario', texto: 'oi', imagem: { tipo: 'image/png', dados: '%%%' } }])).toEqual([{ role: 'user', content: 'oi' }]);
   });
 });
