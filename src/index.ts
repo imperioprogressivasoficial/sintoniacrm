@@ -107,6 +107,12 @@ import { registrarRadar } from './radar/rotas.js';
 import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
 import { ChatEquipe } from './equipe/chat.js';
 import { avisoPorPush, registrarChatEquipe } from './equipe/rotas.js';
+/* empresa-conta: menu Empresa (dados, unidades, produtos e serviços, tabelas de preço, documentos) e Conta (perfil) */
+import { ArmazemCadastroMemoria, ArmazemCadastroPostgres, horarioDeFaixas } from './empresa/cadastro.js';
+import { registrarCadastro } from './empresa/cadastro-rotas.js';
+import { precosDoCadastro } from './empresa/precos-comercial.js';
+import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
+import { UNIDADES_EQUIPE } from './auth/acesso.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -644,7 +650,29 @@ const extras = montarExtras({
 const agendaExterna = new AgendaExterna({ roteador: agendas, log });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas, agendaExterna });
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
-const armazemComercial = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
+/* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços */
+const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
+const armazemComercialBase = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
+const armazemComercial = precosDoCadastro(armazemComercialBase, armazemCadastro);
+registrarCadastro(app, {
+  armazem: armazemCadastro,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  empresa,
+  // Os nomes que o app já mostrava (public/app.html, UNIDADE): a partir daqui, mudam em Empresa › Unidades.
+  unidadesPadrao: [
+    { id: 'norte', nome: 'Salvador Norte', horario: horarioDeFaixas(UNIDADES.norte.horario) },
+    { id: 'sumare', nome: 'Sumaré', horario: horarioDeFaixas(UNIDADES.sumare.horario) },
+    { id: 'feira', nome: 'Feira de Santana', horario: null, ativa: true },
+  ],
+  idsFixos: UNIDADES_EQUIPE,
+  // A tabela antiga, sem a mistura com os produtos (é ela que é copiada).
+  precosComercial: async (id) => (await armazemComercialBase.ler(id)).cfg.precos,
+});
+registrarConta(app, {
+  contas,
+  perfis: pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria(),
+  trocarEmail: pool ? trocarEmailPostgres(pool) : contas instanceof ContasMemoria ? trocarEmailMemoria(contas) : undefined,
+});
 registrarComercial(app, {
   armazem: armazemComercial,
   fonte: pool ? new FonteComercialPostgres(pool) : new FonteComercialMemoria(repo),
