@@ -209,6 +209,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     document.body.append(faixa);
   }
   function desenharFaixa() {
+    // O dono não quer a faixa vermelha no topo (20/11): o aviso fica no sino, no som e no Radar/Esperando.
+    if (faixa) faixa.hidden = true;
+    document.body.classList.remove('esp-com-faixa');
+    return;
     if (!faixa) montarFaixa();
     const itens = esp.itens;
     if (!itens.length) { faixa.hidden = true; document.body.classList.remove('esp-com-faixa'); fecharMenu(); return; }

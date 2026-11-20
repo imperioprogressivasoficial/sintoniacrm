@@ -30,7 +30,7 @@
     proposta: { nome: 'Enviar proposta', info: 'Abre a conversa para mandar a proposta' },
   };
   const MODOS = [
-    ['foco', 'Foco', 'Foco: uma etapa por vez', 'Foco · uma etapa, a próxima cliente em destaque'],
+    ['foco', 'Foco', 'Foco: uma cliente por vez', 'Foco · uma cliente por vez, por prioridade'],
     ['lista', 'Lista', 'Lista: todas de uma vez', 'Lista · todas, quem precisa de você primeiro'],
     ['colunas', 'Colunas', 'Colunas: uma coluna por etapa', 'Colunas · uma coluna por etapa'],
   ];
@@ -154,6 +154,47 @@
   .fc-carregar { all: unset; box-sizing: border-box; cursor: pointer; flex: none; text-align: center; padding: 11px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--marca-azul); background: var(--fc-leve); }
   html[data-tema="escuro"] .fc-carregar { color: var(--marca-menta); }
 
+  /* foco: baralho */
+  .fc-deck { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 0 16px calc(104px + env(safe-area-inset-bottom)); }
+  .fc-deck-cab { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; }
+  .fc-deck-tit { font-size: 13px; color: var(--sub); }
+  .fc-deck-nav { display: flex; align-items: center; gap: 6px; }
+  .fc-deck-nav .fc-seta { width: 32px; height: 32px; }
+  .fc-deck-n { font-size: 13px; font-weight: 650; color: var(--sub); font-variant-numeric: tabular-nums; }
+  .fc-filtro { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 650; background: var(--fc-leve); }
+  .fc-filtro i, .fc-etq i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .fc-filtro span { color: var(--sub); font-size: 11px; }
+  .fc-pilha { flex: 1; min-height: 0; position: relative; display: flex; }
+  .fc-fundo { position: absolute; left: 14px; right: 14px; top: 10px; bottom: -10px; border-radius: 26px; background: var(--fc-card); box-shadow: inset 0 0 0 1px var(--fc-card-b); opacity: .55; }
+  .fc-fundo.f2 { left: 28px; right: 28px; top: 20px; bottom: -20px; opacity: .3; }
+  .fc-carta { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 26px; cursor: grab; touch-action: pan-y; user-select: none;
+    background: var(--fc-card); box-shadow: inset 0 0 0 1px var(--fc-card-b), 0 14px 34px rgba(4,12,24,.12); transition: transform .18s ease, opacity .18s ease; overflow: hidden; }
+  html[data-tema="escuro"] .fc-carta { background: #0f2442; }
+  html[data-tema="escuro"] .fc-fundo { background: #0c1f3a; }
+  .fc-carta.sai-esq { transform: translateX(-120%) rotate(-8deg) !important; opacity: 0; }
+  .fc-carta.sai-dir { transform: translateX(120%) rotate(8deg) !important; opacity: 0; }
+  .fc-carta:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 3px; }
+  .fc-c0 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .fc-c0 > div { display: flex; align-items: center; gap: 4px; }
+  .fc-c0 .fc-mini { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); }
+  .fc-etq { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .fc-c1 { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .fc-c1 > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .fc-c1 .fc-valor { font-size: 15px; }
+  .fc-c1 .avatar { width: 52px; height: 52px; margin: 0; flex: none; font-size: 18px; }
+  .fc-c1 b { font-size: 18px; font-weight: 700; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fc-c1 small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fc-c2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fc-c2 > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--fc-leve); min-width: 0; }
+  .fc-c2 small { font-size: 11.5px; color: var(--sub); }
+  .fc-c2 b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fc-msg { flex: 1; min-height: 54px; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--fc-leve); overflow: hidden; }
+  .fc-msg small { font-size: 12px; color: var(--sub); }
+  .fc-msg p { margin: 0; font-size: 14.5px; line-height: 1.45; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .fc-msg.nada { color: var(--sub); font-style: italic; justify-content: center; text-align: center; }
+  .fc-nav { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .fc-dica { font-size: 12px; color: var(--sub); text-align: center; }
+
   /* lista */
   .fc-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 16px calc(100px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px; overscroll-behavior: contain; }
   .fc-lista > small { font-size: 11px; color: var(--sub); }
@@ -206,7 +247,7 @@
   }
 
   // ---------- contas ----------
-  const nomeDe = (ctx, c) => c.nome || ctx.ui.nomeDe({ telefone: c.telefone });
+  const nomeDe = (ctx, c) => c.nome || (ctx.ui.formatarTel ? ctx.ui.formatarTel(c.telefone) : ctx.ui.nomeDe({ telefone: c.telefone }));
   const sistema = (ctx) => !!ctx.funil?.sistema;
   const colunas = (ctx) => ctx.q?.colunas || [];
   /** Etapas que contam como "em andamento" (o funil do sistema para no Agendada; os outros, todas menos a última). */
@@ -400,6 +441,8 @@
 
   // ---------- desenho ----------
   function irEtapa(ctx, idx) {
+    const c = colunas(ctx)[idx];
+    if (c) { st.etapaFoco = c.etapa.id; st.aberto = null; }
     const cols = colunas(ctx);
     if (!cols.length) return;
     const col = cols[(idx + cols.length) % cols.length];
@@ -471,33 +514,105 @@
           onclick: () => { if (st.modo === id) return; st.modo = id; gravarLocal(chave(ctx, 'modoCelular'), id); redesenhar(true); } }))));
   }
 
+  /** Foco: um lead por vez, por prioridade, como um baralho. Arrasta para o lado = próximo/anterior; toque abre a conversa. */
   function modoFoco(ctx) {
     const { el } = ctx.ui;
     const cols = colunas(ctx);
-    const i = etapaAtual(ctx);
-    const col = cols[i];
-    const painel = el('div', { class: 'fc-painel' });
-    if (!col) { painel.append(el('p', { class: 'fc-vazio', text: 'Este funil ainda não tem etapas.' })); return painel; }
-    const vis = visiveis(ctx, col);
-    const itens = ordenar(ctx, vis.map((cartao) => ({ cartao, col })));
-    const abertoId = itens.some((x) => x.cartao.conversaId === st.aberto) ? st.aberto : itens[0]?.cartao.conversaId;
-    const n = col.total;
-    painel.append(
-      el('div', { class: 'fc-etapa' },
-        el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Etapa anterior', html: IC.esq, onclick: () => irEtapa(ctx, i - 1) }),
-        el('div', { 'aria-live': 'polite' }, el('b', { text: col.etapa.nome }), el('small', { text: `${n} negócio${n === 1 ? '' : 's'} · ${ctx.dinheiro(somaValor(vis))}` })),
-        el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Próxima etapa', html: IC.dir, onclick: () => irEtapa(ctx, i + 1) })),
-      el('div', { class: 'fc-pontos', 'aria-hidden': 'true' }, ...cols.map((c, k) => el('span', { class: k === i ? 'on' : '' }))));
-    const cards = el('div', { class: 'fc-cards fc-rolar', 'data-rolar': 'foco' });
-    if (!itens.length) cards.append(el('p', { class: 'fc-vazio', text: col.cartoes.length ? 'Ninguém com esses filtros nesta etapa.' : 'Nenhum negócio nesta etapa.' }));
-    for (const { cartao } of itens) {
-      cards.append(cartao.conversaId === abertoId
-        ? cartaoGrande(ctx, cartao, col)
-        : cartaoPequeno(ctx, cartao, col, () => { st.aberto = cartao.conversaId; redesenhar(true); const c = st.caixa?.querySelector('.fc-cards'); if (c) c.scrollTop = 0; }));
-    }
-    if (col.mais) cards.append(el('button', { class: 'fc-carregar', type: 'button', text: `Carregar mais (${Math.max(0, col.total - col.cartoes.length)})`, onclick: () => ctx.carregarMais(col) }));
-    painel.append(cards);
+    const painel = el('div', { class: 'fc-deck' });
+    if (!cols.length) { painel.append(el('p', { class: 'fc-vazio', text: 'Este funil ainda não tem etapas.' })); return painel; }
+    const filtro = st.etapaFoco ? cols.find((c) => c.etapa.id === st.etapaFoco) : null;
+    const fontes = filtro ? [filtro] : abertas(ctx);
+    const itens = ordenar(ctx, fontes.flatMap((col) => visiveis(ctx, col).map((cartao) => ({ cartao, col }))));
+    let pos = Math.max(0, itens.findIndex((x) => x.cartao.conversaId === st.aberto));
+    if (pos >= itens.length) pos = 0;
+    const ir = (d) => {
+      const novo = Math.min(itens.length - 1, Math.max(0, pos + d));
+      if (novo === pos) return false;
+      st.aberto = itens[novo].cartao.conversaId; redesenhar(true); return true;
+    };
+    const cab = el('div', { class: 'fc-deck-cab' },
+      filtro
+        ? el('button', { class: 'fc-filtro', type: 'button', 'aria-label': `Mostrando só ${filtro.etapa.nome}. Tocar para ver todas`, onclick: () => { st.etapaFoco = null; st.aberto = null; redesenhar(true); } },
+          el('i', { style: `background:${filtro.etapa.cor || '#3aa0ff'}` }), document.createTextNode(filtro.etapa.nome), el('span', { text: '✕', 'aria-hidden': 'true' }))
+        : el('span', { class: 'fc-deck-tit', text: 'Todas as etapas' }),
+      el('span', { class: 'fc-deck-nav' },
+        el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Anterior', 'aria-disabled': pos === 0 ? 'true' : null, html: IC.esq, onclick: () => ir(-1) }),
+        el('span', { class: 'fc-deck-n', 'aria-live': 'polite', text: itens.length ? `${pos + 1} de ${itens.length}` : '' }),
+        el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Próximo', 'aria-disabled': pos + 1 >= itens.length ? 'true' : null, html: IC.dir, onclick: () => ir(1) })));
+    painel.append(cab);
+    if (!itens.length) { painel.append(el('p', { class: 'fc-vazio', text: 'Ninguém para atender agora. Tudo em dia ✓' })); return painel; }
+    const { cartao, col } = itens[pos];
+    const pilha = el('div', { class: 'fc-pilha' });
+    if (pos + 2 < itens.length) pilha.append(el('div', { class: 'fc-fundo f2', 'aria-hidden': 'true' }));
+    if (pos + 1 < itens.length) pilha.append(el('div', { class: 'fc-fundo f1', 'aria-hidden': 'true' }));
+    const carta = cartaFoco(ctx, cartao, col);
+    pilha.append(carta);
+    arrastar(carta, (dir) => {
+      const d = dir < 0 ? 1 : -1; // para a esquerda = próximo; para a direita = anterior
+      if ((d > 0 && pos + 1 >= itens.length) || (d < 0 && pos === 0)) return false;
+      carta.classList.add(dir < 0 ? 'sai-esq' : 'sai-dir');
+      setTimeout(() => ir(d), 180);
+      return true;
+    }, () => ctx.ui.abrir(cartao.conversaId));
+    painel.append(pilha);
+    if (fontes.some((c) => c.mais) && pos + 3 >= itens.length) fontes.filter((c) => c.mais).forEach((c) => ctx.carregarMais(c));
     return painel;
+  }
+
+  /** A carta do lead no modo Foco. */
+  function cartaFoco(ctx, cartao, col) {
+    const { el } = ctx.ui;
+    const nome = nomeDe(ctx, cartao);
+    const sl = selo(ctx, cartao, col);
+    const av = ctx.ui.avatar({ id: cartao.conversaId, nome: cartao.nome, telefone: cartao.telefone });
+    const u = cartao.ultima;
+    const quem = u ? (u.autor === 'cliente' ? 'Cliente' : u.autor === 'ia' ? 'IA' : (String(u.autorNome || 'Equipe').split(/\s+/)[0])) : '';
+    const cam = caminho(ctx);
+    const prox = cam[cam.indexOf(col) + 1];
+    const podeAvancar = !!prox && col !== colGanho(ctx) && !ehPerdida(col);
+    const acao = acaoDoFunil(ctx);
+    const jaGanhou = (acao === 'ganho' || acao === 'venda') && colGanho(ctx) === col;
+    const etapa = el('span', { class: 'fc-etq' }, el('i', { style: `background:${col.etapa.cor || '#3aa0ff'}` }), document.createTextNode(col.etapa.nome));
+    const tel = cartao.nome && ctx.ui.formatarTel ? ctx.ui.formatarTel(cartao.telefone) : '';
+    return el('article', { class: 'fc-carta', 'data-id': cartao.conversaId, tabindex: '0', 'aria-label': `${nome}, ${col.etapa.nome}. Toque para abrir a conversa` },
+      el('div', { class: 'fc-c0' }, etapa,
+        el('div', {}, el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto }),
+          el('button', { class: 'fc-mini', type: 'button', 'aria-label': `Mais opções de ${nome}`, html: IC.pontos, onclick: (e) => { e.stopPropagation(); ctx.menuCartao(cartao.conversaId); } }))),
+      el('div', { class: 'fc-c1' }, av,
+        el('div', {}, el('b', { text: nome }), el('small', { text: [tel, quemAtende(cartao)].filter(Boolean).join(' · ') })),
+        valorEl(ctx, cartao)),
+      u ? el('div', { class: 'fc-msg' }, el('small', { text: `${quem} · ${ctx.haTexto(u.em)}` }), el('p', { text: u.texto || '(mídia)' }))
+        : el('div', { class: 'fc-msg nada', text: 'Sem mensagens ainda' }),
+      passos(ctx, col),
+      el('div', { class: 'fc-acoes' },
+        el('button', { class: 'fc-ico', type: 'button', 'aria-label': `Abrir conversa com ${nome}`, html: IC.conversa, onclick: (e) => { e.stopPropagation(); ctx.ui.abrir(cartao.conversaId); } }),
+        el('button', { class: 'fc-principal', type: 'button', 'aria-disabled': jaGanhou ? 'true' : null, onclick: (e) => { e.stopPropagation(); if (!jaGanhou) fazerAcao(ctx, acao, cartao, col); } },
+          el('span', { html: IC[acao], style: 'display:grid' }), el('span', { text: jaGanhou ? 'Ganho ✓' : ACOES[acao].nome })),
+        podeAvancar
+          ? el('button', { class: 'fc-ico', type: 'button', 'aria-label': `Mover para ${prox.etapa.nome}`, title: `Mover para ${prox.etapa.nome}`, html: IC.avancar, onclick: (e) => { e.stopPropagation(); ctx.mover(cartao.conversaId, prox.etapa.id); } })
+          : null));
+  }
+
+  /** Arrastar a carta para o lado (dedo ou mouse). `aoSoltar(direção)` decide; toque curto chama `aoTocar`. */
+  function arrastar(carta, aoSoltar, aoTocar) {
+    let x0 = null, y0 = 0, dx = 0, horizontal = null;
+    carta.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; horizontal = null; });
+    carta.addEventListener('pointermove', (e) => {
+      if (x0 == null) return;
+      dx = e.clientX - x0; const dy = e.clientY - y0;
+      if (horizontal == null && Math.abs(dx) + Math.abs(dy) > 8) { horizontal = Math.abs(dx) > Math.abs(dy); if (horizontal) carta.setPointerCapture?.(e.pointerId); }
+      if (horizontal) { e.preventDefault(); carta.style.transform = `translateX(${dx}px) rotate(${dx / 24}deg)`; }
+    });
+    const fim = () => {
+      if (x0 == null) return;
+      const foi = horizontal && Math.abs(dx) > 80 && aoSoltar(Math.sign(dx));
+      if (!foi) carta.style.transform = '';
+      if (!horizontal && Math.abs(dx) < 6) aoTocar();
+      x0 = null;
+    };
+    carta.addEventListener('pointerup', fim);
+    carta.addEventListener('pointercancel', () => { carta.style.transform = ''; x0 = null; });
+    carta.addEventListener('keydown', (e) => { if (e.key === 'Enter') aoTocar(); if (e.key === 'ArrowRight') aoSoltar(-1); if (e.key === 'ArrowLeft') aoSoltar(1); });
   }
 
   function modoLista(ctx) {
@@ -572,6 +687,7 @@
     if (!ctx) return;
     st.modo = 'foco'; gravarLocal(chave(ctx, 'modoCelular'), 'foco');
     if (ctx.funil) st.etapaPorFunil[ctx.funil.id] = etapaId;
+    st.etapaFoco = etapaId || null;
     st.aberto = conversaId;
     st.rolagem.foco = [0, 0];
     redesenhar(true);
