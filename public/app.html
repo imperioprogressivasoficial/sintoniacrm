@@ -902,16 +902,6 @@ html[data-tema="escuro"] { --anel-foto: var(--marca-menta, #0ffcbe); }
 /* imperio: Conversas › Lista | Funil (mesmo desenho do seletor de funis) */
 .titulo-linha { display: flex; align-items: center; gap: 12px; }
 .titulo-linha h1.titulo-grande { flex: 1 1 auto; min-width: 0; }
-.seg-vistas { display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; flex: none;
-  background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
-.seg-vistas .seg-op { all: unset; box-sizing: border-box; cursor: pointer; min-height: 40px; padding: 0 15px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--sub); transition: background .18s ease, color .18s ease; }
-.seg-vistas .seg-op:hover { color: var(--texto); }
-.seg-vistas .seg-op[aria-pressed="true"] { color: var(--texto); font-weight: 700; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(16,110,190,.12); }
-html[data-tema="escuro"] .seg-vistas .seg-op[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 6px 18px rgba(0,0,0,.3); }
-.seg-vistas .seg-op:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
-#v-funil .cabeca-vista.fn-cabeca:has(.seg-vistas) h1.titulo-grande { flex: 1 1 auto !important; }
-#v-funil .fn-cabeca .seg-vistas { flex: none; }
-@media (max-width: 760px) { #v-funil .cabeca-vista.fn-cabeca:has(.seg-vistas) .fn-numeros { flex: 1 1 100%; } }
 /* imperio: Radar (clientes esperando resposta) — único chip com ícone, luz correndo na borda */
 #filtros .chip-radar { position: relative; overflow: hidden; isolation: isolate; background: transparent !important; box-shadow: none !important; gap: 6px; }
 #filtros .chip-radar::before { content: ""; position: absolute; inset: -60%; z-index: -2; background: conic-gradient(from 0deg, transparent 0 70%, var(--brilho-1) 85%, var(--brilho-2) 95%, transparent); animation: radarGira 2.6s linear infinite; }
@@ -1100,7 +1090,7 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
             <button role="menuitem" data-acao="etapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Filtrar por etapa do CRM</span></button>
           </div>
           <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
-          <div class="titulo-linha"><h1 class="titulo-grande">Conversas</h1><div class="seg-vistas" role="group" aria-label="Ver como"><button type="button" class="seg-op" data-ir="conversas" aria-pressed="true">Lista</button><button type="button" class="seg-op" data-ir="funil" aria-pressed="false">Funil</button></div></div>
+          <div class="titulo-linha"><h1 class="titulo-grande">Conversas</h1></div>
           <div class="linha-busca">
           <label class="busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Pesquisar" aria-label="Pesquisar"></label>
             <button aria-label="Filtros" class="bt-filtros" id="bt-filtros" type="button" aria-expanded="false" aria-controls="painel-filtros" title="Filtrar por atendente, unidade, etiqueta ou origem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="qtd-filtros" id="qtd-filtros"></span></button>
@@ -1208,7 +1198,7 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
     <section class="vista coluna-vista" id="v-funil">
       <div class="cabeca-vista fn-cabeca">
         <div class="crm-barra"><button class="icone redondo" id="crm-menu" type="button" title="Mais opções do CRM" aria-label="Mais opções do CRM"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button><button class="icone redondo branco" id="crm-novo" type="button" title="Novo lead" aria-label="Novo lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
-        <h1 class="titulo-grande">CRM</h1><div class="seg-vistas" role="group" aria-label="Ver como"><button type="button" class="seg-op" data-ir="conversas" aria-pressed="false">Lista</button><button type="button" class="seg-op" data-ir="funil" aria-pressed="true">Funil</button></div><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div></div>
+        <h1 class="titulo-grande">CRM</h1><div class="fn-numeros" id="funil-numeros" aria-label="Números do funil"></div></div>
       <div class="funil" id="funil"></div>
     </section>
     <section class="vista" id="v-automacoes"><div class="painel" id="automacoes"></div></section>
@@ -1559,7 +1549,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
 
   // Conversas › Lista | Funil (o CRM saiu da barra do celular)
-  document.querySelectorAll('.seg-vistas .seg-op').forEach((b) => b.addEventListener('click', () => { if (b.getAttribute('aria-pressed') !== 'true') mostrar(b.dataset.ir); }));
 
   // lista
   $('busca').addEventListener('input', (e) => { estado.busca = e.target.value.toLowerCase(); desenharLista(); });
