@@ -1320,7 +1320,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       }));
       requestAnimationFrame(() => { const atual = trilha.querySelector('[aria-current]'); if (atual) trilha.scrollLeft = Math.max(0, atual.offsetLeft - trilha.clientWidth / 2 + atual.offsetWidth / 2); });
       const ts = cartao.tags || [];
-      tags.replaceChildren(...(ts.length ? ts.map(tagEl) : [el('em', { text: 'Sem tags. Marque pela conversa.' })]));
+      tags.replaceChildren(...(ts.length ? ts.map(tagEl) : [el('em', { text: 'Sem tags.' })]),
+        /* clientes-tags: o mesmo seletor de tags de todo o sistema, direto na ficha do cartão */
+        window.SintoniaTags ? el('button', { class: 'fn-tag', type: 'button', style: 'cursor:pointer;color:var(--texto)', title: 'Escolher as tags deste contato',
+          onclick: () => window.SintoniaTags.daConversa(conversaId, { sub: nome, aoMudar: (novas) => { cartao.tags = novas; atualizar(); if (s.q && s.quadro) desenharQuadro(); } }) }, el('span', { text: ts.length ? 'Mudar tags' : '+ Tag' })) : null);
       const fs = sistemaF();
       const chaveAtual = f?.sistema ? col.etapa.chaveSistema : null;
       const bt = (classe, icone, texto, acao, desligado) => el('button', { class: 'fn-bt ' + classe, type: 'button', 'aria-disabled': desligado ? 'true' : null, onclick: () => { if (!desligado) acao(); } },

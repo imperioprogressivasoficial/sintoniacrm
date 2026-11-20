@@ -15,6 +15,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { conversasDasClientes, mesclarAgenda, type AgendaExterna } from '../agenda/agenda-externa.js';
 import { ErroLeads, PedidoImportacao, UNIDADES_LEADS, type Leads } from '../leads/leads.js';
+import { ICONES } from '../rastreio/rastreio.js';
 import { PERIODOS_RELATORIO, RELATORIOS, type NomeRelatorio, type Relatorios } from '../relatorios/relatorios.js';
 import { nomeArquivo } from '../util/csv.js';
 import { bahia, dataISO, DIA } from '../util/tempo.js';
@@ -98,11 +99,15 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
     tag: z.string().min(1).optional(),
     de: Data.optional(),
     ate: Data.optional(),
+    /* clientes-tags: filtro por origem (ícone do rastreamento) */
+    origem: z.enum(ICONES).optional(),
   });
-  const filtroLeads = (q: unknown) => {
+  /* clientes-tags: exportar os selecionados (Clientes › seleção em massa) vai no corpo, pela quantidade de ids */
+  const ExportarSelecionados = FiltroLeadsQ.extend({ ids: z.array(z.string().uuid()).min(1).max(5000) });
+  const filtroLeads = (q: unknown, ids?: string[]) => {
     const f = FiltroLeadsQ.parse(q);
     const dia = (s: string) => bahia(Number(s.slice(0, 4)), Number(s.slice(5, 7)), Number(s.slice(8, 10)));
-    return { unidade: f.unidade, etapa: f.etapa, tagId: f.tag, de: f.de ? dia(f.de) : undefined, ate: f.ate ? new Date(dia(f.ate).getTime() + DIA) : undefined };
+    return { unidade: f.unidade, etapa: f.etapa, tagId: f.tag, origem: f.origem, de: f.de ? dia(f.de) : undefined, ate: f.ate ? new Date(dia(f.ate).getTime() + DIA) : undefined, ...(ids ? { conversaIds: ids } : {}) };
   };
 
   app.get('/api/leads', async (req) => {
@@ -116,6 +121,16 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
     const r = await o.leads.exportarCsv(escopo(req), filtroLeads(req.query));
     return csv(reply, r.csv, `leads-imperio-${dataISO(agora())}.csv`);
   });
+
+  app.post('/api/leads/exportar', async (req, reply) => {
+    exigeGestao(req, MSG_LEADS);
+    const { ids, ...resto } = ExportarSelecionados.parse(req.body);
+    const r = await o.leads.exportarCsv(escopo(req), filtroLeads(resto, ids));
+    return csv(reply, r.csv, `clientes-selecionados-${dataISO(agora())}.csv`);
+  });
+
+  /* clientes-tags: empresas ligadas aos contatos (aba Clientes › Empresas). Todo mundo, só o que a pessoa vê. */
+  app.get('/api/clientes/empresas', async (req) => ({ empresas: await o.leads.empresas(escopo(req)) }));
 
   app.post('/api/leads/importar', { bodyLimit: 12 * 1024 * 1024 }, async (req, reply) => {
     exigeGestao(req, MSG_LEADS);
@@ -228,6 +243,8 @@ export interface DependenciasExtras {
   empresaId: string;
   canalDa: (unidade: UnidadeId) => string | undefined;
   comConversa?: <T>(id: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
+  /** Origem de cada conversa (rastreamento): filtro e coluna do exportar. */
+  origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
   agora?: () => Date;
 }
 
@@ -236,7 +253,7 @@ export function montarExtras(d: DependenciasExtras): { relatorios: RelatoriosCla
     ? new ArmazemLeadsPostgres(d.pool)
     : new ArmazemLeadsMemoria(d.repo as RepositorioMemoria, d.contatos as ContatosMemoria, d.armazemTags);
   const agora = d.agora ?? (() => new Date());
-  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, agora });
+  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, origens: d.origens, agora });
   const relatorios = new RelatoriosClasse({ repo: d.repo, empresaId: d.empresaId, tags: d.tags, contatos: d.contatos, leads: armazem });
   return { relatorios, leads, armazem };
 }
