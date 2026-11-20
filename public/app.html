@@ -892,6 +892,8 @@ html[data-tema="escuro"] { --barra-fundo: rgba(14,41,69,.94); --barra-borda: rgb
   .trilho .nav[aria-current="page"] { padding: 0 14px 0 11px !important; }
   .trilho .nav .rotulo { font-size: 13.5px !important; }
 }
+/* imperio: rótulo da barra com altura de linha para não cortar a perna do g/ç/p ("Ligações", "Configurações") */
+@media (max-width: 760px) { .trilho .nav .rotulo { line-height: 1.4 !important; padding: 1px 0 !important; } }
 /* imperio: barra em celular estreito — tudo cabe sem cortar */
 @media (max-width: 374px) {
   .trilho { left: 10px !important; right: 10px !important; padding: 0 6px !important; }
