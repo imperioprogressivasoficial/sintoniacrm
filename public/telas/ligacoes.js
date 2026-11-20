@@ -271,7 +271,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const lista = s.itens.length ? el('div', { class: 'lg-lista', role: 'list' }, ...s.itens.map(linhaChamada))
       : el('p', { class: 'lg-vazio', text: s.carregando ? 'Carregando…' : s.filtro === 'perdidas' ? 'Nenhuma ligação perdida.' : 'Nenhuma ligação ainda. Toque em Ligar para começar.' });
     s.caixa.replaceChildren(el('div', { class: 'lg' },
-      el('div', { class: 'lg-barra' }, btMenu, btNovo),
+      el('div', { class: 'lg-barra' }, btMenu, el('span', { style: 'display:flex;align-items:center;gap:10px' }, window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null, btNovo)),
       el('h1', { class: 'titulo-grande', text: 'Ligações' }),
       el('div', { class: 'lg-acoes' },
         acao('Ligar', SVG.tel, () => escolherELigar('Ligar')),

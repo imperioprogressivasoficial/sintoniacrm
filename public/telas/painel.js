@@ -792,6 +792,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     linha.append(el('span', { class: s.carregando ? 'pn-carregando' : '', text: d?._em ? `${nomeEscopo ? '· ' : ''}atualizado às ${ui.hm(d._em)}` : 'Carregando os números…' }));
     linha.append(botaoRedondo(ui, IC.recarregar, 'Atualizar agora', () => carregar(true), { class: 'pn-redondo pn-mini' }));
     const podePersonalizar = Boolean(d);
+    if (!s.largo && window.SintoniaBotaoTema) linha.append(window.SintoniaBotaoTema('pn-redondo pn-mini'));
     if (!s.largo && podePersonalizar && !s.editando) linha.append(botaoRedondo(ui, IC.grade, 'Personalizar o Dashboard', () => entrarEdicao(), { class: 'pn-redondo pn-mini', id: 'pn-personalizar' }));
 
     if (s.largo) {
@@ -908,12 +909,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const altura = host.clientHeight || 170;
     const pontos = sr.pontos;
     const vis = sr.corte != null ? pontos.slice(0, sr.corte + 1) : pontos; // hoje: a curva para na hora atual
-    const max = teto(Math.max(1, ...vis.map((p) => Math.max(p.v, p.v2 || 0))));
+    // Banco (celular): curva ondulada como no modelo 3 — suaviza o desenho (o toque no gráfico mostra o valor real do dia).
+    const suave = (arr) => { let v = arr; for (let k = 0; k < 2; k++) v = v.map((x, i) => ((v[i - 1] ?? x) + 2 * x + (v[i + 1] ?? x)) / 4); return v; };
+    const vDes = sr.banco ? suave(vis.map((p) => p.v)) : vis.map((p) => p.v);
+    const max = sr.banco ? Math.max(1, ...vDes) * 1.08 : teto(Math.max(1, ...vis.map((p) => Math.max(p.v, p.v2 || 0))));
     const esq = sr.banco ? 2 : 12, dir = sr.banco ? 8 : 12, topo = 16, baixo = 24;
     const W = largura - esq - dir, H = altura - topo - baixo;
     const x = (i) => esq + (pontos.length > 1 ? (i / (pontos.length - 1)) * W : W / 2);
     const y = (v) => topo + H - (v / max) * H;
-    const pts1 = vis.map((p, i) => [x(i), y(p.v)]);
+    const pts1 = vis.map((p, i) => [x(i), y(vDes[i])]);
     const pts2 = sr.nome2 ? vis.map((p, i) => [x(i), y(p.v2 || 0)]) : null;
     const soma = vis.reduce((a, p) => a + p.v, 0);
     const media = vis.length ? soma / vis.length : 0;
