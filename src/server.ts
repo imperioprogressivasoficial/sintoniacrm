@@ -7,6 +7,7 @@ import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
+import { registrarReunioes } from './reunioes/reunioes.js';
 import { registrarPresenca, type Presencas } from './presenca/presenca.js';
 import type { Revisao } from './ai/copiloto.js';
 import type { Agenda } from './ai/ferramentas.js';
@@ -78,6 +79,8 @@ export interface DependenciasServidor {
   leituras?: Leituras;
   /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
   layoutsPainel?: LayoutsPainel;
+  /** Banco para o link de agendamento e os scripts de venda (só com Postgres). */
+  poolReunioes?: import('pg').Pool;
   /** Presença da equipe ("Disponível para atender"). */
   presencas?: Presencas;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
@@ -513,6 +516,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
 
   if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
+  if (d.poolReunioes) registrarReunioes(app, d.poolReunioes);
   if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
 
   // ---------- Tags, aba IA, painel completo e empresa ----------

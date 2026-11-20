@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Agendar · Sintonia</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-64.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+  :root { --fundo: #eef3fa; --cartao: #ffffff; --texto: #0d2240; --sub: #5b6b82; --linha: #e3e9f2; --azul: #106ebe; --menta: #0ffcbe; --erro: #c43a3a; --sel: #e7f0fb; }
+  @media (prefers-color-scheme: dark) { :root { --fundo: #06142a; --cartao: #0d2240; --texto: #ffffff; --sub: #a9bdd6; --linha: #1d3254; --azul: #3aa0ff; --erro: #ff8a8a; --sel: #16294a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Poppins, system-ui, sans-serif; background: radial-gradient(90% 50% at 0% 0%, color-mix(in srgb, var(--azul) 18%, transparent), transparent 70%), radial-gradient(80% 50% at 100% 100%, color-mix(in srgb, var(--menta) 14%, transparent), transparent 70%), var(--fundo); color: var(--texto); min-height: 100vh; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 48px; }
+  .caixa { background: var(--cartao); border-radius: 28px; box-shadow: 0 18px 50px rgba(4,12,24,.12); display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); overflow: hidden; position: relative; }
+  .caixa::after { content: ''; position: absolute; left: 30px; right: 30px; bottom: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--menta), #3aa0ff, transparent); }
+  @media (max-width: 720px) { .caixa { grid-template-columns: 1fr; } }
+  .info { padding: 28px 24px; border-right: 1px solid var(--linha); display: grid; align-content: start; gap: 10px; }
+  @media (max-width: 720px) { .info { border-right: 0; border-bottom: 1px solid var(--linha); } }
+  .marca { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--sub); font-size: 13px; }
+  .marca img { width: 28px; height: 28px; }
+  h1 { margin: 6px 0 0; font-size: 24px; line-height: 1.2; }
+  .linha-info { display: flex; align-items: center; gap: 8px; color: var(--sub); font-size: 14px; }
+  .linha-info svg { width: 18px; height: 18px; flex: none; }
+  .desc { color: var(--sub); font-size: 14px; line-height: 1.5; white-space: pre-line; margin: 4px 0 0; }
+  .lado { padding: 24px; display: grid; gap: 16px; align-content: start; min-width: 0; }
+  h2 { margin: 0; font-size: 16px; }
+  .dias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .dia { flex: none; width: 74px; border: 0; border-radius: 16px; padding: 10px 6px; background: var(--sel); color: var(--texto); font: inherit; cursor: pointer; display: grid; gap: 2px; }
+  .dia small { font-size: 11.5px; color: var(--sub); text-transform: capitalize; }
+  .dia b { font-size: 20px; }
+  .dia[aria-pressed="true"] { background: linear-gradient(135deg, #106ebe, #3aa0ff); color: #fff; box-shadow: 0 8px 18px rgba(16,110,190,.3); }
+  .dia[aria-pressed="true"] small { color: rgba(255,255,255,.85); }
+  .horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+  .hora { border: 1.5px solid var(--linha); background: none; color: var(--texto); border-radius: 14px; padding: 11px 6px; font: inherit; font-weight: 600; cursor: pointer; }
+  .hora:hover { border-color: var(--azul); }
+  .hora[aria-pressed="true"] { border-color: transparent; background: linear-gradient(135deg, #106ebe, #3aa0ff) padding-box, linear-gradient(135deg, #0ffcbe, #3aa0ff) border-box; color: #fff; }
+  form { display: grid; gap: 10px; }
+  label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  input, textarea { font: inherit; font-size: 15px; color: var(--texto); background: var(--sel); border: 1.5px solid transparent; border-radius: 12px; padding: 11px 12px; width: 100%; }
+  input:focus, textarea:focus { outline: none; border-color: var(--azul); }
+  .botao { border: 0; border-radius: 999px; padding: 14px 18px; font: inherit; font-size: 15px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); cursor: pointer; box-shadow: 0 10px 22px rgba(16,110,190,.3); }
+  .botao[aria-busy="true"] { opacity: .6; pointer-events: none; }
+  .erro { color: var(--erro); font-size: 13.5px; margin: 0; }
+  .vazio { color: var(--sub); font-size: 14px; }
+  .ok { text-align: center; padding: 40px 24px; display: grid; gap: 10px; justify-items: center; }
+  .ok .check { width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; background: rgba(15,252,190,.18); color: #087a5c; }
+  @media (prefers-color-scheme: dark) { .ok .check { color: var(--menta); } }
+  .ok .check svg { width: 34px; height: 34px; }
+  [hidden] { display: none !important; }
+  .rodape { text-align: center; color: var(--sub); font-size: 12px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="caixa" id="caixa">
+    <section class="info">
+      <div class="marca"><img src="/icone-192.png" alt=""><span id="empresa">Agendamento online</span></div>
+      <h1 id="titulo">Carregando…</h1>
+      <div class="linha-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span id="duracao"></span></div>
+      <div class="linha-info" id="linha-local" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.3"/></svg><span id="local"></span></div>
+      <p class="desc" id="desc"></p>
+    </section>
+    <section class="lado" id="escolher">
+      <h2>Escolha o dia</h2>
+      <div class="dias" id="dias" role="group" aria-label="Dias disponíveis"></div>
+      <h2 id="t-horas" hidden>Escolha o horário</h2>
+      <div class="horas" id="horas" role="group" aria-label="Horários disponíveis"></div>
+      <p class="vazio" id="sem-horario" hidden>Nenhum horário livre nos próximos dias. Tente de novo mais tarde.</p>
+      <form id="form" hidden>
+        <h2 id="resumo"></h2>
+        <label>Seu nome<input id="nome" autocomplete="name" required maxlength="120"></label>
+        <label>WhatsApp<input id="tel" inputmode="tel" autocomplete="tel" placeholder="71 99999-9999" maxlength="30"></label>
+        <label>E-mail (opcional)<input id="email" type="email" autocomplete="email" maxlength="160"></label>
+        <label>Quer deixar algum recado? (opcional)<textarea id="obs" rows="2" maxlength="800"></textarea></label>
+        <p class="erro" id="erro" role="alert" hidden></p>
+        <button class="botao" id="confirmar" type="submit">Confirmar agendamento</button>
+      </form>
+    </section>
+    <section class="lado ok" id="pronto" hidden>
+      <div class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+      <h1>Agendado!</h1>
+      <p class="desc" id="pronto-txt" role="status"></p>
+    </section>
+  </div>
+  <p class="rodape">Agendamento pela Sintonia</p>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const slug = location.pathname.split('/').filter(Boolean).pop();
+  const el = (tag, props = {}, ...f) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...f); return e; };
+  const SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const dataLonga = (d) => { const x = new Date(d + 'T12:00:00-03:00'); return x.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bahia' }); };
+  let info = null, dia = null, hora = null;
+
+  function desenharDias() {
+    $('dias').replaceChildren(...info.dias.map((d) => {
+      const x = new Date(d.data + 'T12:00:00-03:00');
+      const b = el('button', { type: 'button', className: 'dia' }, el('small', { textContent: SEM[x.getUTCDay()] }), el('b', { textContent: String(x.getUTCDate()) }), el('small', { textContent: MES[x.getUTCMonth()] }));
+      b.setAttribute('aria-pressed', String(dia === d.data));
+      b.addEventListener('click', () => { dia = d.data; hora = null; desenharDias(); desenharHoras(); });
+      return b;
+    }));
+  }
+  function desenharHoras() {
+    const d = info.dias.find((x) => x.data === dia);
+    $('t-horas').hidden = !d; $('form').hidden = true;
+    $('horas').replaceChildren(...(d ? d.horarios : []).map((h) => {
+      const b = el('button', { type: 'button', className: 'hora', textContent: h });
+      b.setAttribute('aria-pressed', String(hora === h));
+      b.addEventListener('click', () => { hora = h; desenharHoras(); $('form').hidden = false; $('resumo').textContent = `${dataLonga(dia)} às ${h}`; setTimeout(() => $('nome').focus(), 50); });
+      return b;
+    }));
+    if (hora) { $('form').hidden = false; }
+  }
+  async function carregar() {
+    const r = await fetch('/reservar/' + encodeURIComponent(slug));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { $('titulo').textContent = j.erro || 'Link indisponível'; $('escolher').hidden = true; return; }
+    info = j;
+    document.title = `${j.titulo} · Agendar`;
+    $('titulo').textContent = j.titulo;
+    $('duracao').textContent = `${j.duracao_min} min`;
+    $('desc').textContent = j.descricao || '';
+    if (j.local) { $('linha-local').hidden = false; $('local').textContent = j.local; }
+    if (!j.dias.length) { $('sem-horario').hidden = false; return; }
+    if (!dia || !j.dias.some((d) => d.data === dia)) dia = j.dias[0].data;
+    desenharDias(); desenharHoras();
+  }
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const b = $('confirmar'); b.setAttribute('aria-busy', 'true'); $('erro').hidden = true;
+    try {
+      const r = await fetch('/reservar/' + encodeURIComponent(slug), { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: dia, hora, nome: $('nome').value, telefone: $('tel').value, email: $('email').value, observacao: $('obs').value }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { $('erro').textContent = j.erro || 'Não deu para agendar. Tente de novo.'; $('erro').hidden = false; if (r.status === 409) { hora = null; await carregar(); } return; }
+      $('escolher').hidden = true; $('pronto').hidden = false;
+      $('pronto-txt').textContent = `${j.titulo} · ${dataLonga(dia)} às ${hora}.${j.local ? ' Local: ' + j.local + '.' : ''} Até lá!`;
+    } catch { $('erro').textContent = 'Sem conexão. Tente de novo.'; $('erro').hidden = false; }
+    finally { b.removeAttribute('aria-busy'); }
+  });
+  carregar();
+})();
+</script>
+</body>
+</html>

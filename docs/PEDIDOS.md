@@ -24,6 +24,8 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
       interna entre atendentes + os grupos do WhatsApp. No celular, achar um lugar para o botão do chat da equipe.
 - [x] WhatsApp: animação "Sincronizando" depois de conectar, com as conversas chegando (20/11).
 - [x] Botão ativo = cor invertida (Radar no escuro) e, no pipeline, fundo com o degradê azul (20/11).
+- [x] Agendamento online (como o Cal.com, dentro da Sintonia): links /r/<slug>, página pública, reuniões marcadas (20/11).
+- [x] Vendas › Scripts (roteiros por etapa) e Clientes logo abaixo de Vendas (20/11).
 - [ ] Clientes, leads e o cartão do lead (o cartão fica dentro do lead).
 - [x] Menu: Clientes com aba própria; Vendas (CRM) = Criar novo pipeline › pipelines › Tags › Importar;
       Automações = Chatbot, Fluxos, Agente de IA, Follow-up (20/11).
