@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 21:52 UTC (21/11, 18h52 na Bahia)
-commit: 12ac647
-pacote sha256: 7964ed423cb35ea3f4e6acfc6327c2dd60c4ce87a6b055a363712d108397805b
+data: 2026-11-21 21:57 UTC (21/11, 18h57 na Bahia)
+commit: f5a4bb5
+pacote sha256: db36475a91b930d0d99251549ad48e47dce31dccef43c94303fb2adf8c573cad
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-12ac647.b64); pode apagar depois.
-observação: em cima do ea13631. Entra: branch claude/serena-super (internet, Pensar mais, ferramentas de leitura e ação do CRM) e nome da Serena centralizado no topo.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f5a4bb5.b64); pode apagar depois.
+observação: em cima do 12ac647. Entra: branch claude/balao-fantasma (sugestão da IA como balão tracejado no fim da conversa, com Descartar, Editar e Enviar).
