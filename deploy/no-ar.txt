@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 17:50 UTC (21/11, 14h50 na Bahia)
-commit: 2081418
-pacote sha256: 55869d523662f49620d2de8c2b7ae9ed0db86d9f3186fe852fb605bcd75ccb8b
+data: 2026-11-21 18:45 UTC (21/11, 15h45 na Bahia)
+commit: f82f122
+pacote sha256: 302d6e690035628dc9b75150a5f0a8b7f0aa99ca42b26da3f89178db818d94c7
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-2081418.b64); pode apagar depois.
-observação: em cima do 59870a1. Entra: ?v=2111 nos prints da página de vendas (o navegador guardava os antigos por 1 h).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f82f122.b64); pode apagar depois.
+observação: em cima do 2081418. Entra: serena-chave (680: chave geral Serena ligada/pausada; só a gestão muda).

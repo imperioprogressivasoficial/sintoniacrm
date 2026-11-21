@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 15h45 (Bahia):** no ar f82f122 — chave geral da Serena (src/serena/pausa.ts, iaAtiva = chave && !pausa). Sem agentes rodando.
 - **21/11 14h40 (Bahia):** no ar 59870a1 — página de vendas antiga com prints novos (mac-conversas, iphone-conversa, tv-sala). O dono NÃO quer a página nova (branch claude/pagina-vendas-nova fica sem uso).
 - **21/11 12h41 (Bahia):** no ar afc2b56 — serena-faz e sem-exemplos (670). Página de vendas nova pronta na branch claude/pagina-vendas-nova (591edbc), ESPERANDO o ok do dono pelos prints antes de juntar/publicar.
 - **PENDENTE (dono 21/11, depois):** seção "Ajuda" com tutorial de cada função (fluxos, chatbot, follow-up…): um exemplo só + o passo a passo. Os exemplos prontos saem agora (agente sem-exemplos).
