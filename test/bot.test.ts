@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { casarOpcao, Grafo, problemasDoGrafo, textoComOpcoes, validarResposta } from '../src/bot/esquema.js';
-import { MODELOS } from '../src/bot/modelos.js';
+import { modelosBot } from '../src/bot/modelos.js';
 import { AgenteFalso, ambientes, montarBot, quinta } from './bot-ambiente.js';
 
 type Exec = { id: string; status: string; erro: string | null; estado: { noAtual: string | null; caminho: string[]; vars: Record<string, string>; espera: { tipo: string } | null; emExecucao: string | null }; log: Array<{ detalhe: string; tipo: string }> };
@@ -71,7 +71,7 @@ describe('Bots: funções puras', () => {
     const dupla = grafo([{ id: 'a', tipo: 'inicio' }, { id: 'b', tipo: 'fim' }, { id: 'c', tipo: 'fim' }], [['a', 'proximo', 'b'], ['a', 'proximo', 'c']]);
     expect(problemasDoGrafo(dupla).some((x) => x.mensagem.includes('uma saída só pode ter uma linha'))).toBe(true);
     expect(problemasDoGrafo(MENU).filter((x) => x.nivel === 'erro')).toEqual([]);
-    for (const m of MODELOS) expect(problemasDoGrafo(Grafo.parse(m.grafo)).filter((x) => x.nivel === 'erro'), m.id).toEqual([]);
+    for (const m of modelosBot()) expect(problemasDoGrafo(Grafo.parse(m.grafo)).filter((x) => x.nivel === 'erro'), m.id).toEqual([]);
   });
 
   it('entende a resposta da cliente e valida a pergunta aberta', () => {

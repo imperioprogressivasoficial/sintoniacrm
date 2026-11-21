@@ -20,7 +20,7 @@ const Env = z.object({
   TRINKS_API_KEY: z.string().optional(),
   TRINKS_INTERVALO_MS: z.coerce.number().default(1200),
   RELATORIO_DESTINOS: z.string().default(''),
-  /** JSON: [{"canalId":"imperio-norte","unidade":"norte","canal":"evolution"}] */
+  /** JSON: [{"canalId":"imperio-norte","unidade":"norte","canal":"evolution"}] (unidade = id em Empresa › Unidades) */
   SINTONIA_NUMEROS: z.string().default('[]'),
   SINTONIA_EMPRESA_ID: z.string().default('imperio'),
   /** Postgres da Sintonia. Sem ele, tudo fica em memória (só para teste local). */
@@ -39,7 +39,7 @@ const Env = z.object({
 export const NumerosConfig = z.array(
   z.object({
     canalId: z.string(),
-    unidade: z.enum(['norte', 'sumare', 'feira']),
+    unidade: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/),
     canal: z.enum(['evolution', 'meta']),
   }),
 );

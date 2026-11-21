@@ -3,7 +3,7 @@ import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
 import { ehEmailDemo } from '../demo/dados.js';
 import type { Conversa } from '../domain.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { MIN } from '../util/tempo.js';
 import type { ArmazemNotificacoes, Cursor } from './armazem.js';
 import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
@@ -137,7 +137,7 @@ export class Notificador {
     const us = await this.equipe();
     const d = e.dados ?? {};
     const nome = nomeDa(c);
-    const unidade = UNIDADES[c.unidade]?.nome ?? c.unidade;
+    const unidade = unidadeDe(c.unidade)?.nome ?? c.unidade;
 
     switch (e.tipo) {
       // Cliente nova e cada mensagem não viram mais notificação: a lista de conversas (não lidas) já mostra,

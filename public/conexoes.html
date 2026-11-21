@@ -166,6 +166,8 @@
   .wa-menu .wa-botoes .botao { padding: 13px 18px; }
   .wa-menu h2 { justify-content: center; margin: 0 0 4px; }
   .wa-menu .wa-sub { margin: 0 0 14px; }
+  /* unidades: unidade do número no menu do canal */
+  .wa-menu .wa-unidade { display: grid; gap: 6px; margin: 0 0 14px; font-size: 13.5px; }
   .vazio-canais { color: var(--sub); font-size: 14px; }
   #lojas .linha { flex-wrap: nowrap; gap: 6px; }
   #lojas .linha .botao:not(.leve) { flex: 1; }
@@ -338,7 +340,7 @@
     <p>As mensagens que chegam na <b>Página</b> viram conversas na Sintonia, com nome e foto da cliente. A loja responde até <b>24 horas</b> depois da última mensagem da cliente.</p>
     <div class="campos">
       <label>Situação<select id="messengerLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
-      <label>Unidade que recebe as conversas<select id="messengerUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Unidade que recebe as conversas<select id="messengerUnidade" class="sel" data-unidades></select></label>
       <label>Page ID<input id="messengerPageId" inputmode="numeric" autocomplete="off" placeholder="Ex.: 104857362912345"></label>
       <label>Token da Página<input id="messengerToken" type="password" autocomplete="off" placeholder="Page Access Token (usuário do sistema)"></label>
       <label>App Secret<input id="messengerAppSecret" type="password" autocomplete="off" placeholder="Chave secreta do app da Meta"></label>
@@ -369,7 +371,7 @@
     <p>As DMs da conta profissional do Instagram viram conversas na Sintonia. A loja responde até <b>24 horas</b> depois da última mensagem da cliente. Funciona pelo <b>login do Instagram</b> (token que começa com “IG”) ou pelo <b>login do Facebook</b> (token da Página ligada).</p>
     <div class="campos">
       <label>Situação<select id="instagramLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
-      <label>Unidade que recebe as conversas<select id="instagramUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Unidade que recebe as conversas<select id="instagramUnidade" class="sel" data-unidades></select></label>
       <label>Instagram Business Account ID<input id="instagramAccountId" inputmode="numeric" autocomplete="off" placeholder="Ex.: 17841400000000000"></label>
       <label>Page ID <span class="dica">só no login do Facebook</span><input id="instagramPageId" inputmode="numeric" autocomplete="off" placeholder="Página ligada ao Instagram"></label>
       <label>Token de acesso<input id="instagramToken" type="password" autocomplete="off" placeholder="Token do Instagram ou da Página"></label>
@@ -401,7 +403,7 @@
     <div class="aviso">Mensagens diretas do TikTok (Business Messaging API) só existem para <b>parceiros aprovados pelo TikTok</b>, com janela de 48 horas e até 10 mensagens por conversa. Por enquanto a Sintonia recebe os <b>leads dos formulários instantâneos</b> dos anúncios do TikTok.</div>
     <div class="campos">
       <label>Situação<select id="tiktokLigado" class="sel"><option value="">Desligado</option><option value="1">Ligado</option></select></label>
-      <label>Unidade que recebe as conversas<select id="tiktokUnidade" class="sel"><option value="">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Unidade que recebe as conversas<select id="tiktokUnidade" class="sel" data-unidades></select></label>
       <label>Client Key <span class="dica">opcional</span><input id="tiktokClientKey" autocomplete="off" placeholder="App do TikTok for Business"></label>
       <label>Client Secret <span class="dica">opcional: confere a assinatura</span><input id="tiktokClientSecret" type="password" autocomplete="off" placeholder="Chave secreta do app"></label>
     </div>
@@ -554,6 +556,8 @@
   <div class="wa-puxa" aria-hidden="true"></div>
   <h2 id="dc-nome"></h2>
   <p class="wa-sub" id="dc-info"></p>
+  <!-- unidades: em qual unidade as conversas deste número entram (Empresa › Unidades) -->
+  <label class="wa-unidade" id="dc-unidade-rotulo">Unidade que recebe as conversas<select id="dc-unidade" class="sel"></select></label>
   <div class="wa-botoes">
     <button class="botao wa-pri" type="button" id="dc-conectar">Conectar</button>
     <button class="botao leve" type="button" id="dc-renomear">Renomear</button>
@@ -567,8 +571,23 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const UNIDADES = [['norte', 'Norte', 'Salvador Norte Shopping'], ['sumare', 'Sumare', 'Shopping Sumaré']];
-  const NOMES = Object.fromEntries(UNIDADES.map(([u, , n]) => [u, n]));
+  /* unidades: as unidades ativas do cadastro (Empresa › Unidades), carregadas ao abrir a tela.
+     Cada uma: [id, sufixo do campo, nome]. O sufixo segue o servidor (src/conexoes/conexoes.ts): as antigas
+     da Império mantêm "Norte"/"Sumare"; as outras usam "__id" (ex.: metaToken__loja-centro). */
+  const UNIDADES = [];
+  const NOMES = {};
+  const SUFIXO_LEGADO = { norte: 'Norte', sumare: 'Sumare' };
+  async function carregarUnidades() {
+    const r = await fetch('/api/unidades').then((x) => (x.ok ? x.json() : null)).catch(() => null);
+    const lista = (r?.unidades || []).filter((u) => u.ativa !== false);
+    UNIDADES.splice(0, UNIDADES.length, ...lista.map((u) => [u.id, SUFIXO_LEGADO[u.id] || `__${u.id}`, u.nome]));
+    for (const k of Object.keys(NOMES)) delete NOMES[k];
+    for (const [u, , n] of UNIDADES) NOMES[u] = n;
+    // Selects de unidade (Messenger, Instagram, TikTok e o do canal): vazio = a primeira unidade.
+    document.querySelectorAll('select[data-unidades]').forEach((sel) => sel.replaceChildren(...UNIDADES.map(([u, , n], i) => el('option', { value: i === 0 ? '' : u, textContent: n }))));
+    $('dc-unidade').replaceChildren(...UNIDADES.map(([u, , n]) => el('option', { value: u, textContent: n })));
+    $('dc-unidade-rotulo').hidden = UNIDADES.length < 2;
+  }
   const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); Object.assign(e, props); e.append(...filhos.filter((f) => f !== null && f !== undefined)); return e; };
   const api = async (url, opcoes = {}) => {
     const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
@@ -631,7 +650,7 @@
   const SISTEMAS = [['trinks', 'Trinks', 'API pública'], ['avec', 'Avec', 'Avec Salão'], ['appbarber', 'AppBarber', 'Barbearias'], ['nenhum', 'Nenhum', 'Sem agenda']];
   // Campos de cada sistema, por unidade (o id do input é o nome do campo salvo).
   const CAMPOS_AGENDA = {
-    trinks: (suf, nome, u) => [['trinksEstabelecimento' + suf, 'ID do estabelecimento no Trinks', 'text', u === 'norte' ? 'Padrão: 240643 (confira no Trinks)' : 'Padrão: 222074 (confira no Trinks)']],
+    trinks: (suf) => [['trinksEstabelecimento' + suf, 'ID do estabelecimento no Trinks', 'text', 'Só os números (Trinks › Configurações do estabelecimento)']],
     avec: (suf) => [['avecToken' + suf, 'Token da API da Avec', 'password', 'Gerado no painel da Avec (API de relatórios)'], ['avecUnidade' + suf, 'ID da unidade na Avec (opcional)', 'text', 'Ex.: 1234']],
     appbarber: (suf) => [['appbarberToken' + suf, 'Token do AppBarber', 'password', 'Enviado pelo AppBarber'], ['appbarberLoja' + suf, 'ID da loja no AppBarber', 'text', 'Ex.: 1234']],
     nenhum: () => [],
@@ -648,7 +667,8 @@
     $('ag-g-appbarber').hidden = !usados.has('appbarber');
     $('agenda-geral').hidden = !['trinks', 'avec', 'appbarber'].some((s) => usados.has(s));
     $('agenda-unidades').replaceChildren(...agenda.unidades.map((info) => {
-      const [, suf, nome] = UNIDADES.find(([u]) => u === info.unidade);
+      const achada = UNIDADES.find(([u]) => u === info.unidade); if (!achada) return document.createTextNode(''); /* unidades */
+      const [, suf, nome] = achada;
       const atual = info.sistema;
       const estado = el('span', {
         className: 'estado' + (info.pronta ? ' ok' : atual === 'nenhum' ? '' : ' aviso'),
@@ -766,7 +786,7 @@
       const sit = situacaoCanal(k, Boolean(r.erro));
       const logo = el('span', { className: 'wa-logo' + (ok ? '' : ' off'), innerHTML: LOGO_WA });
       const ponto = el('i', { className: sit.ponto });
-      const textos = el('span', {}, el('b', { textContent: k.nome }), el('small', {}, ponto, sit.info), sit.motivo ? el('span', { className: 'wa-motivo', textContent: sit.motivo }) : null);
+      const textos = el('span', {}, el('b', { textContent: k.nome }), el('small', {}, ponto, sit.info, UNIDADES.length > 1 && k.unidade ? ` · ${NOMES[k.unidade] || k.unidadeNome || k.unidade}` : ''), sit.motivo ? el('span', { className: 'wa-motivo', textContent: sit.motivo }) : null);
       const linha = el('button', { className: 'wa-linha', type: 'button' }, logo, textos, el('span', { className: 'estado wa-selo ' + sit.cor, textContent: sit.selo }), el('span', { className: 'seta', textContent: '›' }));
       linha.addEventListener('click', () => menuCanal(k, ok, sit.info, sit.reconectar));
       const item = el('div', { className: 'wa-item' }, linha);
@@ -798,9 +818,16 @@
     $('dc-nome').textContent = k.nome; $('dc-info').textContent = info;
     $('dc-conectar').hidden = ok; $('dc-desconectar').hidden = !ok; $('dc-sincronizar').hidden = !ok;
     $('dc-conectar').textContent = caiu ? 'Reconectar' : 'Conectar';
+    $('dc-unidade').value = k.unidade && NOMES[k.unidade] ? k.unidade : (UNIDADES[0]?.[0] || ''); /* unidades */
     $('d-canal').showModal();
   }
   $('dc-fechar').addEventListener('click', () => $('d-canal').close());
+  /* unidades: trocar a unidade do número (as conversas novas dele entram nela) */
+  $('dc-unidade').addEventListener('change', async (e) => {
+    const unidade = e.target.value;
+    try { await api(`/api/conexoes/whatsapp/canais/${canalMenu.id}`, { method: 'PATCH', body: JSON.stringify({ unidade }) }); canalMenu.unidade = unidade; resumo = await api('/api/conexoes'); carregarLojas(); }
+    catch (x) { alert(x.message); }
+  });
   $('dc-sincronizar').addEventListener('click', () => { $('d-canal').close(); lojaAtual = canalMenu.id; clearInterval(espera); tela('ok'); $('d-wa').showModal(); sincronizar(canalMenu.id); });
   $('dc-conectar').addEventListener('click', () => { $('d-canal').close(); if (canalMenu.saude?.estado === 'desconectado') reconectar(canalMenu); else conectar(canalMenu); });
   $('dc-renomear').addEventListener('click', () => { $('d-canal').close(); renomear(canalMenu); });
@@ -1011,6 +1038,7 @@
   }
 
   (async () => {
+    await carregarUnidades(); /* unidades */
     $('meta-lojas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => cartaoMeta(u, suf, nome)));
     document.querySelectorAll('input[type=password]').forEach((i) => (i.dataset.ph = i.placeholder));
     ligarBotoes(document);

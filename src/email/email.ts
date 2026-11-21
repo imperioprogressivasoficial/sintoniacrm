@@ -3,7 +3,7 @@ import type pg from 'pg';
 import { z } from 'zod';
 import type { Cofre } from '../conexoes/cofre.js';
 import { ETAPAS, type Conversa } from '../domain.js';
-import { UNIDADES } from '../unidades.js';
+import { existeUnidade, unidadeDe, unidadesDa, zIdUnidade } from '../unidades.js';
 import { bahia, partesBahia } from '../util/tempo.js';
 import { Conteudo, montarEmail, trocarVariaveis, type Variaveis } from './blocos.js';
 import { ErroEnvio, type ContaEnvio, type FabricaTransporte } from './transporte.js';
@@ -65,7 +65,8 @@ export const Publico = z.object({
   tags: z.array(uuid).max(50).default([]),
   tagsExcluir: z.array(uuid).max(50).default([]),
   etapas: z.array(z.enum(ETAPAS)).max(ETAPAS.length).default([]),
-  unidades: z.array(z.enum(['norte', 'sumare', 'feira'])).max(3).default([]),
+  // Formato só (o público fica guardado): unidade que sai do cadastro não estraga o envio.
+  unidades: z.array(zIdUnidade()).max(50).default([]),
   aniversariantesDoMes: z.boolean().default(false),
   /** Quantos no máximo (vazio = todos). */
   quantidade: z.number().int().min(1).max(100000).nullable().default(null),
@@ -189,7 +190,7 @@ const RESERVA_MS = 5 * 60_000;
 const MAX_TENTATIVAS = 4;
 
 const novoToken = () => randomBytes(24).toString('hex');
-const nomeUnidade = (u: string | null) => (u && u in UNIDADES ? UNIDADES[u as keyof typeof UNIDADES].nome : '');
+const nomeUnidade = (u: string | null) => (u && existeUnidade(u) ? unidadeDe(u).nome : '');
 
 export class EmailMarketing {
   private readonly agora: () => Date;
@@ -584,7 +585,7 @@ export class EmailMarketing {
   /** HTML de prévia (variáveis com um exemplo; links e descadastro sem rastreio). */
   previa(b: { assunto?: string; preheader?: string; conteudo: unknown; nome?: string; unidade?: string }): { html: string; assunto: string } {
     const conteudo = Conteudo.parse(b.conteudo);
-    const v: Variaveis = { nome: b.nome ?? 'Maria Souza', email: 'maria@exemplo.com', unidade: b.unidade ?? 'Salvador Norte Shopping' };
+    const v: Variaveis = { nome: b.nome ?? 'Maria Souza', email: 'maria@exemplo.com', unidade: b.unidade ?? (unidadesDa()[0]?.nome ?? '') };
     const m = montarEmail(conteudo, { assunto: b.assunto ?? '', preheader: b.preheader, descadastro: '#descadastro' });
     return { html: trocarVariaveis(m.html, v, true), assunto: trocarVariaveis(b.assunto ?? '', v, false) };
   }
@@ -594,7 +595,7 @@ export class EmailMarketing {
     const c = await this.campanha(id);
     this.conferirPronta(c);
     const conta = await this.linhaConta(c.contaId!);
-    const v: Variaveis = { nome: nome ?? 'Maria Souza', email: para, unidade: 'Salvador Norte Shopping' };
+    const v: Variaveis = { nome: nome ?? 'Maria Souza', email: para, unidade: unidadesDa()[0]?.nome ?? '' };
     const m = montarEmail(c.conteudo, { assunto: c.assunto, preheader: c.preheader, descadastro: `${this.baseUrl()}/e/d/teste` });
     await this.o.transporte(this.envioDe(conta)).enviar({
       de: { nome: conta.remetente_nome, email: conta.remetente_email },

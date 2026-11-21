@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { UnidadeId } from '../domain.js';
+import { existeUnidade, idsUnidades } from '../unidades.js';
 import { Cofre } from './cofre.js';
 
 /** O que pode ser configurado pela tela de Conexões. */
@@ -113,20 +114,64 @@ export const CAMPOS = {
   cobrancaEmail: { segredo: false },
   cobrancaCpfCnpj: { segredo: false },
 } as const;
-export type Campo = keyof typeof CAMPOS;
+/**
+ * Campos que existem uma vez por unidade do cadastro (Empresa › Unidades). O nome do campo leva a unidade:
+ * as unidades antigas da Império mantêm o nome de antes ("metaTokenNorte", "canalSumare"); as outras usam
+ * "base__id" ("metaToken__loja-centro"). Assim 1, 2 ou 10 unidades têm cada uma o seu WhatsApp e a sua agenda.
+ */
+export const CAMPOS_POR_UNIDADE = {
+  trinksEstabelecimento: { segredo: false },
+  agendaSistema: { segredo: false },
+  avecToken: { segredo: true },
+  avecUnidade: { segredo: false },
+  appbarberToken: { segredo: true },
+  appbarberLoja: { segredo: false },
+  canal: { segredo: false },
+  metaPhoneNumberId: { segredo: false },
+  metaWabaId: { segredo: false },
+  metaToken: { segredo: true },
+  metaAppSecret: { segredo: true },
+  metaVerifyToken: { segredo: false },
+} as const;
+export type BaseUnidade = keyof typeof CAMPOS_POR_UNIDADE;
+export type Campo = keyof typeof CAMPOS | `${BaseUnidade}__${string}`;
 export type ValoresConexao = Partial<Record<Campo, string>>;
 
-/** Unidades com WhatsApp (Feira está em obras). */
-export const UNIDADES_WHATSAPP = ['norte', 'sumare'] as const;
-export type UnidadeWhatsApp = (typeof UNIDADES_WHATSAPP)[number];
+/** Unidades que podem ter WhatsApp: todas as ativas do cadastro. */
+export const unidadesWhatsApp = (): UnidadeId[] => idsUnidades();
+export type UnidadeWhatsApp = UnidadeId;
 export type TipoCanalUnidade = 'evolution' | 'meta';
 
-const SUFIXO: Record<UnidadeWhatsApp, 'Norte' | 'Sumare'> = { norte: 'Norte', sumare: 'Sumare' };
+/** Sufixo antigo (campos que já existiam antes do cadastro de unidades). */
+const SUFIXO_LEGADO: Record<string, string> = { norte: 'Norte', sumare: 'Sumare' };
+const ID_NO_CAMPO = /^[a-z0-9][a-z0-9-]{0,39}$/;
+/** Nome do campo de uma unidade: campoDaUnidade('metaToken', 'norte') = "metaTokenNorte"; ('metaToken', 'loja-1') = "metaToken__loja-1". */
+export const campoDaUnidade = (base: BaseUnidade, u: string): Campo => (SUFIXO_LEGADO[u] ? `${base}${SUFIXO_LEGADO[u]}` : `${base}__${u}`) as Campo;
+/** O contrário: de qual base e unidade é este campo (undefined = não é campo de unidade). */
+export function campoDeUnidade(chave: string): { base: BaseUnidade; unidade: string } | undefined {
+  const i = chave.indexOf('__');
+  if (i > 0) {
+    const base = chave.slice(0, i);
+    const unidade = chave.slice(i + 2);
+    return base in CAMPOS_POR_UNIDADE && ID_NO_CAMPO.test(unidade) ? { base: base as BaseUnidade, unidade } : undefined;
+  }
+  for (const [u, suf] of Object.entries(SUFIXO_LEGADO)) {
+    if (chave.endsWith(suf) && chave.slice(0, -suf.length) in CAMPOS_POR_UNIDADE) return { base: chave.slice(0, -suf.length) as BaseUnidade, unidade: u };
+  }
+  return undefined;
+}
+/** O campo existe? (fixo ou de unidade) e se é segredo. */
+export function infoCampo(chave: string): { segredo: boolean } | undefined {
+  if (chave in CAMPOS) return CAMPOS[chave as keyof typeof CAMPOS];
+  const u = campoDeUnidade(chave);
+  return u ? CAMPOS_POR_UNIDADE[u.base] : undefined;
+}
+
 type ParteMeta = 'PhoneNumberId' | 'WabaId' | 'Token' | 'AppSecret' | 'VerifyToken';
 /** Nome do campo da API oficial de uma unidade, ex.: campoMeta('Token', 'norte') = "metaTokenNorte". */
-export const campoMeta = (parte: ParteMeta, u: UnidadeWhatsApp) => `meta${parte}${SUFIXO[u]}` as Campo;
-export const campoCanal = (u: UnidadeWhatsApp) => `canal${SUFIXO[u]}` as Campo;
-const ehUnidadeWhatsApp = (u: string): u is UnidadeWhatsApp => (UNIDADES_WHATSAPP as readonly string[]).includes(u);
+export const campoMeta = (parte: ParteMeta, u: UnidadeWhatsApp) => campoDaUnidade(`meta${parte}`, u);
+export const campoCanal = (u: UnidadeWhatsApp) => campoDaUnidade('canal', u);
+const ehUnidadeWhatsApp = (u: string): u is UnidadeWhatsApp => existeUnidade(u);
 
 /** Configuração da API oficial de uma unidade (só com Phone Number ID e token, o mínimo para enviar). */
 export interface ContaMeta {
@@ -140,7 +185,8 @@ export interface ContaMeta {
 
 export const novoVerifyToken = () => `sintonia-${randomBytes(16).toString('hex')}`;
 
-export const NumeroConectadoCfg = z.object({ canalId: z.string().min(1), unidade: z.enum(['norte', 'sumare', 'feira']), nome: z.string().max(60).optional() });
+// A unidade só precisa ter o formato certo: um canal salvo nunca some porque a unidade foi desativada.
+export const NumeroConectadoCfg = z.object({ canalId: z.string().min(1), unidade: z.string().regex(ID_NO_CAMPO), nome: z.string().max(60).optional() });
 /** Canal de WhatsApp registrado. `nome` é o apelido que a pessoa deu (ex.: "Atendimento"); `unidade` é só interna. */
 export type NumeroCfg = { canalId: string; unidade: UnidadeId; nome?: string };
 
@@ -198,7 +244,7 @@ export class Conexoes {
     const brutos = await this.armazem.lerTudo();
     const salvos: ValoresConexao = {};
     for (const [chave, valor] of Object.entries(brutos)) {
-      if (!(chave in CAMPOS)) continue;
+      if (!infoCampo(chave)) continue;
       try {
         salvos[chave as Campo] = this.cofre.decifrar(valor);
       } catch {
@@ -209,10 +255,17 @@ export class Conexoes {
     // Gerados pela Sintonia na primeira vez: token do webhook da Evolution e o Verify Token da Meta de cada unidade.
     const gerar: ValoresConexao = {};
     if (!this.valores.webhookToken) gerar.webhookToken = randomBytes(24).toString('hex');
-    for (const u of UNIDADES_WHATSAPP) if (!this.valores[campoMeta('VerifyToken', u)]) gerar[campoMeta('VerifyToken', u)] = novoVerifyToken();
+    for (const u of unidadesWhatsApp()) if (!this.valores[campoMeta('VerifyToken', u)]) gerar[campoMeta('VerifyToken', u)] = novoVerifyToken();
     for (const c of ['messengerVerifyToken', 'instagramVerifyToken', 'tiktokVerifyToken'] as const) if (!this.valores[c]) gerar[c] = novoVerifyToken();
     if (Object.keys(gerar).length) await this.salvar(gerar, 'sistema');
     else this.avisar();
+  }
+
+  /** Unidade nova no cadastro: ganha o Verify Token da API oficial (o webhook da Meta precisa dele). */
+  async garantirTokensDasUnidades(): Promise<void> {
+    const gerar: ValoresConexao = {};
+    for (const u of unidadesWhatsApp()) if (!this.valores[campoMeta('VerifyToken', u)]) gerar[campoMeta('VerifyToken', u)] = novoVerifyToken();
+    if (Object.keys(gerar).length) await this.salvar(gerar, 'sistema');
   }
 
   get(campo: Campo): string | undefined {
@@ -251,7 +304,11 @@ export class Conexoes {
 
   /** Verify Tokens de todas as unidades (a verificação do webhook aceita qualquer um deles). */
   verifyTokensMeta(): string[] {
-    return UNIDADES_WHATSAPP.map((u) => this.get(campoMeta('VerifyToken', u))).filter((t): t is string => Boolean(t));
+    // Todas as salvas (também de unidade desativada): a Meta pode estar configurada com qualquer uma.
+    return Object.entries(this.valores)
+      .filter(([k]) => campoDeUnidade(k)?.base === 'metaVerifyToken')
+      .map(([, v]) => v)
+      .filter((t): t is string => Boolean(t));
   }
 
   destinosRelatorio(): string[] {
@@ -261,7 +318,7 @@ export class Conexoes {
   /** Grava (cifrado) e aplica. String vazia apaga o campo salvo e volta ao valor do ambiente, se houver. */
   async salvar(parcial: ValoresConexao, quem: string): Promise<void> {
     for (const [campo, valor] of Object.entries(parcial) as Array<[Campo, string | undefined]>) {
-      if (!(campo in CAMPOS) || valor === undefined) continue;
+      if (!infoCampo(campo) || valor === undefined) continue;
       const v = valor.trim();
       await this.armazem.gravar(campo, v ? this.cofre.cifrar(v) : null, quem);
       if (v) this.valores[campo] = v;
@@ -277,14 +334,21 @@ export class Conexoes {
 
   /** Para a tela: nunca devolve o segredo, só se existe e o final dele. */
   resumo() {
+    // Campos fixos + os de cada unidade do cadastro (inclusive desativadas, para a tela mostrar o que ficou salvo).
+    const porUnidade = idsUnidades(undefined, { inativas: true }).flatMap((u) => (Object.keys(CAMPOS_POR_UNIDADE) as BaseUnidade[]).map((b) => campoDaUnidade(b, u)));
+    const chaves = [...new Set<Campo>([...(Object.keys(CAMPOS) as Campo[]), ...porUnidade])];
     const campos = Object.fromEntries(
-      (Object.keys(CAMPOS) as Campo[]).map((c) => {
+      chaves.map((c) => {
         const v = this.valores[c];
-        return [c, CAMPOS[c].segredo ? { definido: Boolean(v), final: v ? v.slice(-4) : null } : { definido: Boolean(v), valor: v ?? null }];
+        return [c, infoCampo(c)?.segredo ? { definido: Boolean(v), final: v ? v.slice(-4) : null } : { definido: Boolean(v), valor: v ?? null }];
       }),
     );
-    const canais = Object.fromEntries(UNIDADES_WHATSAPP.map((u) => [u, this.canalDaUnidade(u)])) as Record<UnidadeWhatsApp, TipoCanalUnidade>;
-    return { campos, numeros: this.numeros(), destinosRelatorio: this.destinosRelatorio(), canais };
+    const canais = Object.fromEntries(unidadesWhatsApp().map((u) => [u, this.canalDaUnidade(u)])) as Record<UnidadeWhatsApp, TipoCanalUnidade>;
+    // Nome de cada campo por unidade, para a tela montar os formulários sem saber a regra do nome.
+    const camposUnidade = Object.fromEntries(
+      idsUnidades(undefined, { inativas: true }).map((u) => [u, Object.fromEntries((Object.keys(CAMPOS_POR_UNIDADE) as BaseUnidade[]).map((b) => [b, campoDaUnidade(b, u)]))]),
+    );
+    return { campos, numeros: this.numeros(), destinosRelatorio: this.destinosRelatorio(), canais, camposUnidade };
   }
 
   private avisar() {

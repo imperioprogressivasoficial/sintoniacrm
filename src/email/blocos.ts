@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { assinatura, identidade } from '../empresa/identidade.js';
+import { unidadesDa } from '../unidades.js';
 
 /**
  * Editor de blocos do e-mail: título, texto, imagem, botão, divisor, espaço e 2 colunas.
@@ -37,9 +39,10 @@ export const Tema = z
     botao: cor.default('#0FFCBE'),
     textoBotao: cor.default('#071D33'),
     logo: z.union([url, z.literal('')]).default(''),
-    rodape: z.string().max(600).default('Império Progressivas · Salvador, Bahia'),
+    // Rodapé padrão: nome e cidade da empresa (Empresa › Dados).
+    rodape: z.string().max(600).default(() => assinatura()),
   })
-  .default({ fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: 'Império Progressivas · Salvador, Bahia' });
+  .default(() => ({ fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: assinatura() }));
 export type Tema = z.infer<typeof Tema>;
 
 export const Conteudo = z.object({ tema: Tema, blocos: z.array(Bloco).max(60).default([]) });
@@ -87,7 +90,7 @@ export function trocarVariaveis(texto: string, v: Variaveis, escapar: boolean): 
     .replace(/\{primeiro_nome\}/g, f(primeiro || 'cliente'))
     .replace(/\{nome\}/g, f(nome || 'cliente'))
     .replace(/\{email\}/g, f((v.email ?? '').trim()))
-    .replace(/\{unidade\}/g, f((v.unidade ?? '').trim() || 'Império Progressivas'));
+    .replace(/\{unidade\}/g, f((v.unidade ?? '').trim() || identidade().nome));
 }
 
 /** Texto simples com **negrito**, *itálico*, [link](https://...) e quebras de linha. */
@@ -147,11 +150,11 @@ export function montarEmail(conteudo: Conteudo, o: OpcoesHtml): EmailMontado {
 </tr></table></td></tr>`;
   });
 
-  const logo = t.logo ? `<tr><td style="padding:28px 32px 8px;" align="center"><img src="${esc(t.logo)}" alt="Império Progressivas" width="160" style="display:block;width:160px;max-width:60%;height:auto;border:0;"></td></tr>` : '<tr><td style="height:24px;font-size:0;line-height:0;">&nbsp;</td></tr>';
+  const logo = t.logo ? `<tr><td style="padding:28px 32px 8px;" align="center"><img src="${esc(t.logo)}" alt="${esc(identidade().nome)}" width="160" style="display:block;width:160px;max-width:60%;height:auto;border:0;"></td></tr>` : '<tr><td style="height:24px;font-size:0;line-height:0;">&nbsp;</td></tr>';
   const preheader = o.preheader?.trim()
     ? `<div style="display:none;font-size:1px;color:${t.fundo};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${esc(o.preheader)}${'&#847;&zwnj;&nbsp;'.repeat(30)}</div>`
     : '';
-  const rodape = `<tr><td style="padding:22px 32px 30px;font-family:${FONTE};font-size:12px;line-height:1.6;color:#5B6B7C;text-align:center;" class="px">${textoRico(t.rodape, (u) => esc(u), '#5B6B7C')}<br>Você recebeu este e-mail porque é cliente ou se cadastrou na Império Progressivas.<br><a href="${esc(o.descadastro)}" style="color:#5B6B7C;text-decoration:underline;">Não quero mais receber e-mails</a></td></tr>`;
+  const rodape = `<tr><td style="padding:22px 32px 30px;font-family:${FONTE};font-size:12px;line-height:1.6;color:#5B6B7C;text-align:center;" class="px">${textoRico(t.rodape, (u) => esc(u), '#5B6B7C')}<br>Você recebeu este e-mail porque é cliente ou se cadastrou na ${esc(identidade().nome)}.<br><a href="${esc(o.descadastro)}" style="color:#5B6B7C;text-decoration:underline;">Não quero mais receber e-mails</a></td></tr>`;
   const pixel = o.pixel ? `<img src="${esc(o.pixel)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;opacity:0;">` : '';
 
   const html = `<!DOCTYPE html>
@@ -207,9 +210,48 @@ const IMG_CABELO = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=
 const IMG_SALAO = 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&q=80';
 const WHATS = 'https://wa.me/5571999999999';
 
-const tema = (p: Partial<Tema> = {}): Tema => ({ fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: 'Império Progressivas · Salvador, Bahia\nSalvador Norte Shopping · Shopping Sumaré', ...p });
-
-export const MODELOS_PRONTOS: Array<{ id: string; nome: string; descricao: string; assunto: string; preheader: string; conteudo: Conteudo }> = [
+/**
+ * Modelos prontos de e-mail, montados com o cadastro (nome, cidade e unidades da empresa). Os textos de cabelo
+ * (progressiva, liso) só aparecem para salão de cabelo; outra empresa recebe a mesma estrutura com texto neutro.
+ */
+export function modelosProntos(): Array<{ id: string; nome: string; descricao: string; assunto: string; preheader: string; conteudo: Conteudo }> {
+  const emp = identidade();
+  const salao = /progressiva|alisament|cabel|sal[aã]o|beleza|hair/i.test(`${emp.segmento} ${emp.nome}`);
+  const nomesUnidades = unidadesDa().map((u) => u.nome);
+  const rodapePadrao = [assinatura(emp), nomesUnidades.length > 1 ? nomesUnidades.join(' · ') : ''].filter(Boolean).join('\n');
+  const tema = (p: Partial<Tema> = {}): Tema => ({ fundo: '#EEF4FB', conteudo: '#FFFFFF', texto: '#0B2540', destaque: '#106EBE', botao: '#0FFCBE', textoBotao: '#071D33', logo: '', rodape: rodapePadrao, ...p });
+  const curto = emp.nome.split(/\s+/)[0] || emp.nome;
+  const POR_EXTENSO = ['', 'Uma', 'Duas', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito', 'Nove', 'Dez'];
+  const emLista = (l: string[]) => (l.length > 1 ? `${l.slice(0, -1).join(', ')} e ${l.at(-1)}` : (l[0] ?? ''));
+  const textoUnidades =
+    nomesUnidades.length > 1
+      ? `**${POR_EXTENSO[nomesUnidades.length] ?? nomesUnidades.length} unidades**${emp.cidade ? ` em ${emp.cidade}` : ''}: ${emLista(nomesUnidades)}.`
+      : `Atendimento com hora marcada${emp.cidade ? ` em ${emp.cidade}` : ''}.`;
+  const todas = nomesUnidades.length > 1 ? (nomesUnidades.length === 2 ? 'nas duas unidades' : 'em todas as unidades') : '';
+  const lista = modelosBase();
+  if (salao) return lista;
+  // Empresa que não é salão de cabelo: mesma estrutura, sem falar de cabelo.
+  return lista.map((m) => {
+    if (m.id === 'promocao')
+      return { ...m, descricao: 'Oferta com chamada e botão para falar pelo WhatsApp.', assunto: '{primeiro_nome}, uma condição especial para você ✨', preheader: `Só este mês na ${emp.nome}. Fale com a gente pelo WhatsApp.`,
+        conteudo: { tema: tema(), blocos: [
+          { tipo: 'titulo', texto: 'Uma condição especial para você', tamanho: 'grande', alinhar: 'esquerda' },
+          { tipo: 'texto', texto: `Oi, {primeiro_nome}! Este mês a ${curto} preparou uma condição especial para você. Escreva aqui o que está em oferta.`, alinhar: 'esquerda' },
+          { tipo: 'botao', texto: 'Quero aproveitar', url: WHATS, alinhar: 'centro' },
+        ] } as Conteudo };
+    if (m.id === 'pos-atendimento')
+      return { ...m, descricao: 'Agradecimento depois do atendimento e convite para voltar.', assunto: '{primeiro_nome}, obrigada pela visita 💙', preheader: 'Conta pra gente como foi.',
+        conteudo: { tema: tema(), blocos: [
+          { tipo: 'titulo', texto: 'Obrigada pela visita, {primeiro_nome}!', tamanho: 'medio', alinhar: 'esquerda' },
+          { tipo: 'texto', texto: 'Foi um prazer te atender. Se tiver qualquer dúvida, é só responder este e-mail ou chamar no WhatsApp.', alinhar: 'esquerda' },
+          { tipo: 'botao', texto: 'Agendar de novo', url: WHATS, alinhar: 'esquerda' },
+        ] } as Conteudo };
+    if (m.id === 'aniversario')
+      return { ...m, conteudo: { ...m.conteudo, blocos: m.conteudo.blocos.map((b) => (b.tipo === 'texto' && /cabelo/.test(b.texto) ? { ...b, texto: b.texto.replace(' e de dias de cabelo perfeito', '') } : b)) } };
+    return m;
+  });
+  function modelosBase(): Array<{ id: string; nome: string; descricao: string; assunto: string; preheader: string; conteudo: Conteudo }> {
+  return [
   {
     id: 'promocao',
     nome: 'Promoção do mês',
@@ -222,10 +264,10 @@ export const MODELOS_PRONTOS: Array<{ id: string; nome: string; descricao: strin
         { tipo: 'imagem', url: IMG_HEROI, alt: 'Cabelo liso e brilhante', largura: 600, arredondar: false },
         { tipo: 'espaco', altura: 12 },
         { tipo: 'titulo', texto: 'Seu liso perfeito, do jeito que você sempre quis', tamanho: 'grande', alinhar: 'esquerda' },
-        { tipo: 'texto', texto: 'Oi, {primeiro_nome}! Este mês a Império preparou uma condição especial na **progressiva** para você chegar no verão com o cabelo leve, sem frizz e com brilho de salão todos os dias.', alinhar: 'esquerda' },
+        { tipo: 'texto', texto: `Oi, {primeiro_nome}! Este mês a ${curto} preparou uma condição especial na **progressiva** para você chegar no verão com o cabelo leve, sem frizz e com brilho de salão todos os dias.`, alinhar: 'esquerda' },
         { tipo: 'botao', texto: 'Quero agendar', url: WHATS, alinhar: 'centro' },
         { tipo: 'divisor' },
-        { tipo: 'colunas', esquerda: [{ tipo: 'imagem', url: IMG_CABELO, alt: 'Antes e depois', largura: 268, arredondar: true }, { tipo: 'texto', texto: '**Avaliação gratuita** com a nossa equipe antes do procedimento.', alinhar: 'esquerda' }], direita: [{ tipo: 'imagem', url: IMG_SALAO, alt: 'Nosso salão', largura: 268, arredondar: true }, { tipo: 'texto', texto: '**Duas unidades** em Salvador: Norte Shopping e Shopping Sumaré.', alinhar: 'esquerda' }] },
+        { tipo: 'colunas', esquerda: [{ tipo: 'imagem', url: IMG_CABELO, alt: 'Antes e depois', largura: 268, arredondar: true }, { tipo: 'texto', texto: '**Avaliação gratuita** com a nossa equipe antes do procedimento.', alinhar: 'esquerda' }], direita: [{ tipo: 'imagem', url: IMG_SALAO, alt: 'Nosso salão', largura: 268, arredondar: true }, { tipo: 'texto', texto: textoUnidades, alinhar: 'esquerda' }] },
       ],
     },
   },
@@ -234,14 +276,14 @@ export const MODELOS_PRONTOS: Array<{ id: string; nome: string; descricao: strin
     nome: 'Feliz aniversário',
     descricao: 'Parabéns com um mimo para usar no mês do aniversário.',
     assunto: 'Feliz aniversário, {primeiro_nome}! Tem presente para você 🎁',
-    preheader: 'Um mimo da Império para comemorar o seu dia.',
+    preheader: `Um mimo da ${curto} para comemorar o seu dia.`,
     conteudo: {
       tema: tema({ fundo: '#E8FFF8' }),
       blocos: [
         { tipo: 'titulo', texto: 'Feliz aniversário, {primeiro_nome}! 🎉', tamanho: 'grande', alinhar: 'centro' },
-        { tipo: 'texto', texto: 'A família Império deseja um ano lindo, cheio de saúde e de dias de cabelo perfeito.\n\nPara comemorar, você ganha um **mimo especial** em qualquer serviço durante o mês do seu aniversário.', alinhar: 'centro' },
+        { tipo: 'texto', texto: `A família ${curto} deseja um ano lindo, cheio de saúde e de dias de cabelo perfeito.\n\nPara comemorar, você ganha um **mimo especial** em qualquer serviço durante o mês do seu aniversário.`, alinhar: 'centro' },
         { tipo: 'botao', texto: 'Resgatar meu presente', url: WHATS, alinhar: 'centro' },
-        { tipo: 'texto', texto: '*Válido no mês do aniversário, nas duas unidades.*', alinhar: 'centro' },
+        { tipo: 'texto', texto: todas ? `*Válido no mês do aniversário, ${todas}.*` : '*Válido no mês do aniversário.*', alinhar: 'centro' },
       ],
     },
   },
@@ -266,7 +308,7 @@ export const MODELOS_PRONTOS: Array<{ id: string; nome: string; descricao: strin
     id: 'novidade',
     nome: 'Novidade simples',
     descricao: 'Só título, texto e botão. Bom para avisos rápidos.',
-    assunto: 'Novidade na Império Progressivas',
+    assunto: `Novidade na ${emp.nome}`,
     preheader: '',
     conteudo: {
       tema: tema(),
@@ -278,3 +320,5 @@ export const MODELOS_PRONTOS: Array<{ id: string; nome: string; descricao: strin
     },
   },
 ];
+  }
+}

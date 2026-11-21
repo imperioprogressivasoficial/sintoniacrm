@@ -67,7 +67,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['fora_do_horario', 'Mensagem fora do horário'],
     ['manual', 'Manual (botão na conversa)'],
   ];
-  const UNIDADES = { norte: 'Salvador Norte', sumare: 'Sumaré', feira: 'Feira de Santana' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const UNIDADES = window.Sintonia?.ui?.UNIDADE || {};
   const MODOS = { ia: 'IA responde', copiloto: 'Copiloto (sugere)', humano: 'Só equipe' };
   const VALIDACOES = { texto: 'Texto', numero: 'Número', telefone: 'Telefone', email: 'E-mail', data: 'Data' };
   const CONDICOES = [['horario_loja', 'A loja está aberta'], ['tag', 'Tem a tag'], ['etapa', 'Está na etapa'], ['campo', 'Campo da ficha / variável'], ['unidade', 'A unidade é'], ['resposta_contem', 'A resposta contém'], ['modo', 'O modo é']];
@@ -950,7 +951,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         }
         case 'condicao': {
           const c = n.condicao || (n.condicao = { se: 'horario_loja', valor: '', operador: 'preenchido' });
-          add(campo('Se…', selecao(CONDICOES, c.se, (v) => { n.condicao = { se: v, valor: v === 'tag' ? opcoesTags()[0]?.[0] || '' : v === 'etapa' ? opcoesEtapas()[0]?.[0] || '' : v === 'unidade' ? 'norte' : v === 'modo' ? 'ia' : '', operador: 'preenchido' }; alterou(true); })));
+          add(campo('Se…', selecao(CONDICOES, c.se, (v) => { n.condicao = { se: v, valor: v === 'tag' ? opcoesTags()[0]?.[0] || '' : v === 'etapa' ? opcoesEtapas()[0]?.[0] || '' : v === 'unidade' ? (window.Sintonia?.ui?.unidadesAtivas?.()[0]?.id || '') : v === 'modo' ? 'ia' : '', operador: 'preenchido' }; alterou(true); })));
           if (c.se === 'tag') add(campo('Tag', selecao(opcoesTags(), c.valor, (v) => { c.valor = v; alterou(); })));
           if (c.se === 'etapa') add(campo('Etapa', selecao(opcoesEtapas(), c.valor, (v) => { c.valor = v; alterou(); })));
           if (c.se === 'unidade') add(campo('Unidade', selecao(Object.entries(UNIDADES), c.valor, (v) => { c.valor = v; alterou(); })));
@@ -1270,7 +1271,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
     async function novaClienteTeste() {
       const telefone = '5599' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
-      await ui.post('/api/teste/cliente', { unidade: 'norte', nome: 'Cliente Teste', telefone, texto: 'Oi' });
+      await ui.post('/api/teste/cliente', { unidade: ui.unidadesAtivas?.()[0]?.id || '', nome: 'Cliente Teste', telefone, texto: 'Oi' }); /* unidades: a 1ª ativa */
       for (let i = 0; i < 10; i++) {
         const lista = await ui.api('/api/conversas').catch(() => []);
         const c = (Array.isArray(lista) ? lista : lista.conversas || []).find((x) => x.telefone === telefone);
@@ -1324,7 +1325,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         const enviar = async () => {
           const texto = entrada.value.trim(); if (!texto || !t.conv) return;
           entrada.value = '';
-          try { await ui.post('/api/teste/cliente', { unidade: t.conv.unidade === 'sumare' ? 'sumare' : 'norte', nome: t.conv.nome || 'Cliente Teste', telefone: t.conv.telefone, texto }); await atualizarTeste(); } catch (x) { ui.toast(x.message); }
+          try { await ui.post('/api/teste/cliente', { unidade: t.conv.unidade || ui.unidadesAtivas?.()[0]?.id || '', nome: t.conv.nome || 'Cliente Teste', telefone: t.conv.telefone, texto }); await atualizarTeste(); } catch (x) { ui.toast(x.message); }
         };
         entrada.addEventListener('keydown', (e) => { if (e.key === 'Enter') enviar(); });
         corpoT.append(chat, el('div', { class: 'bt-linha' }, entrada, el('button', { class: 'bt-redondo', type: 'button', 'aria-label': 'Enviar', html: SVG.enviar, onclick: enviar })));

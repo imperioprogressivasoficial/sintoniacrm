@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { identidade } from '../empresa/identidade.js';
+import { idsUnidades } from '../unidades.js';
 
 /**
  * Follow-up automático (cadências por situação) e confirmação automática de agenda.
@@ -145,7 +147,8 @@ export function configPadrao(): ConfigFollowup {
     cadencias: SITUACOES.map((id) => ({ ...MODELOS_CADENCIA[id], ligada: false })),
     confirmacao: {
       ligada: true,
-      unidades: { norte: { ligada: true, horasAntes: [24, 2] }, sumare: { ligada: true, horasAntes: [24, 2] } },
+      // Uma por unidade ativa do cadastro (unidade nova sem linha aqui também recebe 24 h e 2 h antes).
+      unidades: Object.fromEntries(idsUnidades().map((u) => [u, { ligada: true, horasAntes: [24, 2] }])),
       ...TEXTOS_CONFIRMACAO,
       email: true,
       emailModeloId: null,
@@ -221,7 +224,7 @@ export function preencher(texto: string, v: Record<string, string | undefined | 
     .replace(/\{primeiro_nome\}/g, primeiro || 'tudo bem')
     .replace(/\{nome\}/g, nome || 'cliente')
     .replace(/\{servico\}/g, (v.servico ?? '').trim() || 'atendimento')
-    .replace(/\{unidade\}/g, (v.unidade ?? '').trim() || 'Império Progressivas')
+    .replace(/\{unidade\}/g, (v.unidade ?? '').trim() || identidade().nome)
     .replace(/\{data\}/g, (v.data ?? '').trim())
     .replace(/\{hora\}/g, (v.hora ?? '').trim())
     .replace(/[ \t]+([,.!?])/g, '$1');

@@ -1,6 +1,6 @@
 import type { Conversa, UnidadeId } from '../domain.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { idsUnidades, unidadeDe } from '../unidades.js';
 import { bahia, DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
 import { JANELA_CONDUZINDO_MS } from '../painel/ia-hoje.js';
 
@@ -47,10 +47,8 @@ export interface ResumoSerena {
   agendado: { total: number; proximas: Array<{ conversaId: string; nome: string | null; quando: Date; texto: string }> };
 }
 
-export interface ControleSerena {
-  norte?: { ligado?: boolean; agenteId?: string | null };
-  sumare?: { ligado?: boolean; agenteId?: string | null };
-}
+/** "IA atende primeiro" de cada unidade do cadastro (chave = id da unidade). */
+export type ControleSerena = Partial<Record<string, { ligado?: boolean; agenteId?: string | null }>>;
 
 const ultimaNossa = (c: Conversa) => Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
 const minutos = (ms: number) => Math.max(0, Math.floor(ms / MIN));
@@ -60,7 +58,7 @@ export function precisaDeVoce(conversas: Conversa[], eventos: Evento[], agora: D
   const ag = agora.getTime();
   const porId = new Map(conversas.map((c) => [c.id, c]));
   const itens = new Map<string, ItemPrecisa>();
-  const base = (c: Conversa) => ({ conversaId: c.id, nome: c.nome ?? null, telefone: c.telefone, unidade: c.unidade, unidadeNome: UNIDADES[c.unidade]?.nome ?? c.unidade });
+  const base = (c: Conversa) => ({ conversaId: c.id, nome: c.nome ?? null, telefone: c.telefone, unidade: c.unidade, unidadeNome: unidadeDe(c.unidade)?.nome ?? c.unidade });
 
   // 1) A Serena passou para a equipe e ninguém da equipe respondeu depois (a última passagem de cada conversa).
   const passagens = new Map<string, Evento>();
@@ -144,7 +142,7 @@ export async function resumoSerena(
 
   const precisa = precisaDeVoce(conversas, meus, agora);
 
-  const unidades = (['norte', 'sumare'] as const).map((u) => ({ unidade: u, nome: UNIDADES[u].nome, ligada: Boolean(opcoes.controle?.[u]?.ligado) }));
+  const unidades = idsUnidades().map((u) => ({ unidade: u, nome: unidadeDe(u).nome, ligada: Boolean(opcoes.controle?.[u]?.ligado) }));
   return {
     ligada: opcoes.controle ? unidades.some((u) => u.ligada) : null,
     unidades,

@@ -4,11 +4,11 @@ import { decidirQuemResponde, equipeAtuou } from '../src/engine/atendimento.js';
 import { proximaEtapa } from '../src/engine/etapas.js';
 import { followupsSemAgendamento, lembretesDoAgendamento, posAtendimento } from '../src/engine/followups.js';
 import { ajustarParaJanelaAtiva, estaAberta } from '../src/engine/horario.js';
-import { UNIDADES } from '../src/unidades.js';
+import { unidadeDe } from '../src/unidades.js';
 import { bahia, dataISO, horaHHmm, MIN } from '../src/util/tempo.js';
 import { normalizarCelular, telefoneDoJid } from '../src/util/telefone.js';
 
-const norte = UNIDADES.norte;
+const norte = unidadeDe('norte');
 // Quinta-feira, 5/11/2026
 const quinta = (h: number, m = 0) => bahia(2026, 11, 5, h, m);
 

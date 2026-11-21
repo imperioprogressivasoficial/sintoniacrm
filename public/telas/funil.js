@@ -558,7 +558,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       onclick: () => trocarFunil(f.id),
     }, el('span', { text: f.nome }), el('span', { class: 'fn-qtd', text: f.conversas != null ? String(f.conversas) : '' }))));
     const eu = s.ui.estado.eu || {};
-    const unidades = (eu.unidades && eu.unidades.length ? eu.unidades : Object.keys(UNIDADE).filter((u) => u !== 'feira'));
+    const unidades = (eu.unidades && eu.unidades.length ? eu.unidades : (s.ui.unidadesAtivas ? s.ui.unidadesAtivas().map((u) => u.id) : Object.keys(UNIDADE))); /* unidades: as ativas do cadastro */
     if (s.unidade && !unidades.includes(s.unidade)) s.unidade = '';
     s.unidadesOps = unidades.length < 2 ? [] : [['', 'Todas as unidades'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
     contarFiltros();

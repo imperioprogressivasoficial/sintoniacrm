@@ -10,7 +10,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ABAS = [['atendentes', 'Por atendente'], ['equipe', 'Equipe'], ['fila', 'Sem resposta agora']];
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const CHAVE = 'sintonia.desempenho.filtro';
-  const UNI = { norte: 'Norte', sumare: 'Sumaré' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const UNI = window.Sintonia?.ui?.UNIDADE || {};
 
   const CSS = `
   .dp-caixa.dp-caixa { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; padding: 14px 16px 0; gap: 0; }

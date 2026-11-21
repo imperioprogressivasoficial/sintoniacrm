@@ -10,6 +10,7 @@ import type { ExecutorAgentes } from './executor.js';
 import { ferramentasPermitidas } from './executor.js';
 import type { ServicoAgentesIa } from './servico.js';
 import { AgenteNovo, CHAVES_MEMORIA, FERRAMENTAS_AGENTE, MODELOS, modeloImperio, NOME_FERRAMENTA, NOME_MEMORIA, publico } from './tipos.js';
+import { zUnidade } from '../unidades.js';
 
 export interface OpcoesRotasAgentesIa {
   repo: Repositorio;
@@ -147,7 +148,7 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
   const Teste = z.object({
     mensagem: z.string().trim().min(1).max(2000),
     historico: z.array(z.object({ autor: z.enum(['cliente', 'ia']), texto: z.string().max(4000) })).max(40).optional(),
-    unidade: z.enum(['norte', 'sumare']).optional(),
+    unidade: zUnidade().optional(),
     nome: z.string().trim().max(60).optional(),
   });
   app.post('/api/agentes-ia/:id/testar', async (req) => {

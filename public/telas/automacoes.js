@@ -17,7 +17,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     tubo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 19A1.5 1.5 0 0 0 5.8 21h12.4a1.5 1.5 0 0 0 1.3-2L14 9V3"/><path d="M7.5 15h9"/></svg>',
   };
 
-  const UNIDADES = { norte: 'Salvador Norte', sumare: 'Sumaré', feira: 'Feira de Santana' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const UNIDADES = window.Sintonia?.ui?.UNIDADE || {};
   const MODOS = { ia: 'Agente de IA', copiloto: 'Sugestões', humano: 'Minha resposta' };
 
   const GATILHOS = [

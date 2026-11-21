@@ -1,13 +1,23 @@
+import { z } from 'zod';
 import type { Conversa, UnidadeId } from '../domain.js';
 import type { Digitando } from '../store/repositorio.js';
 import type { Papel, Usuario } from './contas.js';
+import { idsUnidades, zUnidade } from '../unidades.js';
 
 /**
  * Regras de "quem vê o quê" e "quem gerencia quem". Funções puras: o servidor e a Sintonia
  * só perguntam aqui, e os testes conferem cada papel sem subir nada.
  */
 
-export const UNIDADES_EQUIPE: readonly UnidadeId[] = ['norte', 'sumare', 'feira'];
+/** Unidades que podem ser dadas às pessoas: as ativas do cadastro (Empresa › Unidades). Quem já tem uma desativada não a perde. */
+export const unidadesEquipe = (empresaId?: string): UnidadeId[] => idsUnidades(empresaId);
+
+/** Zod: lista de unidades de uma pessoa (cada uma precisa estar no cadastro). */
+export const zUnidadesPessoa = () =>
+  z
+    .array(zUnidade({ mensagem: 'Unidade não cadastrada (Empresa › Unidades).' }))
+    .max(50)
+    .transform((l) => [...new Set(l)]);
 
 export const NOME_PAPEL: Record<Papel, string> = {
   atendente: 'Atendente',
@@ -113,8 +123,8 @@ export function papeisQuePodeDar(g: Pick<Usuario, 'papel'>): Papel[] {
 }
 
 /** Unidades que este gestor pode atribuir. */
-export const unidadesQuePodeDar = (g: Pick<Usuario, 'papel' | 'unidades'>): UnidadeId[] =>
-  veTudo(g) ? [...UNIDADES_EQUIPE] : g.papel === 'gerente' ? UNIDADES_EQUIPE.filter((u) => g.unidades.includes(u)) : [];
+export const unidadesQuePodeDar = (g: Pick<Usuario, 'papel' | 'unidades'> & { empresaId?: string }): UnidadeId[] =>
+  veTudo(g) ? unidadesEquipe(g.empresaId) : g.papel === 'gerente' ? unidadesEquipe(g.empresaId).filter((u) => g.unidades.includes(u)) : [];
 
 /**
  * Pode gerenciar (editar, desativar, redefinir a senha de) esta pessoa?
@@ -138,7 +148,8 @@ export function podeGerenciar(g: Usuario, alvo: Usuario): boolean {
 /** Pode dar este papel e estas unidades (ao criar ou editar)? Devolve o motivo da recusa, ou null. */
 export function recusaAtribuicao(g: Usuario, papel: Papel, unidades: string[]): string | null {
   if (!papeisQuePodeDar(g).includes(papel)) return `Você não pode dar o papel ${NOME_PAPEL[papel]}.`;
-  const permitidas = unidadesQuePodeDar(g) as string[];
+  // Direção e administração podem manter também uma unidade desativada que a pessoa já tinha.
+  const permitidas = (veTudo(g) ? idsUnidades(g.empresaId, { inativas: true }) : unidadesQuePodeDar(g)) as string[];
   if (unidades.some((x) => !permitidas.includes(x))) return 'Você só pode escolher unidades que você gerencia.';
   if (g.papel === 'gerente' && !unidades.length) return 'Escolha pelo menos uma unidade.';
   return null;

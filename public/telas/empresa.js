@@ -352,6 +352,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       unidadesCache = r;
       // O app inteiro lê ui.UNIDADE na hora de desenhar: trocar aqui muda os nomes em toda parte.
       for (const u of r.unidades) if (ui.UNIDADE) ui.UNIDADE[u.id] = u.nome;
+      /* unidades: o app inteiro (selects, filtros, telas) refaz a lista na hora */
+      if (forcar) ui.carregarUnidades?.();
     }
     return unidadesCache || { unidades: [], podeEditar: false };
   }
@@ -545,7 +547,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('div', { class: 'ec-linha', style: 'align-items:flex-start' }, el('span', { text: 'Horário', style: 'flex:none' }), el('small', { class: 'ec-sub', style: 'text-align:right', text: resumoHorario(u.dados?.horario) })),
           u.dados?.telefone || u.dados?.whatsapp ? el('div', { class: 'ec-linha' }, el('span', { text: 'Contato' }), el('b', { text: [u.dados.telefone, u.dados.whatsapp].filter(Boolean).join(' · ') })) : null,
           el('div', { class: 'ec-linha' }, el('span', { text: 'Movimento' }), el('small', { class: 'ec-sub', text: `${eq ? `${n} ${n === 1 ? 'pessoa' : 'pessoas'} · ` : ''}${c} ${c === 1 ? 'conversa' : 'conversas'} agora` }))),
-        u.fixa ? null : el('p', { class: 'ec-sub', text: 'Unidade nova: já fica no cadastro (endereço, horário, tabelas de preço). Ligar números de WhatsApp e pessoas a ela chega numa próxima etapa.' }),
+        u.fixa ? null : el('p', { class: 'ec-sub', text: 'Ligue um número de WhatsApp a ela em Conexões › WhatsApp e dê acesso às pessoas em Atendentes e acessos.' }),
         pode ? el('div', { class: 'ec-acoes' }, botao('Editar', () => editarUnidade(u), 'mini', 'lapis'),
           botao('', () => mover(i, -1), 'mini icone', 'cima'), botao('', () => mover(i, 1), 'mini icone', 'baixo')) : null);
     };
@@ -565,16 +567,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const wpp = entrada({ value: d.whatsapp || '', inputmode: 'tel', maxlength: '30' });
       const email = entrada({ value: d.email || '', type: 'email', maxlength: '200' });
       const obs = entrada({ tag: 'textarea', value: d.observacao || '', maxlength: '500', placeholder: 'Ex.: estacionamento no piso G2, entrada pela rua de trás.' });
+      /* unidades: nome que vai nas mensagens para os clientes (vazio = o nome) */
+      const nomeCli = entrada({ value: d.nomeCliente || '', maxlength: '80', placeholder: 'Ex.: Shopping Barra, piso L2' });
       let proprio = Boolean(d.horario);
       const hor = editorHorario(d.horario || cadastro?.dados?.horario);
       hor.el.hidden = !proprio;
       const erro = el('p', { class: 'ec-erro', role: 'alert' });
-      form.append(el('div', { class: 'ec-form' }, campo('Nome', nome, { cheio: true, dica: 'Como aparece no app (filtros, conversas, relatórios).' }), ...end.campos, campo('Telefone', tel), campo('WhatsApp', wpp), campo('E-mail', email, { cheio: true }), campo('Observação', obs, { cheio: true })),
+      form.append(el('div', { class: 'ec-form' }, campo('Nome', nome, { cheio: true, dica: 'Como aparece no app (filtros, conversas, relatórios).' }), campo('Nome para os clientes', nomeCli, { cheio: true, dica: 'Como a IA e as mensagens chamam a unidade. Vazio = o nome acima.' }), ...end.campos, campo('Telefone', tel), campo('WhatsApp', wpp), campo('E-mail', email, { cheio: true }), campo('Observação', obs, { cheio: true })),
         opcao('Horário próprio', 'Desligado: segue o horário da empresa.', chave(proprio, (v) => { proprio = v; hor.el.hidden = !v; }, 'Horário próprio')), hor.el,
         opcao('Unidade ativa', 'Desativada some das escolhas, mas nada é apagado.', chave(ativa, (v) => { ligada = v; }, 'Unidade ativa')), erro);
       const salvar = botao(u ? 'Salvar' : 'Cadastrar', async () => {
         erro.textContent = '';
-        const corpo = { nome: nome.value.trim(), ativa: ligada, endereco: end.valor(), telefone: tel.value.trim(), whatsapp: wpp.value.trim(), email: email.value.trim(), observacao: obs.value.trim(), horario: proprio ? hor.valor() : null };
+        const corpo = { nome: nome.value.trim(), ativa: ligada, endereco: end.valor(), telefone: tel.value.trim(), whatsapp: wpp.value.trim(), email: email.value.trim(), observacao: obs.value.trim(), nomeCliente: nomeCli.value.trim(), horario: proprio ? hor.valor() : null };
         if (corpo.nome.length < 2) { erro.textContent = 'O nome precisa de pelo menos 2 letras.'; nome.focus(); return; }
         salvar.disabled = true;
         try { await ui.api(u ? `/api/unidades/${encodeURIComponent(u.id)}` : '/api/unidades', { method: u ? 'PATCH' : 'POST', body: JSON.stringify(corpo) }); ui.toast(u ? 'Unidade salva ✓' : 'Unidade cadastrada ✓'); fechar(); redesenhar(); ui.atualizar?.(); }
@@ -735,7 +739,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function editarTabela(t, prods, uns) {
     const pode = prods.podeEditar;
     janela(t ? (pode ? `Editar ${t.nome}` : t.nome) : 'Nova tabela de preço', (form, fechar) => {
-      const nome = entrada({ value: t?.nome || '', maxlength: '80', placeholder: 'Ex.: Black Friday, Convênio, Unidade Norte' });
+      const nome = entrada({ value: t?.nome || '', maxlength: '80', placeholder: 'Ex.: Black Friday, Convênio, Unidade Centro' });
       const desc = entrada({ value: t?.descricao || '', maxlength: '500' });
       const unidade = el('select', { class: 'ec-in' }, el('option', { value: '', text: 'Todas as unidades' }), ...(uns.unidades || []).map((u) => el('option', { value: u.id, text: u.nome })));
       unidade.value = t?.unidade || '';

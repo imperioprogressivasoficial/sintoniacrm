@@ -249,7 +249,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const amanha = new Date(Date.now() + 3600_000); amanha.setMinutes(0, 0, 0);
     const local = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     const quando = el('input', { type: 'datetime-local', value: local(amanha), min: local(new Date()) });
-    const texto = el('input', { maxlength: '200', placeholder: 'Ex.: confirmar a progressiva de sábado' });
+    const texto = el('input', { maxlength: '200', placeholder: 'Ex.: confirmar o horário de sábado' });
     const erro = el('div', { class: 'erro-txt', role: 'alert' });
     const salvar = el('button', { class: 'botao', type: 'submit', text: 'Programar' });
     const form = el('form', { class: 'lg-form' }, el('b', { text: ui.nomeDe(c) }), el('label', {}, document.createTextNode('Quando'), quando), el('label', {}, document.createTextNode('Lembrete (opcional)'), texto), erro, el('div', { class: 'lg-botoes', style: 'justify-content:flex-end' }, salvar));

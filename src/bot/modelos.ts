@@ -1,8 +1,12 @@
+import { identidade } from '../empresa/identidade.js';
+import { unidadesDa } from '../unidades.js';
 import type { Grafo } from './esquema.js';
 
 /**
  * Modelos prontos de bot. A tela mostra a lista e cria um fluxo novo a partir de um deles (rascunho).
- * Tudo em texto curto e caloroso, do jeito da Império.
+ * Tudo em texto curto e caloroso. O nome da empresa e as unidades vêm do cadastro (Empresa › Dados e Unidades);
+ * os serviços de exemplo seguem o segmento (salão de cabelo ganha progressiva/selagem; outra empresa, um menu neutro).
+ * É só o ponto de partida: a pessoa edita o fluxo antes de ligar.
  */
 export interface ModeloBot {
   id: string;
@@ -19,15 +23,56 @@ const g = (nos: NoBruto[], ligs: Array<[string, string, string]>): Grafo =>
 const X = 340;
 const Y = 230;
 
-export const MODELOS: ModeloBot[] = [
+/** A empresa é de salão de cabelo? (decide só os serviços de exemplo dos modelos) */
+const ehSalaoDeCabelo = (segmento: string, nome: string) => /progressiva|alisament|cabel|sal[aã]o|beleza|hair/i.test(`${segmento} ${nome}`);
+
+/** Os modelos, montados com o que está no cadastro agora. */
+export function modelosBot(): ModeloBot[] {
+  const emp = identidade();
+  const salao = ehSalaoDeCabelo(emp.segmento, emp.nome);
+  // Até 9 unidades na pergunta (a 10ª opção da pergunta é "outro"); empresa sem unidades vê uma de exemplo.
+  const unis = unidadesDa().slice(0, 9);
+  const opcoesUnidade = (unis.length ? unis : [{ id: 'principal', nome: 'Unidade principal' }]).map((u) => ({ id: u.id, texto: u.nome.slice(0, 60) }));
+  const S = salao
+    ? {
+        menuDescricao: 'Cliente nova recebe um menu: Progressiva, Selagem, Preços ou Falar com atendente.',
+        a: { id: 'progressiva', texto: 'Progressiva' },
+        b: { id: 'selagem', texto: 'Selagem' },
+        infoA: 'A nossa progressiva deixa o cabelo liso, brilhoso e sem frizz, com fórmula sem formol. ✨',
+        infoB: 'A selagem alinha os fios, tira o volume e dá muito brilho, com resultado natural. ✨',
+        infoPreco: 'Os valores mudam conforme o comprimento e o volume do cabelo. Me conta um pouquinho do seu cabelo que eu te passo certinho! 😊',
+        objetivo: 'Tirar as dúvidas sobre {interesse} e agendar uma avaliação gratuita.',
+        servicos: [
+          { id: 'progressiva', texto: 'Progressiva' },
+          { id: 'selagem', texto: 'Selagem' },
+          { id: 'botox', texto: 'Botox capilar' },
+          { id: 'outro_servico', texto: 'Outro' },
+        ],
+      }
+    : {
+        menuDescricao: 'Cliente nova recebe um menu: Conhecer os serviços, Como funciona, Preços ou Falar com atendente.',
+        a: { id: 'progressiva', texto: 'Conhecer os serviços' },
+        b: { id: 'selagem', texto: 'Como funciona' },
+        infoA: 'Que bom que você quer conhecer! Me conta o que você procura que eu te explico direitinho. ✨',
+        infoB: 'Funciona assim: você me diz o que precisa, eu tiro as dúvidas e já deixo tudo marcado para você. ✨',
+        infoPreco: 'Os valores mudam conforme o que você precisa. Me conta um pouquinho que eu te passo certinho! 😊',
+        objetivo: 'Tirar as dúvidas sobre {interesse} e marcar um horário.',
+        servicos: [
+          { id: 'progressiva', texto: 'Atendimento' },
+          { id: 'selagem', texto: 'Avaliação' },
+          { id: 'botox', texto: 'Retorno' },
+          { id: 'outro_servico', texto: 'Outro' },
+        ],
+      };
+  return [
   {
     id: 'boas_vindas_menu',
     nome: 'Boas-vindas com menu',
-    descricao: 'Cliente nova recebe um menu: Progressiva, Selagem, Preços ou Falar com atendente.',
+    descricao: S.menuDescricao,
     grafo: g(
       [
         { id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'nova_conversa' } },
-        { id: 'oi', tipo: 'mensagem', x: X, y: 0, texto: 'Oi, {primeiro_nome}! 💛 Que bom te ver por aqui. Aqui é da Império Progressivas – {unidade}.' },
+        { id: 'oi', tipo: 'mensagem', x: X, y: 0, texto: `Oi, {primeiro_nome}! 💛 Que bom te ver por aqui. Aqui é da ${emp.nome} – {unidade}.` },
         {
           id: 'menu',
           tipo: 'pergunta',
@@ -36,16 +81,16 @@ export const MODELOS: ModeloBot[] = [
           texto: 'Como posso te ajudar hoje?',
           variavel: 'interesse',
           opcoes: [
-            { id: 'progressiva', texto: 'Progressiva' },
-            { id: 'selagem', texto: 'Selagem' },
+            S.a,
+            S.b,
             { id: 'precos', texto: 'Preços' },
             { id: 'atendente', texto: 'Falar com atendente' },
           ],
         },
-        { id: 'info_prog', tipo: 'mensagem', x: X * 3.2, y: -Y * 1.1, texto: 'A nossa progressiva deixa o cabelo liso, brilhoso e sem frizz, com fórmula sem formol. ✨' },
-        { id: 'info_sel', tipo: 'mensagem', x: X * 3.2, y: 0, texto: 'A selagem alinha os fios, tira o volume e dá muito brilho, com resultado natural. ✨' },
-        { id: 'info_preco', tipo: 'mensagem', x: X * 3.2, y: Y * 1.1, texto: 'Os valores mudam conforme o comprimento e o volume do cabelo. Me conta um pouquinho do seu cabelo que eu te passo certinho! 😊' },
-        { id: 'agente', tipo: 'agente_ia', x: X * 4.4, y: 0, objetivo: 'Tirar as dúvidas sobre {interesse} e agendar uma avaliação gratuita.', saida: { tipo: 'agendou' }, dias: 3 },
+        { id: 'info_prog', tipo: 'mensagem', x: X * 3.2, y: -Y * 1.1, texto: S.infoA },
+        { id: 'info_sel', tipo: 'mensagem', x: X * 3.2, y: 0, texto: S.infoB },
+        { id: 'info_preco', tipo: 'mensagem', x: X * 3.2, y: Y * 1.1, texto: S.infoPreco },
+        { id: 'agente', tipo: 'agente_ia', x: X * 4.4, y: 0, objetivo: S.objetivo, saida: { tipo: 'agendou' }, dias: 3 },
         { id: 'agendado', tipo: 'mensagem', x: X * 5.6, y: 0, texto: 'Prontinho, {primeiro_nome}! Te esperamos. Qualquer coisa é só chamar por aqui. 💛' },
         { id: 'fim', tipo: 'fim', x: X * 6.6, y: 0 },
         { id: 'humano', tipo: 'transferir', x: X * 4.4, y: Y * 2.1, texto: 'Claro! Já chamei uma atendente, ela fala com você em instantes. 💛' },
@@ -122,12 +167,7 @@ export const MODELOS: ModeloBot[] = [
           y: 0,
           texto: 'Oba! Qual serviço você quer fazer?',
           variavel: 'servico',
-          opcoes: [
-            { id: 'progressiva', texto: 'Progressiva' },
-            { id: 'selagem', texto: 'Selagem' },
-            { id: 'botox', texto: 'Botox capilar' },
-            { id: 'outro_servico', texto: 'Outro' },
-          ],
+          opcoes: S.servicos,
         },
         {
           id: 'unidade',
@@ -136,10 +176,7 @@ export const MODELOS: ModeloBot[] = [
           y: 0,
           texto: 'Qual unidade fica melhor pra você?',
           variavel: 'unidade_escolhida',
-          opcoes: [
-            { id: 'norte', texto: 'Salvador Norte Shopping' },
-            { id: 'sumare', texto: 'Shopping Sumaré' },
-          ],
+          opcoes: opcoesUnidade,
         },
         { id: 'dia', tipo: 'pergunta_aberta', x: X * 3.4, y: 0, texto: 'E qual o melhor dia pra você? (ex.: 25/11)', validacao: 'data', variavel: 'melhor_dia' },
         { id: 'resumo', tipo: 'mensagem', x: X * 4.6, y: 0, texto: 'Perfeito! {servico} no {unidade_escolhida}. Vou ver os horários livres pra você. 😊' },
@@ -154,8 +191,7 @@ export const MODELOS: ModeloBot[] = [
         ['servico', 'botox', 'unidade'],
         ['servico', 'outro_servico', 'unidade'],
         ['servico', 'outro', 'humano'],
-        ['unidade', 'norte', 'dia'],
-        ['unidade', 'sumare', 'dia'],
+        ...opcoesUnidade.map((o): [string, string, string] => ['unidade', o.id, 'dia']),
         ['dia', 'proximo', 'resumo'],
         ['dia', 'invalida', 'resumo'],
         ['resumo', 'proximo', 'agente'],
@@ -165,3 +201,4 @@ export const MODELOS: ModeloBot[] = [
     ),
   },
 ];
+}

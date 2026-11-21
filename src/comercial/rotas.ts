@@ -25,6 +25,7 @@ import {
   type PeriodoRanking,
 } from './calculo.js';
 import type { FonteComercial } from './fonte.js';
+import { unidadesDa } from '../unidades.js';
 
 /**
  * Rotas do comercial: resumo do Dashboard (minha meta, ranking, serviços), "Metas e comissão" da gestão,
@@ -259,6 +260,8 @@ export function registrarComercial(app: FastifyInstance, o: OpcoesComercial): vo
       rotacao: cfg.tv.rotacao,
       mes: { mes: m.mes, diasRestantes: m.diasRestantes, ...meta },
       hoje: { agendamentos: hoje.length, compareceram: hoje.filter((v) => v.compareceu).length, porUnidade: porUnidadeHoje, ia: hoje.filter((v) => v.porIa).length },
+      // A TV não tem login (não lê /api/unidades): os nomes das unidades vêm junto (Empresa › Unidades).
+      nomesUnidades: Object.fromEntries(unidadesDa(empresaId, { inativas: true }).map((u) => [u.id, u.nomeApp])),
       ranking: rk.linhas.slice(0, 10).map((l) => ({
         id: l.id,
         nome: primeiroNome(l.nome) ?? l.nome,

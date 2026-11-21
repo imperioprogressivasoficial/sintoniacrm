@@ -179,7 +179,8 @@ describe('rotas de Conexões › Agenda', () => {
     const app = criarServidor({ sintonia: {} as never, repo: {} as never, conexoes: { conexoes: c, agendas, testarIA: async () => {}, testarTrinks: async () => ({ resumo: '' }) } });
 
     const st = (await app.inject({ url: '/api/conexoes/agenda' })).json();
-    expect(st.unidades.map((u: { sistema: string }) => u.sistema)).toEqual(['trinks', 'avec']);
+    // unidades: Feira (do cadastro) também aparece; sem sistema escolhido e sem Trinks de antes, começa em "nenhum".
+    expect(st.unidades.map((u: { sistema: string }) => u.sistema)).toEqual(['trinks', 'avec', 'nenhum']);
     expect(st.unidades[0].falta).toEqual(['Chave da API do Trinks']);
 
     const salvo = await app.inject({ method: 'PUT', url: '/api/conexoes', payload: { avecTokenSumare: 'tok', avecUrl: 'https://api.exemplo-avec.test', avecUnidadeSumare: '77' } });

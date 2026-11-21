@@ -1058,7 +1058,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function ligar(sim, unidade) {
     try {
       const c = await api('/api/agentes-ia/controle');
-      const unidades = unidade ? [unidade] : ['norte', 'sumare'].filter((u) => !sim || c[u]?.agenteId);
+      const unidades = unidade ? [unidade] : Object.keys(c).filter((u) => !sim || c[u]?.agenteId); /* unidades: todas as do cadastro (o servidor manda uma por unidade ativa) */
       if (sim && !unidades.length) { toast('Escolha o agente da Serena em Personalizar primeiro.'); return false; }
       const novo = {}; for (const u of unidades) novo[u] = { ...c[u], ligado: sim };
       await api('/api/agentes-ia/controle', { method: 'PUT', body: JSON.stringify(novo) });

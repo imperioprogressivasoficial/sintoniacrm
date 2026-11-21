@@ -11,7 +11,7 @@ import type { AcaoAgente } from '../ai/ferramentas.js';
 import { decidirQuemResponde, equipeAtuou, REGRAS_PADRAO, type RegrasAtendimento } from '../engine/atendimento.js';
 import { proximaEtapa, type EventoFunil } from '../engine/etapas.js';
 import { followupsSemAgendamento, lembretesDoAgendamento } from '../engine/followups.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
 import { resumir, textoRelatorio } from './relatorio.js';
 import { TravaMemoria, type Trava } from '../fila/trava.js';
@@ -732,7 +732,7 @@ export class Sintonia {
       const c = await this.d.repo.buscarConversa(conversaId);
       if (!c) return;
       const agora = this.agora();
-      const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, regras);
+      const decisao = decidirQuemResponde(c, unidadeDe(c.unidade), agora, regras);
 
       if (decisao.acao === 'nada') return;
       if (await this.botConduz(c)) return;
@@ -751,7 +751,7 @@ export class Sintonia {
       if (!depois) return;
       if (depois.ultimaMensagemCliente?.getTime() !== marco) continue;
       // A equipe assumiu enquanto a IA pensava: não atropela.
-      if (modo === 'responder' && decidirQuemResponde(depois, UNIDADES[depois.unidade], this.agora(), regras).acao !== 'ia_responde') {
+      if (modo === 'responder' && decidirQuemResponde(depois, unidadeDe(depois.unidade), this.agora(), regras).acao !== 'ia_responde') {
         return;
       }
 
@@ -862,7 +862,7 @@ export class Sintonia {
         if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
         await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
         await this.evento('passou_para_humano', c, { motivo: a.motivo });
-        await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${UNIDADES[c.unidade].nome}) para a equipe. Motivo: ${a.motivo}`, c);
+        await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome}) para a equipe. Motivo: ${a.motivo}`, c);
       }
     }
   }

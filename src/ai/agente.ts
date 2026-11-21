@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Conversa, Mensagem } from '../domain.js';
 import { contextoDaConversa, historicoParaTurnos, INSTRUCAO_ATIVA, instrucaoObjetivo, systemPrompt } from './prompt.js';
+import { apresentacao, identidade } from '../empresa/identidade.js';
 import {
   type AcaoAgente,
   type Agenda,
@@ -67,7 +68,9 @@ export class Agente {
   /** System prompt da base atual (refeito só quando a base muda, para aproveitar o cache de prompt). */
   private async systemAtual(): Promise<string> {
     const base = typeof this.baseConhecimento === 'string' ? this.baseConhecimento : await this.baseConhecimento();
-    if (this.system?.base !== base) this.system = { base, texto: systemPrompt(base) };
+    // A empresa entra no system prompt: refeito também quando o nome/segmento muda em Empresa › Dados.
+    const chave = `${base}\u0000${apresentacao()}\u0000${identidade().sobre}`;
+    if (this.system?.base !== chave) this.system = { base: chave, texto: systemPrompt(base) };
     return this.system.texto;
   }
 

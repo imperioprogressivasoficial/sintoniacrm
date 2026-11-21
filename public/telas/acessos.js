@@ -96,8 +96,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   `;
   const MENU = { painel: 'dashboard', funil: 'crm_ver', automacoes: 'automacoes', transmissoes: 'transmissoes', relatorios: 'relatorios', email: 'email_marketing', equipe: 'equipe', acessos: 'equipe' };
   const PAPEL = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
-  const UNID_PADRAO = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
-  const UNID = new Proxy({}, { get: (_, u) => window.Sintonia?.ui?.UNIDADE?.[u] || UNID_PADRAO[u] || u });
+  /* unidades: nomes do cadastro (Empresa › Unidades) */
+  const UNID = new Proxy({}, { get: (_, u) => window.Sintonia?.ui?.UNIDADE?.[u] || u });
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const h = (tag, props = {}, ...filhos) => {

@@ -36,6 +36,7 @@ import { ErroIntegracaoPendente } from './agenda/sistema.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
 import { cabecalhoNotificacoes, problemasDaSituacao, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
+import { zUnidade } from './unidades.js';
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -66,7 +67,7 @@ export interface DependenciasServidor {
   situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; canais?: Record<string, boolean>; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean; sistema?: string; sistemaNome?: string | null; falta?: string[]; pronta?: boolean }> } };
   /** Simulador: uma "cliente" escreve pelo WhatsApp de teste (texto e, se quiser, uma mídia de teste). */
   clienteTeste?: (p: {
-    unidade: 'norte' | 'sumare';
+    unidade: import('./domain.js').UnidadeId;
     nome: string;
     telefone: string;
     texto?: string;
@@ -525,7 +526,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   const ClienteTeste = z
     .object({
-      unidade: z.enum(['norte', 'sumare']),
+      unidade: zUnidade({ ativa: true }),
       nome: z.string().trim().min(2).max(60),
       telefone: z.string().regex(/^5599\d{9}$/, 'Telefone de teste inválido'),
       texto: z.string().trim().max(2000).optional(),
@@ -635,10 +636,11 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Botão "Agendar" dentro do CRM (sem abrir o Trinks) ----------
-  const UnidadeQ = z.enum(['norte', 'sumare']);
+  // Unidade do cadastro; a agenda dela diz se agenda (Conexões › Agenda).
+  const UnidadeQ = zUnidade();
 
   function exigeAgenda(): Agenda {
-    if (!d.agenda) throw Object.assign(new Error('Agenda do salão não configurada (Conexões › Agenda)'), { statusCode: 501 });
+    if (!d.agenda) throw Object.assign(new Error('Agenda não configurada (Conexões › Agenda)'), { statusCode: 501 });
     return d.agenda;
   }
 

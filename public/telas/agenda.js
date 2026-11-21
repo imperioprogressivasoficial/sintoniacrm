@@ -21,8 +21,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['mes', 'Mês', 'm'],
   ];
   const LETRAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-  const CURTO = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
-  const NOME_UNI = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré', feira: 'Feira de Santana' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const CURTO = window.Sintonia?.ui?.UNIDADE || {};
+  const NOME_UNI = CURTO;
 
   const sv = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${d}</svg>`;
   const IC = {

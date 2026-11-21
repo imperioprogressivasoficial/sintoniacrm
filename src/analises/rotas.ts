@@ -6,9 +6,9 @@ import { pode } from '../auth/permissoes.js';
 import type { ArmazemComercial } from '../comercial/armazem.js';
 import type { FonteComercial } from '../comercial/fonte.js';
 import { ehCanalTeste } from '../channels/teste.js';
-import { UNIDADES_LEADS } from '../leads/leads.js';
+import { unidadesLeads } from '../leads/leads.js';
 import { periodoRelatorio, PERIODOS_RELATORIO } from '../relatorios/relatorios.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe, zUnidade } from '../unidades.js';
 import { gerarCsv, nomeArquivo, type Celula } from '../util/csv.js';
 import { dataISO, DIA } from '../util/tempo.js';
 import { analisarFunil, analisarHorarios, analisarRecorrencia, analisarVendas, NOMES_DIA } from './calculo.js';
@@ -50,7 +50,7 @@ export const FiltroAnalise = z.object({
   periodo: z.enum(PERIODOS_RELATORIO).default('30d'),
   de: Data.optional(),
   ate: Data.optional(),
-  unidade: z.enum(UNIDADES_LEADS).optional(),
+  unidade: zUnidade().optional(),
   atendente: z.string().min(1).max(80).optional(),
 });
 export type FiltroAnalise = z.infer<typeof FiltroAnalise>;
@@ -107,7 +107,7 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
         nomes: new Map(equipe.map((p) => [p.id, p.nome])),
       });
       const produtos = o.produtosVinculados ? await o.produtosVinculados(empresaId, vendas.map((v) => v.conversaId)).catch(() => []) : [];
-      return { ...base, ...r, produtos, unidades: r.unidades.map((u) => ({ ...u, nome: UNIDADES[u.unidade as keyof typeof UNIDADES]?.nome ?? u.unidade })) };
+      return { ...base, ...r, produtos, unidades: r.unidades.map((u) => ({ ...u, nome: unidadeDe(u.unidade)?.nome ?? u.unidade })) };
     }
     if (tipo === 'horarios') return { ...base, ...analisarHorarios(await o.fonte.grades(inicio, fim, escopo, at)) };
     if (tipo === 'funil') {
@@ -120,7 +120,7 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
 
   const opcoes = async (req: FastifyRequest) => {
     const esc: EscopoVisao = { ...escopoDe(req.usuario) };
-    const unidades = UNIDADES_LEADS.filter((u) => !esc.unidades || esc.unidades.includes(u)).map((u) => ({ id: u, nome: UNIDADES[u].nome }));
+    const unidades = unidadesLeads().filter((u) => !esc.unidades || esc.unidades.includes(u)).map((u) => ({ id: u, nome: unidadeDe(u).nome }));
     const atendentes = (await equipeDe(req))
       .filter((p) => ['atendente', 'recepcionista', 'gerente'].includes(p.papel) && (!esc.unidades || p.unidades.some((x) => esc.unidades!.includes(x))))
       .map((p) => ({ id: p.id, nome: p.nome, ativo: p.ativo }))

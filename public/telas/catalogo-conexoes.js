@@ -113,7 +113,7 @@
     estado.whatsapp = Boolean(wa?.canais?.some((k) => k.estado === 'conectada'));
     estado.ia = def('anthropicApiKey');
     estado.transcricao = def('openaiApiKey');
-    estado.agenda = def('trinksApiKey') || ['agendaSistemaNorte', 'agendaSistemaSumare'].some((k) => c[k]?.valor && c[k].valor !== 'nenhum');
+    estado.agenda = def('trinksApiKey') || Object.keys(c).some((k) => /^agendaSistema/.test(k) && c[k]?.valor && c[k].valor !== 'nenhum'); /* unidades: qualquer unidade do cadastro */
     estado.messenger = lig('messengerLigado'); estado.instagram = lig('instagramLigado'); estado.tiktok = lig('tiktokLigado');
     estado.capi = lig('capiLigado');
     estado.relatorio = Boolean(r?.destinosRelatorio?.length);

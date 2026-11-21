@@ -233,7 +233,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const campo = (rot, nome, extra = {}) => el('label', { class: extra.largo ? 'ra-largo' : '' }, rot, el(extra.tag || 'input', { name: nome, ...extra.at }, ...(extra.opcoes || [])));
     form.append(
       campo('Nome do link', 'nome', { at: { required: '', maxlength: '60', placeholder: 'Ex.: Link Bio Instagram' } }),
-      campo('Unidade', 'unidade', { tag: 'select', opcoes: Object.entries(u.UNIDADE || { norte: 'Salvador Norte', sumare: 'Sumaré' }).map(([v, t]) => el('option', { value: v, text: t })) }),
+      campo('Unidade', 'unidade', { tag: 'select', opcoes: (u.unidadesAtivas ? u.unidadesAtivas().map((x) => [x.id, x.nome]) : Object.entries(u.UNIDADE || {})).map(([v, t]) => el('option', { value: v, text: t })) }),
       campo('WhatsApp da unidade (com DDD)', 'numero', { at: { required: '', inputmode: 'tel', placeholder: '71 99999-9999' } }),
       campo('Código no endereço (opcional)', 'codigo', { at: { maxlength: '40', placeholder: 'bio-insta', pattern: '[a-z0-9][a-z0-9-]{1,39}' } }),
       campo('Mensagem que a cliente envia', 'mensagem', { largo: true, at: { maxlength: '300', value: 'Olá! Vim pelo link e quero saber mais.' } }),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Conversa, UnidadeId } from '../domain.js';
-import { UNIDADES, type DiaSemana } from '../unidades.js';
+import { type DiaSemana, unidadeDe } from '../unidades.js';
 import { MIN, minutosDoDia, partesBahia } from '../util/tempo.js';
 
 /**
@@ -38,7 +38,7 @@ export function lojaAberta(regra: RegraEspera, unidade: UnidadeId, agora: Date):
   if (!regra.soNoHorario) return true;
   const p = partesBahia(agora);
   const m = p.hora * 60 + p.minuto;
-  const faixa = regra.abre && regra.fecha ? { abre: regra.abre, fecha: regra.fecha } : UNIDADES[unidade]?.horario[p.diaSemana as DiaSemana];
+  const faixa = regra.abre && regra.fecha ? { abre: regra.abre, fecha: regra.fecha } : unidadeDe(unidade)?.horario[p.diaSemana as DiaSemana];
   if (!faixa) return false;
   const ini = minutosDoDia(faixa.abre);
   const fim = minutosDoDia(faixa.fecha);

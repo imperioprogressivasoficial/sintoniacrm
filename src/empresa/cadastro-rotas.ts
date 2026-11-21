@@ -18,6 +18,8 @@ import {
   type Produto,
   type Unidade,
 } from './cadastro.js';
+import { definirIdentidade } from './identidade.js';
+import { definirUnidades, faixasDoHorario, IDS_LEGADOS } from '../unidades.js';
 
 /**
  * Rotas do menu Empresa:
@@ -34,14 +36,29 @@ export interface OpcoesCadastro {
   empresaId: string;
   /** Nome da empresa (o mesmo de /api/empresa): renomear passa por aqui para o cache dele valer na hora. */
   empresa?: { dados(): Promise<{ nome: string }>; renomear(nome: string, por: string): Promise<unknown> };
-  /** Unidades que o sistema já conhecia: criadas no 1º uso, para nada mudar de nome sem querer. */
-  unidadesPadrao: Array<{ id: string; nome: string; horario?: Horario | null; ativa?: boolean }>;
-  /** Ids que as conversas e as pessoas já usam: podem ser desativadas, nunca apagadas. */
-  idsFixos: readonly string[];
+  /**
+   * Unidades criadas no 1º uso, quando a empresa ainda não tem nenhuma (a Império recebe as que o sistema já
+   * conhecia, para nada mudar de nome sem querer; empresa nova recebe uma "Unidade principal").
+   */
+  unidadesPadrao: ListaPadrao | ((empresaId: string) => ListaPadrao);
+  /** Ids antigos que as conversas e as pessoas já usam: podem ser desativados, nunca apagados (padrão: norte, sumare, feira). */
+  idsFixos?: readonly string[];
+  /** A unidade já tem conversas, pessoas ou números ligados? (não deixa apagar; só desativar) */
+  emUso?: (empresaId: string, id: string) => Promise<boolean>;
+  /** Mantém o cache do servidor (src/unidades.ts e src/empresa/identidade.ts) igual ao cadastro. Padrão: sim. */
+  sincronizarCache?: boolean;
   /** Tabela de preços antiga do Comercial (para copiar para Produtos e serviços). */
   precosComercial?: (empresaId: string) => Promise<Array<{ servico: string; valor: number }>>;
   /** Avisado quando as unidades mudam (o servidor pode atualizar nomes guardados em memória). */
   aoMudarUnidades?: (empresaId: string, unidades: Unidade[]) => void;
+}
+
+type ListaPadrao = Array<{ id: string; nome: string; nomeCliente?: string; horario?: Horario | null; ativa?: boolean }>;
+
+/** O que o registro devolve: o index carrega o cache das unidades e da empresa ao subir. */
+export interface CadastroRegistrado {
+  /** Lê (e semeia, se preciso) as unidades e os dados da empresa e atualiza o cache do servidor. */
+  carregar(empresaId: string): Promise<Unidade[]>;
 }
 
 const erro = (statusCode: number, msg: string) => Object.assign(new Error(msg), { statusCode });
@@ -119,6 +136,7 @@ const UnidadeCorpo = z.object({
   email: z.union([z.literal(''), z.string().trim().toLowerCase().email('E-mail inválido').max(200)]).optional(),
   horario: Horario.nullable().optional(),
   observacao: T(500).optional(),
+  nomeCliente: T(80).optional(),
 });
 
 const ProdutoBase = z.object({
@@ -180,7 +198,7 @@ const DocumentoEdicao = z.object({
   visivel: z.enum(['equipe', 'gestao']).optional(),
 });
 
-export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void {
+export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): CadastroRegistrado {
   const empresaDe = (req: FastifyRequest) => req.usuario?.empresaId ?? o.empresaId;
   const quem = (req: FastifyRequest) => req.usuario?.nome ?? 'teste';
   const ehDirecao = (req: FastifyRequest) => !req.usuario || veTudo(req.usuario);
@@ -235,6 +253,8 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
     if (b.nome) {
       if (empresaId === o.empresaId && o.empresa) await o.empresa.renomear(b.nome, quem(req));
     }
+    // Nome, segmento, cidade e "sobre" entram na hora nos textos da IA, da Serena e dos e-mails.
+    await sincronizar(empresaId);
     return cadastro(req);
   });
 
@@ -256,35 +276,61 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
   });
 
   // ------------------------------------------------------------ unidades
-  const fixas = new Set(o.idsFixos);
+  const fixas = new Set(o.idsFixos ?? IDS_LEGADOS);
   const semeadas = new Set<string>();
   async function unidades(empresaId: string): Promise<Unidade[]> {
     let l = await o.armazem.unidades(empresaId);
     if (!l.length && !semeadas.has(empresaId)) {
       semeadas.add(empresaId);
-      for (const [i, u] of o.unidadesPadrao.entries()) {
+      const padrao = typeof o.unidadesPadrao === 'function' ? o.unidadesPadrao(empresaId) : o.unidadesPadrao;
+      for (const [i, u] of padrao.entries()) {
         await o.armazem.salvarUnidade(empresaId, {
           id: u.id,
           nome: u.nome,
           ativa: u.ativa ?? true,
           ordem: i,
-          dados: DadosUnidade.parse({ horario: u.horario ?? null }),
+          dados: DadosUnidade.parse({ horario: u.horario ?? null, nomeCliente: u.nomeCliente && u.nomeCliente !== u.nome ? u.nomeCliente : '' }),
           atualizadaPor: null,
         });
       }
       l = await o.armazem.unidades(empresaId);
+      await sincronizar(empresaId, l);
       o.aoMudarUnidades?.(empresaId, l);
     }
     return l;
   }
+  /** Cache do servidor = cadastro: unidades (com o horário da empresa quando a unidade segue o dela) e a identidade. */
+  async function sincronizar(empresaId: string, lista?: Unidade[]) {
+    if (o.sincronizarCache === false) return;
+    const reg = await o.armazem.lerDados(empresaId).catch(() => undefined);
+    const dados = reg?.dados ?? DadosEmpresa.parse({});
+    const l = lista ?? (await o.armazem.unidades(empresaId));
+    if (l.length) {
+      definirUnidades(
+        empresaId,
+        l.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.dados.nomeCliente, ativa: u.ativa, ordem: u.ordem, horario: faixasDoHorario(u.dados.horario ?? dados.horario) })),
+      );
+    }
+    definirIdentidade(empresaId, {
+      nome: await nomeDaEmpresa(empresaId, reg?.nome),
+      segmento: dados.segmento,
+      cidade: dados.endereco.cidade,
+      uf: dados.endereco.uf,
+      sobre: dados.sobre,
+    });
+  }
   const publicaUnidade = (u: Unidade) => ({ ...u, fixa: fixas.has(u.id) });
   app.get('/api/unidades', async (req) => ({ unidades: (await unidades(empresaDe(req))).map(publicaUnidade), podeEditar: ehDirecao(req) }));
 
-  const mudou = async (empresaId: string) => o.aoMudarUnidades?.(empresaId, await o.armazem.unidades(empresaId));
+  const mudou = async (empresaId: string) => {
+    const l = await o.armazem.unidades(empresaId);
+    await sincronizar(empresaId, l);
+    o.aoMudarUnidades?.(empresaId, l);
+  };
   const dadosUnidade = (b: z.infer<typeof UnidadeCorpo>, atual?: Unidade) =>
     DadosUnidade.parse({
       ...(atual?.dados ?? {}),
-      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao }).filter(([, v]) => v !== undefined)),
+      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao, nomeCliente: b.nomeCliente }).filter(([, v]) => v !== undefined)),
     });
 
   app.post('/api/unidades', async (req, reply) => {
@@ -339,8 +385,8 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
   app.delete('/api/unidades/:id', async (req) => {
     exigeDirecao(req, 'Só a direção e a administração apagam unidades.');
     const { id } = req.params as { id: string };
-    if (fixas.has(id)) throw erro(409, 'Esta unidade já tem conversas e pessoas ligadas a ela. Desative em vez de apagar.');
     const empresaId = empresaDe(req);
+    if (fixas.has(id) || (await o.emUso?.(empresaId, id))) throw erro(409, 'Esta unidade já tem conversas, pessoas ou números ligados a ela. Desative em vez de apagar.');
     await unidades(empresaId);
     if (!(await o.armazem.apagarUnidade(empresaId, id))) throw erro(404, 'Unidade não encontrada.');
     await mudou(empresaId);
@@ -530,4 +576,12 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
       .type(a.tipo)
       .send(a.conteudo);
   });
+
+  return {
+    async carregar(empresaId: string) {
+      const l = await unidades(empresaId);
+      await sincronizar(empresaId, l);
+      return l;
+    },
+  };
 }

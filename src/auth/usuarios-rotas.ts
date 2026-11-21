@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { apareceNaEquipe, NOME_PAPEL, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, UNIDADES_EQUIPE, unidadesQuePodeDar } from './acesso.js';
+import { apareceNaEquipe, NOME_PAPEL, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, unidadesQuePodeDar, zUnidadesPessoa } from './acesso.js';
 import type { Acessos } from './acessos.js';
 import { PAPEIS, type Contas, type Papel, type Usuario } from './contas.js';
 import {
@@ -35,7 +35,7 @@ export interface OpcoesUsuarios {
 }
 
 const erro = (statusCode: number, mensagem: string) => Object.assign(new Error(mensagem), { statusCode });
-const Unidades = z.array(z.enum(UNIDADES_EQUIPE as [string, ...string[]])).max(UNIDADES_EQUIPE.length).transform((l) => [...new Set(l)]);
+const Unidades = zUnidadesPessoa();
 const Validade = z.number().int().min(1).max(24 * 14).optional();
 const HorarioZ = z.object({ dias: z.array(z.number().int().min(0).max(6)).min(1).max(7), inicio: z.string(), fim: z.string() }).nullable().optional();
 

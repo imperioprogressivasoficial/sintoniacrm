@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
-import { ehGestor, podeVer, UNIDADES_EQUIPE } from '../auth/acesso.js';
+import { ehGestor, podeVer } from '../auth/acesso.js';
+import { zUnidade } from '../unidades.js';
 import type { Conexoes, ValoresConexao } from '../conexoes/conexoes.js';
 import type { Rastreio } from './rastreio.js';
 import { seloDe } from './rastreio.js';
@@ -58,7 +59,7 @@ export function numeroComPais(entrada: string): string {
 const NovoLink = z.object({
   nome: z.string({ message: 'Dê um nome ao link.' }).trim().min(2, 'Dê um nome ao link (2 letras ou mais).').max(60, 'Nome do link: até 60 letras.'),
   codigo: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,39}$/, 'Código: letras minúsculas, números e hífen (2 a 40)').optional(),
-  unidade: z.enum(UNIDADES_EQUIPE as [string, ...string[]], { message: 'Escolha a unidade.' }),
+  unidade: zUnidade({ mensagem: 'Escolha a unidade.' }),
   numero: z
     .string({ message: 'Informe o WhatsApp da unidade, com DDD.' })
     .transform(numeroComPais)

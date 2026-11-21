@@ -2,8 +2,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { ehGestor, veTudo } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
-import { MODELOS_PRONTOS } from './blocos.js';
+import { modelosProntos } from './blocos.js';
 import { ErroEmail, PREDEFINICOES, type EmailMarketing, type Publico } from './email.js';
+import { identidade } from '../empresa/identidade.js';
 
 /**
  * Rotas do e-mail marketing. Gestão (/api/email/...): só gerência, direção e administração
@@ -35,7 +36,7 @@ main{max-width:440px;width:100%;background:var(--cartao);border:1px solid var(--
 h1{font-family:Sintony,Poppins,sans-serif;font-size:24px;margin:0 0 10px;color:#106EBE}@media (prefers-color-scheme:dark){h1{color:#0FFCBE}}
 p{line-height:1.55;color:var(--sub);margin:0 0 18px}button{all:unset;cursor:pointer;display:block;text-align:center;width:100%;padding:14px 0;border-radius:999px;background:#0FFCBE;color:#071D33;font-weight:700;font-size:16px}
 small{display:block;margin-top:16px;color:var(--sub);font-size:12px;text-align:center}
-</style></head><body><main>${corpo}<small>Império Progressivas · enviado pela Sintonia</small></main></body></html>`;
+</style></head><body><main>${corpo}<small>${esc(identidade().nome)} · enviado pela Sintonia</small></main></body></html>`;
 }
 
 export function registrarEmail(app: FastifyInstance, o: OpcoesRotasEmail): void {
@@ -118,7 +119,7 @@ export function registrarEmail(app: FastifyInstance, o: OpcoesRotasEmail): void 
   // ---------------------------------------------------------------- modelos
   app.get('/api/email/modelos-prontos', async (req) => {
     gestao(req);
-    return MODELOS_PRONTOS;
+    return modelosProntos();
   });
   app.get('/api/email/modelos', async (req) => {
     gestao(req);
@@ -249,7 +250,7 @@ export function registrarEmail(app: FastifyInstance, o: OpcoesRotasEmail): void 
     if (!/^[0-9a-f]{48}$/.test(token)) return reply.code(404).send(paginaPublica('Link inválido', '<h1>Link inválido</h1><p>Confira se o endereço está completo.</p>'));
     return paginaPublica(
       'Não receber mais e-mails',
-      `<h1>Não quer mais receber nossos e-mails?</h1><p>Tudo bem! Confirme abaixo e você não recebe mais e-mails de marketing da Império Progressivas.</p>
+      `<h1>Não quer mais receber nossos e-mails?</h1><p>Tudo bem! Confirme abaixo e você não recebe mais e-mails de marketing da ${esc(identidade().nome)}.</p>
        <form method="post" action="/e/d/${token}"><input type="hidden" name="confirmar" value="1"><button type="submit">Confirmar descadastro</button></form>`,
     );
   });

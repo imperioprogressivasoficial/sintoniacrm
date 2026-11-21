@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PedidoAgente, RespostaAgente } from '../src/ai/agente.js';
 import { Sintonia } from '../src/app/sintonia.js';
-import { UNIDADES_EQUIPE } from '../src/auth/acesso.js';
 import { ContasMemoria, ContasPostgres, type Contas, type Usuario } from '../src/auth/contas.js';
 import { gerarHash } from '../src/auth/senha.js';
 import { lerWebhookEvolution } from '../src/channels/evolution.js';
@@ -103,7 +102,6 @@ async function montar(a: Ambiente) {
       { id: 'norte', nome: 'Salvador Norte' },
       { id: 'sumare', nome: 'Sumaré' },
     ],
-    idsFixos: UNIDADES_EQUIPE,
     precosComercial: async (id) => (await p.comercial.ler(id)).cfg.precos,
   });
   registrarConta(app, { contas: p.contas, perfis: p.perfis, trocarEmail: p.trocarEmail });

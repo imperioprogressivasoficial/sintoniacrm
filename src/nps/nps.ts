@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Conversa, UnidadeId } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { dataISO, HORA } from '../util/tempo.js';
 import type { ArmazemNps } from './armazem.js';
 import {
@@ -255,7 +255,7 @@ export class Nps {
   }
 
   private texto(molde: string, c: Conversa): string {
-    return preencherNps(molde, { nome: c.nome, atendente: c.responsavelNome, unidade: UNIDADES[c.unidade as UnidadeId]?.nome ?? c.unidade });
+    return preencherNps(molde, { nome: c.nome, atendente: c.responsavelNome, unidade: unidadeDe(c.unidade)?.nome ?? c.unidade });
   }
 
   private async responder(c: Conversa, molde: string): Promise<void> {

@@ -4,6 +4,8 @@
  * Todo texto que vem do servidor entra por textContent (el(..., { text })), nunca como HTML. */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
+  /* unidades: ids das unidades ativas do cadastro (Empresa › Unidades) */
+  const idsAtivas = (ui) => (ui.unidadesAtivas ? ui.unidadesAtivas().map((u) => u.id) : Object.keys(ui.UNIDADE || {}));
   const geral = window.SintoniaTelas.ia;
   const ABAS = [
     ['geral', 'Visão geral'],
@@ -257,9 +259,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         editorAgente(ctx, { ...d, agentes: [...d.agentes, a] }, a.id);
       } catch (x) { ui.toast(erroTxt(x)); }
     };
-    const novo = gestor ? el('button', { class: 'agx-botao primario', type: 'button', onclick: () => dialogo(el, 'Novo agente de IA', [el('p', { class: 'agx-sub', text: 'Comece pelo modelo da Império (persona, regras, padrões e exemplos prontos para ajustar) ou em branco.' })], (fechar) => [
+    const novo = gestor ? el('button', { class: 'agx-botao primario', type: 'button', onclick: () => dialogo(el, 'Novo agente de IA', [el('p', { class: 'agx-sub', text: 'Comece pelo modelo pronto (persona, regras, padrões e exemplos para ajustar, já com o nome da empresa) ou em branco.' })], (fechar) => [
       el('button', { class: 'agx-botao', type: 'button', text: 'Em branco', onclick: () => { fechar(); criar(false); } }),
-      el('button', { class: 'agx-botao primario', type: 'button', text: 'Modelo Império', onclick: () => { fechar(); criar(true); } })]) }, el('span', { html: SVG.mais, 'aria-hidden': 'true' }), el('span', { text: 'Novo agente' })) : null;
+      el('button', { class: 'agx-botao primario', type: 'button', text: 'Modelo pronto', onclick: () => { fechar(); criar(true); } })]) }, el('span', { html: SVG.mais, 'aria-hidden': 'true' }), el('span', { text: 'Novo agente' })) : null;
     const cartoes = d.agentes.map((a) => el('button', { class: 'agx-cartao', type: 'button', onclick: () => editorAgente(ctx, d, a.id) },
       el('div', { class: 'agx-cab' }, avatarDe(el, a), el('div', { class: 'agx-txt' }, el('b', { text: a.nome }), el('span', { text: (d.modelos[a.provedor] || []).find((m) => m.id === a.modelo)?.nome || a.modelo }))),
       el('div', { class: 'agx-pilulas' },
@@ -270,7 +272,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     conteudo.replaceChildren(
       topo(el, 'Agentes de IA', 'Cada agente tem persona, regras, respostas modelo, exemplos, conhecimento e memória. Teste antes de colocar para atender.', novo),
       avisoChave(el, ui, d.chaves) || '',
-      d.agentes.length ? el('div', { class: 'agx-grade cartoes' }, ...cartoes) : el('div', { class: 'agx-vidro' }, el('div', { class: 'agx-vazio' }, el('b', { text: 'Nenhum agente ainda' }), el('span', { text: gestor ? 'Crie o primeiro: o modelo Império já vem com o jeito do salão.' : 'A gestão cria os agentes aqui.' }), gestor ? el('button', { class: 'agx-botao primario', type: 'button', text: 'Criar com o modelo Império', onclick: () => criar(true) }) : null)));
+      d.agentes.length ? el('div', { class: 'agx-grade cartoes' }, ...cartoes) : el('div', { class: 'agx-vidro' }, el('div', { class: 'agx-vazio' }, el('b', { text: 'Nenhum agente ainda' }), el('span', { text: gestor ? 'Crie o primeiro: o modelo pronto já vem com o nome e o jeito da empresa.' : 'A gestão cria os agentes aqui.' }), gestor ? el('button', { class: 'agx-botao primario', type: 'button', text: 'Criar com o modelo pronto', onclick: () => criar(true) }) : null)));
   }
 
   async function editorAgente(ctx, lista, id) {
@@ -308,7 +310,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const novo = avatarDe(el, a); idBloco.querySelector('.agx-av').replaceWith(novo);
     });
     const EMOJIS = ['💇‍♀️', '✨', '💜', '🌸', '👩🏽', '🤖', '💬', '⭐'];
-    const unidadesSel = el('div', { class: 'agx-pilulas' }, ...['norte', 'sumare'].map((u) => {
+    const unidadesSel = el('div', { class: 'agx-pilulas' }, ...idsAtivas(ui).map((u) => { /* unidades: as ativas do cadastro */
       const l = el('label', { class: 'agx-check', style: 'min-height:40px;padding:6px 12px' }, el('input', { type: 'checkbox' }), el('span', { text: ui.UNIDADE[u] || u }));
       const cb = l.querySelector('input'); cb.checked = a.unidades.includes(u); cb.disabled = trava;
       cb.addEventListener('change', () => { a.unidades = cb.checked ? [...new Set([...a.unidades, u])] : a.unidades.filter((x) => x !== u); marcar(); });
@@ -346,7 +348,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     slider.addEventListener('input', () => { a.criatividade = Number(slider.value); marcar(); });
     const persona = el('details', { class: 'agx-sec', open: '' }, el('summary', {}, el('span', { text: 'Persona e tom' })),
       el('div', { class: 'agx-corpo' },
-        campo(el, 'Quem é', area(c.persona.quemE, (v) => { c.persona.quemE = v; }, 'Ex.: Lia, consultora da Império, especialista em progressiva.')),
+        campo(el, 'Quem é', area(c.persona.quemE, (v) => { c.persona.quemE = v; }, 'Ex.: Lia, consultora da empresa, especialista no que vocês vendem.')),
         campo(el, 'Como fala', area(c.persona.comoFala, (v) => { c.persona.comoFala = v; }, 'Ex.: calorosa, chama pelo nome, frases curtas.', 2)),
         el('div', { class: 'agx-slider' }, el('span', { class: 'agx-sub', style: 'font-weight:650', text: 'Jeito' }), slider, el('div', { class: 'agx-pontas' }, el('span', { text: 'Formal' }), el('span', { text: 'Descontraída' }))),
         el('div', { class: 'agx-opcao' }, el('span', { class: 'agx-txt' }, el('b', { text: 'Usa emojis' })), interruptor(el, c.persona.emojis, 'Usa emojis', (v) => { c.persona.emojis = v; marcar(); }, trava)),
@@ -470,8 +472,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const msgs = [];
     const chat = el('div', { class: 'agx-chat', 'aria-live': 'polite' });
     const campoTxt = el('textarea', { class: 'agx-entrada', rows: '1', placeholder: semChave ? 'Configure a chave para testar' : 'Escreva como se fosse a cliente…' });
-    const unidade = segmentado(el, [['norte', ui.UNIDADE.norte || 'Norte'], ['sumare', ui.UNIDADE.sumare || 'Sumaré']], a.unidades[0] || 'norte', (v) => { estado.unidade = v; });
-    const estado = { unidade: a.unidades[0] || 'norte', enviando: false };
+    /* unidades: as ativas do cadastro; começa na 1ª do agente */
+    const primeiraUni = a.unidades.find((u) => idsAtivas(ui).includes(u)) || idsAtivas(ui)[0] || '';
+    const unidade = segmentado(el, idsAtivas(ui).map((u) => [u, ui.UNIDADE[u] || u]), primeiraUni, (v) => { estado.unidade = v; });
+    const estado = { unidade: primeiraUni, enviando: false };
     const enviarBtn = el('button', { class: 'agx-redondo', type: 'button', 'aria-label': 'Enviar', html: SVG.enviar });
     if (semChave) { campoTxt.disabled = true; enviarBtn.disabled = true; }
     const desenharChat = () => {
@@ -548,13 +552,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const formulario = () => {
       if (!gestor) return el('p', { class: 'agx-sub', text: 'Só a gestão adiciona conhecimento.' });
       let tipo = 'texto';
-      const t1 = el('input', { class: 'agx-entrada', placeholder: 'Título (ex.: Cuidados pós-progressiva)', maxlength: '120' });
+      const t1 = el('input', { class: 'agx-entrada', placeholder: 'Título (ex.: Cuidados depois do serviço)', maxlength: '120' });
       const t2 = el('textarea', { class: 'agx-entrada', rows: '4', placeholder: 'Conteúdo' });
       const url = el('input', { class: 'agx-entrada', type: 'url', placeholder: 'https://…' });
       const arq = el('input', { type: 'file', accept: '.txt,.pdf,.md,text/plain,application/pdf', class: 'agx-entrada' });
       const partes = { texto: [t1, t2], faq: [t1, t2], link: [url], arquivo: [arq] };
       const corpo = el('div', { class: 'agx-lista' });
-      const desenharF = () => { t1.placeholder = tipo === 'faq' ? 'Pergunta (ex.: Atende criança?)' : 'Título (ex.: Cuidados pós-progressiva)'; t2.placeholder = tipo === 'faq' ? 'Resposta' : 'Conteúdo'; corpo.replaceChildren(...partes[tipo]); };
+      const desenharF = () => { t1.placeholder = tipo === 'faq' ? 'Pergunta (ex.: Atende criança?)' : 'Título (ex.: Cuidados depois do serviço)'; t2.placeholder = tipo === 'faq' ? 'Resposta' : 'Conteúdo'; corpo.replaceChildren(...partes[tipo]); };
       const btn = el('button', { class: 'agx-botao primario', type: 'button', style: 'justify-self:start', text: 'Adicionar' });
       btn.addEventListener('click', async () => {
         btn.disabled = true;
@@ -642,7 +646,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!ctx.vivo()) return;
     const caixaTxt = el('textarea', { class: 'agx-entrada', rows: '3', maxlength: '500', placeholder: 'Ex.: mova para Interessada todas que pediram preço hoje e não agendaram' });
     const resultado = el('div', { class: 'agx-col' });
-    const EXEMPLOS = ['Mova para Interessada todas que pediram preço hoje e não agendaram', 'Marque VIP quem gastou mais de 500', 'Liste quem sumiu há 3 dias', 'Crie lembrete de ligação para quem sumiu há 7 dias na Norte'];
+    const EXEMPLOS = ['Mova para Interessada todas que pediram preço hoje e não agendaram', 'Marque VIP quem gastou mais de 500', 'Liste quem sumiu há 3 dias', 'Crie lembrete de ligação para quem sumiu há 7 dias'];
     const pedir = async () => {
       const texto = caixaTxt.value.trim();
       if (texto.length < 4) return;
@@ -737,7 +741,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     conteudo.replaceChildren(
       topo(el, 'IA atende primeiro', 'Com a opção ligada, a IA recebe toda conversa nova da unidade no horário escolhido, conduz o atendimento e organiza o CRM sozinha (etapa, tags, lembretes). Tudo fica no histórico como “IA”.'),
       avisoChave(el, ui, d.chaves) || '',
-      el('div', { class: 'agx-grade cartoes', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))' }, unidade('norte'), unidade('sumare')),
+      el('div', { class: 'agx-grade cartoes', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))' }, ...idsAtivas(ui).map((u) => unidade(u))), /* unidades: um cartão por unidade ativa */
       el('div', { class: 'agx-vidro' }, el('h2', { text: 'Passagem para a equipe e de volta' }),
         el('p', { class: 'agx-sub', text: 'A IA passa para a equipe pelas condições de cada agente (reclamação, pedido de pessoa, cliente irritada, valor alto, palavras). Na conversa, a atendente vê quem está no controle e toca em “Assumir”. Quando a equipe responde, a IA sai da frente; com “Volta para a IA”, ela retoma se a equipe sumir.' })),
       trava ? el('p', { class: 'agx-sub', text: 'Só a gerência, a direção e a administração mudam estas opções.' }) : '');
