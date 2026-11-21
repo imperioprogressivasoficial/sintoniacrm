@@ -96,6 +96,8 @@ export interface OpcoesDestino {
   producao: boolean;
   /** Desenvolvimento: libera localhost e rede local (nunca em produção). */
   permitirLocal?: boolean;
+  /** banco-seguranca: aceita http:// público (baixar imagem ou página de terceiros); a rede interna continua bloqueada. */
+  permitirHttp?: boolean;
   /** Resolve o nome (troque nos testes). */
   resolver?: (host: string) => Promise<string[]>;
 }
@@ -104,7 +106,7 @@ export const resolverDns = (host: string) =>
   new Promise<string[]>((ok, falha) => dnsLookup(host, { all: true, verbatim: true }, (e, l) => (e ? falha(e) : ok((l as LookupAddress[]).map((x) => x.address)))));
 
 /** Confere o endereço só pelo texto (sem DNS). Devolve a URL normalizada. */
-export function conferirUrl(bruta: string, o: Pick<OpcoesDestino, 'producao' | 'permitirLocal'>): URL {
+export function conferirUrl(bruta: string, o: Pick<OpcoesDestino, 'producao' | 'permitirLocal' | 'permitirHttp'>): URL {
   let url: URL;
   try {
     url = new URL(bruta.trim());
@@ -113,7 +115,7 @@ export function conferirUrl(bruta: string, o: Pick<OpcoesDestino, 'producao' | '
   }
   if (bruta.length > 2000) throw new ErroDestino('Endereço longo demais.');
   if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new ErroDestino('Use um endereço https://.');
-  if (url.protocol === 'http:' && (o.producao || !o.permitirLocal)) throw new ErroDestino('Por segurança, o endereço precisa começar com https://.');
+  if (url.protocol === 'http:' && !o.permitirHttp && (o.producao || !o.permitirLocal)) throw new ErroDestino('Por segurança, o endereço precisa começar com https://.');
   if (url.username || url.password) throw new ErroDestino('Não coloque usuário e senha no endereço. Use o segredo do webhook para conferir a assinatura.');
   const host = url.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
   if (!host) throw new ErroDestino('Endereço sem servidor.');
@@ -167,4 +169,30 @@ export function lookupSeguro(permitirLocal = false) {
       cb(null, p.address, p.family);
     });
   };
+}
+
+/**
+ * banco-seguranca: busca um endereço de terceiros (imagem do bot, página para a base da IA, webhook do bot) sem deixar
+ * o servidor ser usado para chegar na rede interna (banco, Evolution, n8n, metadados da nuvem).
+ * - Confere o endereço (texto) e, com a rede de verdade, o DNS: todos os IPs precisam ser públicos.
+ * - Segue no máximo 3 redirecionamentos, conferindo cada destino de novo (um site público não manda para dentro).
+ * Com `fetchFn` de teste e sem `resolver`, só a conferência do texto vale (os testes não têm DNS).
+ */
+export async function buscarSeguro(
+  bruta: string | URL,
+  init: RequestInit = {},
+  o: { fetchFn?: typeof fetch; resolver?: (host: string) => Promise<string[]>; maxRedirecionamentos?: number; permitirHttp?: boolean } = {},
+): Promise<Response> {
+  const f = o.fetchFn ?? fetch;
+  const resolver = o.resolver ?? (o.fetchFn ? undefined : resolverDns);
+  const regras: OpcoesDestino = { producao: true, permitirHttp: o.permitirHttp ?? true };
+  let atual = String(bruta);
+  for (let salto = 0; ; salto++) {
+    const url = resolver ? await conferirDestino(atual, { ...regras, resolver }) : conferirUrl(atual, regras);
+    const r = await f(url, { ...init, redirect: 'manual' });
+    const destino = r.status >= 300 && r.status < 400 ? r.headers.get('location') : null;
+    if (!destino) return r;
+    if (salto >= (o.maxRedirecionamentos ?? 3)) throw new ErroDestino('O endereço redireciona vezes demais.');
+    atual = new URL(destino, url).toString();
+  }
 }

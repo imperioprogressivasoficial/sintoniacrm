@@ -243,8 +243,14 @@ export class Conexoes {
   async carregar(): Promise<void> {
     const brutos = await this.armazem.lerTudo();
     const salvos: ValoresConexao = {};
+    /* banco-seguranca: valor gravado sem cifra (formato antigo, ou posto à mão no banco) é lido e regravado cifrado. */
+    const semCifra: ValoresConexao = {};
     for (const [chave, valor] of Object.entries(brutos)) {
       if (!infoCampo(chave)) continue;
+      if (!valor.startsWith('v1.')) {
+        if (valor.trim()) salvos[chave as Campo] = semCifra[chave as Campo] = valor.trim();
+        continue;
+      }
       try {
         salvos[chave as Campo] = this.cofre.decifrar(valor);
       } catch {
@@ -252,6 +258,10 @@ export class Conexoes {
       }
     }
     this.valores = { ...limpar(this.doAmbiente), ...salvos };
+    if (Object.keys(semCifra).length) {
+      this.log(`Conexões sem cifra no banco foram cifradas: ${Object.keys(semCifra).join(', ')}`);
+      for (const [campo, v] of Object.entries(semCifra)) await this.armazem.gravar(campo, this.cofre.cifrar(v!), 'sistema (cifrar)');
+    }
     // Gerados pela Sintonia na primeira vez: token do webhook da Evolution e o Verify Token da Meta de cada unidade.
     const gerar: ValoresConexao = {};
     if (!this.valores.webhookToken) gerar.webhookToken = randomBytes(24).toString('hex');
