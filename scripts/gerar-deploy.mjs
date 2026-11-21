@@ -330,7 +330,11 @@ ${comEvolution ? `  evolution:
     name: ${REDE_EVOLUTION}
 ` : ''}`);
   conferirReceita(receita);
-  process.stdout.write(receita);
+  // A Hostinger recusa receitas com mais de 8192 letras: os comentários ficam só aqui no gerador (a 1ª linha, com o
+  // sha256 do pacote, continua). Sem comentários dentro de textos de várias linhas (comandos) que precisem do "#".
+  const enxuta = receita.split('\n').filter((l, i) => i === 0 || !/^\s*#/.test(l)).join('\n');
+  if (enxuta.length > 8192) throw new Error(`Receita com ${enxuta.length} letras: a Hostinger aceita até 8192. Encurte o gerador.`);
+  process.stdout.write(enxuta);
 } finally {
   rmSync(pasta, { recursive: true, force: true });
 }
