@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 16h25 (Bahia):** no ar b6309ce — mensagem mandada pelo celular leva o nome da dona / última atendente / "Equipe" (690).
 - **21/11 16h18 (Bahia):** no ar 9faf68c — Configurações no celular = modelos 6 + 10 do dono (capa azul-marinho, busca, atalhos, áreas). Computador sem mudança.
 - **21/11 15h44 (Bahia):** no ar ed46144 — assinatura da IA (Agente de IA › Comportamento: liga/desliga, nome, começo/fim).
 - **21/11 15h34 (Bahia):** no ar f82f122 — chave geral da Serena (src/serena/pausa.ts, iaAtiva = chave && !pausa). Sem agentes rodando.

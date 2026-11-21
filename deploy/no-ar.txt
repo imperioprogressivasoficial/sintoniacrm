@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 19:18 UTC (21/11, 16h18 na Bahia)
-commit: 9faf68c
-pacote sha256: 41c62fd0c66de3a73e09f0254191e0c13583c51b8538f3f8d74d4d6a3123a609
+data: 2026-11-21 19:25 UTC (21/11, 16h25 na Bahia)
+commit: b6309ce
+pacote sha256: 2785c08353d20effc8ac528755f54af69875d0be256864f83d3f666e8b052258
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-9faf68c.b64); pode apagar depois.
-observação: em cima do ed46144. Entra: Configurações no celular nova (capa + busca + atalhos + áreas no painel; .cfg-nova em app.html).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-b6309ce.b64); pode apagar depois.
+observação: em cima do 9faf68c. Entra: sem "celular da loja" (690; Sintonia.quemPeloCelular).
