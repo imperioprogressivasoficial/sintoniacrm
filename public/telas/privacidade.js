@@ -108,7 +108,7 @@
     try { localStorage.setItem(CHAVE, ligada ? '1' : '0'); } catch {}
     if (window.SintoniaContaPrefs) window.SintoniaContaPrefs.ocultarDados = ligada;
     fetch('/api/conta', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ preferencias: { ocultarDados: ligada } }) }).catch(() => {});
-    window.Sintonia?.ui?.toast?.(ligada ? 'Dados dos clientes ocultos. Para mostrar de novo, toque no olho ao lado do Radar.' : 'Dados dos clientes à mostra.');
+    window.Sintonia?.ui?.toast?.(ligada ? 'Dados dos clientes ocultos. Para mostrar de novo, toque no olho no topo da conversa.' : 'Dados dos clientes à mostra.');
   }
   // Aparelho sem escolha feita: vale o que está salvo na conta (aberto em outro aparelho).
   addEventListener('sintonia:conta', () => {
@@ -120,24 +120,24 @@
   addEventListener('DOMContentLoaded', () => aplicar(ligada), { once: true });
 
   window.SintoniaPrivacidade = { ligada: () => ligada, definir, alternar: () => definir(!ligada), marcar: varrer, sensivel };
-  /* Chave rápida no topo de Conversas, ao lado do Radar (dono 21/11): um olho que liga/desliga o modo oculto. */
+  /* Olho no topo da conversa aberta, junto de Radar, Agendar e Ligar (dono 21/11): liga/desliga o modo oculto. */
   const OLHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
   const OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.6A10 10 0 0 1 12 5.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-3.2 4.1M6.6 6.6C4 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.7 0 3.2-.5 4.5-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
-  function chipOculto() {
-    const radar = document.querySelector('#filtros .chip-radar');
-    if (!radar || document.getElementById('chip-oculto')) return;
+  function botaoOlho() {
+    const pilula = document.querySelector('#chat-aberto .pilula-topo');
+    if (!pilula || document.getElementById('topo-oculto')) return;
     const b = document.createElement('button');
-    b.type = 'button'; b.id = 'chip-oculto'; b.className = 'chip chip-oculto';
-    const pintar = () => { b.setAttribute('aria-pressed', String(ligada)); b.innerHTML = (ligada ? OLHO_FECHADO : OLHO) + '<span>' + (ligada ? 'Oculto' : 'Ocultar') + '</span>'; b.title = ligada ? 'Mostrar nomes, números e fotos' : 'Ocultar nomes, números e fotos dos clientes'; };
+    b.type = 'button'; b.id = 'topo-oculto'; b.className = 'icone';
+    const pintar = () => {
+      b.setAttribute('aria-pressed', String(ligada)); b.classList.toggle('ligado', ligada);
+      b.innerHTML = ligada ? OLHO_FECHADO : OLHO;
+      b.title = ligada ? 'Mostrar nomes, números e fotos' : 'Ocultar nomes, números e fotos dos clientes';
+      b.setAttribute('aria-label', b.title);
+    };
     pintar();
     b.addEventListener('click', () => definir(!ligada));
     addEventListener('sintonia:privacidade', pintar);
-    /* os filtros desmarcam todos os chips ao trocar: o do olho volta a mostrar o estado dele */
-    document.getElementById('filtros')?.addEventListener('click', () => setTimeout(pintar, 0));
-    radar.after(b);
+    pilula.append(b);
   }
-  const cssOculto = document.createElement('style');
-  cssOculto.textContent = '#filtros .chip-oculto { display: inline-flex; align-items: center; gap: 6px; } #filtros .chip-oculto svg { width: 16px; height: 16px; flex: none; }';
-  document.head.append(cssOculto);
-  chipOculto(); addEventListener('DOMContentLoaded', chipOculto, { once: true }); setTimeout(chipOculto, 1500);
+  botaoOlho(); addEventListener('DOMContentLoaded', botaoOlho, { once: true }); setTimeout(botaoOlho, 1500);
 })();
