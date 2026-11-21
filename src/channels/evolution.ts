@@ -100,6 +100,27 @@ function lerConteudo(bruta: Obj | null | undefined): { texto: string; anexo?: An
   return null;
 }
 
+/**
+ * Referência completa da mídia (chave + nó da mensagem, sem miniaturas nem base64) para o download.
+ * Com ela a Evolution baixa direto do WhatsApp (mediaKey/directPath), sem precisar ter a mensagem guardada
+ * no banco dela — a Evolution do servidor não guarda mensagens (SAVE_DATA desligado), e por isso o download
+ * só pelo id falhava ("Message not found"). Pedido do dono 21/11: "não está baixando áudio, foto, arquivo".
+ */
+const SEM_PESO = new Set(['jpegThumbnail', 'thumbnail', 'base64', 'thumbnailDirectPath', 'thumbnailSha256', 'thumbnailEncSha256', 'contextInfo', 'pngThumbnail', 'streamingSidecar', 'waveform']);
+function enxugar(v: unknown, prof = 0): unknown {
+  if (prof > 6 || v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.slice(0, 20).map((x) => enxugar(x, prof + 1));
+  const o: Record<string, unknown> = {};
+  for (const [k, x] of Object.entries(v as Record<string, unknown>)) if (!SEM_PESO.has(k)) o[k] = enxugar(x, prof + 1);
+  return o;
+}
+function refMidiaEvolution(key: { id: string; remoteJid: string; fromMe: boolean; participant?: string | null }, message: unknown): string | undefined {
+  try {
+    const ref = JSON.stringify({ key: { id: key.id, remoteJid: key.remoteJid, fromMe: key.fromMe, ...(key.participant ? { participant: key.participant } : {}) }, message: enxugar(message) });
+    return ref.length <= 16_000 ? ref : undefined;
+  } catch { return undefined; }
+}
+
 /** Evento do webhook da Evolution, normalizado (ex.: "messages.upsert", "messages.set"). */
 export function eventoEvolution(corpo: unknown): string {
   const e = (corpo as { event?: unknown } | null)?.event;
@@ -129,6 +150,7 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
     const telefone = telefoneDoJid(jid);
     const conteudo = lerConteudo(m.message);
     if (!telefone || !conteudo) continue;
+    if (conteudo.anexo && !conteudo.anexo.base64 && !conteudo.anexo.ref) { const ref = refMidiaEvolution(m.key, m.message); if (ref) conteudo.anexo.ref = ref; }
     const ts = Number(m.messageTimestamp ?? 0);
     const referencia = m.key.fromMe ? undefined : referenciaDaEvolution(m);
     saida.push({
@@ -180,6 +202,7 @@ export function lerGruposEvolution(corpo: unknown): MensagemGrupoRecebida[] {
     if (!ehGrupo(m.key.remoteJid)) continue;
     const conteudo = lerConteudo(m.message);
     if (!conteudo) continue;
+    if (conteudo.anexo && !conteudo.anexo.base64 && !conteudo.anexo.ref) { const ref = refMidiaEvolution(m.key, m.message); if (ref) conteudo.anexo.ref = ref; }
     const k = m.key;
     const participanteJid = k.participant ?? null;
     const participante = numeroDoJid(k.participantAlt) ?? numeroDoJid(k.participantPn) ?? numeroDoJid(k.senderPn) ?? numeroDoJid(k.participant);
@@ -357,8 +380,12 @@ export class CanalEvolution implements CanalWhatsApp {
   }
 
   /** Baixa a mídia de uma mensagem já recebida. A Evolution procura a mensagem pelo id no banco dela. */
-  async baixarMidia(instancia: string, idExterno: string): Promise<MidiaBaixada> {
-    const resp = await this.postar('chat/getBase64FromMediaMessage', instancia, { message: { key: { id: idExterno } }, convertToMp4: false }, 60_000);
+  async baixarMidia(instancia: string, idExterno: string, ref?: string): Promise<MidiaBaixada> {
+    // Com a mensagem completa (ref), a Evolution baixa direto do WhatsApp; sem ela, procura pelo id no banco dela.
+    let completa: unknown;
+    if (ref && ref.startsWith('{')) { try { const r = JSON.parse(ref) as { key?: unknown; message?: unknown }; if (r.key && r.message) completa = r; } catch { /* ref antiga */ } }
+    let resp = completa ? await this.postar('chat/getBase64FromMediaMessage', instancia, { message: completa, convertToMp4: false }, 60_000) : null;
+    if (!resp || !resp.ok) resp = await this.postar('chat/getBase64FromMediaMessage', instancia, { message: { key: { id: idExterno } }, convertToMp4: false }, 60_000);
     if (!resp.ok) throw new Error(`Evolution não entregou a mídia (${resp.status}): ${(await resp.text()).slice(0, 300)}`);
     const j = (await resp.json()) as { base64?: string; mimetype?: string; fileName?: string };
     if (!j.base64) throw new Error('Evolution respondeu sem o arquivo');

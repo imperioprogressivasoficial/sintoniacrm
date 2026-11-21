@@ -142,7 +142,8 @@ export class EvolutionAdmin {
       url: webhook.url,
       headers: { 'x-sintonia-token': webhook.token },
       byEvents: false,
-      base64: false,
+      // O arquivo (foto, áudio, documento) vem junto no webhook: não depende de baixar depois da Evolution.
+      base64: true,
       events: EVENTOS_WEBHOOK,
     };
     if (atual.estado === 'conectada') {
@@ -290,14 +291,15 @@ export class EvolutionAdmin {
     if (!w || typeof w.url !== 'string' || !w.url) return false;
     const atuais = Array.isArray(w.events) ? (w.events as unknown[]).map(String) : [];
     const faltam = EVENTOS_WEBHOOK.filter((e) => !atuais.includes(e));
-    if (!faltam.length) return false;
+    // Também liga o arquivo junto no webhook (base64), se estiver desligado.
+    if (!faltam.length && w.webhookBase64 === true) return false;
     await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, {
       webhook: {
         enabled: w.enabled !== false,
         url: w.url,
         headers: (w.headers as Record<string, unknown> | undefined) ?? {},
         byEvents: w.webhookByEvents === true,
-        base64: w.webhookBase64 === true,
+        base64: true,
         events: [...atuais, ...faltam],
       },
     });

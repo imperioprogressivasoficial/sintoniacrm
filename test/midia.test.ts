@@ -121,14 +121,14 @@ describe('webhook da Evolution: mídias', () => {
   it('foto com legenda: marcador para a IA + anexo com os dados', () => {
     const [m] = lerWebhookEvolution(upsert(IMAGEM));
     expect(m!.texto).toBe('[foto] meu cabelo hoje');
-    expect(m!.anexo).toEqual({ tipo: 'imagem', mimetype: 'image/jpeg', legenda: 'meu cabelo hoje', tamanho: 183442 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'imagem', mimetype: 'image/jpeg', legenda: 'meu cabelo hoje', tamanho: 183442 });
     expect(m!.nome).toBe('Marina Souza');
   });
 
   it('nota de voz (ptt) com duração', () => {
     const [m] = lerWebhookEvolution(upsert(AUDIO_VOZ));
     expect(m!.texto).toBe('[áudio]');
-    expect(m!.anexo).toEqual({ tipo: 'audio', mimetype: 'audio/ogg; codecs=opus', duracaoSeg: 12, tamanho: 19534, voz: true });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'audio', mimetype: 'audio/ogg; codecs=opus', duracaoSeg: 12, tamanho: 19534, voz: true });
   });
 
   it('áudio encaminhado (sem ptt) não é nota de voz', () => {
@@ -139,13 +139,13 @@ describe('webhook da Evolution: mídias', () => {
   it('vídeo: tamanho no formato Long do WhatsApp', () => {
     const [m] = lerWebhookEvolution(upsert(VIDEO));
     expect(m!.texto).toBe('[vídeo] olha o resultado');
-    expect(m!.anexo).toEqual({ tipo: 'video', mimetype: 'video/mp4', duracaoSeg: 9, legenda: 'olha o resultado', tamanho: 2_345_678 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'video', mimetype: 'video/mp4', duracaoSeg: 9, legenda: 'olha o resultado', tamanho: 2_345_678 });
   });
 
   it('documento com nome do arquivo', () => {
     const [m] = lerWebhookEvolution(upsert(DOCUMENTO));
     expect(m!.texto).toBe('[documento: comprovante-pix.pdf]');
-    expect(m!.anexo).toEqual({ tipo: 'documento', mimetype: 'application/pdf', nomeArquivo: 'comprovante-pix.pdf', tamanho: 88123 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'documento', mimetype: 'application/pdf', nomeArquivo: 'comprovante-pix.pdf', tamanho: 88123 });
   });
 
   it('documento com legenda (vem embrulhado em documentWithCaptionMessage)', () => {
@@ -157,7 +157,7 @@ describe('webhook da Evolution: mídias', () => {
   it('figurinha', () => {
     const [m] = lerWebhookEvolution(upsert(FIGURINHA));
     expect(m!.texto).toBe('[figurinha]');
-    expect(m!.anexo).toEqual({ tipo: 'figurinha', mimetype: 'image/webp', tamanho: 12440 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'figurinha', mimetype: 'image/webp', tamanho: 12440 });
   });
 
   it('mensagem temporária (ephemeralMessage) e visualização única também são lidas', () => {
