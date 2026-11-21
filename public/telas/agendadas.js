@@ -547,5 +547,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 
   window.SintoniaAgendadas = { conversa, noFim, abrir: abrirFolha, quandoTxt, _limparComposicao: limparComposicao };
-  window.SintoniaTelas.agendadas = { desenhar, valorMenu: () => (minhasPendentes ? String(minhasPendentes) : '') };
+  /* atendimento-extra: menu Automações › Mensagens agendadas abre com "Todas" (o que vai sair sozinho na empresa). */
+  const verTodas = () => { tela.quem = 'todas'; tela.situacao = 'pendentes'; };
+  window.SintoniaTelas.agendadas = { desenhar, verTodas, valorMenu: () => (minhasPendentes ? String(minhasPendentes) : '') };
 })();

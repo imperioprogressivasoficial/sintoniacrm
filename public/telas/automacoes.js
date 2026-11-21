@@ -389,6 +389,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
     // nps-posvenda: modelos prontos (pesquisa de satisfação, pós-venda, régua 1/3/7 dias).
     if (window.SintoniaTelas.nps?.prontos) tela.append(window.SintoniaTelas.nps.prontos(ui, { aoMudar: () => desenhar(caixa, ui), abrirFollowup: fu ? () => { s.aba = 'followup'; desenhar(caixa, ui); } : null }));
+    /* atendimento-extra: menu Automações › Modelos prontos rola até os "Prontos para usar". */
+    if (s.rolarModelos) { s.rolarModelos = false; requestAnimationFrame(() => tela.querySelector('.np-prontos')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })); }
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));
     const filtros = el('div', { class: 'au-filtros', role: 'group', 'aria-label': 'Filtrar por funil' });
     const config = el('div', { class: 'au-config' });
@@ -871,5 +873,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return d;
   }
 
-  window.SintoniaTelas.automacoes = { desenhar, abrirEditor, abrirDaEtapa };
+  /* atendimento-extra: o menu Automações abre a aba certa (Fluxos, Follow-up ou os modelos prontos) e o endereço acompanha
+   * (/app/fluxos, /app/fluxos/follow-up, /app/fluxos/modelos — public/telas/rotas.js). */
+  function irAba(aba, mostrar = true) {
+    s.aba = aba === 'followup' || aba === 'follow-up' ? 'followup' : 'automacoes';
+    s.rolarModelos = aba === 'modelos';
+    if (mostrar) (s.ui || window.Sintonia?.ui)?.mostrar('automacoes');
+  }
+  const aba = () => (s.aba === 'followup' ? 'follow-up' : '');
+  window.SintoniaTelas.automacoes = { desenhar, abrirEditor, abrirDaEtapa, irAba, aba };
 })();
