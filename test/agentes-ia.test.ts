@@ -14,6 +14,7 @@ import { Cofre } from '../src/conexoes/cofre.js';
 import { criarServidor } from '../src/server.js';
 import { AgenteFalso, ambientes, quinta } from './gestao-ambiente.js';
 import { deflateSync } from 'node:zlib';
+import { ArmazemPausaMemoria, ChaveSerena, portaoIa } from '../src/serena/pausa.js';
 
 /** Claude falso: grava o que recebeu e responde a sequência combinada (repete a última). */
 function claudeFalso(respostas: Array<Record<string, unknown>>) {
@@ -45,7 +46,7 @@ const agendaFalsa: Agenda = {
   listarAgendamentosDoCliente: async () => [],
 };
 
-async function montar(amb: (typeof ambientes)[number], o: { chaveGeral?: boolean; respostas?: Array<Record<string, unknown>> } = {}) {
+async function montar(amb: (typeof ambientes)[number], o: { chaveGeral?: boolean; respostas?: Array<Record<string, unknown>>; chaveSerena?: ChaveSerena } = {}) {
   const { repo, contas, pool } = await amb.criar();
   const relogio = { t: quinta(14) };
   const agora = () => relogio.t;
@@ -101,6 +102,13 @@ async function montar(amb: (typeof ambientes)[number], o: { chaveGeral?: boolean
     agente: ag.agente,
     modoInicial: ag.modoInicial,
     agora,
+    // serena-chave: como no index, o portão único da IA (chave E Serena não pausada).
+    ...(o.chaveSerena
+      ? (() => {
+          const portao = portaoIa({ chave: o.chaveSerena!, temChaveGeral: () => o.chaveGeral !== false, temIaPara: (c) => ag.temIaPara(c) });
+          return { modoInicial: portao.modoInicial(ag.modoInicial), iaDisponivel: (c: import('../src/domain.js').Conversa) => portao.iaPara(c) };
+        })()
+      : {}),
   });
   const app = criarServidor({ sintonia, repo, agora, auth: { contas, agora } });
   ag.registrar(app);
@@ -242,6 +250,31 @@ describe.each(ambientes)('Agentes de IA ($nome)', (amb) => {
     expect(m.falso.recebidos).toHaveLength(0);
     const t = (await m.como(m.gente.admin, 'POST', `/api/agentes-ia/${a.id}/testar`, { mensagem: 'isso é um absurdo' })).json();
     expect(t.passagemDireta).toContain('Reclamação');
+  });
+
+  it('serena-chave: com a Serena pausada o agente do estúdio não age (nem no "IA atende primeiro"); ligada, volta', async () => {
+    const chaveSerena = new ChaveSerena({ empresaId: 'imperio', armazem: new ArmazemPausaMemoria(), agora: () => quinta(14) });
+    const m = await montar(amb, { chaveSerena });
+    const a = await m.criarAgente();
+    await m.como(m.gente.admin, 'PUT', '/api/agentes-ia/controle', { norte: { ligado: true, agenteId: a.id } });
+    const dela = await m.escreve('norte', 'oi, tudo bem?');
+    expect((await m.repo.buscarConversa(dela.id))!.modo).toBe('ia');
+    expect(m.falso.recebidos).toHaveLength(1);
+
+    await chaveSerena.pausar({ ate: null }, { nome: 'Fulana' });
+    const enviados = m.enviados.length;
+    await m.escreve('norte', 'quanto é?', dela.telefone);
+    const nova = await m.escreve('norte', 'oi, primeira vez');
+    expect(m.falso.recebidos).toHaveLength(1); // o agente não foi chamado
+    expect(m.padrao.pedidos).toHaveLength(0);
+    expect(m.enviados).toHaveLength(enviados);
+    expect((await m.repo.buscarConversa(dela.id))!.modo).toBe('ia'); // o modo fica como estava
+    expect((await m.repo.buscarConversa(nova.id))!.modo).toBe('humano'); // nasce com a equipe
+    expect((await m.como(m.gente.carla, 'GET', `/api/agentes-ia/conversa/${nova.id}`)).json()).toMatchObject({ noControle: 'equipe' });
+
+    await chaveSerena.ligar({ nome: 'Fulana' });
+    await m.escreve('norte', 'e aí?', dela.telefone);
+    expect(m.falso.recebidos).toHaveLength(2);
   });
 
   it('IA atende primeiro só quando ligada (e respeita a unidade); a atendente assume e devolve', async () => {

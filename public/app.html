@@ -2337,7 +2337,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   /** Rótulo do chip: quem está atendendo esta conversa agora. */
   function rotuloAtende(c) {
-    if (c.modo === 'ia') return 'IA atendendo';
+    if (c.modo === 'ia') return window.SintoniaSerenaChave?.rotuloChip?.(c) || 'IA atendendo'; /* serena-chave: "Serena pausada · equipe atende" */
     /* conversa-ux: "Sem dona" confundia: agora é "Sem responsável" / "Responsável: Fulano" */
     if (c.responsavelId && c.responsavelId === estado.eu?.id) return 'Responsável: você';
     if (c.responsavelId) return `Responsável: ${primeiroNome(c.responsavelNome) || 'equipe'}`;
@@ -2988,7 +2988,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const sub = $('c-sub');
     sub.classList.toggle('digitando', dig.length > 0);
     sub.textContent = dig.length === 1 ? `${primeiroNome(dig[0].nome)} está respondendo…` : dig.length ? `${dig.map((x) => primeiroNome(x.nome)).join(' e ')} estão respondendo…` : `${UNIDADE[c.unidade] || c.unidade} · ver ficha`;
-    $('modo').dataset.m = c.modo; $('modo-txt').textContent = rotuloAtende(c);
+    $('modo').dataset.m = window.SintoniaSerenaChave?.dataChip?.(c) || c.modo; $('modo-txt').textContent = rotuloAtende(c); /* serena-chave */
     $('f-dono').textContent = c.responsavelId ? (c.responsavelId === eu.id ? 'Você' : c.responsavelNome) : 'Sem responsável';
     window.SintoniaConversaUx?.chip?.(c); /* conversa-ux: foto de quem é responsável no chip */
   }
@@ -3619,6 +3619,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/barra-some.js" defer></script><!-- barra-some: barra de baixo do celular some ao rolar -->
 <script src="/telas/abas-deslizar.js" defer></script><!-- abas-deslizar: arrastar para o lado troca de aba (celular) -->
 <script src="/telas/chat-ia.js" defer></script>
+<script src="/telas/serena-chave.js" defer></script><!-- serena-chave: chave "Serena ligada/pausada", faixa em Conversas e chip -->
 <script src="/telas/serena.js" defer></script>
 <script src="/telas/ligacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>

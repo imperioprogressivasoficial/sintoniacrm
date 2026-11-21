@@ -31,6 +31,8 @@ export interface OpcoesNotificador {
   automacaoAtiva?: (conversaId: string) => Promise<boolean>;
   /** conversa-extra: quem silenciou a conversa agora (sem push, sem vibração para essas pessoas). */
   silenciaram?: (conversaId: string, agora: Date) => Promise<Set<string>>;
+  /** serena-chave: Serena pausada: conversa no modo IA com cliente esperando também avisa a equipe. */
+  serenaPausada?: () => boolean;
 }
 
 /** Item da faixa "clientes esperando" do app. */
@@ -247,6 +249,19 @@ export class Notificador {
     return n;
   }
 
+  /**
+   * serena-chave: aviso para a equipe toda (sino + push, tipo "ia_equipe"): "Fulana pausou a Serena até 15h".
+   * A chave garante um aviso só por pessoa.
+   */
+  async avisarEquipe(a: { titulo: string; texto: string; chave: string; vista?: string }): Promise<number> {
+    let n = 0;
+    for (const u of await this.equipe()) {
+      if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
+      if (await this.criar(u, { tipo: 'ia_equipe', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+    }
+    return n;
+  }
+
   /** msg-agendada: aviso direto para uma pessoa (ex.: a mensagem que ela agendou não saiu). Sino + push, tipo "falha". */
   /** atendimento-extra: `tipo` e `vista` opcionais (ex.: "reuniao" abrindo a Agenda). */
   async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string; vista?: string; tipo?: TipoNotificacao }): Promise<boolean> {
@@ -305,7 +320,8 @@ export class Notificador {
     for (const c of await this.o.repo.listarConversas()) {
       if (c.empresaId !== this.o.empresaId) continue;
       const regra = this.regraDaUnidade(regras, c.unidade);
-      const s = avaliarEspera(c, regra, agora);
+      // serena-chave: com a Serena pausada, quem está no modo IA também está esperando a equipe.
+      const s = avaliarEspera(c.modo === 'ia' && this.o.serenaPausada?.() ? { ...c, modo: 'copiloto' } : c, regra, agora);
       if (!s.nivel || !s.desde) continue;
       // Bot ou follow-up conduzindo a conversa: ninguém precisa correr.
       if (this.o.automacaoAtiva && (await this.o.automacaoAtiva(c.id).catch(() => false))) continue;

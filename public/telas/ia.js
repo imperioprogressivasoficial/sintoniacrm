@@ -356,9 +356,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const cab = (titulo, ...lado) => el('div', { class: 'iax-cab' }, el('h2', { text: titulo }), ...lado);
 
       // ================= topo + aviso de chave
+      /* serena-chave: no lugar do "IA ligada" parado, a chave grande "Serena ligada / Serena pausada até 15h"
+         (public/telas/serena-chave.js). Sem a chave da IA, ela aparece desligada com "Falta a chave em Conexões". */
       const topo = el('div', { class: 'iax-topo' },
         el('h1', { class: 'titulo-grande', text: 'Inteligência' }),
-        el('span', { class: 'iax-estado' + (ligada ? ' ligada' : '') }, el('i'), el('span', { text: ligada ? 'IA ligada' : 'IA desligada' })));
+        window.SintoniaSerenaChave?.chave
+          ? window.SintoniaSerenaChave.chave({ tamanho: 'grande' })
+          : el('span', { class: 'iax-estado' + (ligada ? ' ligada' : '') }, el('i'), el('span', { text: ligada ? 'IA ligada' : 'IA desligada' })));
 
       const alerta = ligada ? null : el('div', { class: 'iax-alerta', role: 'status' },
         el('span', { class: 'iax-alerta-ic', html: SVG.chave, 'aria-hidden': 'true' }),

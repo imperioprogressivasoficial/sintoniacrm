@@ -73,6 +73,8 @@ import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
 import { EnvioAosPoucos, registrarSerenaFaz, transmitirPelaSerena, type ServicosSerenaFaz } from './serena/confirmar.js'; /* serena-faz */
+import { ArmazemPausaMemoria, ArmazemPausaPostgres, avisoDaMudanca, ChaveSerena, conversasParaRetomar, portaoIa, RETOMAR_ATE_MS } from './serena/pausa.js'; /* serena-chave */
+import { registrarPausaSerena } from './serena/pausa-rotas.js'; /* serena-chave */
 import { regrasDosAgentes } from './serena/fazer.js'; /* serena-faz */
 import { fontesDoBanco, funisComEtapas } from './serena/acoes.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
@@ -245,6 +247,14 @@ const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new Armaze
 const armazemTags = pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas());
 const tags = new Tags(armazemTags, cfg.SINTONIA_EMPRESA_ID);
 const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
+/* serena-faz: a mesma auditoria vale para as ações da Serena (enviar, agendar, mover). serena-chave: e para a chave geral. */
+const auditoria = pool ? new AuditoriaPostgres(pool) : new AuditoriaMemoria();
+/* serena-chave: chave geral "Serena ligada / pausada" (no banco). Pausada = como sem chave, sem mexer na chave nem no
+   modo das conversas. O portão `iaAtiva()` (chave da IA E não pausada) vale onde antes se olhava só a chave. */
+const chaveSerena = new ChaveSerena({ empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: pool ? new ArmazemPausaPostgres(pool) : new ArmazemPausaMemoria(), auditoria, log });
+await chaveSerena.carregar();
+const portao = portaoIa({ chave: chaveSerena, temChaveGeral: () => iaLigada, temIaPara: (c) => agentesIa.temIaPara(c) });
+const modoNovo = () => portao.modoNovo(async () => (await empresa.configIa()).modoPadrao);
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
 const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBaseDa(cfg.SINTONIA_EMPRESA_ID));
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
@@ -368,6 +378,7 @@ const notificador = new Notificador({
   push: { chaves: chavesPush, enviador: enviadorWebPush, assunto: `mailto:${process.env.VAPID_EMAIL || cfg.ADMIN_EMAIL || 'suporte@example.com'}` },
   // Cliente esperando: sem alerta enquanto um bot ou um follow-up conduz a conversa (criados mais abaixo).
   automacaoAtiva: async (id) => (await armazemBots.ativasDaConversa(id)).length > 0 || Boolean((await followup.seloDaConversa(id)).cadencia),
+  serenaPausada: () => chaveSerena.pausada() /* serena-chave: modo IA também avisa "cliente esperando" */,
   log,
 });
 observarEventos(repo, (e) => notificador.aoEvento(e));
@@ -484,7 +495,8 @@ const followup = new Followup({
   repo,
   sintonia: () => sintonia,
   agente: { executar: (p) => agentesIa.agente.executar(p) },
-  iaDisponivel: () => iaLigada,
+  iaDisponivel: () => portao.iaAtiva() /* serena-chave */,
+  pausada: () => chaveSerena.pausada() /* serena-chave: cadências esperam a pausa */,
   email,
   tags,
   log,
@@ -501,7 +513,7 @@ const radar = new Radar({
   sintonia: () => sintonia,
   agente: { executar: (p) => agentesIa.agente.executar(p) },
   juiz: juizClaude(claude, { modelo: cfg.SINTONIA_MODELO }),
-  iaDisponivel: () => iaLigada,
+  iaDisponivel: () => portao.iaAtiva() /* serena-chave */,
   log,
 });
 observarEventos(repo, (e) => radar.aoEvento(e));
@@ -577,6 +589,8 @@ const agentesIa = montarAgentesIa({
 });
 // Correções da equipe às sugestões viram aprendizados para a gestão aprovar.
 observarEventos(repo, (e) => void agentesIa.controle.aoEvento(e));
+/* serena-chave: "IA atende primeiro" não escolhe agente com a Serena pausada (a conversa nova nasce com a equipe). */
+const modoInicialAgentes = portao.modoInicial((c: import('./domain.js').Conversa, agora: Date) => agentesIa.modoInicial(c, agora));
 
 /* robustez: fila própria da IA (src/app/fila-ia.ts): a mensagem aparece na tela na hora e a IA pensa por trás,
    com SINTONIA_PARALELO_IA conversas ao mesmo tempo. SINTONIA_FILA_IA=0 volta ao jeito antigo (pensa dentro da entrada). */
@@ -600,9 +614,11 @@ const sintonia = new Sintonia({
   numeros,
   // Porteiro do plano da IA: sem plano, fora da janela ou sem cota, a conversa fica para a equipe.
   agente: comPorteiro(agentesIa.agente, { planos, empresaId: cfg.SINTONIA_EMPRESA_ID, log }),
-  modoInicial: agentesIa.modoInicial,
-  /* robustez: sem chave da IA, a IA não é chamada e a conversa nova nasce com a equipe. */
-  iaDisponivel: (c) => agentesIa.temIaPara(c),
+  modoInicial: modoInicialAgentes,
+  /* robustez: sem chave da IA, a IA não é chamada e a conversa nova nasce com a equipe.
+     serena-chave: o mesmo com a Serena pausada; e quem escreveu durante a pausa e esperou mais de 30 min fica com a equipe. */
+  iaDisponivel: (c) => portao.iaPara(c),
+  respostaVencida: (c, agora) => chaveSerena.respostaVencida(c, agora),
   log,
   trava,
   midias,
@@ -648,7 +664,7 @@ const cobertura = new CoberturaIa({
   contas,
   presencas,
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
-  temIa: async (c) => !sintonia.iaPausadaAte() && (await agentesIa.temIaPara(c)),
+  temIa: async (c) => !sintonia.iaPausadaAte() && (await portao.iaPara(c)) /* serena-chave: pausada, não passa para a IA */,
   reavaliar: (id) => sintonia.reavaliar(id),
   podeAtender: async (u) => {
     if (!acessosRodizio) return resolverPermissoes(u.papel).responder;
@@ -693,7 +709,7 @@ const integracoes = montarIntegracoes({
   repo,
   sintonia,
   canalDa: canalDaUnidade,
-  modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+  modoInicial: modoNovo /* serena-chave */,
   contatos: armazemContatos,
   tags: (e) => (e === tags.empresaId ? tags : undefined),
   funis: (e) => (e === funis.empresaId ? funis : undefined),
@@ -737,7 +753,7 @@ const avisosReuniao = pool
         const r = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade: n.unidade, canalId: n.canalId, telefone, nome, agora });
         if (r.nova) {
           await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: r.conversa.id, unidade: r.conversa.unidade, em: agora, dados: { origem: 'agendamento_online' } });
-          await sintonia.mudarModo(r.conversa.id, (await agentesIa.modoInicial(r.conversa, agora)) ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
+          await sintonia.mudarModo(r.conversa.id, (await modoInicialAgentes(r.conversa, agora)) ?? (await modoNovo())); /* serena-chave */
         }
         await sintonia.comConversa(r.conversa.id, async (c) => {
           await sintonia.enviarAutomatico(c, texto, 'Agendamento online');
@@ -765,8 +781,6 @@ async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void>
 const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 /* usuarios: um só armazém de perfis (Conta › Perfil e o telefone que a gestão usa para mandar o convite pelo WhatsApp). */
 const perfisUsuario = pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria();
-/* serena-faz: a mesma auditoria vale para as ações da Serena (enviar, agendar, mover). */
-const auditoria = pool ? new AuditoriaPostgres(pool) : new AuditoriaMemoria();
 const app = criarServidor({
   /* banco-seguranca: auditoria das ações sensíveis, LGPD (exportar/apagar dados de cliente) e CSP (SINTONIA_CSP) */
   protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria, ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
@@ -836,6 +850,7 @@ const app = criarServidor({
   fotos: new Fotos(repo, (canalId) => numeros.find((n) => n.canalId === canalId)?.canal, undefined, log),
   situacao: () => ({
     iaLigada,
+    serena: chaveSerena.paraTela() /* serena-chave: faixa "Serena pausada" nas telas */,
     agendaLigada,
     numerosReais: numeros.filter(ehReal).length,
     // Canais para "Novo contato": quais estão conectados (Instagram e Messenger só respondem quem chamou).
@@ -880,8 +895,8 @@ const app = criarServidor({
     if (nova) {
       // A conversa foi criada aqui (para nascer no modo certo): registra a chegada da cliente como num número real.
       await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora, dados: { origem: 'cliente_teste' } });
-      const inicial = await agentesIa.modoInicial(conversa, agora);
-      await sintonia.mudarModo(conversa.id, inicial ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
+      const inicial = await modoInicialAgentes(conversa, agora); /* serena-chave */
+      await sintonia.mudarModo(conversa.id, inicial ?? (await modoNovo()));
     }
     // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
     const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;
@@ -905,6 +920,30 @@ const app = criarServidor({
       { conversa, mensagens: await repo.mensagens(conversaId), rascunho, servicos, agora: new Date() },
     );
   },
+});
+
+/* serena-chave: GET/PUT /api/ia/pausa (só a gestão muda; todo mundo vê). Cada mudança vira aviso para a equipe e,
+   ao voltar, a Serena responde só quem escreveu há menos de 30 min (as mais antigas ficam com a equipe). */
+registrarPausaSerena(app, { chave: chaveSerena, temChave: () => iaLigada });
+chaveSerena.aoMudar(async (m) => {
+  const agora = new Date();
+  const a = avisoDaMudanca(m, agora);
+  await notificador.avisarEquipe({ ...a, chave: `serena-chave-${m.tipo}-${agora.getTime()}`, vista: 'ia' }).catch((e) => log('Falha ao avisar a equipe da chave da Serena', String(e)));
+  if (m.tipo === 'pausou' || !iaLigada) return;
+  // Ao voltar: só as conversas no modo IA com a cliente esperando há menos de 30 min (por trás, sem segurar a tela).
+  void (async () => {
+    const lista = pool
+      ? await repo.listarConversas({
+          ids: (await pool.query<{ id: string }>(`select id from sintonia.conversas where empresa_id = $1 and modo = 'ia' and ultima_mensagem_cliente > $2`, [cfg.SINTONIA_EMPRESA_ID, new Date(agora.getTime() - RETOMAR_ATE_MS)])).rows.map((r) => r.id),
+        })
+      : await repo.listarConversas({ empresaId: cfg.SINTONIA_EMPRESA_ID });
+    const retomar = conversasParaRetomar(lista, agora);
+    if (retomar.length) log(`Serena ligada de novo: respondendo ${retomar.length} conversa(s) recentes`);
+    for (const c of retomar) {
+      if (filaIa) filaIa.pedir(c.id);
+      else await sintonia.reavaliar(c.id).catch((e) => log('Falha ao retomar a conversa', String(e)));
+    }
+  })().catch((e) => log('Falha ao retomar as conversas depois da pausa', String(e)));
 });
 
 // Estúdio de agentes de IA (/api/agentes-ia) e "Peça para a IA" (/api/ia/comando).
@@ -1112,7 +1151,7 @@ if (pool) {
     contatos: armazemContatos,
     leads: extras.leads,
     contaMeta: (u) => conexoes.contaMeta(u),
-    modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+    modoInicial: modoNovo /* serena-chave */,
     log,
   });
   registrarTransmissoes(app, {
@@ -1164,7 +1203,7 @@ registrarConversa(app, {
   ia: { claude, modelo: cfg.SINTONIA_MODELO, base: () => base.texto(), ligada: () => iaLigada },
   // Envia pelo número real da unidade; o de teste só vale enquanto nenhum número real estiver conectado.
   canalDa: canalDaUnidade,
-  modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+  modoInicial: modoNovo /* serena-chave */,
   controleIa: () => agentesIa.servico.controle(),
   // Serena cria coisas no CRM (sempre com prévia e "Salvar"): scripts, fluxos, links de agendamento e etiquetas.
   serenaAcoes: (empresaId) => ({
@@ -1273,7 +1312,8 @@ let relatorioEnviadoEm = '';
 /* robustez: a rodada de 30 s nunca começa por cima da anterior (src/util/relogio.ts). */
 const rodadaRelogio = umaPorVez('30 s', async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
-  await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA
+  await chaveSerena.carregar(); // serena-chave: outro processo pode ter mexido; a pausa vencida volta sozinha
+  if (!chaveSerena.pausada()) await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA (pausada: não muda o modo de ninguém)
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
   await bots.tick().catch((e) => log('Falha no relógio dos bots', String(e))); // esperas, tempo limite das respostas, agente de IA
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando

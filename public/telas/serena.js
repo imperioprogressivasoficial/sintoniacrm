@@ -573,7 +573,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
     R.veu = el('button', { type: 'button', class: 'srn-veu', 'aria-label': 'Fechar o menu', tabindex: '-1', onclick: () => fecharMenu() });
     R.tela = el('div', { class: 'srn-tela' },
-      R.cab = el('header', { class: 'srn-cab' }, R.btMenu, el('span', { class: 'srn-bt srn-vazio', 'aria-hidden': 'true', style: 'visibility:hidden;pointer-events:none' }), R.titulo, window.SintoniaBotaoTema ? window.SintoniaBotaoTema('srn-bt srn-tema') : null, R.btNova),
+      /* serena-chave: chave pequena "Ligada / Pausada" ao lado do título (no lugar do espaço vazio que equilibrava o topo) */
+      R.cab = el('header', { class: 'srn-cab' }, R.btMenu, window.SintoniaSerenaChave?.chave ? window.SintoniaSerenaChave.chave({ tamanho: 'pequena' }) : el('span', { class: 'srn-bt srn-vazio', 'aria-hidden': 'true', style: 'visibility:hidden;pointer-events:none' }), R.titulo, window.SintoniaBotaoTema ? window.SintoniaBotaoTema('srn-bt srn-tema') : null, R.btNova),
       R.faixa, R.miolo,
       el('div', { class: 'srn-baixo' }, R.anexo, R.compor), ...Object.values(R.arquivos), R.veu);
 
@@ -606,6 +607,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   function textoStatus() {
+    /* serena-chave: pausada, o status diz até quando (o chat aqui continua funcionando) */
+    const chave = window.SintoniaSerenaChave?.estado?.();
+    if (chave?.pausada && chave.temChave) return { txt: `Pausada ${chave.texto || ''}`.trim(), on: false };
     if (!resumo) return { txt: resumoFalhou ? 'Sua assistente' : 'Carregando…', on: null };
     if (resumo.ligada === false) return { txt: 'Desligada', on: false };
     if (resumo.ligada === null) return { txt: 'Sua assistente', on: null };
@@ -647,6 +651,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const h = r?.hoje;
     let frase;
     if (!r) frase = el('p', { class: resumoFalhou ? '' : 'srn-esqueleto', text: resumoFalhou ? 'Pergunte o que quiser sobre o seu dia.' : 'Carregando o seu dia…' });
+    else if (window.SintoniaSerenaChave?.estado?.()?.pausada) frase = el('p', { text: `Estou pausada no atendimento às clientes ${window.SintoniaSerenaChave.estado().texto || ''}: a equipe atende tudo. Aqui com você eu continuo funcionando.`.replace(/\s+:/, ':') }); /* serena-chave */
     else if (r.ligada === false) frase = el('p', { text: 'Estou desligada no atendimento agora, mas posso te ajudar por aqui.' });
     else if (h.respostas) frase = el('p', { text: `Hoje respondi ${plural(h.respostas, 'mensagem', 'mensagens')}${h.marcados ? ` e marquei ${plural(h.marcados, 'horário', 'horários')}` : ''}.` });
     else frase = el('p', { text: 'Ainda não atendi ninguém hoje. Pergunte o que quiser.' });
@@ -1367,6 +1372,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     });
   }
   let historicoDe = null;
+  /* serena-chave: a chave mudou (aqui ou em outra tela): status do topo e frase do início na hora */
+  addEventListener('sintonia:serena-chave', () => {
+    if (!montado || !R.raiz?.isConnected) return;
+    desenharCabecalho();
+    if (!atual() && !enviando && !falha) desenharInicioSemAnimar();
+  });
   // Depois que os números chegam: troca o conteúdo dos cartões sem repetir a animação de entrada.
   function desenharInicioSemAnimar() { desenharInicio(); R.coluna.querySelectorAll('.srn-entra').forEach((x) => x.classList.remove('srn-entra')); }
 

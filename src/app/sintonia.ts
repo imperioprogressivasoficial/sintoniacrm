@@ -81,6 +81,11 @@ export interface DependenciasSintonia {
    */
   iaDisponivel?: (c: Conversa) => Promise<boolean>;
   /**
+   * serena-chave: a mensagem da cliente chegou durante a última pausa da Serena e já tem mais de 30 min: a IA não
+   * responde mais (fica com a equipe, sem responder alguém horas depois). Ausente = nunca.
+   */
+  respostaVencida?: (c: Conversa, agora: Date) => boolean;
+  /**
    * robustez: fila própria da IA. Com ela, `receber` só grava e mostra a mensagem (rápido) e pede para a IA pensar
    * por trás (src/app/fila-ia.ts). Ausente = pensa na hora, dentro de `receber` (comportamento antigo, testes).
    */
@@ -926,6 +931,8 @@ export class Sintonia {
       }
       // robustez: sem chave da IA (ou IA desligada), não chama nem reagenda: a conversa fica para a equipe.
       if (!(await this.temIa(c))) return;
+      // serena-chave: chegou durante a pausa e já passou de 30 min: fica com a equipe.
+      if (this.d.respostaVencida?.(c, agora)) return;
 
       // ia-completa: várias mensagens seguidas viram uma resposta só (espera a cliente parar de digitar).
       if (this.d.juntarMs) {

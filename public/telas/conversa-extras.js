@@ -439,7 +439,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const iniciais = (nomeResp === 'Você' ? (eu.nome || 'Eu') : nomeResp).split(/\s+/).filter(Boolean).map((x) => x[0]).slice(0, 2).join('').toUpperCase() || '·';
     const av = el('span', { class: 'ia2-av', text: c.responsavelId ? iniciais : '—' });
     if (c.responsavelId && window.SintoniaFotos?.url?.(c.responsavelId)) { const im = el('img', { alt: '', src: window.SintoniaFotos.url(c.responsavelId), decoding: 'async' }); im.onerror = () => im.remove(); av.replaceChildren(im); }
-    const explicacao = c.modo === 'ia' ? 'A IA responde e agenda sozinha' : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
+    const explicacao = c.modo === 'ia' ? (window.SintoniaSerenaChave?.pausada?.() ? 'Serena pausada: a equipe atende esta conversa' /* serena-chave */ : 'A IA responde e agenda sozinha') : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
     const assumir = async () => {
       if (jaEu) { fechar(); return; }
       if (bloqueado) { toast('Esta conversa já tem responsável. Peça para a gerente transferir para você.'); return; }

@@ -54,6 +54,11 @@ export interface OpcoesFollowup {
   /** IA para "a IA escreve a mensagem com este objetivo". Só é usada quando `iaDisponivel()` diz que há chave. */
   agente?: { executar(p: PedidoAgente): Promise<RespostaAgente> };
   iaDisponivel?: () => boolean;
+  /**
+   * serena-chave: a Serena está pausada (a equipe atende tudo): as cadências de follow-up esperam a pausa acabar
+   * (ficam adiadas, não se perdem). A confirmação de agenda continua (é aviso do horário, não atendimento).
+   */
+  pausada?: () => boolean;
   email?: EmailParaFollowup;
   tags?: TagsParaFollowup;
   agora?: () => Date;
@@ -395,6 +400,11 @@ export class Followup {
     }
 
     if (e.tipo === 'confirmacao') return this.enviarConfirmacao(e, cfg, fim);
+    // serena-chave: Serena pausada: a cadência espera (confere de novo daqui a 15 min).
+    if (this.o.pausada?.()) {
+      await this.o.armazem.adiar(e.id, new Date(agora.getTime() + 15 * MIN));
+      return 'adiado';
+    }
     return this.enviarCadencia(e, cfg, fim);
   }
 
