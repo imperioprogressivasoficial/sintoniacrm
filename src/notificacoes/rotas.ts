@@ -39,6 +39,11 @@ export function problemasDaSituacao(s: { iaLigada: boolean; numerosReais: number
   return lista;
 }
 
+/** Problemas fixos que esta pessoa vê (só quem resolve: gestão). */
+const problemasPara = (o: OpcoesNotificacoes, u: Usuario): Problema[] => (o.problemas && (ehGestor(u) || veTudo(u)) ? o.problemas() : []);
+/** notificacoes2: o aviso de falha que repete um problema fixo ("falha:ia" = problema "ia") não aparece nem conta de novo. */
+const chavesRepetidas = (ps: Problema[]) => ps.map((p) => `falha:${p.chave}`);
+
 const exigeLogin = (req: FastifyRequest): Usuario => {
   if (!req.usuario) throw Object.assign(new Error('Faça login para continuar.'), { statusCode: 401 });
   return req.usuario;
@@ -71,7 +76,8 @@ const cursorDe = (n: Notificacao) => `${n.atualizadaEm.getTime()}_${n.id}`;
 export async function cabecalhoNotificacoes(o: OpcoesNotificacoes | undefined, req: FastifyRequest, reply: FastifyReply): Promise<{ naoLidas: number; versao: number; silencio: boolean } | undefined> {
   if (!o || !req.usuario) return undefined;
   try {
-    const r = await o.notificador.resumo(req.usuario.id);
+    const ps = problemasPara(o, req.usuario);
+    const r = await o.notificador.resumo(req.usuario, { problemas: ps.length, excluirChaves: chavesRepetidas(ps) });
     const prefs = await o.notificador.preferencias(req.usuario.id);
     const resumo = { ...r, silencio: emNaoPerturbe(prefs, o.agora?.() ?? new Date()) };
     reply.header('x-notificacoes', JSON.stringify({ n: resumo.naoLidas, v: resumo.versao, s: resumo.silencio ? 1 : 0 }));
@@ -87,16 +93,20 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
   app.get('/api/notificacoes', async (req, reply) => {
     const u = exigeLogin(req);
     const q = z.object({ antes: z.string().max(80).optional(), limite: z.coerce.number().int().min(1).max(100).default(30) }).parse(req.query);
-    const itens = await o.notificador.listar(u.id, q.limite + 1, lerCursor(q.antes));
+    const problemas = problemasPara(o, u);
+    const itens = await o.notificador.listar(u.id, q.limite + 1, lerCursor(q.antes), chavesRepetidas(problemas));
     const pagina = itens.slice(0, q.limite);
     const resumo = await cabecalhoNotificacoes(o, req, reply);
+    // notificacoes2: "clientes esperando" vem da lista de verdade (sempre aparece, mesmo com o sino cheio).
+    const esperando = q.antes ? [] : await o.notificador.esperasDoSino(u).catch(() => []);
     return {
       itens: pagina.map(paraTela),
       proximo: itens.length > q.limite && pagina.length ? cursorDe(pagina[pagina.length - 1]!) : null,
       naoLidas: resumo?.naoLidas ?? 0,
       versao: resumo?.versao ?? 0,
-      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; não entram no contador.
-      problemas: o.problemas && (ehGestor(u) || veTudo(u)) ? o.problemas() : [],
+      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; cada um conta uma vez no número do sino.
+      problemas,
+      esperando: esperando.map((x) => ({ conversaId: x.conversaId, nome: x.nome, unidade: x.unidade, nivel: x.nivel, minutos: x.minutos, desde: x.desde, dona: x.dona })),
       silencio: resumo?.silencio ?? false,
     };
   });

@@ -165,7 +165,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['falha', 'Problemas que impedem o trabalho', 'WhatsApp desconectado, chave da IA, agenda (só administração e direção).'],
   ];
 
-  const est = { problemas: [], itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
+  const est = { problemas: [], esperando: [], itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
 
   // ---------------------------------------------------------------- tempo
   const diaDe = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -179,7 +179,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (grupoDe(d) === 'Ontem') return `ontem, ${hm}`;
     return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + `, ${hm}`;
   }
-  const textoDe = (n) => (n.contador > 1 ? `${n.texto} · ${n.contador} mensagens` : n.texto);
+  // notificacoes2: aviso que se repetiu vira um item só com "(26×)".
+  const textoDe = (n) => (n.contador > 1 ? `${n.texto} (${n.contador}×)` : n.texto);
 
   // ---------------------------------------------------------------- contador, título, ícone da aba
   const iconeOriginal = document.querySelector('link[rel="icon"][sizes="64x64"]') || document.querySelector('link[rel="icon"]');
@@ -243,6 +244,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   async function tocarItem(n) {
     fechar();
+    if (n.sinteticaEspera) { irPara(n); return; }
     if (!n.lida) {
       n.lida = true; mostrarContador(Math.max(0, est.n - 1));
       post(`/api/notificacoes/${n.id}/lida`).catch(() => {});
@@ -275,6 +277,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const r = await api('/api/notificacoes?' + q);
       est.itens = mais ? est.itens.concat(r.itens.filter((x) => !est.itens.some((y) => y.id === x.id))) : r.itens;
       est.proximo = r.proximo; est.silencio = r.silencio; est.problemas = r.problemas || [];
+      if (!mais) est.esperando = r.esperando || []; /* notificacoes2: quem está esperando de verdade */
       mostrarContador(r.naoLidas);
       if (r.versao) est.versao = Math.max(est.versao ?? 0, r.versao);
       return r;
@@ -283,8 +286,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /** Chegou versão nova pelo cabeçalho: busca, e avisa (toast + som) do que é novo e ainda não lido. */
   async function novidades(versaoAntiga) {
+    const antes = new Set(est.esperando.map((x) => x.conversaId));
     const r = await buscar(false).catch(() => null);
     if (!r) return;
+    /* notificacoes2: cliente que começou a esperar agora (a espera não vem mais nas notificações da lista) */
+    const novaEspera = est.esperando.find((x) => !antes.has(x.conversaId) && !est.vistas.has('espera:' + x.conversaId + ':' + x.desde));
+    if (novaEspera) {
+      est.vistas.add('espera:' + novaEspera.conversaId + ':' + novaEspera.desde);
+      r.itens = r.itens.concat({ id: 'espera-' + novaEspera.conversaId, tipo: 'espera', titulo: `${novaEspera.nome} está esperando`, texto: `Sem resposta há ${novaEspera.minutos} min`, contador: 1, conversaId: novaEspera.conversaId, em: new Date().toISOString(), lida: false, sinteticaEspera: true });
+    }
     if (est.aberto) desenharLista();
     const novas = r.itens.filter((n) => !n.lida && new Date(n.em).getTime() > versaoAntiga && !est.vistas.has(n.id + ':' + n.em));
     novas.forEach((n) => est.vistas.add(n.id + ':' + n.em));
@@ -324,18 +334,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('span', { class: 'nt-ic t-problema', html: IC.falha }),
         el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: pr.titulo }), el('span', { class: 'nt-quando' }, el('span', { text: 'Resolver' })), el('span', { class: 'nt-texto', text: pr.texto }))));
     }
-    // Clientes esperando: um item só, atualizado no lugar.
-    const esperas = est.itens.filter((n) => n.tipo === 'espera' && !n.lida);
+    // Clientes esperando: um item só, montado pelo servidor com quem está esperando de verdade (notificacoes2).
+    const esperas = est.esperando;
     const outras = est.itens.filter((n) => n.tipo !== 'espera');
     if (esperas.length) {
-      const nomes = [...new Set(esperas.map((n) => (n.titulo || '').replace(/^Urgente: /, '').replace(/ (está esperando|espera há .*)$/, '')))];
+      const nomes = esperas.map((x) => x.nome);
       const qtd = nomes.length;
-      const mais = esperas.reduce((a, n) => (new Date(n.em) > new Date(a.em) ? n : a), esperas[0]);
+      const maior = Math.max(...esperas.map((x) => x.minutos || 0));
       frag.push(el('div', { class: 'nt-grupo', text: 'Agora' }));
       frag.push(el('button', { class: 'nt-item nt-nova', onclick: () => abrirEsperando(esperas) },
         el('span', { class: 'nt-ic t-espera', html: IC.espera }),
         el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: qtd === 1 ? '1 cliente esperando resposta' : `${qtd} clientes esperando resposta` }),
-          el('span', { class: 'nt-quando' }, el('span', { text: relativo(mais.em) }), el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
+          el('span', { class: 'nt-quando' }, el('span', { text: `há ${maior} min` }), el('i', { class: 'nt-ponto', 'aria-label': 'esperando' })),
           el('span', { class: 'nt-texto', text: nomesCurto(nomes) }))));
     }
     let grupo = '';
@@ -355,10 +365,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const marcar = $('nt-marcar'); if (marcar) marcar.disabled = !est.n;
   }
 
-  /** Toque no "N clientes esperando": marca esses avisos como lidos e mostra a lista de não lidas. */
+  /** Toque no "N clientes esperando": abre a conversa (uma só) ou a lista de quem está esperando. Conta no sino até alguém responder. */
   function abrirEsperando(esperas) {
-    for (const n of esperas) { n.lida = true; post(`/api/notificacoes/${n.id}/lida`).catch(() => {}); }
-    mostrarContador(Math.max(0, est.n - 1));
     fechar();
     const ids = [...new Set(esperas.map((n) => n.conversaId).filter(Boolean))];
     if (ids.length === 1) { ui.abrir(ids[0]); return; }

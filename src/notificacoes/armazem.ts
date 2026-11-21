@@ -14,12 +14,24 @@ export interface ArmazemNotificacoes {
   grupoAberto(usuarioId: string, conversaId: string, tipos: string[]): Promise<Notificacao | undefined>;
   /** Junta mais uma mensagem: novo texto, contador + `somar`, sobe para o topo. */
   somar(id: string, campos: { texto: string; em: Date; somar: number }): Promise<Notificacao | undefined>;
-  /** Já existe notificação com esta chave para a pessoa (desde `desde`, se informado)? */
+  /** Já existe notificação com esta chave para a pessoa (mexida desde `desde`, se informado)? */
   existeChave(usuarioId: string, chave: string, desde?: Date): Promise<boolean>;
-  /** Mais nova primeiro; só as que já valem (criada_em <= agora). */
-  listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]): Promise<Notificacao[]>;
+  /** notificacoes2: a notificação mais recente da pessoa com esta chave (para juntar o aviso repetido nela). */
+  porChave(usuarioId: string, chave: string): Promise<Notificacao | undefined>;
+  /**
+   * notificacoes2: o mesmo aviso aconteceu de novo: contador + 1, texto e título novos, sobe para o topo
+   * e volta a ficar não lida (em vez de criar outra linha igual).
+   */
+  repetir(id: string, campos: { titulo: string; texto: string; em: Date }): Promise<Notificacao | undefined>;
+  /**
+   * notificacoes2: "cliente esperando" que não vale mais (alguém respondeu ou a conversa parou de esperar) fica lida
+   * para todo mundo da lista `usuarioIds`. `ativas` são as esperas que continuam ("espera:<conversa>:<desde>").
+   */
+  fecharEsperas(usuarioIds: string[], ativas: string[], em: Date, conversaId?: string): Promise<number>;
+  /** Mais nova primeiro; só as que já valem (criada_em <= agora). `excluirChaves` esconde avisos (ex.: o mesmo problema fixo no topo). */
+  listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]): Promise<Notificacao[]>;
   /** Não lidas e "versão" (última mudança, em ms) para o app saber quando buscar de novo. */
-  resumo(usuarioId: string, agora: Date, tipos?: readonly string[]): Promise<{ naoLidas: number; versao: number; esperaNaoLidas: number }>;
+  resumo(usuarioId: string, agora: Date, tipos?: readonly string[], excluirChaves?: readonly string[]): Promise<{ naoLidas: number; versao: number; esperaNaoLidas: number }>;
   marcarLida(usuarioId: string, id: string, em: Date): Promise<boolean>;
   marcarTodas(usuarioId: string, em: Date): Promise<number>;
   marcarDaConversa(usuarioId: string, conversaId: string, em: Date): Promise<number>;
@@ -72,21 +84,44 @@ export class ArmazemNotificacoesMemoria implements ArmazemNotificacoes {
     return copia(n);
   }
   async existeChave(usuarioId: string, chave: string, desde?: Date) {
-    return this.itens.some((x) => x.usuarioId === usuarioId && x.chave === chave && (!desde || x.criadaEm.getTime() >= desde.getTime()));
+    return this.itens.some((x) => x.usuarioId === usuarioId && x.chave === chave && (!desde || x.atualizadaEm.getTime() >= desde.getTime()));
   }
-  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]) {
+  async porChave(usuarioId: string, chave: string) {
+    const n = this.itens.filter((x) => x.usuarioId === usuarioId && x.chave === chave).sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())[0];
+    return n && copia(n);
+  }
+  async repetir(id: string, c: { titulo: string; texto: string; em: Date }) {
+    const n = this.itens.find((x) => x.id === id);
+    if (!n) return undefined;
+    Object.assign(n, { titulo: c.titulo, texto: c.texto, contador: n.contador + 1, atualizadaEm: c.em.getTime() > n.atualizadaEm.getTime() ? c.em : n.atualizadaEm, entregueEm: c.em });
+    delete n.lidaEm;
+    return copia(n);
+  }
+  async fecharEsperas(usuarioIds: string[], ativas: string[], em: Date, conversaId?: string) {
+    const quem = new Set(usuarioIds), valem = new Set(ativas);
+    let k = 0;
+    for (const n of this.itens) {
+      if (n.tipo !== 'espera' || n.lidaEm || !quem.has(n.usuarioId) || n.criadaEm.getTime() > em.getTime()) continue;
+      if (conversaId && n.conversaId !== conversaId) continue;
+      if (n.chave && valem.has(n.chave.replace(/:\d+$/, ''))) continue;
+      n.lidaEm = em;
+      k++;
+    }
+    return k;
+  }
+  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]) {
     return this.itens
-      .filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime() && (!antes || depoisDe(x, antes)) && (!tipos || tipos.includes(x.tipo)))
+      .filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime() && (!antes || depoisDe(x, antes)) && (!tipos || tipos.includes(x.tipo)) && !(x.chave && excluirChaves?.includes(x.chave)))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime() || (a.id < b.id ? 1 : -1))
       .slice(0, limite)
       .map(copia);
   }
-  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[]) {
+  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[], excluirChaves?: readonly string[]) {
     const minhas = this.itens.filter((x) => x.usuarioId === usuarioId && x.criadaEm.getTime() <= agora.getTime());
-    const contam = minhas.filter((x) => !x.lidaEm && (!tipos || tipos.includes(x.tipo)));
+    const contam = minhas.filter((x) => !x.lidaEm && (!tipos || tipos.includes(x.tipo)) && !(x.chave && excluirChaves?.includes(x.chave)));
     return {
       naoLidas: contam.length,
-      esperaNaoLidas: contam.filter((x) => x.tipo === 'espera').length,
+      esperaNaoLidas: minhas.filter((x) => !x.lidaEm && x.tipo === 'espera').length,
       versao: Math.max(0, ...minhas.map((x) => Math.max(x.atualizadaEm.getTime(), x.lidaEm?.getTime() ?? 0))),
     };
   }
@@ -206,28 +241,52 @@ export class ArmazemNotificacoesPostgres implements ArmazemNotificacoes {
   }
   async existeChave(usuarioId: string, chave: string, desde?: Date) {
     const { rowCount } = await this.pool.query(
-      `select 1 from ${T} where usuario_id = $1 and chave = $2 and ($3::timestamptz is null or criada_em >= $3) limit 1`,
+      `select 1 from ${T} where usuario_id = $1 and chave = $2 and ($3::timestamptz is null or atualizada_em >= $3) limit 1`,
       [usuarioId, chave, desde ?? null],
     );
     return Boolean(rowCount);
   }
-  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[]) {
+  async porChave(usuarioId: string, chave: string) {
+    const { rows } = await this.pool.query<Linha>(`select * from ${T} where usuario_id = $1 and chave = $2 order by atualizada_em desc, id desc limit 1`, [usuarioId, chave]);
+    return rows[0] && daLinha(rows[0]);
+  }
+  async repetir(id: string, c: { titulo: string; texto: string; em: Date }) {
+    const { rows } = await this.pool.query<Linha>(
+      `update ${T} set titulo = $2, texto = $3, contador = contador + 1, atualizada_em = greatest(atualizada_em, $4), lida_em = null, entregue_em = $4
+        where id = $1 returning *`,
+      [id, c.titulo, c.texto, c.em],
+    );
+    return rows[0] && daLinha(rows[0]);
+  }
+  async fecharEsperas(usuarioIds: string[], ativas: string[], em: Date, conversaId?: string) {
+    if (!usuarioIds.length) return 0;
+    const { rowCount } = await this.pool.query(
+      `update ${T} set lida_em = $3
+        where tipo = 'espera' and lida_em is null and usuario_id = any($1::uuid[]) and criada_em <= $3
+          and ($4::uuid is null or conversa_id = $4)
+          and (chave is null or regexp_replace(chave, ':[0-9]+$', '') <> all($2::text[]))`,
+      [usuarioIds, ativas, em, conversaId ?? null],
+    );
+    return rowCount ?? 0;
+  }
+  async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]) {
     const { rows } = await this.pool.query<Linha>(
       `select * from ${T} where usuario_id = $1 and criada_em <= $2
          and ($3::timestamptz is null or (atualizada_em, id) < ($3, $4::uuid))
          and ($6::text[] is null or tipo = any($6))
+         and (chave is null or $7::text[] is null or chave <> all($7))
        order by atualizada_em desc, id desc limit $5`,
-      [usuarioId, agora, antes?.em ?? null, antes?.id ?? '00000000-0000-0000-0000-000000000000', limite, tipos ? [...tipos] : null],
+      [usuarioId, agora, antes?.em ?? null, antes?.id ?? '00000000-0000-0000-0000-000000000000', limite, tipos ? [...tipos] : null, excluirChaves?.length ? [...excluirChaves] : null],
     );
     return rows.map(daLinha);
   }
-  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[]) {
+  async resumo(usuarioId: string, agora: Date, tipos?: readonly string[], excluirChaves?: readonly string[]) {
     const { rows } = await this.pool.query<{ n: string; e: string; v: Date | null }>(
-      `select count(*) filter (where lida_em is null and ($3::text[] is null or tipo = any($3))) as n,
+      `select count(*) filter (where lida_em is null and ($3::text[] is null or tipo = any($3)) and (chave is null or $4::text[] is null or chave <> all($4))) as n,
               count(*) filter (where lida_em is null and tipo = 'espera') as e,
               max(greatest(atualizada_em, coalesce(lida_em, atualizada_em))) as v
          from ${T} where usuario_id = $1 and criada_em <= $2`,
-      [usuarioId, agora, tipos ? [...tipos] : null],
+      [usuarioId, agora, tipos ? [...tipos] : null, excluirChaves?.length ? [...excluirChaves] : null],
     );
     return { naoLidas: Number(rows[0]?.n ?? 0), esperaNaoLidas: Number(rows[0]?.e ?? 0), versao: rows[0]?.v?.getTime() ?? 0 };
   }

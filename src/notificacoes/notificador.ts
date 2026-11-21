@@ -51,6 +51,22 @@ export interface EsperaParaTela {
   prazo: string;
 }
 
+type ListaEsperas = Array<{ c: Conversa; nivel: 1 | 2; desde: Date; minutos: number; regra: RegraEspera; prazo?: PrazoEspera }>;
+
+/** Tipos que entram na lista do sino como notificação (a espera vem da lista de verdade, não das notificações). */
+const TIPOS_DA_LISTA = TIPOS_VISIVEIS.filter((t) => t !== 'espera');
+
+/** Item "clientes esperando" do sino. */
+export interface EsperaDoSino {
+  conversaId: string;
+  nome: string;
+  unidade: UnidadeId;
+  nivel: 1 | 2;
+  minutos: number;
+  desde: Date;
+  dona: string | null;
+}
+
 /** Falhas que valem notificação (só para a administração e a direção, no máximo uma por hora de cada). */
 const FALHAS: Array<{ classe: string; teste: RegExp; titulo: string; texto: string }> = [
   {
@@ -80,6 +96,11 @@ export class Notificador {
   /** Conversas que acabaram de nascer: a primeira mensagem já está na notificação de "nova cliente". */
   /** Mensagens que já tocaram no aparelho de cada pessoa ("<usuario>:<mensagem>"): nunca repete. */
   private regrasCache?: { em: number; regras: Promise<RegrasEspera> };
+  /** notificacoes2: última lista de "clientes esperando" (montada pelo relógio; o sino lê daqui sem recalcular a cada pedido). */
+  private esperasCache?: { em: number; lista: Promise<ListaEsperas> };
+  /** notificacoes2: quando a lista de esperas mudou pela última vez (ms): entra na "versão" do sino. */
+  private versaoEsperas = 0;
+  private chavesEsperas = '';
   private readonly agora: () => Date;
   private readonly log: (msg: string, extra?: unknown) => void;
   /** Ouvintes de notificação nova (para avisar o app sem esperar o ciclo). */
@@ -136,6 +157,16 @@ export class Notificador {
   private async tratar(e: Evento): Promise<void> {
     if (e.tipo === 'falha') return this.falha(e);
     if (!e.conversaId) return;
+    // notificacoes2: alguém respondeu: o "cliente esperando" dessa conversa sai do sino de todo mundo na hora.
+    if (e.tipo === 'equipe_respondeu' || e.tipo === 'ia_respondeu') {
+      const us = await this.equipe();
+      const agora = this.agora();
+      await this.o.armazem.fecharEsperas(us.map((u) => u.id), [], agora, e.conversaId);
+      this.esperasCache = undefined;
+      this.versaoEsperas = agora.getTime();
+      return;
+    }
+    if (e.tipo === 'mensagem_cliente' || e.tipo === 'transferencia') this.esperasCache = undefined;
     const c = await this.o.repo.buscarConversa(e.conversaId);
     if (!c || c.empresaId !== this.o.empresaId) return;
     const us = await this.equipe();
@@ -232,7 +263,8 @@ export class Notificador {
     const umaHora = new Date(this.agora().getTime() - 60 * MIN);
     for (const u of (await this.equipe()).filter(veTudo)) {
       if (await this.o.armazem.existeChave(u.id, chave, umaHora)) continue;
-      await this.criar(u, { tipo: 'falha', titulo: f.titulo, texto: f.texto, vista: 'conexoes', chave });
+      // notificacoes2: de novo depois de uma hora: o mesmo aviso sobe com "2×", "3×"… (não cria outro igual).
+      await this.criar(u, { tipo: 'falha', titulo: f.titulo, texto: f.texto, vista: 'conexoes', agrupar: chave });
     }
   }
 
@@ -240,24 +272,25 @@ export class Notificador {
    * Aviso de sistema para a gestão (administração, direção e gerência): sino + push, tipo "falha".
    * A chave garante que o mesmo aviso sai uma vez só para cada pessoa (ex.: uma queda do WhatsApp).
    */
-  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string; tipo?: TipoNotificacao }): Promise<number> {
+  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string; tipo?: TipoNotificacao; agrupar?: boolean }): Promise<number> {
     let n = 0;
     for (const u of (await this.equipe()).filter((x) => ehGestor(x))) {
-      if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
-      if (await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+      if (!a.agrupar && (await this.o.armazem.existeChave(u.id, a.chave))) continue;
+      if (await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, ...(a.agrupar ? { agrupar: a.chave } : { chave: a.chave }), ...(a.vista ? { vista: a.vista } : {}) })) n++;
     }
     return n;
   }
 
   /**
    * serena-chave: aviso para a equipe toda (sino + push, tipo "ia_equipe"): "Fulana pausou a Serena até 15h".
-   * A chave garante um aviso só por pessoa.
+   * A chave garante um aviso só por pessoa. notificacoes2: com `agrupar`, a mesma chave atualiza o aviso que já existe
+   * (pausou/ligou a Serena vira um item só, com o estado mais novo e quantas vezes mudou).
    */
-  async avisarEquipe(a: { titulo: string; texto: string; chave: string; vista?: string }): Promise<number> {
+  async avisarEquipe(a: { titulo: string; texto: string; chave: string; vista?: string; agrupar?: boolean }): Promise<number> {
     let n = 0;
     for (const u of await this.equipe()) {
-      if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
-      if (await this.criar(u, { tipo: 'ia_equipe', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+      if (!a.agrupar && (await this.o.armazem.existeChave(u.id, a.chave))) continue;
+      if (await this.criar(u, { tipo: 'ia_equipe', titulo: a.titulo, texto: a.texto, ...(a.agrupar ? { agrupar: a.chave } : { chave: a.chave }), ...(a.vista ? { vista: a.vista } : {}) })) n++;
     }
     return n;
   }
@@ -314,7 +347,7 @@ export class Notificador {
   }
 
   /** Conversas esperando além do limite (com o nível de cada uma). */
-  private async esperas(agora: Date): Promise<Array<{ c: Conversa; nivel: 1 | 2; desde: Date; minutos: number; regra: RegraEspera; prazo?: PrazoEspera }>> {
+  private async esperas(agora: Date): Promise<ListaEsperas> {
     const regras = await this.regrasEspera();
     const saida = [];
     for (const c of await this.o.repo.listarConversas()) {
@@ -332,9 +365,19 @@ export class Notificador {
 
   /** Cliente sem resposta além do limite: aviso (dona ou unidade) e alerta forte (também a gestão), uma vez por nível e por mensagem. */
   private async esperando(agora: Date): Promise<void> {
-    const lista = await this.esperas(agora);
-    if (!lista.length) return;
+    const pronta = this.esperas(agora);
+    this.esperasCache = { em: agora.getTime(), lista: pronta };
+    const lista = await pronta;
     const us = await this.equipe();
+    // notificacoes2: alguém respondeu (ou a conversa parou de esperar): o aviso sai do sino de todo mundo.
+    const ativas = lista.map(({ c, desde }) => `espera:${c.id}:${desde.getTime()}`);
+    const fechadas = await this.o.armazem.fecharEsperas(us.map((u) => u.id), ativas, agora);
+    const chaves = ativas.sort().join('|');
+    if (fechadas || chaves !== this.chavesEsperas) {
+      this.chavesEsperas = chaves;
+      this.versaoEsperas = agora.getTime();
+    }
+    if (!lista.length) return;
     for (const { c, nivel, desde, minutos, prazo } of lista) {
       const alvos = new Map(this.donaOuUnidade(us, c).map((u) => [u.id, u]));
       if (nivel === 2) for (const u of this.gestao(us, c)) alvos.set(u.id, u);
@@ -356,6 +399,31 @@ export class Notificador {
         });
       }
     }
+  }
+
+  /** A lista de esperas do último minuto (refaz se ficou velha: o relógio não rodou ou é a primeira vez). */
+  private esperasRecentes(): Promise<ListaEsperas> {
+    const agora = this.agora();
+    if (!this.esperasCache || agora.getTime() - this.esperasCache.em > 90_000 || agora.getTime() < this.esperasCache.em) {
+      this.esperasCache = { em: agora.getTime(), lista: this.esperas(agora) };
+    }
+    return this.esperasCache.lista;
+  }
+
+  /**
+   * notificacoes2: "clientes esperando" do sino desta pessoa, montado da lista de verdade (não das últimas notificações):
+   * as mesmas regras de quem recebe o aviso (dona ou a unidade; no alerta forte, também a gestão), se ela quer esse aviso.
+   */
+  async esperasDoSino(u: Usuario): Promise<EsperaDoSino[]> {
+    const p = await this.prefsDe(u.id);
+    if (p.tipos.espera === false) return [];
+    const lista = await this.esperasRecentes().catch(() => [] as ListaEsperas);
+    if (!lista.length) return [];
+    const us = await this.equipe();
+    return lista
+      .filter(({ c, nivel }) => this.donaOuUnidade(us, c).some((x) => x.id === u.id) || (nivel === 2 && this.gestao(us, c).some((x) => x.id === u.id)))
+      .sort((a, b) => b.minutos - a.minutos)
+      .map(({ c, nivel, desde, minutos }) => ({ conversaId: c.id, nome: nomeDa(c), unidade: c.unidade, nivel, minutos, desde, dona: c.responsavelNome ?? null }));
   }
 
   /** Para a faixa do app: as esperas que esta pessoa vê. */
@@ -387,12 +455,28 @@ export class Notificador {
 
   private async criar(
     u: Usuario,
-    n: { tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; chave?: string; contador?: number; em?: Date; espera?: boolean },
+    n: { tipo: TipoNotificacao; titulo: string; texto: string; conversaId?: string; vista?: string; chave?: string; contador?: number; em?: Date; espera?: boolean; agrupar?: string },
   ): Promise<Notificacao | undefined> {
     const p = await this.prefsDe(u.id);
     if (n.tipo !== 'teste' && p.tipos[n.tipo] === false) return undefined;
     const semPush = Boolean(n.espera && (!p.espera.push || esperaSilenciada(p, this.agora())));
     const agora = this.agora();
+    // notificacoes2: aviso que se repete (mesma chave) vira um item só: contador + 1, data nova, não lido de novo.
+    if (n.agrupar) {
+      const antes = await this.o.armazem.porChave(u.id, n.agrupar);
+      const etiqueta = `grupo-${n.agrupar}`;
+      if (antes) {
+        const nova = await this.o.armazem.repetir(antes.id, { titulo: n.titulo, texto: n.texto, em: agora });
+        if (!nova) return undefined;
+        await this.entregar(nova, p, false, { texto: nova.texto, etiqueta }).catch((x) => this.log('Falha no push', String(x)));
+        this.aoCriar?.(nova);
+        return nova;
+      }
+      const criada = await this.o.armazem.criar({ usuarioId: u.id, tipo: n.tipo, titulo: n.titulo, texto: n.texto, criadaEm: agora, chave: n.agrupar, entregueEm: agora, ...(n.conversaId ? { conversaId: n.conversaId } : {}), ...(n.vista ? { vista: n.vista } : {}) });
+      await this.entregar(criada, p, false, { etiqueta }).catch((x) => this.log('Falha no push', String(x)));
+      this.aoCriar?.(criada);
+      return criada;
+    }
     const futura = Boolean(n.em && n.em.getTime() > agora.getTime());
     const criada = await this.o.armazem.criar({
       usuarioId: u.id,
@@ -431,7 +515,7 @@ export class Notificador {
     const carga: CargaPush = {
       id: n.id,
       titulo: troca?.titulo ?? n.titulo,
-      texto: troca?.texto ?? (n.contador > 1 ? `${n.texto} (${n.contador} mensagens)` : n.texto),
+      texto: troca?.texto ?? (n.contador > 1 && (n.tipo === 'mensagem' || n.tipo === 'nova_cliente') ? `${n.texto} (${n.contador} mensagens)` : n.texto),
       etiqueta: troca?.etiqueta ?? (n.conversaId ? `conversa-${n.conversaId}` : `notificacao-${n.tipo}`),
       tipo: n.tipo,
       ...(troca?.insistente ? { insistente: true } : {}),
@@ -465,13 +549,20 @@ export class Notificador {
   async testar(u: Usuario): Promise<Notificacao | undefined> {
     return this.criar(u, { tipo: 'teste', titulo: 'Notificações ligadas', texto: 'É assim que os avisos da Sintonia vão chegar.' });
   }
-  listar(usuarioId: string, limite: number, antes?: Cursor) {
-    return this.o.armazem.listar(usuarioId, this.agora(), limite, antes, TIPOS_VISIVEIS);
+  /**
+   * Lista do sino: só os tipos que ainda valem. notificacoes2: sem os avisos de espera (o item "clientes esperando"
+   * vem de esperasDoSino) e sem os avisos que repetem um problema fixo no topo (`excluirChaves`).
+   */
+  listar(usuarioId: string, limite: number, antes?: Cursor, excluirChaves?: readonly string[]) {
+    return this.o.armazem.listar(usuarioId, this.agora(), limite, antes, TIPOS_DA_LISTA, excluirChaves);
   }
-  /** Não lidas do sino: só os tipos que ainda valem, e os "clientes esperando" contam como um item só (agrupados). */
-  async resumo(usuarioId: string) {
-    const r = await this.o.armazem.resumo(usuarioId, this.agora(), TIPOS_VISIVEIS);
-    return { naoLidas: r.naoLidas - r.esperaNaoLidas + (r.esperaNaoLidas > 0 ? 1 : 0), versao: r.versao };
+  /**
+   * O número do sino é o que a lista mostra: avisos não lidos + cada problema fixo uma vez + "clientes esperando"
+   * como um item só, enquanto houver alguém esperando por esta pessoa.
+   */
+  async resumo(u: Usuario, extra: { problemas?: number; excluirChaves?: readonly string[] } = {}) {
+    const [r, esperas] = await Promise.all([this.o.armazem.resumo(u.id, this.agora(), TIPOS_DA_LISTA, extra.excluirChaves), this.esperasDoSino(u)]);
+    return { naoLidas: r.naoLidas + (extra.problemas ?? 0) + (esperas.length ? 1 : 0), versao: Math.max(r.versao, this.versaoEsperas), esperando: esperas.length };
   }
   async preferencias(usuarioId: string) {
     return this.prefsDe(usuarioId);

@@ -929,7 +929,8 @@ registrarPausaSerena(app, { chave: chaveSerena, temChave: () => iaLigada });
 chaveSerena.aoMudar(async (m) => {
   const agora = new Date();
   const a = avisoDaMudanca(m, agora);
-  await notificador.avisarEquipe({ ...a, chave: `serena-chave-${m.tipo}-${agora.getTime()}`, vista: 'ia' }).catch((e) => log('Falha ao avisar a equipe da chave da Serena', String(e)));
+  // notificacoes2: pausar/ligar a Serena atualiza um aviso só (o estado mais novo), em vez de um aviso por mudança.
+  await notificador.avisarEquipe({ ...a, chave: 'serena-chave', agrupar: true, vista: 'ia' }).catch((e) => log('Falha ao avisar a equipe da chave da Serena', String(e)));
   if (m.tipo === 'pausou' || !iaLigada) return;
   // Ao voltar: só as conversas no modo IA com a cliente esperando há menos de 30 min (por trás, sem segurar a tela).
   void (async () => {
