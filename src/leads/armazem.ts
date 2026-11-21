@@ -119,6 +119,8 @@ export class ArmazemLeadsPostgres implements ArmazemLeads {
       await c.query('select id from sintonia.conversas where id = any($1::uuid[]) order by id for update', [[deId, paraId]]);
       await c.query('update sintonia.mensagens set conversa_id = $2 where conversa_id = $1', [deId, paraId]);
       await c.query('update sintonia.eventos set conversa_id = $2 where conversa_id = $1', [deId, paraId]);
+      // msg-agendada: o que estava agendado para a conversa juntada continua valendo na principal.
+      await c.query('update sintonia.mensagens_agendadas set conversa_id = $2 where conversa_id = $1', [deId, paraId]);
       await c.query(
         `update sintonia.tarefas t set conversa_id = $2
           where t.conversa_id = $1 and not t.feita

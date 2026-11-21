@@ -1082,6 +1082,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           <button class="nav lt-item" data-vista="reunioes" title="Agendamento online: link para o contato marcar reunião"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/></svg><span class="lt-rot">Agendamento online</span></button>
           <!-- rotina: tarefas e checklist do dia do vendedor (public/telas/rotina.js) -->
           <button class="nav lt-item" data-vista="rotina" title="Rotina: tarefas e checklist do dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/></svg><span class="lt-rot">Rotina</span><span class="lt-qtd" id="lt-rotina-qtd" hidden></span></button>
+          <!-- msg-agendada: mensagens agendadas nas conversas (public/telas/agendadas.js) -->
+          <button class="nav lt-item" data-vista="agendadas" title="Mensagens agendadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/></svg><span class="lt-rot">Envios agendados</span><span class="lt-qtd" id="lt-agendadas-qtd" hidden></span></button>
         </div></div>
       </div>
 
@@ -1327,6 +1329,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <section class="vista" id="v-grupos"><div class="painel" id="grupos"></div></section>
     <section class="vista" id="v-chat-equipe"><div class="ceq" id="chat-equipe"></div></section><!-- equipe: Conversas de equipe (public/telas/equipe.js) -->
     <section class="vista" id="v-rotina"><div class="painel" id="rotina"></div></section>
+    <section class="vista" id="v-agendadas"><div class="painel" id="agendadas"></div></section><!-- msg-agendada -->
     <section class="vista" id="v-scripts"><div class="painel" id="scripts"></div></section>
     <!-- layout-telas: Empresa e conta abrem dentro do painel, na largura toda -->
     <section class="vista" id="v-acessos"><div class="painel" id="acessos"></div></section>
@@ -1676,6 +1679,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if ((v === 'serena' || v === 'ligacoes' || v === 'relatorios' || v === 'desempenho' || v === 'analises' /* analises */ || v === 'leads' || v === 'agenda' || v === 'transmissoes' || v === 'email' || v === 'clientes' || v === 'respostas' || v === 'links' || v === 'reunioes' || v === 'scripts' || v === 'rotina' || v === 'grupos' || v === 'acessos' || v === 'empresa' || v === 'planos') && window.SintoniaTelas?.[v]) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui);
     /* equipe: Conversas de equipe (chat interno) — a vista é 'chat-equipe'; 'equipe' continua sendo Atendentes e acessos */
     if (v === 'chat-equipe' && window.SintoniaTelas?.equipe) window.SintoniaTelas.equipe.desenhar($('chat-equipe'), window.Sintonia.ui);
+    /* msg-agendada: Atendimento › Mensagens agendadas */
+    if (v === 'agendadas' && window.SintoniaTelas?.agendadas) window.SintoniaTelas.agendadas.desenhar($('agendadas'), window.Sintonia.ui);
     /* clientes-tags: tela Vendas › Tags */
     if (v === 'tags' && window.SintoniaTelas?.tags) window.SintoniaTelas.tags.desenhar($('tags-tela'), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
@@ -2003,6 +2008,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!d) return;
     /* respostas-fluxos: faixa do fluxo de mensagens em andamento */
     window.SintoniaFluxos?.faixa?.(estado.aberta);
+    window.SintoniaAgendadas?.conversa?.(estado.aberta); /* msg-agendada: balões das agendadas */
     const assinatura = JSON.stringify(d);
     if (d.conversa?.id !== estado.aberta) return; /* fluidez: chegou a resposta de uma conversa que já foi trocada */
     guardarConversa(d, assinatura); /* fluidez */
@@ -2040,6 +2046,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       caixa.append(bal); anterior = quem;
     }
     if (!mensagens.length) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
+    window.SintoniaAgendadas?.noFim?.(caixa, c); /* msg-agendada: "Agendada para…" no fim */
     if (noFim || caixa.dataset.conversa !== c.id) caixa.scrollTop = caixa.scrollHeight;
     caixa.dataset.conversa = c.id;
     const mostrarSug = Boolean(sugestao) && c.modo !== 'humano';
@@ -3008,6 +3015,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { nome: 'Agendamento online', sub: 'Link para o contato marcar reunião', ic: IC.agenda, cor: '#106ebe', acao: () => mostrar('reunioes') },
         /* rotina: tarefas e checklist do dia; o valor mostra as atrasadas */
         { nome: 'Rotina', sub: 'Tarefas e checklist do dia', valor: window.SintoniaTelas?.rotina?.valorMenu?.() || '', ic: I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), cor: '#0ea5e9', acao: () => mostrar('rotina') },
+        /* msg-agendada: o valor mostra quantas das minhas ainda vão sair */
+        { nome: 'Mensagens agendadas', sub: 'O que vai sair na hora marcada', valor: window.SintoniaTelas?.agendadas?.valorMenu?.() || '', ic: I('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/>'), cor: '#106ebe', acao: () => mostrar('agendadas') },
       ] },
       { id: 'vendas', titulo: 'Pipelines', ic: IC.funil, cor: '#106ebe', itens: [
         gestor && { nome: 'Criar novo pipeline', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.novoFunil?.(), 300); } },
@@ -3534,6 +3543,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/respostas.js" defer></script>
 <script src="/telas/reunioes.js" defer></script>
 <script src="/telas/rotina.js" defer></script>
+<script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
 <script src="/telas/scripts.js" defer></script>
 <script src="/telas/empresa.js" defer></script><!-- layout-telas -->
 <script src="/telas/chanfro.js" defer></script>
