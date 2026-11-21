@@ -159,6 +159,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/equipe.js': { arquivo: 'telas/equipe.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/voltar-celular.js': { arquivo: 'telas/voltar-celular.js', tipo: 'text/javascript; charset=utf-8' }, // rotas-celular: botão Voltar no celular
   '/telas/rotas.js': { arquivo: 'telas/rotas.js', tipo: 'text/javascript; charset=utf-8' }, // rotas-fontes: endereços /app/<tela>
   // integracoes: Integrações e API (chaves, webhooks, MCP, documentação)
   '/telas/integracoes.js': { arquivo: 'telas/integracoes.js', tipo: 'text/javascript; charset=utf-8' },

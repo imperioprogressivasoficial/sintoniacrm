@@ -67,7 +67,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   async function desenhar(c, u) {
     ui = u; caixa = c;
     window.SintoniaTelas.reunioes?.css?.();
-    if (!document.getElementById('sc-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'sc-css', textContent: CSS }));
+    /* rotas-celular: id próprio (o "sc-css" já era da serena-chave.js e este estilo nunca entrava: chips crus e lupa gigante) */
+    if (!document.getElementById('scripts-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'scripts-css', textContent: CSS }));
     const el = ui.el;
     caixa.replaceChildren(el('p', { class: 'rn-vazio', text: 'Carregando…' }));
     let d;

@@ -8,7 +8,11 @@
  *   - O painel lateral (painel-lateral.js) também usa o histórico, na mesma URL: quando o próprio app volta no
  *     histórico (history.back/go), o estado da tela é que vale e o endereço é acertado depois.
  * Os nomes internos das vistas (#v-*) não mudam: CAMINHO faz o mapa vista ⇄ caminho.
- * Ganchos no app.html: mostrar(), abrir() e fecharConversa() chamam SintoniaRotas.mudou(). */
+ * Ganchos no app.html: mostrar(), abrir() e fecharConversa() chamam SintoniaRotas.mudou().
+ * rotas-celular: cada entrada nova guarda de onde a pessoa veio (state.origem: tela, área aberta de Configurações,
+ *   rolagem) e a entrada de onde ela saiu ganha state.reabrir. Voltar (botão "Voltar" do celular, arrastar da borda,
+ *   voltar do navegador/Android) cai na entrada anterior e, se lá havia uma área aberta, ela abre de novo no mesmo
+ *   ponto (public/telas/voltar-celular.js). state.seq diz a ordem das entradas (as do painel lateral copiam a da tela). */
 (() => {
   const ui = window.Sintonia?.ui;
   if (!ui || !history.pushState) return;
@@ -87,13 +91,26 @@
   } catch { /* navegador não deixa trocar: segue sem a proteção */ }
 
   let pronto = false, aplicando = false;
-  const marca = (anterior) => ({ ...(history.state && typeof history.state === 'object' ? history.state : {}), sintoniaRota: 1, rotaAnterior: anterior });
+  /* rotas-celular: número de ordem das entradas (sobe sempre, mesmo depois de recarregar) */
+  let seqAtual = Number(history.state?.seq) || 0;
+  const novoSeq = () => (seqAtual = Math.max(seqAtual + 1, Date.now()));
+  const V = () => window.SintoniaVoltar;
+  const marca = (anterior) => ({ ...(history.state && typeof history.state === 'object' ? history.state : {}), sintoniaRota: 1, rotaAnterior: anterior, seq: Number(history.state?.seq) || novoSeq() });
   function trocarEndereco(novo, empurrar) {
     if (novo === location.pathname) return;
     try {
-      if (empurrar) history.pushState({ sintoniaRota: 1, rotaAnterior: location.pathname }, '', novo); // entrada nova: sem o estado do painel
-      else history.replaceState(marca(history.state?.rotaAnterior), '', novo + location.search + location.hash);
+      if (empurrar) {
+        // rotas-celular: de onde veio (fica na entrada nova) e o que reabrir ao voltar (fica na entrada de onde saiu)
+        let origem = null, reabrir = null;
+        try { ({ origem, reabrir } = V()?.saida?.(location.pathname, novo) || {}); } catch (x) { console.error(x); }
+        const daqui = { ...marca(history.state?.rotaAnterior) };
+        if (reabrir) daqui.reabrir = reabrir; else delete daqui.reabrir;
+        history.replaceState(daqui, '', location.pathname + location.search + location.hash);
+        history.pushState({ sintoniaRota: 1, rotaAnterior: location.pathname, seq: novoSeq(), ...(origem ? { origem } : {}) }, '', novo); // entrada nova: sem o estado do painel
+        V()?.guardar?.(history.state);
+      } else history.replaceState(marca(history.state?.rotaAnterior), '', novo + location.search + location.hash);
     } catch {}
+    V()?.atualizar?.();
   }
 
   /** A tela mudou (mostrar, abrir conversa, fechar conversa, clique numa aba): o endereço acompanha.
@@ -134,6 +151,10 @@
 
   addEventListener('popstate', (e) => {
     if (!pronto) return;
+    /* rotas-celular: voltou de outra tela (não só fechou um painel) para uma entrada que tinha algo aberto */
+    const seqDe = seqAtual, seqPara = Number(e.state?.seq) || 0;
+    if (seqPara) seqAtual = seqPara;
+    const voltouDeTela = seqPara && seqDe && seqPara < seqDe;
     if (pendentes > 0) {
       pendentes--;
       if (!pendentes) clearTimeout(tempo);
@@ -144,6 +165,9 @@
     const r = lerCaminho();
     if (!r.vista) { setTimeout(() => trocarEndereco(caminhoAtual(), false), 0); return; }
     aplicar(r);
+    // depois deste popstate (o painel lateral também ouve o mesmo evento e fecharia o que abrisse agora)
+    if (voltouDeTela && e.state?.reabrir && estado.vista === r.vista) { const m = e.state.reabrir; setTimeout(() => { try { if (estado.vista === m.vista) V()?.reabrir?.(m); } catch (x) { console.error(x); } }, 0); }
+    V()?.atualizar?.();
   });
 
   // Voltar da conversa (seta, arrastar da borda no celular): fecha sem empilhar outra entrada.
@@ -169,5 +193,18 @@
     }, 0);
   })();
 
-  window.SintoniaRotas = { mudou, caminho: caminhoAtual, ler: lerCaminho, CAMINHO, ir: (caminho) => { const r = lerCaminho(caminho); if (r.vista) { aplicar(r); setTimeout(() => mudou(), 0); } } };
+  /* rotas-celular: volta para a tela de onde a pessoa veio (botão "Voltar" e arrastar da borda no celular).
+   * Com origem: anda para trás no histórico (o popstate acima mostra a tela e reabre a área). Sem origem (entrou
+   * direto pelo endereço): vai para Configurações no lugar desta entrada. Devolve false se não havia para onde voltar. */
+  function voltar() {
+    const o = history.state?.origem;
+    const passos = Math.max(1, Math.min(20, Number(o?.passos) || 1));
+    if (o && history.length > passos) { try { hg(-passos); return true; } catch {} }
+    const destino = lerCaminho(o?.caminho || '/app/configuracoes').vista || 'configuracoes';
+    aplicar({ vista: destino, sub: '' });
+    setTimeout(() => { trocarEndereco(caminhoAtual(), false); try { const st = { ...(history.state || {}) }; delete st.origem; history.replaceState(st, ''); } catch {} V()?.atualizar?.(); }, 0);
+    return true;
+  }
+
+  window.SintoniaRotas = { mudou, caminho: caminhoAtual, ler: lerCaminho, CAMINHO, voltar, ir: (caminho) => { const r = lerCaminho(caminho); if (r.vista) { aplicar(r); setTimeout(() => mudou(), 0); } } };
 })();
