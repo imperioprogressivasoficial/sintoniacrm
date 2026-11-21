@@ -121,7 +121,8 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   // Toda a API pede login, menos as rotas públicas.
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
     const caminho = req.url.split('?')[0]!;
-    if (!caminho.startsWith('/api/') || PUBLICAS.has(caminho)) return;
+    // integracoes: a API pública (/api/v1) se autentica pela chave de API (src/integracoes/api.ts), nunca pelo cookie.
+    if (!caminho.startsWith('/api/') || PUBLICAS.has(caminho) || caminho.startsWith('/api/v1/') || caminho === '/api/v1') return;
     const u = await usuarioDaRequisicao(req, o);
     if (!u) return reply.code(401).send({ erro: 'Faça login para continuar.' });
     const r = await resolverDe(u);
