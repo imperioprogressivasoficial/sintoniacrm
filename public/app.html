@@ -3459,7 +3459,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
-    if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
+    if (!estado.situacao.agendaLigada) avisos.push('Agenda desligada (Conexões › Agenda)'); /* unidades: qualquer sistema de agenda */
     estado.avisos = avisos;
     $('nova-teste-cel').hidden = false;
     await pFotos;
