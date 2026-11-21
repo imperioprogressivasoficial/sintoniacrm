@@ -1,5 +1,5 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 17:10 UTC (21/11, 14h10 na Bahia)
+data: 2026-11-21 12:58 UTC (21/11, 09h58 na Bahia)
 commit: 8f874e9
 pacote sha256: 086cab534472b2ffbdc8aa457201a1b130353c554eb25fbc70985965ece16143
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
