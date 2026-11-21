@@ -8,6 +8,7 @@ import { ehCanalTeste } from '../channels/teste.js';
 import { ACOES_PRINCIPAIS, type Funis } from '../funis/funis.js';
 import { lerFiltro } from '../funis/filtro-leads.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
+import { zUnidade } from '../unidades.js';
 
 /**
  * Rotas dos funis por tags e das automações. Registradas depois de criarServidor (src/index.ts),
@@ -26,7 +27,7 @@ export interface OpcoesRotasFunis {
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
-const UNIDADE = z.enum(['norte', 'sumare', 'feira']);
+const UNIDADE = zUnidade();
 
 export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void {
   const { funis } = o;

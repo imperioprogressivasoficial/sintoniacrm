@@ -6,7 +6,7 @@ import { pode } from '../auth/permissoes.js';
 import type { ArmazemComercial } from '../comercial/armazem.js';
 import { janela } from '../painel/painel.js';
 import { periodoRelatorio } from '../relatorios/relatorios.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { calcularDesempenho, desempenhoCsv, montarFila, TABELAS_CSV, type TabelaCsv } from './calculo.js';
 import type { FonteDesempenho } from './fonte.js';
 
@@ -32,7 +32,10 @@ export function registrarDesempenho(app: FastifyInstance, o: OpcoesDesempenho): 
     periodo: z.enum(['hoje', 'ontem', '7d', '30d', 'personalizado']).default('hoje'),
     de: Data.optional(),
     ate: Data.optional(),
-    unidade: z.enum(o.unidades as [string, ...string[]]).optional(),
+    unidade: z
+      .string()
+      .refine((u) => o.unidades.includes(u), 'Unidade inválida.')
+      .optional(),
     atendente: z.string().min(1).max(80).optional(),
     limite: z.coerce.number().int().min(1).max(24 * 60).default(15),
   });
@@ -78,7 +81,7 @@ export function registrarDesempenho(app: FastifyInstance, o: OpcoesDesempenho): 
     const d = calcularDesempenho({ dados, inicio, fim, agora, pessoas: pessoas.map((p) => ({ id: p.id, nome: p.nome })), precos: reg?.cfg.precos ?? [], limiteMin: f.limite, atendente: f.atendente });
     const fila = montarFila(esperando, agora, { atendente: f.atendente });
     const opcoes = {
-      unidades: o.unidades.filter((u) => !esc.unidades || esc.unidades.includes(u) || f.unidade).map((u) => ({ id: u, nome: UNIDADES[u as keyof typeof UNIDADES]?.nome ?? u })),
+      unidades: o.unidades.filter((u) => !esc.unidades || esc.unidades.includes(u) || f.unidade).map((u) => ({ id: u, nome: unidadeDe(u)?.nome ?? u })),
       atendentes: pessoas.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
     };
     return { f, d, fila, opcoes, agora };

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { PAPEIS, type Contas, type Usuario } from './contas.js';
-import { apareceNaEquipe, ehGestor, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, UNIDADES_EQUIPE, unidadesQuePodeDar } from './acesso.js';
+import { apareceNaEquipe, ehGestor, papeisQuePodeDar, podeGerenciar, recusaAtribuicao, unidadesQuePodeDar, zUnidadesPessoa } from './acesso.js';
 import { pode } from './permissoes.js';
 import { gerarHash, senhaFraca } from './senha.js';
 import { seriaUltimoAdmin } from './usuarios-rotas.js';
@@ -20,7 +20,7 @@ export function assinaturaDeImagem(b: Buffer, tipo: string): boolean {
 
 const erro = (statusCode: number, mensagem: string) => Object.assign(new Error(mensagem), { statusCode });
 
-const Unidades = z.array(z.enum(UNIDADES_EQUIPE as [string, ...string[]])).max(UNIDADES_EQUIPE.length).transform((l) => [...new Set(l)]);
+const Unidades = zUnidadesPessoa();
 const Senha = z.string().max(200);
 
 const Nova = z.object({

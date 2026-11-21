@@ -6,7 +6,7 @@ import type { Notificador } from './notificador.js';
 import type { ChavesPush } from './push.js';
 import { ehGestor, veTudo } from '../auth/acesso.js';
 import type { UnidadeId } from '../domain.js';
-import { UNIDADES } from '../unidades.js';
+import { existeUnidade, idsUnidades, unidadeDe, zUnidade } from '../unidades.js';
 import { completarPreferencias, emNaoPerturbe, EsquemaPreferencias, type Notificacao } from './tipos.js';
 
 export interface OpcoesNotificacoes {
@@ -188,18 +188,18 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
     return { ok: true, silencioAte };
   });
 
-  const unidadesDe = (u: Usuario): UnidadeId[] => (veTudo(u) ? (Object.keys(UNIDADES) as UnidadeId[]) : (u.unidades as UnidadeId[]).filter((x) => x in UNIDADES));
+  const unidadesDe = (u: Usuario): UnidadeId[] => (veTudo(u) ? idsUnidades(u.empresaId) : (u.unidades as UnidadeId[]).filter((x) => existeUnidade(x, u.empresaId)));
   app.get('/api/espera/regras', async (req) => {
     const u = exigeLogin(req);
     const regras = await o.notificador.regrasEspera();
     return {
       podeEditar: ehGestor(u),
-      unidades: unidadesDe(u).map((id) => ({ id, nome: UNIDADES[id].nome, regra: o.notificador.regraDaUnidade(regras, id) })),
+      unidades: unidadesDe(u).map((id) => ({ id, nome: unidadeDe(id).nome, regra: o.notificador.regraDaUnidade(regras, id) })),
     };
   });
   app.put('/api/espera/regras/:unidade', async (req, reply) => {
     const u = exigeLogin(req);
-    const { unidade } = z.object({ unidade: z.enum(['norte', 'sumare', 'feira']) }).parse(req.params);
+    const { unidade } = z.object({ unidade: zUnidade() }).parse(req.params);
     if (!ehGestor(u) || !unidadesDe(u).includes(unidade)) return reply.code(403).send({ erro: 'Só a gestão da unidade muda os alertas de espera.' });
     try {
       return { ok: true, regra: await o.notificador.salvarRegrasEspera(unidade, req.body ?? {}) };

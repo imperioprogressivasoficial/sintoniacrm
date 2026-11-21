@@ -389,7 +389,7 @@ describe('Tela de Conexões: API oficial', () => {
     expect(ok.statusCode).toBe(200);
     expect(ok.body).not.toContain('EAAG-segredo');
     expect(ok.body).not.toContain('app-secreto');
-    expect(ok.json().canais).toEqual({ norte: 'meta', sumare: 'evolution' });
+    expect(ok.json().canais).toEqual({ norte: 'meta', sumare: 'evolution', feira: 'evolution' }); // unidades: todas as ativas do cadastro
 
     const t = (await app.inject({ method: 'POST', url: '/api/conexoes/meta/norte/testar', headers: { cookie }, payload: {} })).json();
     expect(t).toMatchObject({ ok: true, numero: '+55 71 3333-0000', nome: 'Império Norte', modelos: 1 });

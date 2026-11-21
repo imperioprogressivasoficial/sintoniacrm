@@ -21,8 +21,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['mes', 'Mês', 'm'],
   ];
   const LETRAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-  const CURTO = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
-  const NOME_UNI = { norte: 'Salvador Norte Shopping', sumare: 'Shopping Sumaré', feira: 'Feira de Santana' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const CURTO = window.Sintonia?.ui?.UNIDADE || {};
+  const NOME_UNI = CURTO;
 
   const sv = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${d}</svg>`;
   const IC = {
@@ -153,7 +154,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const p = (async () => {
       const de = blocoIni(b);
       try {
+        // atendimento-extra: as reuniões marcadas pelo link de agendamento online vêm junto (nunca seguram a agenda).
+        const pReu = s.ui.api(`/api/reunioes/agenda?de=${de}&dias=${BLOCO}`).then((x) => x.itens || []).catch(() => []);
         const r = await s.ui.api(`/api/agenda/agendamentos?de=${de}&dias=${BLOCO}`);
+        r.itens = [...(r.itens || []), ...(await pReu)];
         if (Array.isArray(r.unidades)) s.unidades = r.unidades;
         let conf = {};
         try {
@@ -228,6 +232,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (mudou) guardar();
   }
   const corDe = (nome) => (nome && nome in s.cores ? 'ag-c' + s.cores[nome] : 'ag-cx');
+  /* atendimento-extra: reunião online tem cor própria; o resto segue a cor da profissional. */
+  const REU = 'reuniao';
+  const ehReu = (i) => i.fonte === REU;
+  const corEv = (i) => (ehReu(i) ? 'ag-creu' : corDe(i.profissional));
 
   async function garantir(ini, n, comVizinhos = true) {
     const bs = blocosEntre(ini, n);
@@ -239,7 +247,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
   }
 
-  const passa = (i) => !s.offUni.has(i.unidade) && !s.offProf.has(i.profissional || '-');
+  const passa = (i) => (ehReu(i) ? !s.offProf.has('§' + REU) : !s.offUni.has(i.unidade) && !s.offProf.has(i.profissional || '-'));
   const doDia = (iso) => (porDia.get(iso) || []).filter(passa);
 
   // ---------- períodos ----------
@@ -410,7 +418,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!profs.length) lista.push(el('div', { class: 'ag-nota', text: 'As profissionais aparecem aqui conforme os horários carregam.' }));
     for (const p of profs) lista.push(chk(corDe(p), p, !s.offProf.has(p), (v) => { v ? s.offProf.delete(p) : s.offProf.add(p); aplicar(); }));
     lista.push(chk('ag-cx', 'Sem profissional', !s.offProf.has('-'), (v) => { v ? s.offProf.delete('-') : s.offProf.add('-'); aplicar(); }));
-    lista.push(el('div', { class: 'ag-nota', text: 'Mostra os horários marcados pela Sintonia (IA e botão Agendar) e os marcados direto no sistema do salão, como o Trinks.' }));
+    lista.push(el('div', { class: 'ag-sec', text: 'Outros' }));
+    lista.push(chk('ag-creu', 'Reuniões online', !s.offProf.has('§' + REU), (v) => { v ? s.offProf.delete('§' + REU) : s.offProf.add('§' + REU); aplicar(); }));
+    lista.push(el('div', { class: 'ag-nota', text: 'Mostra os horários marcados pela Sintonia (IA e botão Agendar), os marcados direto no sistema do salão, como o Trinks, e as reuniões marcadas pelo link de agendamento online.' }));
     return lista;
   }
 
@@ -539,7 +549,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   const tituloEv = (i) => [i.cliente || s.ui.formatarTel?.(i.telefone) || i.telefone, i.servico].filter(Boolean).join(' — ');
-  const rotuloEv = (i) => `${tituloEv(i)}, ${diaLongo(i._dia)}, das ${hm(new Date(i.inicio))} às ${hm(new Date(i.fim))}${i.profissional ? ', com ' + i.profissional : ''}`;
+  const rotuloEv = (i) => `${ehReu(i) ? 'Reunião online: ' : ''}${tituloEv(i)}, ${diaLongo(i._dia)}, das ${hm(new Date(i.inicio))} às ${hm(new Date(i.fim))}${i.profissional ? ', com ' + i.profissional : ''}`;
   const jaFoi = (i) => new Date(i.fim) < new Date();
 
   /** Colunas lado a lado para horários que se cruzam (como no calendário). */
@@ -603,11 +613,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         const curto = alt < 36;
         const tempo = curto ? hm(new Date(i.inicio)) : `${hm(new Date(i.inicio))} – ${hm(new Date(i.fim))}`;
         col.append(el('button', {
-          class: `ag-ev ${corDe(i.profissional)}${jaFoi(i) ? ' ag-passou' : ''}${curto ? ' ag-curto' : ''}${e.ncol > 1 && n >= 3 ? ' ag-estreito' : ''}`, type: 'button',
+          class: `ag-ev ${corEv(i)}${jaFoi(i) ? ' ag-passou' : ''}${curto ? ' ag-curto' : ''}${e.ncol > 1 && n >= 3 ? ' ag-estreito' : ''}`, type: 'button',
           style: `top:${top}px;height:${alt}px;left:calc(${(e.col / e.ncol) * 100}% + 1px);width:calc(${100 / e.ncol}% - 3px)`,
           'aria-label': rotuloEv(i),
           onclick: (ev) => { ev.stopPropagation(); if (!s.arrastou) abrirFolha(i); },
-        }, el('b', { text: tituloEv(i) + (curto ? ', ' : '') }), el('span', { text: tempo })));
+        }, ehReu(i) && alt >= 52 ? el('small', { class: 'ag-etq', text: 'Reunião online' }) : null, el('b', { text: tituloEv(i) + (curto ? ', ' : '') }), el('span', { text: tempo })));
       }
       if (d === s.hoje) col.append(el('div', { class: 'ag-agora', style: `top:${(agora.min / 60) * H}px`, 'aria-hidden': 'true' }));
       p.append(col);
@@ -684,7 +694,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         for (const i of lista.slice(0, mostra)) {
           c.append(i.feriado
             ? el('span', { class: 'ag-mchip ag-cf', text: i.feriado, 'aria-hidden': 'true' })
-            : el('span', { class: `ag-mchip ${corDe(i.profissional)}${jaFoi(i) ? ' ag-passou' : ''}`, text: s.pc ? `${hm(new Date(i.inicio))} ${i.cliente || ''}` : i.cliente || i.servico || 'Horário', 'aria-hidden': 'true' }));
+            : el('span', { class: `ag-mchip ${corEv(i)}${jaFoi(i) ? ' ag-passou' : ''}`, text: s.pc ? `${hm(new Date(i.inicio))} ${i.cliente || ''}` : i.cliente || i.servico || 'Horário', 'aria-hidden': 'true' }));
         }
         if (lista.length > mostra) c.append(el('span', { class: 'ag-mmais', text: `+${lista.length - mostra}`, 'aria-hidden': 'true' }));
       }
@@ -693,9 +703,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function cartao(i) {
     return el('button', {
-      class: `ag-card ${corDe(i.profissional)}${jaFoi(i) ? ' ag-passou' : ''}`, type: 'button', 'aria-label': rotuloEv(i),
+      class: `ag-card ${corEv(i)}${jaFoi(i) ? ' ag-passou' : ''}`, type: 'button', 'aria-label': rotuloEv(i),
       onclick: () => abrirFolha(i),
-    }, el('b', { text: tituloEv(i) }), el('span', { text: `${hm(new Date(i.inicio))} – ${hm(new Date(i.fim))}${i.profissional ? ' · ' + i.profissional : ''}` }));
+    }, el('b', { text: tituloEv(i) }, ehReu(i) ? el('span', { class: 'ag-etq', text: 'Reunião online' }) : null), el('span', { text: `${hm(new Date(i.inicio))} – ${hm(new Date(i.fim))}${i.profissional ? ' · ' + i.profissional : ''}` }));
   }
   function linhaDia(d, itens, f) {
     return el('div', { class: 'ag-pdia' + (d === s.hoje ? ' ag-hj' : ''), 'data-dia': d },
@@ -786,6 +796,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   // ---------- folha de detalhes ----------
   function abrirFolha(i) {
+    if (ehReu(i)) return abrirFolhaReuniao(i);
     const d = el('dialog', { class: 'ag-dlg ag-folha', 'aria-label': `Horário de ${i.cliente || 'cliente'}` });
     const ini = new Date(i.inicio), fim = new Date(i.fim);
     const passou = jaFoi(i);
@@ -814,6 +825,44 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ag-aviso', text: i.podeAbrir
         ? `Para remarcar ou cancelar, combine com a cliente na conversa e ajuste no ${doSistema ? i.por : 'Trinks'}.`
         : !i.conversaId ? 'Esta cliente ainda não tem conversa na Sintonia.' : 'Esta conversa é de outra atendente. Você vê o horário, mas não abre a conversa.' }));
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    d.addEventListener('close', () => d.remove());
+    ligarPuxarParaBaixo(d);
+    document.body.append(d);
+    d.showModal();
+  }
+
+  /* atendimento-extra: folha da reunião online (marcada pelo próprio contato no link de agendamento). */
+  function abrirFolhaReuniao(i) {
+    const d = el('dialog', { class: 'ag-dlg ag-folha', 'aria-label': `Reunião online com ${i.cliente || 'contato'}` });
+    const ini = new Date(i.inicio), fim = new Date(i.fim);
+    const linha = (ic, ...filhos) => el('div', { class: 'ag-linha' }, el('span', { html: ic, style: 'display:grid;justify-self:center;color:var(--ag-sub)' }), el('div', {}, ...filhos));
+    const dur = i.duracaoMin >= 60 ? `${Math.floor(i.duracaoMin / 60)} h${i.duracaoMin % 60 ? ' ' + (i.duracaoMin % 60) + ' min' : ''}` : `${i.duracaoMin} min`;
+    const tel = i.telefone ? s.ui.formatarTel?.(i.telefone) || i.telefone : '';
+    const eu = s.ui.estado?.eu || {};
+    const resp = i.responsavelId && eu.id === i.responsavelId ? 'Seu link' : null;
+    const local = /^https?:\/\//i.test(i.local || '') ? el('a', { href: i.local, target: '_blank', rel: 'noopener', text: i.local }) : el('span', { text: i.local || 'Não informado' });
+    const cancelar = el('button', { class: 'ag-bt ag-borda', type: 'button', html: IC.fechar + '<span>Cancelar reunião</span>', onclick: async () => {
+      if (!confirm(`Cancelar a reunião com ${i.cliente || 'o contato'}? ${tel ? 'Ele recebe o aviso pelo WhatsApp, se o link estiver com a confirmação ligada.' : ''}`)) return;
+      cancelar.disabled = true;
+      try { await s.ui.post(`/api/reunioes/${i.reuniaoId}/cancelar`); d.close(); s.ui.toast?.('Reunião cancelada.'); atualizar(); }
+      catch (x) { cancelar.disabled = false; s.ui.toast?.(x.message || 'Não deu para cancelar.'); }
+    } });
+    d.append(...[
+      el('div', { class: 'ag-alca', 'aria-hidden': 'true' }),
+      el('div', { class: 'ag-folha-topo' }, el('button', { class: 'ag-ic', type: 'button', 'aria-label': 'Fechar', html: IC.fechar, onclick: () => d.close() })),
+      el('div', { class: 'ag-folha-tit ag-creu' }, el('span', { class: 'ag-quad', 'aria-hidden': 'true' }),
+        el('div', {}, el('h2', { text: i.cliente || tel || 'Contato' }), el('p', { text: `${diaLongo(i._dia)} · ${hm(ini)} – ${hm(fim)}` }, el('span', { class: 'ag-origem ag-reu', text: 'Reunião online' })))),
+      linha(IC.cal, el('span', { text: i.servico || 'Reunião' }), el('small', { text: dur })),
+      linha(IC.local, local, el('small', { text: 'Local' })),
+      linha(IC.pessoa, el('span', { text: 'Marcado pelo próprio contato, no link de agendamento' }), el('small', { text: `${resp ? resp + ' · ' : ''}marcado em ${new Date(i.marcadoEm).toLocaleString('pt-BR', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` })),
+      tel ? linha(IC.tel, el('span', { text: tel })) : null,
+      i.email ? linha(IC.conversa, el('span', { text: i.email }), el('small', { text: 'E-mail' })) : null,
+      i.observacao ? linha(IC.conversa, el('span', { text: `“${i.observacao}”` }), el('small', { text: 'Recado do contato' })) : null,
+      el('div', { class: 'ag-acoes' },
+        i.podeAbrir ? el('button', { class: 'ag-bt ag-cheio', type: 'button', html: IC.conversa + '<span>Abrir conversa</span>', onclick: () => { d.close(); s.ui.abrir(i.conversaId); } }) : null,
+        jaFoi(i) ? null : cancelar),
+      el('div', { class: 'ag-aviso', text: 'Os links de agendamento ficam em Atendimento › Agendamento online (confirmação pelo WhatsApp e lembrete antes).' })].filter(Boolean));
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     d.addEventListener('close', () => d.remove());
     ligarPuxarParaBaixo(d);

@@ -8,6 +8,7 @@ import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
+import { camposPessoais, registrarConversasPessoais, type ConversasPessoais } from './conversa/pessoal.js'; /* conversa-extra */
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
 import { registrarReunioes } from './reunioes/reunioes.js';
 import { registrarRotina } from './rotina/rotina.js';
@@ -36,6 +37,7 @@ import { ErroIntegracaoPendente } from './agenda/sistema.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
 import { cabecalhoNotificacoes, problemasDaSituacao, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
+import { zUnidade } from './unidades.js';
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -72,7 +74,7 @@ export interface DependenciasServidor {
   situacao?: () => { iaLigada: boolean; agendaLigada: boolean; numerosReais: number; canais?: Record<string, boolean>; agenda?: { chave: boolean; unidades: Array<{ id: string; nome: string; estabelecimento: boolean; sistema?: string; sistemaNome?: string | null; falta?: string[]; pronta?: boolean }> } };
   /** Simulador: uma "cliente" escreve pelo WhatsApp de teste (texto e, se quiser, uma mídia de teste). */
   clienteTeste?: (p: {
-    unidade: 'norte' | 'sumare';
+    unidade: import('./domain.js').UnidadeId;
     nome: string;
     telefone: string;
     texto?: string;
@@ -89,12 +91,16 @@ export interface DependenciasServidor {
   whatsappSaude?: SaudeWhatsApp;
   /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
   leituras?: Leituras;
+  /** conversa-extra: silenciar e arquivar, por pessoa (src/conversa/pessoal.ts). */
+  pessoais?: ConversasPessoais;
   /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
   layoutsPainel?: LayoutsPainel;
   /** Banco para o link de agendamento e os scripts de venda (só com Postgres). */
   poolReunioes?: import('pg').Pool;
   /* integracoes: reunião marcada/cancelada pelo link vira webhook "agendamento.*" (src/integracoes). */
   aoReuniao?: (tipo: 'criado' | 'cancelado', empresaId: string, reuniao: Record<string, unknown>) => void;
+  /* atendimento-extra: avisos do agendamento online (sino + push, WhatsApp para o contato, lembrete antes). */
+  avisosReuniao?: import('./reunioes/avisos.js').AvisosReuniao;
   /** Rotina do vendedor (tarefas e checklist do dia): src/rotina/rotina.ts. */
   poolRotina?: import('pg').Pool;
   /** Presença da equipe ("Disponível para atender"). */
@@ -104,6 +110,8 @@ export interface DependenciasServidor {
   finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
+  /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
+  historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
 }
@@ -146,7 +154,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   // Corpo bruto guardado para conferir a assinatura da Meta.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, corpo, feito) => {
     try {
-      (req as unknown as { corpoBruto: string }).corpoBruto = String(corpo);
+      // robustez: o webhook da Evolution (histórico de até 40 MB) não usa assinatura: não guarda uma segunda cópia do corpo.
+      if (!req.url.startsWith('/webhooks/evolution')) (req as unknown as { corpoBruto: string }).corpoBruto = String(corpo);
       feito(null, corpo ? JSON.parse(String(corpo)) : {});
     } catch (e) {
       // JSON quebrado é erro de quem mandou (400), não do servidor.
@@ -169,7 +178,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const vistosMeta = new Map<string, Date>();
   /** Andamento do histórico do WhatsApp recebido depois de conectar (para a tela "Sincronizando"). */
   const progressoHistorico = new Map<string, { mensagens: number; conversas: number; em: Date }>();
-  if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
+  if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => d.historico?.progresso(id) ?? progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).
@@ -244,6 +253,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       d.whatsappSaude?.aoMensagem(instancia);
       /* grupos: o histórico dos grupos vai para Conversas de grupo */
       d.grupos?.aoWebhook(corpo).catch((e) => log('Falha ao importar histórico dos grupos', String(e)));
+      // robustez: grava em lotes no banco e responde; o importador passa para as conversas por trás e continua de onde
+      // parou se o app reiniciar (src/app/historico.ts). Se não der para gravar, responde erro: a Evolution manda de novo.
+      if (d.historico) {
+        const novas = await d.historico.receber(instancia, historico);
+        return { historico: historico.length, novas };
+      }
       const p = progressoHistorico.get(instancia) ?? { mensagens: 0, conversas: 0, em: new Date() };
       progressoHistorico.set(instancia, { ...p, em: new Date() });
       d.sintonia.importarHistorico(historico).then((r) => {
@@ -386,11 +401,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const marcadas = d.leituras && req.usuario ? await d.leituras.marcadasNaoLidas(req.usuario.id) : new Set<string>();
     const origens = d.origens ? await d.origens(ids).catch(() => ({}) as Record<string, never>) : undefined;
     const finalizadas = d.finalizadas ? await d.finalizadas(ids).catch(() => new Map<string, Date>()) : new Map<string, Date>();
+    /* conversa-extra: silenciada e arquivada para esta pessoa */
+    const pessoais = d.pessoais && req.usuario ? await d.pessoais.doUsuario(req.usuario.id).catch(() => undefined) : undefined;
+    const agoraLista = new Date();
     const saida = lista
       .filter((c) => !q.tag || (tags.get(c.id) ?? []).some((t) => t.id === q.tag))
       .map((c) => {
         const m = pagina.ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ...(pessoais ? camposPessoais(pessoais.get(c.id), c, agoraLista) : {}), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
     if (pagina.proximo) reply.header('x-sintonia-proximo', Buffer.from(`${pagina.proximo.em.toISOString()}|${pagina.proximo.id}`).toString('base64url'));
     return responderComEtag(req, reply, saida, sino ? JSON.stringify(sino) : '');
@@ -576,7 +594,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   const ClienteTeste = z
     .object({
-      unidade: z.enum(['norte', 'sumare']),
+      unidade: zUnidade({ ativa: true }),
       nome: z.string().trim().min(2).max(60),
       telefone: z.string().regex(/^5599\d{9}$/, 'Telefone de teste inválido'),
       texto: z.string().trim().max(2000).optional(),
@@ -608,6 +626,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Fotos, áudios, vídeos e documentos ----------
+  if (d.pessoais) registrarConversasPessoais(app, { pessoais: d.pessoais, visiveis: async (req) => (await d.repo.listarConversas()).filter(visivelPara(req)) }); /* conversa-extra */
   if (d.contatos) registrarContatos(app, { contatos: d.contatos.armazem, empresaId: d.contatos.empresaId, conversaVisivel, renomear: (id, nome) => d.sintonia.renomearCliente(id, nome) });
   registrarRotasMidia(app, { sintonia: d.sintonia, repo: d.repo, midias: d.midias, agora: d.agora, conversaVisivel, quemDe: (req) => req.usuario });
 
@@ -662,7 +681,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
 
   if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
-  if (d.poolReunioes) registrarReunioes(app, d.poolReunioes, { aoReuniao: d.aoReuniao });
+  if (d.poolReunioes) registrarReunioes(app, d.poolReunioes, {
+    aoReuniao: d.aoReuniao,
+    /* atendimento-extra */ avisos: d.avisosReuniao,
+    podeAbrir: async (req, id) => {
+      const c = await d.repo.buscarConversa(id);
+      return Boolean(c && (!req.usuario || (c.empresaId === req.usuario.empresaId && podeVer(req.usuario, c))));
+    },
+  });
   if (d.poolRotina) registrarRotina(app, { pool: d.poolRotina, contas: d.auth?.contas, repo: d.repo, visivelPara, agora });
   if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
 
@@ -678,10 +704,11 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Botão "Agendar" dentro do CRM (sem abrir o Trinks) ----------
-  const UnidadeQ = z.enum(['norte', 'sumare']);
+  // Unidade do cadastro; a agenda dela diz se agenda (Conexões › Agenda).
+  const UnidadeQ = zUnidade();
 
   function exigeAgenda(): Agenda {
-    if (!d.agenda) throw Object.assign(new Error('Agenda do salão não configurada (Conexões › Agenda)'), { statusCode: 501 });
+    if (!d.agenda) throw Object.assign(new Error('Agenda não configurada (Conexões › Agenda)'), { statusCode: 501 });
     return d.agenda;
   }
 

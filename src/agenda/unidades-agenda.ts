@@ -1,5 +1,6 @@
 import type { UnidadeId } from '../domain.js';
-import { UNIDADES } from '../unidades.js';
+import { campoDaUnidade } from '../conexoes/conexoes.js';
+import { EMPRESA_IMPERIO, empresaPadraoDasUnidades, existeUnidade, idsUnidades, nomeUnidade, UNIDADES_IMPERIO } from '../unidades.js';
 import { ErroAgendamento } from './agendar.js';
 import { AgendaAppBarber } from './appbarber.js';
 import { AgendaAvec } from './avec.js';
@@ -11,19 +12,29 @@ import type { ClienteTrinks } from './trinks.js';
  * as rotas usam. Sem escolha salva a unidade fica no Trinks, como sempre foi.
  */
 
-export const UNIDADES_AGENDA = ['norte', 'sumare'] as const;
-export type UnidadeAgenda = (typeof UNIDADES_AGENDA)[number];
-const SUFIXO: Record<UnidadeAgenda, 'Norte' | 'Sumare'> = { norte: 'Norte', sumare: 'Sumare' };
+/** Unidades que aparecem em Conexões › Agenda: as ativas do cadastro (Empresa › Unidades). */
+export const unidadesAgenda = (): UnidadeId[] => idsUnidades();
+export type UnidadeAgenda = UnidadeId;
 
 /** Nomes dos campos de Conexões de cada unidade. */
 export const camposAgenda = (u: UnidadeAgenda) => ({
-  sistema: `agendaSistema${SUFIXO[u]}`,
-  trinksEstabelecimento: `trinksEstabelecimento${SUFIXO[u]}`,
-  avecToken: `avecToken${SUFIXO[u]}`,
-  avecUnidade: `avecUnidade${SUFIXO[u]}`,
-  appbarberToken: `appbarberToken${SUFIXO[u]}`,
-  appbarberLoja: `appbarberLoja${SUFIXO[u]}`,
-}) as const;
+  sistema: campoDaUnidade('agendaSistema', u),
+  trinksEstabelecimento: campoDaUnidade('trinksEstabelecimento', u),
+  avecToken: campoDaUnidade('avecToken', u),
+  avecUnidade: campoDaUnidade('avecUnidade', u),
+  appbarberToken: campoDaUnidade('appbarberToken', u),
+  appbarberLoja: campoDaUnidade('appbarberLoja', u),
+});
+
+/**
+ * Sem escolha salva: as unidades que já agendavam pelo Trinks antes do cadastro (as da Império com
+ * estabelecimento conhecido) continuam no Trinks; unidade nova começa sem sistema de agenda ("nenhum").
+ */
+/** Estabelecimento do Trinks que a unidade já usava antes da tela de Conexões (só as da Império). */
+export const estabelecimentoLegado = (u: string): string | null =>
+  empresaPadraoDasUnidades() === EMPRESA_IMPERIO ? (UNIDADES_IMPERIO.find((x) => x.id === u)?.trinks ?? null) : null;
+
+const padraoDa = (u: UnidadeAgenda): EscolhaAgenda => (estabelecimentoLegado(u) ? 'trinks' : 'nenhum');
 
 /** Até onde cada adaptador vai hoje: só o Trinks lista, consulta horários e agenda de verdade. */
 export const AGENDA_COMPLETA: Record<TipoSistemaAgenda, boolean> = { trinks: true, avec: false, appbarber: false };
@@ -47,22 +58,23 @@ export interface ConfigAgendaUnidade {
 
 type Ler = (campo: string) => string | undefined;
 
-export function escolhaDe(valor: string | undefined): EscolhaAgenda {
-  return valor === 'avec' || valor === 'appbarber' || valor === 'nenhum' || valor === 'trinks' ? valor : 'trinks';
+export function escolhaDe(valor: string | undefined, padrao: EscolhaAgenda = 'trinks'): EscolhaAgenda {
+  return valor === 'avec' || valor === 'appbarber' || valor === 'nenhum' || valor === 'trinks' ? valor : padrao;
 }
 
-const ehUnidadeAgenda = (u: string): u is UnidadeAgenda => (UNIDADES_AGENDA as readonly string[]).includes(u);
+const ehUnidadeAgenda = (u: string): u is UnidadeAgenda => existeUnidade(u);
 
 /** Configuração da agenda de uma unidade, lida das Conexões (ler = conexoes.get). */
 export function configAgendaDa(ler: Ler, u: UnidadeAgenda): ConfigAgendaUnidade {
   const c = camposAgenda(u);
-  const escolha = escolhaDe(ler(c.sistema));
-  const nome = UNIDADES[u].nome;
+  const escolha = escolhaDe(ler(c.sistema), padraoDa(u));
+  // Só o nome do cadastro: unidadeDe() pergunta a agenda para cá (index), e daria volta.
+  const nome = nomeUnidade(u);
   const falta: string[] = [];
   let local: string | null = null;
   if (escolha === 'trinks') {
-    // O estabelecimento em uso: o da tela, senão o padrão de src/unidades.ts (o index aplica um sobre o outro).
-    local = ler(c.trinksEstabelecimento) || UNIDADES[u].trinksEstabelecimentoId;
+    // O estabelecimento em uso: o da tela, senão o que a unidade já usava antes (src/unidades.ts).
+    local = ler(c.trinksEstabelecimento) || estabelecimentoLegado(u);
     if (!ler('trinksApiKey')) falta.push('Chave da API do Trinks');
     if (!local) falta.push(`ID do estabelecimento no Trinks (${nome})`);
   } else if (escolha === 'avec') {
@@ -112,7 +124,7 @@ export class AgendasDasUnidades implements RoteadorAgenda {
   }
 
   configs(): ConfigAgendaUnidade[] {
-    return UNIDADES_AGENDA.map((u) => this.config(u));
+    return unidadesAgenda().map((u) => this.config(u));
   }
 
   /** Alguma unidade agenda de verdade? */
@@ -139,9 +151,9 @@ export class AgendasDasUnidades implements RoteadorAgenda {
   }
 
   paraUnidade(unidade: UnidadeId): AgendaDaUnidade {
-    const u = UNIDADES[unidade];
-    if (!ehUnidadeAgenda(unidade) || !u?.agendaAberta) {
-      throw new ErroAgendamento('sem_agenda', `A unidade ${u?.nome ?? unidade} ainda não tem agenda.`);
+    const u = { nome: nomeUnidade(unidade) };
+    if (!ehUnidadeAgenda(unidade)) {
+      throw new ErroAgendamento('sem_agenda', `A unidade ${u.nome} ainda não tem agenda.`);
     }
     const cfg = this.config(unidade);
     if (cfg.escolha === 'nenhum') {

@@ -18,6 +18,7 @@ import { pode } from '../auth/permissoes.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
+import { idsUnidades, zUnidade } from '../unidades.js';
 
 /**
  * Recursos da tela de conversa:
@@ -52,7 +53,8 @@ export interface OpcoesConversa {
   serenaAcoes?: (empresaId: string) => FontesSerena;
 }
 
-const UNIDADE = z.enum(['norte', 'sumare', 'feira']);
+// Unidade do cadastro (Empresa › Unidades); para conversa nova, só as ativas.
+const UNIDADE = zUnidade({ ativa: true });
 // O tratamento de erros do servidor só repassa a mensagem de 4xx e 501: falha de serviço de fora vira 424.
 const erro = (msg: string, statusCode: number, extra: Record<string, unknown> = {}) => Object.assign(new Error(msg), { statusCode, ...extra });
 
@@ -298,7 +300,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     const candidatas: UnidadeId[] = [
       ...(b.unidade ? [b.unidade] : []),
       ...(u && !veTudo(u) ? (u.unidades as UnidadeId[]) : []),
-      ...(UNIDADE.options as UnidadeId[]),
+      ...idsUnidades(o.empresaId),
     ];
     const unidade = candidatas.find((x) => podeUnidade(x) && conectada(x));
     if (!unidade) {

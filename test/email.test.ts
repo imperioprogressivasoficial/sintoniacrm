@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Conteudo, MODELOS_PRONTOS, montarEmail, trocarVariaveis } from '../src/email/blocos.js';
+import { Conteudo, modelosProntos, montarEmail, trocarVariaveis } from '../src/email/blocos.js';
 import { ErroEnvio, erroDoSmtp } from '../src/email/transporte.js';
 import { montarEmail as montarAmbiente } from './email-ambiente.js';
 import { temPostgres } from './repos.js';
@@ -41,7 +41,7 @@ describe('E-mail: HTML gerado pelos blocos', () => {
   it('recusa link perigoso e cor inválida; modelos prontos são válidos', () => {
     expect(() => conteudo([{ tipo: 'botao', texto: 'x', url: 'javascript:alert(1)' }])).toThrow();
     expect(() => Conteudo.parse({ tema: { destaque: 'azul' }, blocos: [] })).toThrow();
-    for (const mp of MODELOS_PRONTOS) expect(() => Conteudo.parse(mp.conteudo)).not.toThrow();
+    for (const mp of modelosProntos()) expect(() => Conteudo.parse(mp.conteudo)).not.toThrow();
   });
 
   it('classifica erros do SMTP: 5xx de destinatário é permanente (bounce), 4xx tenta de novo', () => {

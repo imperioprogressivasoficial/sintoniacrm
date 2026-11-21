@@ -1295,7 +1295,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       }
       return el('div', { class: 'pn-vs-l', role: 'group', 'aria-label': `${titulo}: IA ${fmt(ia)}, equipe ${fmt(eq)}` },
         el('div', { class: 'pn-vs-t' }, el('b', { text: titulo }), opcoes.nota ? el('span', { text: opcoes.nota }) : null),
-        el('div', { class: 'pn-vs-n' }, el('span', {}, fmt(ia), el('small', { text: 'IA' })), el('span', {}, fmt(eq), el('small', { text: 'equipe' }))),
+        el('div', { class: 'pn-vs-n' }, el('span', {}, fmt(ia), window.SintoniaSerenaSelo ? el('small', { style: 'display:inline-flex;align-items:center;gap:4px' }, window.SintoniaSerenaSelo({ tam: 14, titulo: 'Serena (IA)' }), document.createTextNode('Serena')) : el('small', { text: 'IA' })), el('span', {}, fmt(eq), el('small', { text: 'equipe' }))),
         barra);
     };
     const tot = (A.ia || 0) + (A.equipe || 0);

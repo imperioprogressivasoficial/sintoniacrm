@@ -14,12 +14,12 @@ import type { Contas } from '../auth/contas.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { conversasDasClientes, mesclarAgenda, type AgendaExterna } from '../agenda/agenda-externa.js';
-import { ErroLeads, PedidoImportacao, UNIDADES_LEADS, type Leads } from '../leads/leads.js';
+import { ErroLeads, PedidoImportacao, unidadesLeads, type Leads } from '../leads/leads.js';
 import { ICONES } from '../rastreio/rastreio.js';
 import { PERIODOS_RELATORIO, RELATORIOS, type NomeRelatorio, type Relatorios } from '../relatorios/relatorios.js';
 import { nomeArquivo } from '../util/csv.js';
 import { bahia, dataISO, DIA } from '../util/tempo.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe, zUnidade } from '../unidades.js';
 
 /**
  * Relatórios, Leads (importar/exportar/duplicatas) e Agenda. Registradas depois de criarServidor (src/index.ts),
@@ -39,7 +39,7 @@ export interface OpcoesExtras {
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
 const Data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const Unidade = z.enum(UNIDADES_LEADS);
+const Unidade = zUnidade();
 
 export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
   const agora = o.agora ?? (() => new Date());
@@ -76,7 +76,7 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
     const eq = await equipe(req);
     const esc = escopo(req);
     const r = await o.relatorios.gerar(f, { agora: agora(), escopo: esc, equipe: eq });
-    const unidades = UNIDADES_LEADS.filter((u) => !esc.unidades || esc.unidades.includes(u)).map((u) => ({ id: u, nome: UNIDADES[u].nome }));
+    const unidades = unidadesLeads().filter((u) => !esc.unidades || esc.unidades.includes(u)).map((u) => ({ id: u, nome: unidadeDe(u).nome }));
     const atendentes = (eq ?? [])
       .filter((p) => ['atendente', 'recepcionista'].includes(p.papel) && (!esc.unidades || p.unidades.some((x) => esc.unidades!.includes(x))))
       .map((p) => ({ id: p.id, nome: p.nome, ativo: p.ativo }))
@@ -188,7 +188,7 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
     const fim = new Date(inicio.getTime() + q.dias * DIA);
     // A agenda da unidade é de todas (a recepção vê o dia inteiro); abrir a conversa segue quem vê o quê.
     const esc: EscopoVisao = { empresaId: o.empresaId, ...(u && escopoDe(u).unidades ? { unidades: escopoDe(u).unidades } : {}) };
-    const permitidas = UNIDADES_LEADS.filter((x) => !esc.unidades || esc.unidades.includes(x)).map((x) => ({ id: x, nome: UNIDADES[x].nome }));
+    const permitidas = unidadesLeads().filter((x) => !esc.unidades || esc.unidades.includes(x)).map((x) => ({ id: x, nome: unidadeDe(x).nome }));
     if (q.unidade) {
       if (esc.unidades && !esc.unidades.includes(q.unidade)) throw proibido('Você não vê a agenda dessa unidade.');
       esc.unidades = [q.unidade];
@@ -245,6 +245,8 @@ export interface DependenciasExtras {
   comConversa?: <T>(id: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
   /** Origem de cada conversa (rastreamento): filtro e coluna do exportar. */
   origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
+  /** produtos-lead: produtos vinculados de cada conversa (coluna "Produtos" do exportar). */
+  produtos?: (ids: string[]) => Promise<Map<string, string>>;
   agora?: () => Date;
 }
 
@@ -253,7 +255,7 @@ export function montarExtras(d: DependenciasExtras): { relatorios: RelatoriosCla
     ? new ArmazemLeadsPostgres(d.pool)
     : new ArmazemLeadsMemoria(d.repo as RepositorioMemoria, d.contatos as ContatosMemoria, d.armazemTags);
   const agora = d.agora ?? (() => new Date());
-  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, origens: d.origens, agora });
+  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, origens: d.origens, produtos: d.produtos, agora });
   const relatorios = new RelatoriosClasse({ repo: d.repo, empresaId: d.empresaId, tags: d.tags, contatos: d.contatos, leads: armazem });
   return { relatorios, leads, armazem };
 }

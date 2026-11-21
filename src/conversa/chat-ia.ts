@@ -2,14 +2,15 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { Conversa } from '../domain.js';
 import type { ClienteClaude } from '../ai/agente.js';
 import type { ItemAgenda } from '../agenda/agenda-dia.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { partesBahia } from '../util/tempo.js';
 import { ErroAssistente } from './assistente.js';
 import type { SugestaoLigacao } from '../app/ligacoes.js';
 import type { AcoesSerena, Artefato } from '../serena/acoes.js';
+import { apresentacao, identidade } from '../empresa/identidade.js';
 
 /**
- * Serena (botão do meio da barra; antes "Ajuda da IA"): um chat (como o ChatGPT) para a equipe do salão.
+ * Serena (botão do meio da barra; antes "Ajuda da IA"): um chat (como o ChatGPT) para a equipe da empresa.
  * A IA só responde com base no contexto que a Sintonia monta aqui (base de conhecimento, o dia da IA,
  * quem está esperando resposta e a agenda de hoje e amanhã), restrito ao que a pessoa pode ver.
  * Nada é enviado para cliente nenhuma.
@@ -64,7 +65,7 @@ export interface ContextoChat {
   ligar?: SugestaoLigacao[];
 }
 
-const INSTRUCOES = `Você é a Serena, a assistente de IA da Sintonia, o CRM de WhatsApp da Império Progressivas (salões de alisamento e progressiva em Salvador). Quem fala com você é alguém da equipe do salão (atendente, gerente ou direção), nunca uma cliente.
+const INSTRUCOES = () => `Você é a Serena, a assistente de IA da Sintonia, o CRM de WhatsApp da ${apresentacao()}. Quem fala com você é alguém da equipe da empresa (atendente, gerente ou direção), nunca uma cliente.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}
 Regras:
 - Português do Brasil, tom simples, direto e gentil. Respostas curtas; use listas com "- " quando ajudar. Pode usar **negrito** com moderação. Sem títulos com #.
 - Baseie números, nomes, horários, preços e regras SOMENTE no <contexto> abaixo. Se a informação não estiver lá, diga claramente que não sabe ou que não tem esse dado aqui, e sugira onde conferir no app (Conversas, Agenda, CRM, Ligações, Dashboard). Nunca invente números.
@@ -89,7 +90,7 @@ const dataBr = (d: Date) => {
   const p = partesBahia(d);
   return `${String(p.dia).padStart(2, '0')}/${String(p.mes).padStart(2, '0')}/${p.ano}`;
 };
-const nomeUnidade = (u: string) => (UNIDADES as Record<string, { nome: string }>)[u]?.nome ?? u;
+const nomeUnidade = (u: string) => unidadeDe(u).nome;
 
 const ordemEsperando = (c: ContextoChat) =>
   [...c.esperando].sort((a, b) => (a.ultimaMensagemCliente?.getTime() ?? 0) - (b.ultimaMensagemCliente?.getTime() ?? 0)).slice(0, 25);
@@ -218,7 +219,7 @@ export async function conversarComIa(
   type Msg = Anthropic.Beta.Messages.BetaMessageParam;
   const msgs = paraMensagensClaude(mensagens) as Msg[];
   const ferramentas = acoes?.ferramentas() ?? [];
-  const instrucoes = ferramentas.length ? `${INSTRUCOES}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES;
+  const instrucoes = ferramentas.length ? `${INSTRUCOES()}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES();
   const regras = acoes ? `\n\n<o_que_voce_pode_criar>\n${acoes.regras()}\n</o_que_voce_pode_criar>` : '';
   const textos: string[] = [];
   for (let rodada = 0; ; rodada++) {

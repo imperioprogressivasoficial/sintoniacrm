@@ -52,6 +52,11 @@
   .ok .check svg { width: 34px; height: 34px; }
   [hidden] { display: none !important; }
   .rodape { text-align: center; color: var(--sub); font-size: 12px; margin-top: 18px; }
+  /* atendimento-extra: desmarcar pelo link */
+  .desmarcar { color: var(--sub); font-size: 13px; margin: 6px 0 0; }
+  .desmarcar a { color: var(--azul); font-weight: 600; }
+  .botao.perigo { background: none; color: var(--erro); box-shadow: inset 0 0 0 1.5px currentColor; }
+  .ok .check.x { background: color-mix(in srgb, var(--erro) 14%, transparent); color: var(--erro); }
 </style>
 </head>
 <body>
@@ -84,6 +89,15 @@
       <div class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
       <h1>Agendado!</h1>
       <p class="desc" id="pronto-txt" role="status"></p>
+      <p class="desmarcar" id="pronto-desmarcar" hidden>Se precisar desmarcar: <a id="link-desmarcar" href="#">desmarcar esta reunião</a>. Guarde este link.</p>
+    </section>
+    <section class="lado ok" id="cancelar" hidden>
+      <div class="check x" id="cancelar-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 13.5l5 5M14.5 13.5l-5 5"/></svg></div>
+      <h1 id="cancelar-tit">Desmarcar reunião</h1>
+      <p class="desc" id="cancelar-txt" role="status"></p>
+      <p class="erro" id="cancelar-erro" role="alert" hidden></p>
+      <button class="botao perigo" id="bt-cancelar" type="button" hidden>Desmarcar</button>
+      <a class="desmarcar" id="cancelar-novo" href="" hidden>Escolher outro horário</a>
     </section>
   </div>
   <p class="rodape">Agendamento pela Sintonia</p>
@@ -97,6 +111,8 @@
   const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const dataLonga = (d) => { const x = new Date(d + 'T12:00:00-03:00'); return x.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bahia' }); };
   let info = null, dia = null, hora = null;
+  const codigoCancelar = new URLSearchParams(location.search).get('cancelar');
+  const quando = (iso) => { const x = new Date(iso); return `${x.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bahia' })} às ${x.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' })}`; };
 
   function desenharDias() {
     $('dias').replaceChildren(...info.dias.map((d) => {
@@ -142,10 +158,41 @@
       if (!r.ok) { $('erro').textContent = j.erro || 'Não deu para agendar. Tente de novo.'; $('erro').hidden = false; if (r.status === 409) { hora = null; await carregar(); } return; }
       $('escolher').hidden = true; $('pronto').hidden = false;
       $('pronto-txt').textContent = `${j.titulo} · ${dataLonga(dia)} às ${hora}.${j.local ? ' Local: ' + j.local + '.' : ''} Até lá!`;
+      if (j.cancelar) { $('link-desmarcar').href = `${location.pathname}?cancelar=${encodeURIComponent(j.cancelar)}`; $('pronto-desmarcar').hidden = false; }
     } catch { $('erro').textContent = 'Sem conexão. Tente de novo.'; $('erro').hidden = false; }
     finally { b.removeAttribute('aria-busy'); }
   });
-  carregar();
+  // atendimento-extra: /r/<slug>?cancelar=<código> mostra a reunião e o botão para desmarcar.
+  async function telaCancelar() {
+    $('escolher').hidden = true; $('cancelar').hidden = false;
+    $('cancelar-novo').href = location.pathname;
+    let j = {};
+    try {
+      const r = await fetch(`/reservar/${encodeURIComponent(slug)}/reserva?codigo=${encodeURIComponent(codigoCancelar)}`);
+      j = await r.json().catch(() => ({}));
+      if (!r.ok) { $('cancelar-txt').textContent = j.erro || 'Não achamos esse agendamento.'; $('cancelar-novo').hidden = false; return; }
+    } catch { $('cancelar-txt').textContent = 'Sem conexão. Tente de novo.'; return; }
+    $('titulo').textContent = j.titulo; document.title = `${j.titulo} · Desmarcar`;
+    if (j.local) { $('linha-local').hidden = false; $('local').textContent = j.local; }
+    $('duracao').textContent = `${Math.round((new Date(j.fim) - new Date(j.inicio)) / 60000)} min`;
+    const resumo = quando(j.inicio);
+    if (j.status === 'cancelada') { $('cancelar-tit').textContent = 'Reunião desmarcada'; $('cancelar-txt').textContent = `A reunião de ${resumo} já está desmarcada.`; $('cancelar-novo').hidden = false; return; }
+    if (j.passou) { $('cancelar-txt').textContent = `A reunião de ${resumo} já começou. Fale com quem te mandou o link.`; return; }
+    $('cancelar-txt').textContent = `${j.nome}, sua reunião está marcada para ${resumo}. Quer mesmo desmarcar?`;
+    const b = $('bt-cancelar'); b.hidden = false;
+    b.onclick = async () => {
+      b.setAttribute('aria-busy', 'true'); $('cancelar-erro').hidden = true;
+      try {
+        const r = await fetch(`/reservar/${encodeURIComponent(slug)}/cancelar`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ codigo: codigoCancelar }) });
+        const k = await r.json().catch(() => ({}));
+        if (!r.ok) { $('cancelar-erro').textContent = k.erro || 'Não deu para desmarcar. Tente de novo.'; $('cancelar-erro').hidden = false; return; }
+        b.hidden = true; $('cancelar-tit').textContent = 'Reunião desmarcada';
+        $('cancelar-txt').textContent = `Pronto: a reunião de ${resumo} foi desmarcada e a equipe já foi avisada.`; $('cancelar-novo').hidden = false;
+      } catch { $('cancelar-erro').textContent = 'Sem conexão. Tente de novo.'; $('cancelar-erro').hidden = false; }
+      finally { b.removeAttribute('aria-busy'); }
+    };
+  }
+  if (codigoCancelar) telaCancelar(); else carregar();
 })();
 </script>
 </body>

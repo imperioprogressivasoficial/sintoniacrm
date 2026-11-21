@@ -1,6 +1,6 @@
 import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
 
 /** Aba IA: o que a IA fez hoje (horário da Bahia) e o que ela está conduzindo agora. */
@@ -73,7 +73,7 @@ export async function iaHoje(repo: Repositorio, agora: Date, podeVer: (c: Conver
         nome: c.nome ?? null,
         telefone: c.telefone,
         unidade: c.unidade,
-        unidadeNome: UNIDADES[c.unidade].nome,
+        unidadeNome: unidadeDe(c.unidade).nome,
         etapa: c.etapa,
         ultimaMensagem: m ? { autor: m.autor, texto: m.texto.slice(0, 140), em: m.em } : null,
         ultimaAtividade: new Date(ult),

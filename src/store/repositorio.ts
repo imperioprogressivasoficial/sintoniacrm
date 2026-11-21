@@ -127,8 +127,15 @@ export interface Repositorio {
    * Com `anexo`, grava junto os dados da mídia (o arquivo vem depois, em `guardarMidia`).
    * `id` opcional: quem grava pode escolher o id para guardar a mídia logo em seguida.
    * `refMidia`: id da mídia no canal, quando não é o da mensagem (API oficial), para o download.
+   * `proximaMidia`: quando o download pode começar (histórico/resgate: depois das mídias que acabaram de chegar).
    */
-  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }): Promise<boolean>;
+  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }): Promise<boolean>;
+  /**
+   * atendimento-extra: mensagem que já estava gravada só como texto ("[foto]") e sem os dados da mídia
+   * (histórico antigo): grava agora os dados da mídia, para baixar o arquivo. Retorna o id da mensagem
+   * se completou; undefined se ela não existe nessa conversa ou já tinha mídia.
+   */
+  completarMidia(conversaId: string, idExterno: string, anexo: Anexo, o?: { ref?: string; proxima?: Date }): Promise<string | undefined>;
   /** Aviso de entrega/leitura de uma mensagem que a loja enviou. Nunca volta atrás (lida não vira entregue). */
   registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date): Promise<boolean>;
 
@@ -293,13 +300,20 @@ export class RepositorioMemoria implements Repositorio {
   }
 
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
-    const { anexo, refMidia, ...resto } = m;
+    const { anexo, refMidia, proximaMidia, ...resto } = m;
     const id = m.id ?? randomUUID();
     this.msgs.push({ ...resto, id });
-    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: 0, ref: refMidia });
+    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: proximaMidia?.getTime() ?? 0, ref: refMidia });
     return true;
+  }
+
+  async completarMidia(conversaId: string, idExterno: string, anexo: Anexo, o: { ref?: string; proxima?: Date } = {}) {
+    const m = this.msgs.find((x) => x.idExterno === idExterno && x.conversaId === conversaId);
+    if (!m || this.midias.has(m.id)) return undefined;
+    this.midias.set(m.id, { conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: o.proxima?.getTime() ?? 0, ref: o.ref });
+    return m.id;
   }
 
   async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>) {

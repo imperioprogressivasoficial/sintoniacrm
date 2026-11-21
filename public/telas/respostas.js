@@ -15,7 +15,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const r = s.editando;
     const gestor = u.ehGestor(u.estado.eu || {});
     const atalho = el('input', { class: 'ds-campo', name: 'atalho', maxlength: '30', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', placeholder: 'preco', required: '' });
-    const texto = el('textarea', { class: 'ds-campo', name: 'texto', maxlength: '3000', required: '', rows: '5', placeholder: 'Oi {nome}! A progressiva na unidade {unidade}…', style: 'height:auto;padding:10px 12px;resize:vertical' });
+    const texto = el('textarea', { class: 'ds-campo', name: 'texto', maxlength: '3000', required: '', rows: '5', placeholder: 'Oi {nome}! Seu horário na unidade {unidade}…', style: 'height:auto;padding:10px 12px;resize:vertical' });
     atalho.value = r ? r.atalho : ''; texto.value = r ? r.texto : '';
     const pessoal = el('input', { type: 'checkbox', name: 'pessoal' });
     const erro = el('div', { class: 'erro-txt', role: 'alert' });

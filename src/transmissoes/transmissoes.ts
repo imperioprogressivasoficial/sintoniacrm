@@ -12,7 +12,7 @@ import type { Leads, RelatorioImportacao } from '../leads/leads.js';
 import { textoDoAnexo } from '../midia.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Tag, Tags } from '../tags/tags.js';
-import { UNIDADES } from '../unidades.js';
+import { idsUnidades, unidadeDe } from '../unidades.js';
 import { dataISO, DIA, MIN, partesBahia } from '../util/tempo.js';
 import { ClienteModelosMeta, componentesDoModelo, ModeloNovo, statusLocal } from './meta-modelos.js';
 import { contarVariaveis, dentroDaJanela, ehDescadastro, esperaDepois, montarTexto, parametrosDoModelo, preencherModelo, sorteador, type DadosPessoa } from './texto.js';
@@ -194,12 +194,12 @@ export class Transmissoes {
 
   /** Para a tela: por qual número e API cada unidade envia, e os limites recomendados. */
   numeros() {
-    return (['norte', 'sumare'] as const).map((u) => {
+    return idsUnidades(this.empresaId).map((u) => {
       const n = this.numeroDaUnidade(u);
       const tipo = n ? (ehCanalTeste(n.canalId) ? 'teste' : n.canal.tipo) : null;
       return {
         unidade: u,
-        nome: UNIDADES[u].nome,
+        nome: unidadeDe(u).nome,
         canalId: n?.canalId ?? null,
         tipo,
         oficial: tipo === 'meta' || tipo === 'teste',
@@ -409,7 +409,7 @@ export class Transmissoes {
     const c = await this.exigir(id);
     if (!['rascunho', 'pausada', 'agendada', 'aguardando_modelo'].includes(c.status)) throw new ErroTransmissao('Esta transmissão já está em andamento ou terminou.', 409);
     const numero = this.numeroDaUnidade(c.unidade);
-    if (!numero) throw new ErroTransmissao(`A unidade ${UNIDADES[c.unidade].nome} não tem WhatsApp conectado.`);
+    if (!numero) throw new ErroTransmissao(`A unidade ${unidadeDe(c.unidade).nome} não tem WhatsApp conectado.`);
     const tipo = ehCanalTeste(numero.canalId) ? 'teste' : numero.canal.tipo;
     if (c.canal === 'oficial' && tipo === 'evolution') throw new ErroTransmissao('Esta unidade usa a API não oficial (QR Code): escolha "API não oficial" e escreva o texto.');
     if (c.canal === 'nao_oficial' && tipo === 'meta') throw new ErroTransmissao('Esta unidade usa a API oficial: fora da janela de 24 h só passa modelo aprovado. Escolha "API oficial" e um modelo.');
@@ -1040,7 +1040,7 @@ export class Transmissoes {
     }
     if (ficha?.email) campos.email = ficha.email;
     if (ficha?.nascimento) campos.nascimento = ficha.nascimento.split('-').reverse().join('/');
-    return { nome: ficha?.nome || nome, telefone, unidade: UNIDADES[unidade].nome, campos };
+    return { nome: ficha?.nome || nome, telefone, unidade: unidadeDe(unidade).nome, campos };
   }
 
   /** Canal de teste: simula "entregue" (3 s) e "lida" (mais 4 s) para ver o funil andar sem número real. */
@@ -1167,7 +1167,7 @@ export class Transmissoes {
    */
   async atualizarModelos(soUnidade?: string): Promise<void> {
     const agora = this.agora();
-    for (const unidade of soUnidade ? [soUnidade] : ['norte', 'sumare']) {
+    for (const unidade of soUnidade ? [soUnidade] : idsUnidades(this.empresaId)) {
       const meta = this.cliente(unidade);
       if (meta) {
         const lista = await meta.cli.listar(meta.wabaId);

@@ -6,7 +6,8 @@ import { CanalInstagram, CanalMessenger, canalIdSocial, contasDoWebhookSocial, l
 import { assinaturaTikTokValida, lerLeadsTikTok, type LeadTikTok } from '../channels/tiktok.js';
 import type { CanalWhatsApp, MensagemRecebida } from '../channels/tipos.js';
 import type { UnidadeId } from '../domain.js';
-import { novoVerifyToken, UNIDADES_WHATSAPP, type Campo, type Conexoes } from './conexoes.js';
+import { novoVerifyToken, type Campo, type Conexoes } from './conexoes.js';
+import { existeUnidade, primeiraUnidade, zUnidade } from '../unidades.js';
 
 /**
  * Facebook Messenger, Instagram Direct e TikTok (leads) na tela de Conexões:
@@ -19,7 +20,8 @@ const NOMES: Record<Rede, string> = { messenger: 'Facebook Messenger', instagram
 
 const unidadeDe = (c: Conexoes, rede: Rede): UnidadeId => {
   const u = c.get(`${rede}Unidade` as Campo);
-  return u && (UNIDADES_WHATSAPP as readonly string[]).includes(u) ? (u as UnidadeId) : 'norte';
+  // Vazio (ou unidade que saiu do cadastro) = a primeira unidade ativa.
+  return u && existeUnidade(u, undefined, { ativa: true }) ? u : primeiraUnidade();
 };
 const ligado = (c: Conexoes, rede: Rede) => c.get(`${rede}Ligado` as Campo) === '1';
 
@@ -183,20 +185,22 @@ export const RedeParam = z.enum(['messenger', 'instagram', 'tiktok']);
 
 /** Campos que a tela pode gravar (o PUT /api/conexoes valida com isto). */
 const IdNum = z.string().trim().regex(/^\d*$/, 'Use só os números do id (copie do painel da Meta)').max(40).optional();
+// '' = a primeira unidade; senão uma unidade ativa do cadastro.
+const UnidadeOuVazio = z.union([z.literal(''), zUnidade({ ativa: true })]).optional();
 export const CamposSociais = {
   messengerLigado: z.enum(['', '0', '1']).optional(),
-  messengerUnidade: z.enum(['', ...UNIDADES_WHATSAPP]).optional(),
+  messengerUnidade: UnidadeOuVazio,
   messengerPageId: IdNum,
   messengerToken: z.string().max(800).optional(),
   messengerAppSecret: z.string().max(200).optional(),
   instagramLigado: z.enum(['', '0', '1']).optional(),
-  instagramUnidade: z.enum(['', ...UNIDADES_WHATSAPP]).optional(),
+  instagramUnidade: UnidadeOuVazio,
   instagramAccountId: IdNum,
   instagramPageId: IdNum,
   instagramToken: z.string().max(800).optional(),
   instagramAppSecret: z.string().max(200).optional(),
   tiktokLigado: z.enum(['', '0', '1']).optional(),
-  tiktokUnidade: z.enum(['', ...UNIDADES_WHATSAPP]).optional(),
+  tiktokUnidade: UnidadeOuVazio,
   tiktokClientKey: z.string().trim().max(100).optional(),
   tiktokClientSecret: z.string().max(200).optional(),
 };

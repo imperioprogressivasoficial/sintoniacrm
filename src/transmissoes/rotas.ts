@@ -5,7 +5,7 @@ import { pode } from '../auth/permissoes.js';
 import { ErroTag } from '../tags/tags.js';
 import { ErroLeads } from '../leads/leads.js';
 import { ErroTransmissao, type Transmissoes } from './transmissoes.js';
-import { UNIDADES_TRANSMISSAO } from './tipos.js';
+import { zUnidadeTransmissao } from './tipos.js';
 
 /**
  * Rotas /api/transmissoes/... — só gestão (gerente nas unidades dele, direção e admin).
@@ -14,11 +14,11 @@ import { UNIDADES_TRANSMISSAO } from './tipos.js';
 export interface OpcoesRotasTransmissoes {
   transmissoes: Transmissoes;
   /** Canal de teste: uma cliente "responde" à transmissão (chega como mensagem normal). */
-  simularResposta?: (p: { unidade: 'norte' | 'sumare'; telefone: string; nome?: string; texto: string }) => Promise<void>;
+  simularResposta?: (p: { unidade: string; telefone: string; nome?: string; texto: string }) => Promise<void>;
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
-const Unidade = z.enum(UNIDADES_TRANSMISSAO);
+const Unidade = zUnidadeTransmissao();
 const MSG = 'Só a gerência, a direção e a administração fazem transmissões.';
 
 export function registrarTransmissoes(app: FastifyInstance, o: OpcoesRotasTransmissoes): void {

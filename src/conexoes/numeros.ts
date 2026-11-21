@@ -3,7 +3,7 @@ import { CanalMeta, lerStatusMeta, lerWebhookMeta } from '../channels/meta.js';
 import type { CanalWhatsApp, StatusRecebido } from '../channels/tipos.js';
 import type { UnidadeId } from '../domain.js';
 import type { OpcoesWebhookMeta } from '../server.js';
-import { UNIDADES_WHATSAPP, type Conexoes } from './conexoes.js';
+import { unidadesWhatsApp, type Conexoes } from './conexoes.js';
 import { PREFIXO_INSTANCIA } from '../channels/evolution-admin.js';
 
 /**
@@ -38,7 +38,7 @@ export function numerosDasConexoes(f: FonteNumeros): NumeroConectado[] {
     else log(`Número ${n.canalId} ignorado: canal ${n.canal} sem credenciais`);
   }
 
-  for (const unidade of UNIDADES_WHATSAPP) {
+  for (const unidade of unidadesWhatsApp()) {
     if (conexoes.canalDaUnidade(unidade) !== 'meta') continue;
     const conta = conexoes.contaMeta(unidade);
     if (!conta) {
@@ -85,7 +85,7 @@ export function opcoesWebhookMeta(
   status?: (lista: StatusRecebido[]) => Promise<unknown>,
 ): OpcoesWebhookMeta {
   const segredos: OpcoesWebhookMeta['segredos'] = [];
-  for (const u of UNIDADES_WHATSAPP) {
+  for (const u of unidadesWhatsApp()) {
     const conta = conexoes.contaMeta(u);
     if (conta?.appSecret) segredos.push({ appSecret: conta.appSecret, numeros: [conta.phoneNumberId] });
   }

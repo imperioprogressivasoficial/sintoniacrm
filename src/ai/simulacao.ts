@@ -1,6 +1,7 @@
 import type { Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { PedidoAgente, RespostaAgente } from './agente.js';
 import type { AcaoAgente } from './ferramentas.js';
+import { primeiraUnidade } from '../unidades.js';
 
 /**
  * "Testar a IA": a IA responde a uma cliente fictícia usando a base atual.
@@ -45,7 +46,7 @@ export async function simularResposta(
   const conversa: Conversa = {
     id: 'simulacao',
     empresaId,
-    unidade: p.unidade ?? 'norte',
+    unidade: p.unidade ?? primeiraUnidade(empresaId),
     canalId: 'simulacao',
     telefone: '5599000000000',
     nome: p.nome ?? 'Cliente de teste',

@@ -22,6 +22,7 @@ import { systemDoAgente, textoMemoria } from './prompt.js';
 import { SemChave } from './provedores.js';
 import { CHAVES_MEMORIA, type AgenteIa, type FerramentaAgente, type Provedor } from './tipos.js';
 import { avaliarResposta } from './nota.js';
+import { primeiraUnidade } from '../unidades.js';
 
 type Ferramenta = Anthropic.Beta.Messages.BetaTool;
 
@@ -305,7 +306,7 @@ export class ExecutorAgentes {
     const conversa: Conversa = {
       id: 'simulacao',
       empresaId: this.d.empresaId,
-      unidade: t.unidade ?? ((a.unidades[0] as UnidadeId | undefined) ?? 'norte'),
+      unidade: t.unidade ?? ((a.unidades[0] as UnidadeId | undefined) ?? primeiraUnidade(a.empresaId)),
       canalId: 'simulacao',
       telefone: '5599000000000',
       nome: t.nome ?? 'Cliente de teste',

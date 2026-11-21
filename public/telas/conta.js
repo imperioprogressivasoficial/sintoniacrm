@@ -189,6 +189,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v10h14V10"/></svg>', 'Ao abrir a Sintonia',
         opcao('Tela inicial', 'A primeira tela quando você abre o app.', tela),
         opcao('Idioma', 'Outros idiomas chegam numa próxima versão.', idioma)),
+      window.SintoniaPapelParede ? window.SintoniaPapelParede.cartao(EC) : null, /* conversa-extra: papel de parede das conversas */
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="4"/></svg>', 'Acesso rápido',
         opcao('Mostrar a bolinha de atalhos', 'Fica na borda da tela (some com uma conversa aberta no celular). Vale só neste aparelho.', chave(bolinha, (v) => window.Sintonia?.acessoRapido?.definir?.(v), 'Mostrar a bolinha')),
         el('div', { class: 'ec-acoes' }, botao('Escolher e ordenar os atalhos', () => window.Sintonia?.acessoRapido?.editar?.(), 'mini'))),
@@ -297,6 +298,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!c) return;
     conta = c;
     const p = c.preferencias;
+    window.SintoniaContaPrefs = p; dispatchEvent(new Event('sintonia:conta')); /* conversa-extra: papel de parede (telas/papel-parede.js) */
     document.documentElement.dataset.densidade = p.densidade || 'confortavel';
     // Tema salvo na conta: vale num aparelho novo (sem escolha feita aqui ainda).
     let local = null; try { local = localStorage.getItem('sintonia.tema'); } catch {}

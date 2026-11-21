@@ -558,7 +558,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       onclick: () => trocarFunil(f.id),
     }, el('span', { text: f.nome }), el('span', { class: 'fn-qtd', text: f.conversas != null ? String(f.conversas) : '' }))));
     const eu = s.ui.estado.eu || {};
-    const unidades = (eu.unidades && eu.unidades.length ? eu.unidades : Object.keys(UNIDADE).filter((u) => u !== 'feira'));
+    const unidades = (eu.unidades && eu.unidades.length ? eu.unidades : (s.ui.unidadesAtivas ? s.ui.unidadesAtivas().map((u) => u.id) : Object.keys(UNIDADE))); /* unidades: as ativas do cadastro */
     if (s.unidade && !unidades.includes(s.unidade)) s.unidade = '';
     s.unidadesOps = unidades.length < 2 ? [] : [['', 'Todas as unidades'], ...unidades.map((u) => [u, UNIDADE[u] || u])];
     contarFiltros();
@@ -850,7 +850,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
     // Quem atende: selo "IA" quando a IA responde sozinha; senão, a foto ou as iniciais da atendente.
     const atende = cartao.modo === 'ia'
-      ? el('span', { class: 'fn-ia', title: 'A IA está atendendo', text: 'IA' })
+      ? (window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 22 }) : el('span', { class: 'fn-ia', title: 'A IA está atendendo', text: 'IA' })) /* conversa-extra: foto da Serena */
       : bolinha(cartao.dona, cartao.dona ? `Atendida por ${cartao.dona.nome}` : 'Sem atendente');
     const ra = window.SintoniaRastreio;
     const origem = cartao.origem?.icone && cartao.origem.icone !== 'desconhecido' ? cartao.origem : (ra?.selo(cartao.conversaId) || { icone: 'desconhecido' });
@@ -1218,7 +1218,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const desenharAchados = () => {
       if (!input.value.trim()) { fechar(); return; }
       s.achados.replaceChildren(...(achados.length ? achados.map((a, i) => {
-        const atende = a.modo === 'ia' ? el('span', { class: 'fn-ia', text: 'IA' }) : bolinha(a.dona, a.dona ? `Atendida por ${a.dona.nome}` : 'Sem atendente');
+        const atende = a.modo === 'ia' ? (window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 20 }) : el('span', { class: 'fn-ia', text: 'IA' })) : bolinha(a.dona, a.dona ? `Atendida por ${a.dona.nome}` : 'Sem atendente');
         const etapa = el('small', {}, el('i'), el('span', { text: `${a.etapa.nome} · ${funil()?.nome || ''}` }));
         etapa.style.setProperty('--cor', a.etapa.cor);
         const linha = el('div', { class: 'fn-achado', role: 'option', 'aria-selected': String(i === sel), onmousedown: (e) => e.preventDefault(), onclick: () => { fechar(); pular(a.conversaId, a.etapa.id, a); } },
@@ -1338,14 +1338,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const obs = el('textarea', { rows: '3', maxlength: '4000', placeholder: 'Preferências, histórico, cuidados…', 'aria-label': 'Observações', disabled: '' });
     const obsInfo = el('small');
     const tags = el('div', { class: 'fn-tags-fi' });
+    const produtosCaixa = el('div'); /* produtos-lead: produtos e serviços do lead */
     const rodape = el('div', { class: 'fn-fi-rodape' });
     d.append(
       el('div', { class: 'fn-fi-topo' }, rotuloTopo, el('button', { class: 'fn-redondo', type: 'button', 'aria-label': 'Fechar', title: 'Fechar', html: SVG.fechar, onclick: fechar })),
       el('div', { class: 'fn-fi-corpo' }, resumo, trilha,
         el('div', { class: 'fn-campo' }, el('span', { text: 'Responsável' }), donaCaixa),
         el('label', { class: 'fn-campo' }, el('span', { text: 'Observações da ficha' }), obs, obsInfo),
-        el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags)),
+        el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags),
+        window.SintoniaProdutosLead ? el('div', { class: 'fn-campo' }, el('span', { text: 'Produtos e serviços' }), produtosCaixa) : null),
       rodape);
+    /* produtos-lead: o valor do cartão acompanha a soma dos produtos */
+    window.SintoniaProdutosLead?.montar(produtosCaixa, conversaId, { aoMudar: (r) => { const a = acharCartao(conversaId); if (a && r && 'valor' in r && a.cartao.valor !== r.valor) { a.cartao.valor = r.valor; s.cartaoEls.delete(conversaId); desenharQuadro(); } } });
     let ultimoObs = '';
     const salvarObs = async () => {
       if (obs.disabled || obs.value === ultimoObs) return;

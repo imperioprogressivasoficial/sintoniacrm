@@ -5,6 +5,7 @@ import pg from 'pg';
 import { describe, expect, it } from 'vitest';
 import type { PedidoAgente, RespostaAgente } from '../src/ai/agente.js';
 import { FilaIa } from '../src/app/fila-ia.js';
+import { FilaHistoricoMemoria, FilaHistoricoPostgres, ImportadorHistorico, type FilaHistorico } from '../src/app/historico.js';
 import { esperaFalhaIa, MAX_FALHAS_IA, Sintonia } from '../src/app/sintonia.js';
 import type { CanalWhatsApp, MensagemRecebida } from '../src/channels/tipos.js';
 import { FilaMemoria, type FilaEntrada } from '../src/fila/entrada.js';
@@ -588,5 +589,69 @@ describe.each(fabricas)('Lista de Conversas sem o corte de 500 ($nome)', (f) => 
     const r4 = await app.inject({ url: '/api/conversas', headers: { 'if-none-match': etag } });
     expect(r4.statusCode).toBe(200);
     expect(r4.json()[0].ultima.texto).toBe('voltei');
+  });
+});
+
+// ---------------------------------------------------------------- 9. histórico ao conectar
+
+describe('Histórico do WhatsApp ao conectar: em lotes, com o estado no banco', () => {
+  const corpoHistorico = (n: number, prefixo: string) => ({
+    event: 'messages.set',
+    instance: 'imperio-norte',
+    data: {
+      messages: Array.from({ length: n }, (_, i) => ({
+        key: { remoteJid: `5575${String(910000000 + (i % 37)).padStart(9, '0')}@s.whatsapp.net`, fromMe: i % 3 === 0, id: `${prefixo}-${i}` },
+        pushName: `Histórico ${i % 37}`,
+        message: { conversation: `Mensagem antiga ${i}` },
+        messageTimestamp: Math.floor(Date.UTC(2026, 9, 1) / 1000) + i * 60,
+      })),
+    },
+  });
+
+  const filas: Array<{ nome: string; criar(): Promise<FilaHistorico> }> = [
+    { nome: 'memória', criar: async () => new FilaHistoricoMemoria() },
+    ...(temPostgres ? [{ nome: 'postgres', criar: async () => { const p = await poolDeTeste(); await p.query('delete from sintonia.historico_entrada'); return new FilaHistoricoPostgres(p); } }] : []),
+  ];
+
+  it.each(filas)('webhook grava e responde; o importador passa tudo para as conversas em lotes ($nome)', async (fx) => {
+    const repo = fx.nome === 'postgres' ? await fabricas.at(-1)!.criar() : new RepositorioMemoria();
+    const fila = await fx.criar();
+    const { s } = sintoniaCom(repo, { t: madrugada() });
+    const tamanhos: number[] = [];
+    const importador = new ImportadorHistorico({ fila, lote: 500, importar: (m) => (tamanhos.push(m.length), s.importarHistorico(m)) });
+    const app = criarServidor({ sintonia: s, repo, historico: importador, evolution: { canal: { tipo: 'evolution', lerWebhook: () => [], enviarTexto: async () => ({ idExterno: 'x' }) } as CanalWhatsApp } });
+    const r = await app.inject({ method: 'POST', url: '/webhooks/evolution', payload: corpoHistorico(1200, 'hist') });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({ historico: 1200, novas: 1200 });
+    await importador.ocioso();
+    expect(tamanhos).toEqual([500, 500, 200]);
+    const conversas = await repo.listarConversas();
+    expect(conversas).toHaveLength(37);
+    let total = 0;
+    for (const c of conversas) total += (await repo.mensagens(c.id, 1000)).length;
+    expect(total).toBe(1200);
+    expect(await fila.pendentes()).toEqual({});
+    expect(importador.progresso('imperio-norte')).toMatchObject({ mensagens: 1200, faltam: 0 });
+  });
+
+  it.each(filas)('o app reinicia no meio: o que faltava continua depois, sem perder nem duplicar ($nome)', async (fx) => {
+    const repo = fx.nome === 'postgres' ? await fabricas.at(-1)!.criar() : new RepositorioMemoria();
+    const fila = await fx.criar();
+    const { s } = sintoniaCom(repo, { t: madrugada() });
+    const msgs = (await import('../src/channels/evolution.js')).lerWebhookEvolution(corpoHistorico(1100, 'queda'));
+    // 1º processo: importa um lote e "cai" no segundo (antes de apagar o lote da tabela).
+    let lotes = 0;
+    const caiu = new ImportadorHistorico({ fila, lote: 500, importar: async (m) => { if (++lotes === 2) { await s.importarHistorico(m.slice(0, 120)); throw new Error('processo caiu'); } return s.importarHistorico(m); } });
+    await caiu.receber('imperio-norte', msgs);
+    await caiu.encerrar();
+    expect(Object.values(await fila.pendentes())[0]).toBe(600);
+    // 2º processo, depois de subir de novo: continua de onde parou (o lote pela metade é repetido sem duplicar).
+    const depois = new ImportadorHistorico({ fila, lote: 500, importar: (m) => s.importarHistorico(m) });
+    depois.avisar();
+    await depois.ocioso();
+    let total = 0;
+    for (const c of await repo.listarConversas()) total += (await repo.mensagens(c.id, 1000)).length;
+    expect(total).toBe(1100);
+    expect(await fila.pendentes()).toEqual({});
   });
 });

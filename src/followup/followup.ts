@@ -2,9 +2,10 @@ import type { Conversa } from '../domain.js';
 import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
 import { ajustarParaJanelaAtiva, estaAberta, proximaAbertura } from '../engine/horario.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemFollowup } from './armazem.js';
+import { identidade } from '../empresa/identidade.js';
 import {
   ConfigFollowup,
   MODELOS_CADENCIA,
@@ -356,7 +357,7 @@ export class Followup {
 
     // Horário da unidade.
     const agora = this.agora();
-    const unidade = UNIDADES[c0.unidade];
+    const unidade = unidadeDe(c0.unidade);
     if (cfg.respeitarHorario && unidade && !estaAberta(unidade, agora)) {
       const abre = proximaAbertura(unidade, agora);
       if (e.tipo === 'confirmacao') {
@@ -486,7 +487,7 @@ export class Followup {
           blocos: [
             { tipo: 'titulo', texto: 'Seu horário está chegando ✨', tamanho: 'grande', alinhar: 'esquerda' },
             { tipo: 'texto', texto: 'Olá, {primeiro_nome}!\n\nSeu horário de **{servico}** na **{unidade}** é **{data} às {hora}**.\n\nPara confirmar, responda no WhatsApp: **1 - Confirmo** ou **2 - Preciso remarcar**.', alinhar: 'esquerda' },
-            { tipo: 'texto', texto: 'Até lá! 💙\nEquipe Império Progressivas', alinhar: 'esquerda' },
+            { tipo: 'texto', texto: `Até lá! 💙\nEquipe ${identidade(this.o.empresaId).nome}`, alinhar: 'esquerda' },
           ],
         },
       },
@@ -507,7 +508,7 @@ export class Followup {
 
   private variaveis(c: Conversa, conf: Partial<Pick<Confirmacao, 'servico' | 'inicio'>>): Record<string, string> {
     const dh = conf.inicio ? dataHora(conf.inicio) : { data: '', hora: '' };
-    return { nome: c.nome ?? '', servico: conf.servico ?? '', unidade: UNIDADES[c.unidade]?.nome ?? '', data: dh.data, hora: dh.hora };
+    return { nome: c.nome ?? '', servico: conf.servico ?? '', unidade: unidadeDe(c.unidade)?.nome ?? '', data: dh.data, hora: dh.hora };
   }
 
   private paraEmail(v: Record<string, string>): Record<string, string> {

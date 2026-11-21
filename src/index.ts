@@ -1,10 +1,11 @@
 import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
+import { ConversasPessoaisMemoria, ConversasPessoaisPostgres } from './conversa/pessoal.js'; /* conversa-extra */
 import { LayoutsPainelMemoria, LayoutsPainelPostgres } from './painel/layout.js';
 import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerChaveDeArquivo, lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
-import { AgendasDasUnidades, UNIDADES_AGENDA } from './agenda/unidades-agenda.js';
+import { AgendasDasUnidades, unidadesAgenda } from './agenda/unidades-agenda.js';
 import { AgendaExterna } from './agenda/agenda-externa.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
@@ -16,7 +17,7 @@ import { Midias } from './app/midias.js';
 import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
-import { carregarBase } from './ai/prompt.js';
+import { carregarBaseDa } from './ai/prompt.js';
 import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { EvolutionAdmin } from './channels/evolution-admin.js';
@@ -41,6 +42,7 @@ import { TravaMemoria, TravaPostgres, type Trava } from './fila/trava.js';
 import { FilaComReserva } from './fila/reserva.js';
 import { umaPorVez } from './util/relogio.js';
 import { FilaIa } from './app/fila-ia.js';
+import { FilaHistoricoPostgres, ImportadorHistorico } from './app/historico.js';
 import { acessosPara } from './auth/acessos.js';
 import { resolver as resolverPermissoes } from './auth/permissoes.js';
 import { criarPool, esperarBanco, ehErroDeConexao } from './store/banco.js';
@@ -48,7 +50,8 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
-import { UNIDADES } from './unidades.js';
+import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe } from './unidades.js';
+import { definirEmpresaPadraoIdentidade, IDENTIDADE_IMPERIO } from './empresa/identidade.js';
 import { dataISO, partesBahia } from './util/tempo.js';
 import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from './empresa/empresa.js';
 import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, TagsDaIa } from './tags/tags.js';
@@ -122,12 +125,15 @@ import { registrarAgendadas } from './agendadas/rotas.js';
 /* empresa-conta: menu Empresa (dados, unidades, produtos e serviços, tabelas de preço, documentos) e Conta (perfil) */
 import { ArmazemCadastroMemoria, ArmazemCadastroPostgres, horarioDeFaixas } from './empresa/cadastro.js';
 import { registrarCadastro } from './empresa/cadastro-rotas.js';
+import { ArmazemProdutosLeadMemoria, ArmazemProdutosLeadPostgres, ProdutosLead } from './empresa/lead-produtos.js';
+import { registrarProdutosLead } from './empresa/lead-produtos-rotas.js';
 import { precosDoCadastro } from './empresa/precos-comercial.js';
 import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
-import { UNIDADES_EQUIPE } from './auth/acesso.js';
 /* integracoes: área de desenvolvedores (chaves de API, API v1, webhooks de saída e MCP) */
 import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integracoes/armazem.js';
 import { montarIntegracoes } from './integracoes/rotas.js';
+/* atendimento-extra: avisos do agendamento online (sino, WhatsApp para o contato e lembrete antes) */
+import { AvisosReuniao } from './reunioes/avisos.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -189,6 +195,10 @@ if (cfg.DATABASE_URL) {
   contas = new ContasMemoria();
 }
 
+// Empresa atendida por este servidor: as unidades e a identidade (nome, segmento, cidade) vêm do cadastro dela.
+definirEmpresaPadrao(cfg.SINTONIA_EMPRESA_ID);
+definirEmpresaPadraoIdentidade(cfg.SINTONIA_EMPRESA_ID);
+
 // Plano da IA: medição de uso e porteiro. A conta original (SINTONIA_PLANO_FUNDADOR, padrão "imperio") fica no Fundador.
 const planos = new Planos({
   armazem: pool ? new ArmazemPlanosPostgres(pool) : new ArmazemPlanosMemoria(),
@@ -199,14 +209,19 @@ anotarUso = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
 porteiroIa = porteiroDe(planos, cfg.SINTONIA_EMPRESA_ID);
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
-const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
+const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, cfg.SINTONIA_EMPRESA_ID === EMPRESA_IMPERIO ? IDENTIDADE_IMPERIO.nome : 'Minha empresa');
 const armazemTags = pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas());
 const tags = new Tags(armazemTags, cfg.SINTONIA_EMPRESA_ID);
 const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
-const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
+const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBaseDa(cfg.SINTONIA_EMPRESA_ID));
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
-const agente = new Agente(claude, agendas, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
+const agente = new Agente(claude, agendas, () => base.texto(), {
+  modelo: cfg.SINTONIA_MODELO,
+  esforco: cfg.SINTONIA_ESFORCO,
+  /* produtos-lead: a IA sabe o que a equipe vinculou ao lead */
+  produtosDoLead: (c) => produtosLead.textoParaIa(c),
+});
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
 if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
@@ -259,17 +274,17 @@ const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId) && !ehCanalSocia
 const canaisSociais = new Map<string, { chave: string; canal: CanalWhatsApp }>();
 let iaLigada = false;
 let agendaLigada = false;
-const ESTABELECIMENTO_PADRAO = { norte: UNIDADES.norte.trinksEstabelecimentoId, sumare: UNIDADES.sumare.trinksEstabelecimentoId };
+// Estabelecimento do Trinks e se a unidade agenda: lido de Conexões › Agenda (vale o que está na tela agora).
+definirAgendaDasUnidades((id) => {
+  const a = agendas.config(id);
+  return { trinksEstabelecimentoId: a.escolha === 'trinks' ? a.local : null, agendaAberta: a.escolha !== 'nenhum' };
+});
 
 function aplicarConexoes() {
   const chaveIA = conexoes.get('anthropicApiKey');
   claudeAtual = new Anthropic({ apiKey: chaveIA || 'sem-chave' });
   iaLigada = Boolean(chaveIA);
   trinks.definirChave(conexoes.get('trinksApiKey') ?? '');
-  // ID do estabelecimento de cada unidade: o da tela de Conexões vale por cima do padrão.
-  for (const [u, campo] of [['norte', 'trinksEstabelecimentoNorte'], ['sumare', 'trinksEstabelecimentoSumare']] as const) {
-    UNIDADES[u].trinksEstabelecimentoId = conexoes.get(campo) || ESTABELECIMENTO_PADRAO[u];
-  }
   // Cada unidade usa o sistema escolhido em Conexões › Agenda (Trinks, Avec, AppBarber ou nenhum).
   agendaLigada = agendas.algumaPronta();
   evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
@@ -284,7 +299,7 @@ function aplicarConexoes() {
     log,
   });
   // WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
-  for (const unidade of ['norte', 'sumare'] as const) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
+  for (const unidade of idsUnidades()) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
   // Facebook Messenger e Instagram Direct: entram depois (o número de WhatsApp de cada unidade continua sendo o primeiro).
   const sociais = numerosSociais(conexoes, canaisSociais);
   lista.push(...sociais);
@@ -301,7 +316,10 @@ const armazemNotificacoes = pool ? new ArmazemNotificacoesPostgres(pool) : new A
 // Histórico da tela Ligações (efetuadas pelo app; recebidas/perdidas pelo evento CALL do WhatsApp).
 const armazemChamadas = pool ? new ArmazemChamadasPostgres(pool) : new ArmazemChamadasMemoria();
 const chavesPush = new ChavesPush(armazemNotificacoes, cofre);
+/* conversa-extra: silenciar e arquivar conversas, por pessoa (o push respeita o silêncio) */
+const pessoais = pool ? new ConversasPessoaisPostgres(pool) : new ConversasPessoaisMemoria();
 const notificador = new Notificador({
+  silenciaram: (conversaId, agora) => pessoais.silenciaramAgora(conversaId, agora),
   armazem: armazemNotificacoes,
   contas,
   repo,
@@ -586,7 +604,39 @@ const integracoes = montarIntegracoes({
 });
 observarEventos(repo, (e) => integracoes.aoEvento(e));
 
+/* atendimento-extra: quem marca ou desmarca pelo link de agendamento avisa a dona do link e a gestão (sino + push);
+ * o contato recebe a confirmação e o lembrete pelo WhatsApp (conversa do número, ou uma nova no primeiro número conectado). */
+const avisosReuniao = pool
+  ? new AvisosReuniao({
+      pool,
+      log,
+      urlPublica: () => process.env.SINTONIA_URL_PUBLICA,
+      avisarPessoa: (id, a) => notificador.avisarPessoa(id, a),
+      avisarGestao: (a) => notificador.avisarGestao(a),
+      whatsapp: async (telefone, nome, texto) => {
+        const n = numeros.find(ehReal);
+        if (!n) return undefined;
+        const agora = new Date();
+        const r = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade: n.unidade, canalId: n.canalId, telefone, nome, agora });
+        if (r.nova) {
+          await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: r.conversa.id, unidade: r.conversa.unidade, em: agora, dados: { origem: 'agendamento_online' } });
+          await sintonia.mudarModo(r.conversa.id, (await agentesIa.modoInicial(r.conversa, agora)) ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
+        }
+        await sintonia.comConversa(r.conversa.id, async (c) => {
+          await sintonia.enviarAutomatico(c, texto, 'Agendamento online');
+          await repo.salvarConversa(c);
+        });
+        return { conversaId: r.conversa.id };
+      },
+    })
+  : undefined;
+
+/* robustez: histórico do WhatsApp ao conectar em lotes, com o estado no banco (continua depois de reiniciar). */
+const importadorHistorico = pool
+  ? new ImportadorHistorico({ fila: new FilaHistoricoPostgres(pool), importar: (m) => sintonia.importarHistorico(m), log })
+  : undefined;
 const app = criarServidor({
+  ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   sintonia,
   repo,
   log,
@@ -601,6 +651,7 @@ const app = criarServidor({
   },
   grupos,
   aoReuniao: integracoes.aoReuniao,
+  avisosReuniao, // atendimento-extra
   conexoes: {
     conexoes,
     agendas,
@@ -616,11 +667,11 @@ const app = criarServidor({
       const t = new ClienteTrinks({ apiKey: chave });
       const partes: string[] = [];
       let falhas = 0;
-      for (const u of ['norte', 'sumare'] as const) {
-        const est = UNIDADES[u].trinksEstabelecimentoId;
-        if (!est) { partes.push(`${UNIDADES[u].nome}: sem ID do estabelecimento`); continue; }
-        try { partes.push(`${UNIDADES[u].nome}: ${(await t.listarProfissionais(est)).length} profissionais`); }
-        catch (e) { falhas++; partes.push(`${UNIDADES[u].nome}: ${String((e as Error).message).slice(0, 80)}`); }
+      for (const u of unidadesAgenda().filter((x) => agendas.config(x).escolha === 'trinks')) {
+        const est = unidadeDe(u).trinksEstabelecimentoId;
+        if (!est) { partes.push(`${unidadeDe(u).nome}: sem ID do estabelecimento`); continue; }
+        try { partes.push(`${unidadeDe(u).nome}: ${(await t.listarProfissionais(est)).length} profissionais`); }
+        catch (e) { falhas++; partes.push(`${unidadeDe(u).nome}: ${String((e as Error).message).slice(0, 80)}`); }
       }
       if (falhas && falhas === partes.length) throw new Error(partes.join(' · '));
       return { resumo: partes.join(' · ') };
@@ -662,7 +713,7 @@ const app = criarServidor({
     },
     agenda: {
       chave: Boolean(conexoes.get('trinksApiKey')),
-      unidades: UNIDADES_AGENDA.map((u) => {
+      unidades: unidadesAgenda().map((u) => {
         const a = agendas.config(u);
         return { id: u, nome: a.nome, estabelecimento: Boolean(a.local), sistema: a.escolha, sistemaNome: a.sistemaNome, falta: a.aviso && !a.falta.length ? [a.aviso] : a.falta, pronta: a.pronta };
       }),
@@ -673,6 +724,7 @@ const app = criarServidor({
   whatsappSaude,
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
+  pessoais,
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
   ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
   presencas,
@@ -740,6 +792,8 @@ const extras = montarExtras({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   /* clientes-tags: origem de cada conversa no exportar (filtro e coluna) */
   origens: (ids) => rastreio.selos(ids),
+  /* produtos-lead: coluna "Produtos" do exportar */
+  produtos: (ids) => produtosLead.resumoDe(cfg.SINTONIA_EMPRESA_ID, ids),
 });
 // A Agenda mostra também o que a recepção marca direto no sistema do salão (cache de 1 minuto por unidade e período).
 const agendaExterna = new AgendaExterna({ roteador: agendas, log });
@@ -747,22 +801,55 @@ registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: ext
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
 /* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços */
 const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
+/* produtos-lead: produtos e serviços vinculados ao lead (ficha, cartão do Pipeline, filtro, exportar, IA e Análises) */
+const produtosLead = new ProdutosLead({ armazem: pool ? new ArmazemProdutosLeadPostgres(pool) : new ArmazemProdutosLeadMemoria(), cadastro: armazemCadastro, valor: funis });
+registrarProdutosLead(app, { repo, servico: produtosLead, empresaId: cfg.SINTONIA_EMPRESA_ID });
+funis.ligarFiltros({
+  conversasComProdutos: (f) => produtosLead.conversasComFiltro(cfg.SINTONIA_EMPRESA_ID, f),
+  telefonesDasEmpresas: (chaves) => extras.leads.telefonesDasEmpresas(chaves),
+});
 const armazemComercialBase = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
 const armazemComercial = precosDoCadastro(armazemComercialBase, armazemCadastro);
-registrarCadastro(app, {
+const cadastroEmpresa = registrarCadastro(app, {
   armazem: armazemCadastro,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   empresa,
-  // Os nomes que o app já mostrava (public/app.html, UNIDADE): a partir daqui, mudam em Empresa › Unidades.
-  unidadesPadrao: [
-    { id: 'norte', nome: 'Salvador Norte', horario: horarioDeFaixas(UNIDADES.norte.horario) },
-    { id: 'sumare', nome: 'Sumaré', horario: horarioDeFaixas(UNIDADES.sumare.horario) },
-    { id: 'feira', nome: 'Feira de Santana', horario: null, ativa: true },
-  ],
-  idsFixos: UNIDADES_EQUIPE,
+  // Empresa sem unidades no cadastro: a Império recebe as que o app já mostrava (com o nome para clientes e o
+  // horário de shopping de antes); qualquer outra empresa começa com uma "Unidade principal" e cadastra as dela.
+  unidadesPadrao: (empresaId) =>
+    empresaId === EMPRESA_IMPERIO
+      ? UNIDADES_IMPERIO.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.nomeCliente, horario: u.horario && Object.keys(u.horario).length ? horarioDeFaixas(u.horario) : null, ativa: u.ativa }))
+      : [{ id: UNIDADE_INICIAL.id, nome: UNIDADE_INICIAL.nome, horario: null }],
+  // Não deixa apagar unidade com conversas, pessoas ou números ligados (só desativar).
+  emUso: async (empresaId, id) => {
+    if (numeros.some((n) => n.unidade === id && !ehCanalTeste(n.canalId)) || conexoes.numeros().some((n) => n.unidade === id)) return true;
+    if (pool) {
+      const { rows } = await pool.query<{ usada: boolean }>(
+        `select exists(select 1 from sintonia.conversas where empresa_id = $1 and unidade = $2)
+             or exists(select 1 from sintonia.usuarios where empresa_id = $1 and $2 = any(unidades)) as usada`,
+        [empresaId, id],
+      );
+      return Boolean(rows[0]?.usada);
+    }
+    return (await repo.listarConversas()).some((c) => c.empresaId === empresaId && c.unidade === id) || (await contas.listarUsuarios(empresaId)).some((u) => u.unidades.includes(id));
+  },
+  // Unidade nova (ou desativada): canais de teste, agenda e números refeitos na hora.
+  aoMudarUnidades: () => {
+    aplicarConexoes();
+    conexoes.garantirTokensDasUnidades().catch((e) => log('Falha ao gerar o Verify Token da unidade nova', String(e)));
+  },
   // A tabela antiga, sem a mistura com os produtos (é ela que é copiada).
   precosComercial: async (id) => (await armazemComercialBase.ler(id)).cfg.precos,
 });
+// Cache das unidades e da identidade da empresa (src/unidades.ts, src/empresa/identidade.ts) a partir do cadastro,
+// antes de atender qualquer mensagem; depois as conexões são refeitas com as unidades certas.
+try {
+  await cadastroEmpresa.carregar(cfg.SINTONIA_EMPRESA_ID);
+  await conexoes.garantirTokensDasUnidades();
+  aplicarConexoes();
+} catch (e) {
+  log('Falha ao carregar as unidades do cadastro (seguem as conhecidas)', String(e));
+}
 registrarConta(app, {
   contas,
   perfis: pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria(),
@@ -774,7 +861,10 @@ registrarComercial(app, {
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
-  unidades: ['norte', 'sumare'],
+  // Unidades ativas do cadastro, lidas na hora (unidade nova entra nas metas e na TV sem reiniciar).
+  get unidades() {
+    return idsUnidades();
+  },
   metaMesAntiga: async () => (await empresa.meta()).agendamentosMes ?? null,
   nomeEmpresa: async () => (await empresa.dados()).nome,
 });
@@ -784,7 +874,9 @@ registrarDesempenho(app, {
   armazem: armazemComercial,
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
-  unidades: ['norte', 'sumare'],
+  get unidades() {
+    return idsUnidades();
+  },
   agora: () => new Date(),
 });
 // Análises (menu Análises): vendas e receita, horários de pico, tempo parado no funil e clientes que voltaram.
@@ -794,6 +886,8 @@ registrarAnalises(app, {
   armazemComercial,
   origens: new OrigensConversa({ repo, contatos: armazemContatos, leads: extras.armazem, selos: (ids) => rastreio.selos(ids) }),
   contas,
+  /* produtos-lead: receita por produto/serviço vinculado */
+  produtosVinculados: (empresaId, ids) => produtosLead.porProduto(empresaId, ids),
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });
@@ -976,6 +1070,7 @@ const rodadaRelogio = umaPorVez('30 s', async () => {
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
   await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
   await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
+  await avisosReuniao?.tick().catch((e) => log('Falha no relógio do agendamento online', String(e))); // atendimento-extra: lembrete antes da reunião
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);
@@ -1017,6 +1112,7 @@ const relogioReserva = setInterval(() => void rodadaReserva(), 5_000);
 void rodadaReserva();
 
 trabalhador.iniciar();
+importadorHistorico?.avisar(); // robustez: histórico que ficou pela metade antes de reiniciar continua agora
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
 // Desligamento limpo: para de aceitar, termina o que está em andamento, fecha o banco.
@@ -1035,6 +1131,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
     await trabalhador.parar();
+    await importadorHistorico?.encerrar().catch(() => {});
     // A IA em andamento tem até 15 s para terminar; o que ficar na fila volta pela tarefa "reavaliar" do banco.
     await Promise.race([filaIa?.ocioso(), new Promise((r) => setTimeout(r, 15_000))]);
     await Promise.all([rodadaRelogio.ocioso(), rodadaFluxos.ocioso(), rodadaAgendadas.ocioso(), rodadaTransmissoes.ocioso(), rodadaWebhooks.ocioso(), rodadaReserva.ocioso()]).catch(() => {});

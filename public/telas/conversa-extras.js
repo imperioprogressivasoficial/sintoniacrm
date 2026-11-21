@@ -433,6 +433,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       })() : null);
 
     corpo.replaceChildren(el('div', { class: 'cx-secao', text: 'Quem atende' }), status, quemLista, el('div', { class: 'cx-secao', text: 'Ajuda para escrever' }), ajuda);
+    { const extra = window.SintoniaConversaExtra?.secaoMenu?.(c, fechar); if (extra) corpo.append(...extra.filter(Boolean)); } /* conversa-extra: silenciar, arquivar, papel de parede */
     if (!recursos.ia && !estado.situacao?.iaLigada) corpo.append(el('p', { class: 'cx-aviso' }, document.createTextNode('A IA ainda está desligada: falta configurar a chave da IA (Anthropic) em Conexões. '), linkConexoes()));
     abrirFolha(d);
   }

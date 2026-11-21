@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { idsUnidades, zIdUnidade, zUnidade } from '../unidades.js';
+import { identidade } from '../empresa/identidade.js';
 
 /**
  * Estúdio de agentes de IA: tipos, validação e padrões.
@@ -106,7 +108,7 @@ export function publico(a: AgenteIa) {
 export const AgenteNovo = z.object({
   nome: texto(60).min(1),
   avatar: z.string().max(200_000).optional(),
-  unidades: z.array(z.enum(['norte', 'sumare'])).max(3).optional(),
+  unidades: z.array(zUnidade()).max(50).optional(),
   provedor: z.enum(PROVEDORES).optional(),
   modelo: texto(80).min(1).optional(),
   /** string = nova chave; null = apagar a chave própria; ausente = não mexe. */
@@ -121,15 +123,38 @@ export function configPadrao(): ConfigAgente {
   return ConfigAgente.parse({});
 }
 
-/** Um agente pronto para começar, com o jeito Império. */
+/**
+ * Um agente pronto para começar ("Modelo pronto" na tela; o pedido ainda se chama modeloPronto: 'imperio').
+ * O nome da empresa vem do cadastro; o jeito de salão de cabelo só vale para salão (outra empresa ganha um neutro).
+ */
 export function modeloImperio(): Pick<AgenteIa, 'nome' | 'avatar' | 'criatividade'> & { config: ConfigAgente } {
+  const emp = identidade();
+  if (!/progressiva|alisament|cabel|sal[aã]o|beleza|hair/i.test(`${emp.segmento} ${emp.nome}`)) {
+    return {
+      nome: 'Lia',
+      avatar: '✦',
+      criatividade: 50,
+      config: ConfigAgente.parse({
+        persona: {
+          quemE: `Lia, consultora da ${emp.nome}${emp.segmento ? ` (${emp.segmento.toLowerCase()})` : ''}.`,
+          comoFala: 'Calorosa, próxima e direta. Chama a cliente pelo nome.',
+          emojis: true,
+          tamanho: 'curta',
+        },
+        regras: {
+          sempre: ['Sempre oferecer um próximo passo concreto no fim da resposta', 'Sempre perguntar o nome se ainda não souber'],
+          nunca: ['Nunca inventar preço ou prazo', 'Nunca prometer resultado garantido'],
+        },
+      }),
+    };
+  }
   return {
     nome: 'Lia',
     avatar: '💇‍♀️',
     criatividade: 60,
     config: ConfigAgente.parse({
       persona: {
-        quemE: 'Lia, consultora da Império Progressivas, especialista em alisamento e progressiva.',
+        quemE: `Lia, consultora da ${emp.nome}, especialista em alisamento e progressiva.`,
         comoFala: 'Calorosa, próxima e direta, como uma amiga que entende de cabelo. Chama a cliente pelo nome.',
         emojis: true,
         tamanho: 'curta',
@@ -194,10 +219,16 @@ export const ConfigUnidadeControle = z.object({
 });
 export type ConfigUnidadeControle = z.infer<typeof ConfigUnidadeControle>;
 
-export const ConfigControle = z.object({
-  norte: ConfigUnidadeControle.default(ConfigUnidadeControle.parse({})),
-  sumare: ConfigUnidadeControle.default(ConfigUnidadeControle.parse({})),
-});
+/** "IA atende primeiro" por unidade do cadastro (Empresa › Unidades): { norte: {...}, 'loja-centro': {...} }. */
+export const ConfigControle = z
+  .record(zIdUnidade(), ConfigUnidadeControle)
+  .default({})
+  .transform((r) => {
+    // Toda unidade ativa aparece (desligada se nunca foi configurada); o que já estava salvo fica.
+    const c: Record<string, ConfigUnidadeControle> = { ...r };
+    for (const u of idsUnidades()) c[u] ??= ConfigUnidadeControle.parse({});
+    return c;
+  });
 export type ConfigControle = z.infer<typeof ConfigControle>;
 
 export interface RegistroComando {

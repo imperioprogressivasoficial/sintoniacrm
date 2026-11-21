@@ -4,7 +4,8 @@
  * e só reaproveita este pedaço). Estilos próprios com prefixo .cm-.
  */
 (() => {
-  const UNIDADE = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const UNIDADE = window.Sintonia?.ui?.UNIDADE || {};
   const PERIODOS = [['dia', 'Hoje'], ['semana', 'Semana'], ['mes', 'Mês']];
   const CRITERIOS = [['agendamentos', 'Agendamentos'], ['comparecimentos', 'Comparecimentos'], ['valor', 'Valor'], ['conversao', 'Conversão'], ['tempo', '1ª resposta']];
   const CSS = `
@@ -237,7 +238,7 @@
     const tbP = el('tbody');
     const precos = [];
     const addPreco = (p = { servico: '', valor: '' }) => {
-      const sv = el('input', { class: 'cm-in', type: 'text', value: p.servico, placeholder: 'Ex.: Progressiva', 'aria-label': 'Serviço' });
+      const sv = el('input', { class: 'cm-in', type: 'text', value: p.servico, placeholder: 'Ex.: Consulta', 'aria-label': 'Serviço' });
       const vl = inp(p.valor, { 'aria-label': 'Preço' });
       const item = { sv, vl };
       const tr = el('tr', {}, el('td', {}, sv), el('td', {}, vl), el('td', {}, el('button', { class: 'cm-bt cm-perigo', type: 'button', text: 'Tirar', onclick: () => { precos.splice(precos.indexOf(item), 1); tr.remove(); } })));

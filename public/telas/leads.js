@@ -193,7 +193,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     im.nomeArquivo = nome || '';
     im.passo = 'mapa';
     im.previa = null;
-    if (!im.unidade) im.unidade = s.ui.estado.eu?.unidades?.[0] === 'sumare' ? 'sumare' : 'norte';
+    if (!im.unidade) im.unidade = unidadesDaPessoa(s.ui)[0]?.[0] || ''; /* unidades: a 1ª que a pessoa vê */
     desenhar();
   }
 
@@ -248,8 +248,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     x.value = valor;
     return x;
   }
-  const UNIDADES = [['norte', 'Salvador Norte Shopping'], ['sumare', 'Shopping Sumaré']];
-  const unidadesDaPessoa = (ui) => { const eu = ui.estado.eu; return !eu || ['admin', 'direcao'].includes(eu.papel) || !eu.unidades?.length ? UNIDADES : UNIDADES.filter(([u]) => eu.unidades.includes(u)); };
+  /* unidades: as ativas do cadastro (Empresa › Unidades) */
+  const unidadesLista = (ui) => (ui.unidadesAtivas ? ui.unidadesAtivas() : []).map((u) => [u.id, u.nome]);
+  const unidadesDaPessoa = (ui) => { const eu = ui.estado.eu; const todas = unidadesLista(ui); return !eu || ['admin', 'direcao'].includes(eu.papel) || !eu.unidades?.length ? todas : todas.filter(([u]) => eu.unidades.includes(u)); };
 
   const ORIGENS = [['', 'Todas'], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['whatsapp', 'WhatsApp'], ['google_ads', 'Google'], ['indicacao', 'Indicação'], ['estabelecimento', 'Estabelecimento'], ['desconhecido', 'Sem origem']];
   function consultaExp() {

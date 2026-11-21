@@ -3,7 +3,7 @@ import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
 import { ehEmailDemo } from '../demo/dados.js';
 import type { Conversa } from '../domain.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { MIN } from '../util/tempo.js';
 import type { ArmazemNotificacoes, Cursor } from './armazem.js';
 import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
@@ -28,6 +28,8 @@ export interface OpcoesNotificador {
   esperaMin?: number;
   /** A conversa está com bot ou follow-up conduzindo? (aí não há alerta de espera). */
   automacaoAtiva?: (conversaId: string) => Promise<boolean>;
+  /** conversa-extra: quem silenciou a conversa agora (sem push, sem vibração para essas pessoas). */
+  silenciaram?: (conversaId: string, agora: Date) => Promise<Set<string>>;
 }
 
 /** Item da faixa "clientes esperando" do app. */
@@ -135,7 +137,7 @@ export class Notificador {
     const us = await this.equipe();
     const d = e.dados ?? {};
     const nome = nomeDa(c);
-    const unidade = UNIDADES[c.unidade]?.nome ?? c.unidade;
+    const unidade = unidadeDe(c.unidade)?.nome ?? c.unidade;
 
     switch (e.tipo) {
       // Cliente nova e cada mensagem não viram mais notificação: a lista de conversas (não lidas) já mostra,
@@ -229,21 +231,22 @@ export class Notificador {
    * Aviso de sistema para a gestão (administração, direção e gerência): sino + push, tipo "falha".
    * A chave garante que o mesmo aviso sai uma vez só para cada pessoa (ex.: uma queda do WhatsApp).
    */
-  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string }): Promise<number> {
+  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string; tipo?: TipoNotificacao }): Promise<number> {
     let n = 0;
     for (const u of (await this.equipe()).filter((x) => ehGestor(x))) {
       if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
-      if (await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+      if (await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
     }
     return n;
   }
 
   /** msg-agendada: aviso direto para uma pessoa (ex.: a mensagem que ela agendou não saiu). Sino + push, tipo "falha". */
-  async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string }): Promise<boolean> {
+  /** atendimento-extra: `tipo` e `vista` opcionais (ex.: "reuniao" abrindo a Agenda). */
+  async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string; vista?: string; tipo?: TipoNotificacao }): Promise<boolean> {
     const u = (await this.equipe()).find((x) => x.id === usuarioId);
     if (!u) return false;
     if (a.chave && (await this.o.armazem.existeChave(u.id, a.chave))) return false;
-    return Boolean(await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, ...(a.conversaId ? { conversaId: a.conversaId } : {}), ...(a.chave ? { chave: a.chave } : {}) }));
+    return Boolean(await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, ...(a.conversaId ? { conversaId: a.conversaId } : {}), ...(a.vista ? { vista: a.vista } : {}), ...(a.chave ? { chave: a.chave } : {}) }));
   }
 
   // ---------------------------------------------------------------- relógio
@@ -388,6 +391,12 @@ export class Notificador {
     if (!this.o.push) return 0;
     const p = prefs ?? (await this.prefsDe(n.usuarioId));
     if (!p.push || emNaoPerturbe(p, this.agora())) return 0;
+    // conversa-extra: conversa silenciada por esta pessoa = nada de push dela (o aviso continua no sino).
+    // Lembrete de ligação foi a própria pessoa que pediu: esse continua tocando.
+    if (n.conversaId && n.tipo !== 'lembrete_ligacao' && this.o.silenciaram) {
+      const quem = await this.o.silenciaram(n.conversaId, this.agora()).catch(() => new Set<string>());
+      if (quem.has(n.usuarioId)) return 0;
+    }
     const inscricoes = await this.o.armazem.inscricoes(n.usuarioId);
     if (!inscricoes.length) return 0;
     const chaves = await this.o.push.chaves.obter();

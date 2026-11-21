@@ -1056,7 +1056,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   <aside class="lateral" id="lateral" aria-label="Menu">
     <div class="lt-topo">
       <picture class="lt-marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="" width="40" height="40"></picture>
-      <div class="lt-nome"><b>Sintonia</b><span id="lt-empresa">Império Progressivas</span></div>
+      <div class="lt-nome"><b>Sintonia</b><span id="lt-empresa"></span></div>
       <button class="lt-recolher" id="lt-recolher" title="Recolher menu" aria-label="Recolher menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>
     </div>
     <label class="lt-busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="lt-busca" type="search" placeholder="Buscar cliente" aria-label="Buscar cliente"><kbd>⌘K</kbd></label>
@@ -1114,12 +1114,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       <div class="lt-grupo" data-grupo="automacoes">
         <button class="lt-cab" type="button" aria-expanded="false" title="Automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <!-- automacoes-ordem: Chatbot, Fluxos, Follow-up, Agente de IA, Pesquisa de satisfação -->
+          <!-- automacoes-ordem: Chatbot, Fluxos, Follow-up, Agente de IA, Pesquisa de satisfação (+ atendimento-extra: Modelos prontos, Mensagens agendadas) -->
           <button class="so-gestao nav lt-item" data-vista="bot" title="Chatbot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span class="lt-rot">Chatbot</span></button>
           <button class="so-gestao nav lt-item" data-vista="automacoes" title="Fluxos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 3 3v6.5M6 8.5V15a3 3 0 0 0 3 3h6.5"/></svg><span class="lt-rot">Fluxos</span></button>
           <button class="so-gestao lt-item" id="lt-followup" type="button" title="Follow-up: lembretes para quem parou de responder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2.5h6"/></svg><span class="lt-rot">Follow-up</span></button>
           <button class="so-gestao nav lt-item" data-vista="ia" id="lt-ia-config" title="Agente de IA: agentes, treinamento e memória"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Agente de IA</span></button>
           <button class="so-gestao lt-item" id="lt-nps" type="button" title="Pesquisa de satisfação: nota de 0 a 10 ao finalizar o atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg><span class="lt-rot">Pesquisa de satisfação</span></button>
+          <!-- atendimento-extra: o que mais é automático e tinha ficado fora do grupo (levam às telas que já existem) -->
+          <button class="so-gestao lt-item" id="lt-auto-modelos" type="button" title="Modelos prontos: pós-venda, aniversário, régua de mensagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M17 13.5v7M13.5 17h7"/></svg><span class="lt-rot">Modelos prontos</span></button>
+          <button class="so-gestao lt-item" id="lt-auto-agendadas" type="button" title="Mensagens agendadas: o que vai sair sozinho, de toda a equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/></svg><span class="lt-rot">Mensagens agendadas</span></button>
         </div></div>
       </div>
 
@@ -1372,7 +1375,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   <p class="info" style="margin:0 4px 10px">As tags aparecem no topo das Conversas como filtros. Toque numa tag para mudar o nome ou a cor.</p>
   <div class="folha-lista" id="tg-lista"></div>
   <form id="f-tag" class="tag-form">
-    <input id="tg-nome" maxlength="30" placeholder="Nova tag (ex.: Progressiva, VIP, Instagram)" autocomplete="off" required>
+    <input id="tg-nome" maxlength="30" placeholder="Nova tag (ex.: VIP, Instagram, Indicação)" autocomplete="off" required>
     <div class="cores" id="tg-cores"></div>
     <div class="rodape"><button type="button" class="botao leve" id="tg-cancelar" hidden>Cancelar</button><button class="botao" id="tg-ok">Criar tag</button></div>
     <div class="erro-txt" id="tg-erro"></div>
@@ -1423,8 +1426,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <h2>Nova conversa de teste</h2>
     <p class="info" style="margin:0">Simula uma cliente chamando no WhatsApp. Nada é enviado para fora da Sintonia.</p>
     <label>Nome da cliente <input name="nome" required minlength="2" value="Cliente Teste"></label>
-    <label>Unidade <select name="unidade"><option value="norte">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
-    <label>Primeira mensagem <textarea name="texto" rows="3" required>Oi! Quanto custa a progressiva? Queria marcar pra sábado.</textarea></label>
+    <label>Unidade <select name="unidade" data-unidades="ativas"></select></label><!-- unidades: opções vêm de /api/unidades -->
+    <label>Primeira mensagem <textarea name="texto" rows="3" required>Oi! Quanto custa? Queria marcar um horário pra sábado.</textarea></label>
     <div class="rodape"><button class="botao leve" value="cancelar" formnovalidate>Cancelar</button><button class="botao" value="ok">Criar</button></div>
   </form>
 </dialog>
@@ -1434,7 +1437,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <h2>Agendar</h2>
     <div id="ag-pendente" class="ag-pendente" hidden></div>
     <div id="ag-corpo" style="display:grid;gap:12px">
-      <label>Unidade <select id="ag-unidade"><option value="norte">Salvador Norte Shopping</option><option value="sumare">Shopping Sumaré</option></select></label>
+      <label>Unidade <select id="ag-unidade" data-unidades="ativas"></select></label><!-- unidades: opções vêm de /api/unidades -->
       <label>Serviço <select id="ag-servico"></select></label>
       <label>Profissional <select id="ag-prof"><option value="">Qualquer uma</option></select></label>
       <label>Data <input type="date" id="ag-data"></label>
@@ -1560,7 +1563,30 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const $ = (id) => document.getElementById(id);
   const ETAPAS = [['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
   const NOME_ETAPA = Object.fromEntries(ETAPAS);
-  const UNIDADE = { norte: 'Salvador Norte', sumare: 'Sumaré', feira: 'Feira de Santana' };
+  /* unidades: nomes das unidades vêm do cadastro (Empresa › Unidades, /api/unidades). Um único ponto para o app
+     inteiro: UNIDADE[id] = nome e UNIDADES = lista na ordem do cadastro ({ id, nome, ativa }). As telas usam
+     ui.UNIDADE, ui.unidades(), ui.unidadesAtivas() e ui.nomeUnidade(id); quando o cadastro muda, sai o evento "unidades". */
+  const UNIDADE = {};
+  const UNIDADES = [];
+  async function carregarUnidades() {
+    const r = await api('/api/unidades').catch(() => null);
+    if (!r || !Array.isArray(r.unidades)) return UNIDADES;
+    for (const k of Object.keys(UNIDADE)) delete UNIDADE[k];
+    UNIDADES.splice(0, UNIDADES.length, ...r.unidades.map((u) => ({ id: u.id, nome: u.nome, ativa: u.ativa !== false })));
+    for (const u of UNIDADES) UNIDADE[u.id] = u.nome;
+    // Selects marcados com data-unidades ganham as opções (texto sempre por textContent).
+    document.querySelectorAll('select[data-unidades]').forEach((sel) => {
+      const atual = sel.value;
+      const lista = sel.dataset.unidades === 'todas' ? UNIDADES : UNIDADES.filter((u) => u.ativa);
+      sel.replaceChildren(...lista.map((u) => Object.assign(document.createElement('option'), { value: u.id, textContent: u.nome })));
+      if (lista.some((u) => u.id === atual)) sel.value = atual;
+    });
+    dispatchEvent(new Event('unidades'));
+    return UNIDADES;
+  }
+  const unidadesAtivas = () => UNIDADES.filter((u) => u.ativa);
+  const nomeUnidade = (id) => UNIDADE[id] || id || '';
+  /* fim unidades */
   const MODO = { ia: 'Agente de IA', copiloto: 'Sugestões', humano: 'Minha resposta' };
   const CORES = ['#00a884', '#027eb5', '#7f66ff', '#e26b2c', '#c4407b', '#1f8a70', '#a0522d', '#5b6ee1'];
   const CHECK = '<svg viewBox="0 0 16 11" fill="currentColor"><path d="M11.07.65 4.98 8.15 2.7 5.92a.5.5 0 0 0-.7.71l2.67 2.6a.5.5 0 0 0 .73-.04L11.84 1.3a.5.5 0 0 0-.77-.64Zm3.79 0-6.08 7.5-.9-.88-.7.71 1.29 1.25a.5.5 0 0 0 .73-.04L15.63 1.3a.5.5 0 0 0-.77-.64Z"/></svg>';
@@ -1723,6 +1749,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca)) && !window.SintoniaListaServidor?.achou(c.id)) return false; /* robustez: achada pela busca do servidor (ex.: texto da mensagem) */
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
+    if (window.SintoniaConversaExtra && !window.SintoniaConversaExtra.passa(c)) return false; /* conversa-extra: arquivadas ficam em "Arquivadas" */
     return true;
   });
   // Ícone de origem ao lado do nome só quando a origem é conhecida (sem "?" repetido em toda linha).
@@ -1760,14 +1787,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const caixa = $('itens');
     contarRadar();
     const lista = filtradas();
+    const cxTopo = window.SintoniaConversaExtra?.topoLista?.(); /* conversa-extra: linha "Arquivadas (N)" no topo (ou o aviso dentro do arquivo) */
     if (!lista.length) {
-      caixa.replaceChildren(); linhasFz.clear();
+      caixa.replaceChildren(...(cxTopo ? [cxTopo] : [])); linhasFz.clear();
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
       if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Configurações › Conexões. Para mostrar o sistema, use Configurações › Dados de demonstração.' }));
       else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
     }
-    const hoje = new Date().toDateString(); const desejadas = []; const vistas = new Set();
+    const hoje = new Date().toDateString(); const desejadas = cxTopo ? [cxTopo] : []; const vistas = new Set();
     for (const c of lista) {
       const ass = hoje + '|' + assinaturaLinha(c, estado.selecao);
       const velha = linhasFz.get(c.id);
@@ -1786,6 +1814,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const tsHora = horaLista(u ? u.em : c.atualizadaEm); const tsSelo = window.SintoniaTelas?.esperaSelo;
       if (tsSelo) { const ch = tsSelo.chegou(c, tsHora); if (ch) l2.append(ch); }
       else if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
+      if (c.silenciada && window.SintoniaConversaExtra) l2.append(window.SintoniaConversaExtra.sino(c)); /* conversa-extra: sino cortado */
       if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       const linha = (el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
@@ -1854,7 +1883,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       chip('Minhas', estado.quem === 'minhas', () => { estado.quem = estado.quem === 'minhas' ? '' : 'minhas'; }),
       chip('Sem atendente', estado.quem === 'sem', () => { estado.quem = estado.quem === 'sem' ? '' : 'sem'; }))];
     partes.push(grupo('etapa', 'Etapa do CRM', ...ETAPAS.map(([id, nome]) => chip(nome, estado.etapasFiltro.has(id), () => { estado.etapasFiltro.has(id) ? estado.etapasFiltro.delete(id) : estado.etapasFiltro.add(id); }))));
-    const unidades = [...new Set(estado.conversas.map((c) => c.unidade))];
+    const unidades = [...new Set(estado.conversas.map((c) => c.unidade))].sort((a, b) => UNIDADES.findIndex((u) => u.id === a) - UNIDADES.findIndex((u) => u.id === b)); /* unidades: na ordem do cadastro */
     if (unidades.length > 1) partes.push(grupo('unidade', 'Unidade', chip('Todas', !estado.unidadeFiltro, () => { estado.unidadeFiltro = ''; }),
       ...unidades.map((u) => chip(UNIDADE[u] || u, estado.unidadeFiltro === u, () => { estado.unidadeFiltro = estado.unidadeFiltro === u ? '' : u; }))));
     if (estado.tags.length) partes.push(grupo('etiqueta', 'Etiqueta',
@@ -2347,11 +2376,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
     if (a.situacao === 'grande') return linhaDoc(a, `Arquivo grande demais para guardar${a.tamanho ? ' (' + tamanhoTxt(a.tamanho) + ')' : ''}. Veja no celular da loja.`);
     if (a.situacao === 'falhou') {
-      const tentar = el('button', { type: 'button', text: 'Tentar de novo', onclick: async (e) => {
+      /* atendimento-extra: também vale para fotos e áudios antigos do histórico, que ficam para baixar com o botão. */
+      const tentar = el('button', { type: 'button', text: 'Baixar', onclick: async (e) => {
         e.currentTarget.disabled = true;
         try { await post(`${url}/baixar`); await atualizar(); } catch (x) { toast(x.message); }
       } });
-      return linhaDoc(a, 'Não foi possível baixar', tentar);
+      return linhaDoc(a, 'Arquivo não baixado', tentar);
     }
     if (a.tipo === 'imagem' || a.tipo === 'figurinha') {
       const img = el('img', { src: url, alt: a.tipo === 'imagem' ? (a.legenda || 'Foto') : 'Figurinha', loading: 'lazy', decoding: 'async' });
@@ -2665,7 +2695,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('menu-mais').hidden = true;
     const c = estado.detalhe?.conversa; if (!c) return;
     $('ag-erro').textContent = ''; estado.horario = null;
-    $('ag-unidade').value = c.unidade === 'sumare' ? 'sumare' : 'norte';
+    $('ag-unidade').value = unidadesAtivas().some((u) => u.id === c.unidade) ? c.unidade : (unidadesAtivas()[0]?.id || ''); /* unidades */
     $('ag-nome').value = c.nome || ''; $('ag-data').value = hojeISO(); $('ag-data').min = hojeISO();
     $('d-agendar').showModal();
     await prepararAgenda();
@@ -2811,7 +2841,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       ...(conduzindo.length ? conduzindo.slice(0, 30).map((c) => el('button', { class: 'item', onclick: () => { mostrar('conversas'); abrir(c.id); } }, avatarDaLista(c), el('div', { class: 'corpo' }, el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), el('span', { class: 'hora', text: horaLista(c.ultima ? c.ultima.em : c.atualizadaEm) })), el('div', { class: 'l2' }, el('span', { class: 'previa', text: c.ultima ? c.ultima.texto : '' }))))) : [el('p', { class: 'info', style: 'padding:0 4px', text: 'Nenhuma conversa com o Agente de IA agora. Escolha "Agente de IA" no modo da conversa para a IA conduzir.' })]),
       el('h3', { class: 'secao', text: 'O que ela fez hoje' }),
       ...(deIA.length ? deIA.slice(0, 30).map((a) => el('div', { class: 'linha-ligacao' }, el('b', { text: a.titulo }), el('span', { text: ` · ${a.cliente || ''} · ${hm(a.em)}${a.detalhe ? ' · ' + a.detalhe : ''}` }))) : [el('p', { class: 'info', style: 'padding:0 4px', text: 'Ainda nada hoje.' })]),
-      ...(ehGestor(estado.eu) ? [el('h3', { class: 'secao', text: 'Treinamento' }), el('p', { class: 'info', style: 'padding:0 4px', text: 'Em breve aqui: o que a IA sabe da Império (serviços, regras, jeito de falar) para você editar e testar.' })] : []),
+      ...(ehGestor(estado.eu) ? [el('h3', { class: 'secao', text: 'Treinamento' }), el('p', { class: 'info', style: 'padding:0 4px', text: 'Em breve aqui: o que a IA sabe da empresa (serviços, regras, jeito de falar) para você editar e testar.' })] : []),
     );
   }
 
@@ -2853,7 +2883,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function atualizar() {
     try { const p = pedidoLista || api('/api/conversas'); pedidoLista = null; const l = await p; estado.conversas = window.SintoniaListaServidor ? window.SintoniaListaServidor.juntar(l) : l; } catch { return; } /* robustez: junta as páginas mais antigas e os achados da busca */
     if (!estado.conversasDoServidor) { estado.conversasDoServidor = true; setTimeout(guardarLista, 1500); }
-    const n = estado.conversas.filter(naoLida).length;
+    const n = estado.conversas.filter((c) => naoLida(c) && !c.arquivada).length; /* conversa-extra: arquivadas não contam no número do menu */
     $('contador').hidden = !n; $('contador').textContent = String(n);
     $('lt-qtd').hidden = !n; $('lt-qtd').textContent = String(n);
     $('qtd-nao-lidas').textContent = n ? String(n) : '';
@@ -3074,11 +3104,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       ] },
       gestor && { id: 'automacoes', titulo: 'Automações', ic: IC.raio, cor: '#f5b800', escuroIc: true, itens: [
         pode('automacoes') && { nome: 'Chatbot', sub: 'Perguntas e botões', ic: IC.respostas, cor: '#0a8f7a', acao: () => mostrar('bot') },
-        pode('automacoes') && { nome: 'Fluxos', sub: 'Gatilhos e mensagens automáticas', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => mostrar('automacoes') },
+        pode('automacoes') && { nome: 'Fluxos', sub: 'Gatilhos e mensagens automáticas', ic: IC.raio, cor: '#f5b800', escuroIc: true, acao: () => { window.SintoniaTelas?.automacoes?.irAba?.('fluxos', false); mostrar('automacoes'); } },
         { nome: 'Agente de IA', sub: 'Agentes, treinamento e memória', ic: IC.ia, cor: '#0ffcbe', escuroIc: true, acao: () => mostrar('ia') },
-        pode('automacoes') && { nome: 'Follow-up', sub: 'Lembretes para quem parou de responder', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('automacoes') },
+        pode('automacoes') && { nome: 'Follow-up', sub: 'Quem parou de responder e confirmação de agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => { window.SintoniaTelas?.automacoes?.irAba?.('followup', false); mostrar('automacoes'); } },
         /* nps-posvenda: configuração da pesquisa de satisfação */
         pode('automacoes') && window.SintoniaTelas?.nps && { nome: 'Pesquisa de satisfação', sub: 'Nota de 0 a 10 ao finalizar o atendimento', ic: IC.relatorio, cor: '#d97706', acao: () => window.SintoniaTelas.nps.configurar(window.Sintonia.ui) },
+        /* atendimento-extra: modelos prontos (pós-venda, aniversário, régua) e as mensagens agendadas de toda a equipe */
+        pode('automacoes') && { nome: 'Modelos prontos', sub: 'Pós-venda, aniversário e régua de mensagens', ic: I('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M17 13.5v7M13.5 17h7"/>'), cor: '#8b5cf6', acao: () => { window.SintoniaTelas?.automacoes?.irAba?.('modelos', false); mostrar('automacoes'); } },
+        { nome: 'Mensagens agendadas', sub: 'O que vai sair sozinho, de toda a equipe', ic: I('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/>'), cor: '#106ebe', acao: () => { window.SintoniaTelas?.agendadas?.verTodas?.(); mostrar('agendadas'); } },
       ] },
       gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
         { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
@@ -3335,7 +3368,23 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       try { const l = await api('/api/funis'); funis = Array.isArray(l) ? l : []; } catch { /* sem funis: fica só o item CRM */ }
       desenharFunis();
     }
-    $('lt-followup')?.addEventListener('click', () => mostrar('automacoes'));
+    /* atendimento-extra: Follow-up abre a aba Follow-up (antes caía em Fluxos); Fluxos volta para a aba Fluxos. */
+    const irAutomacoes = (aba) => { const A = window.SintoniaTelas?.automacoes; if (A?.irAba) A.irAba(aba); else mostrar('automacoes'); };
+    $('lt-followup')?.addEventListener('click', () => irAutomacoes('followup'));
+    $('lt-auto-modelos')?.addEventListener('click', () => irAutomacoes('modelos'));
+    $('lt-auto-agendadas')?.addEventListener('click', () => { window.SintoniaTelas?.agendadas?.verTodas?.(); mostrar('agendadas'); });
+    document.querySelector('.lt-item[data-vista="automacoes"]')?.addEventListener('click', () => window.SintoniaTelas?.automacoes?.irAba?.('fluxos', false), true);
+    // Com a aba Follow-up aberta, o item Follow-up fica marcado no menu (e na trilha do topo) no lugar de Fluxos.
+    const marcarAbaAuto = () => {
+      const fu = estado.vista === 'automacoes' && window.SintoniaTelas?.automacoes?.aba?.() === 'follow-up';
+      if (fu) { document.querySelector('#lt-grupos .lt-item[data-vista="automacoes"]')?.removeAttribute('aria-current'); $('lt-followup')?.setAttribute('aria-current', 'page'); }
+      else {
+        $('lt-followup')?.removeAttribute('aria-current');
+        if (estado.vista === 'automacoes') document.querySelector('#lt-grupos .lt-item[data-vista="automacoes"]')?.setAttribute('aria-current', 'page');
+      }
+      try { trilha(); } catch { /* sem trilha */ }
+    };
+    document.addEventListener('click', () => setTimeout(marcarAbaAuto, 30));
     $('lt-nps')?.addEventListener('click', () => { if (window.SintoniaTelas?.nps?.configurar) window.SintoniaTelas.nps.configurar(window.Sintonia.ui); else toast('A pesquisa de satisfação ainda está carregando. Tente de novo.'); });
     $('lt-novo-funil').addEventListener('click', async () => {
       mostrar('funil');
@@ -3409,11 +3458,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     document.querySelectorAll('#lateral .so-admin').forEach((e) => { e.hidden = !['admin', 'direcao'].includes(eu.papel); });
     // A Serena (chat) é de todos; a configuração da IA fica em Configurações › Inteligência Artificial (gestão).
     window.SintoniaMenu?.arrumar();
-    api('/api/empresa').then((emp) => { if (emp?.nome) $('lt-empresa').textContent = emp.nome; }).catch(() => {});
+    api('/api/empresa').then((emp) => { if (emp?.nome) { $('lt-empresa').textContent = emp.nome; window.Sintonia.ui.empresa.nome = emp.nome; } }).catch(() => {});
   }
 
   // Ferramentas para as telas em arquivos próprios (/telas/*.js): cada uma se registra em window.SintoniaTelas.
   window.Sintonia.ui = { api, post, el, toast, atualizar, avatar, avatarDaLista, nomeDe, formatarTel, hm, horaLista, quando, mostrar, abrir: (id) => { mostrar('conversas'); abrir(id); }, agendar: async (id) => { mostrar('conversas'); await abrir(id); abrirAgendar(); }, estado, ehGestor: (u) => ehGestor(u), UNIDADE, NOME_ETAPA, ETAPAS, MODO };
+  /* unidades: lista do cadastro e o nome da empresa para as telas (nada fixo de uma empresa só) */
+  Object.assign(window.Sintonia.ui, { unidades: () => UNIDADES, unidadesAtivas, nomeUnidade, carregarUnidades, empresa: { nome: '' } });
   // Tela de conversa (/telas/conversa-extras.js): pôr texto no campo e recarregar a conversa.
   Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
   Object.assign(window.Sintonia.ui, { naoLida, esperando, textoPrevia }); /* conversas-gestos: arrastar e segurar a linha da lista */
@@ -3424,7 +3475,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     pedidoLista = api('/api/conversas'); pedidoLista.catch(() => {});
     const pSituacao = api('/api/situacao').catch(() => ({}));
     const pFotos = window.SintoniaFotos.carregar();
+    const pUnidades = carregarUnidades(); /* unidades */
     estado.eu = await api('/api/auth/eu');
+    await pUnidades; /* unidades: nomes prontos antes de desenhar */
     $('nav-config').title = `Conta · ${estado.eu.nome}`;
     preencherLateral();
     $('nav-equipe').hidden = true;
@@ -3433,7 +3486,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const avisos = [];
     if (!estado.situacao.numerosReais) avisos.push('Modo demonstração: WhatsApp da loja ainda não conectado');
     if (!estado.situacao.iaLigada) avisos.push('IA desligada (falta a chave)');
-    if (!estado.situacao.agendaLigada) avisos.push('Agenda Trinks desligada (falta a chave)');
+    if (!estado.situacao.agendaLigada) avisos.push('Agenda desligada (Conexões › Agenda)'); /* unidades: qualquer sistema de agenda */
     estado.avisos = avisos;
     $('nova-teste-cel').hidden = false;
     await pFotos;
@@ -3596,7 +3649,10 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
 <script src="/telas/whatsapp-saude.js" defer></script>
 <script src="/telas/equipe.js" defer></script><!-- equipe: Conversas de equipe (chat interno) -->
-<script src="/telas/conversa-ux.js" defer></script><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/produtos-lead.js" defer></script><!-- produtos-lead: produtos e serviços vinculados ao lead (ficha e cartão do Pipeline) -->
+<script src="/telas/conversa-ux.js" defer></script>
+<script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
+<script src="/telas/conversa-extra.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)

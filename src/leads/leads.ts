@@ -4,7 +4,7 @@ import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { contatoVazio, validarCampos, type ArmazemContatos, type CampoContato, type Contato } from '../contatos/contatos.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Tags } from '../tags/tags.js';
-import { UNIDADES } from '../unidades.js';
+import { idsUnidades, unidadeDe, unidadePorNome, zUnidade } from '../unidades.js';
 import { gerarCsv } from '../util/csv.js';
 import { dataISO, horaHHmm } from '../util/tempo.js';
 import type { ArmazemLeads } from './armazem.js';
@@ -30,10 +30,13 @@ export interface OpcoesLeads {
   origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
   /** Trava da conversa (a mesma da Sintonia): ninguém grava nela durante a mescla. */
   comConversa?: <T>(id: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
+  /** produtos-lead: produtos vinculados de cada conversa ("2× Escova; Hidratação"), coluna "Produtos" do exportar. */
+  produtos?: (conversaIds: string[]) => Promise<Map<string, string>>;
   agora: () => Date;
 }
 
-export const UNIDADES_LEADS = ['norte', 'sumare'] as const;
+/** Unidades que recebem leads: as ativas do cadastro (Empresa › Unidades). */
+export const unidadesLeads = (empresaId?: string) => idsUnidades(empresaId);
 
 export interface FiltroLeads {
   unidade?: UnidadeId;
@@ -104,7 +107,7 @@ export type LinhaImportacao = z.infer<typeof LinhaImportacao>;
 
 export const PedidoImportacao = z.object({
   linhas: z.array(LinhaImportacao).min(1).max(5000),
-  unidade: z.enum(UNIDADES_LEADS),
+  unidade: zUnidade({ ativa: true }),
   etapa: z.enum(ETAPAS).default('novo_lead'),
   tagId: z.string().min(1).optional(),
   /** Cria também a conversa (sem mensagem) para o lead aparecer no CRM e no funil. */
@@ -138,12 +141,18 @@ export interface RelatorioImportacao {
 
 const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-function unidadeDe(v: string | null | undefined): UnidadeId | null | undefined {
+/** Chave da empresa ligada ao contato (a mesma de Clientes › Empresas): CNPJ completo, senão o nome sem acento. */
+export function chaveEmpresaContato(e: { nomeFantasia?: string; razaoSocial?: string; cnpj?: string }): string | null {
+  const nome = (e.nomeFantasia || e.razaoSocial || '').trim();
+  const cnpj = (e.cnpj || '').replace(/\D/g, '');
+  if (!nome && !cnpj) return null;
+  return cnpj.length === 14 ? `cnpj:${cnpj}` : `nome:${semAcento(nome).replace(/\s+/g, ' ')}`;
+}
+
+/** Unidade escrita na planilha (nome ou id do cadastro); null = não reconhecida. */
+function unidadeDoTexto(v: string | null | undefined): UnidadeId | null | undefined {
   if (!v || !v.trim()) return undefined;
-  const s = semAcento(v);
-  if (s.includes('norte')) return 'norte';
-  if (s.includes('sumare')) return 'sumare';
-  return null;
+  return unidadePorNome(semAcento(v))?.id ?? null;
 }
 
 function etapaDe(v: string | null | undefined): Etapa | null | undefined {
@@ -278,18 +287,23 @@ export class Leads {
     const { linhas, campos } = await this.linhas(escopo, f);
     const valor = (c: CampoContato, v: unknown) => (v === null || v === undefined ? '' : c.tipo === 'data' && typeof v === 'string' ? v.split('-').reverse().join('/') : (v as string | number | boolean));
     const comOrigem = Boolean(this.o.origens);
+    const comProdutos = Boolean(this.o.produtos);
+    const produtos = this.o.produtos
+      ? await this.o.produtos(linhas.map((l) => l.conversaId).filter((x): x is string => Boolean(x))).catch(() => new Map<string, string>())
+      : new Map<string, string>();
     const csv = gerarCsv(
-      ['Nome', 'Telefone', 'E-mail', 'Unidade', 'Etapa', 'Tags', 'Dona', 'Criado em', ...(comOrigem ? ['Origem'] : []), ...campos.map((c) => c.nome)],
+      ['Nome', 'Telefone', 'E-mail', 'Unidade', 'Etapa', 'Tags', 'Dona', 'Criado em', ...(comOrigem ? ['Origem'] : []), ...(comProdutos ? ['Produtos'] : []), ...campos.map((c) => c.nome)],
       linhas.map((l) => [
         l.nome,
         l.telefone,
         l.email,
-        l.unidade ? UNIDADES[l.unidade].nome : '',
+        l.unidade ? unidadeDe(l.unidade).nome : '',
         l.etapa ? NOME_ETAPA[l.etapa] : '',
         l.tags.join(', '),
         l.dona,
         l.criadoEm ? `${dataISO(l.criadoEm).split('-').reverse().join('/')} ${horaHHmm(l.criadoEm)}` : '',
         ...(comOrigem ? [l.conversaId ? (NOME_ORIGEM[l.origem ?? 'desconhecido'] ?? l.origem ?? '') : ''] : []),
+        ...(comProdutos ? [l.conversaId ? (produtos.get(l.conversaId) ?? '') : ''] : []),
         ...campos.map((c) => valor(c, l.campos[c.id])),
       ]),
     );
@@ -310,11 +324,11 @@ export class Leads {
       const e = f.empresa ?? {};
       const nome = (e.nomeFantasia || e.razaoSocial || '').trim();
       const cnpj = (e.cnpj || '').replace(/\D/g, '');
-      if (!nome && !cnpj) continue;
+      const chave = chaveEmpresaContato(e);
+      if (!chave) continue;
       const todas = conversasDoTel.get(f.telefone) ?? [];
       const vistas = todas.filter((c) => noEscopo(escopo, c));
       if (todas.length ? !vistas.length : Boolean(escopo.unidades || escopo.donaOuSemDona)) continue;
-      const chave = cnpj.length === 14 ? `cnpj:${cnpj}` : `nome:${semAcento(nome).replace(/\s+/g, ' ')}`;
       const cnpjBonito = cnpj.length === 14 ? cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : e.cnpj?.trim() || null;
       const g = grupos.get(chave) ?? { chave, nome: '', razaoSocial: null, cnpj: cnpjBonito, site: null, total: 0, contatos: [] };
       // Nome do grupo: nome fantasia antes da razão social; entre iguais, o de quem tem conversa.
@@ -331,6 +345,14 @@ export class Leads {
       grupos.set(chave, g);
     }
     return [...grupos.values()].sort((a, x) => x.total - a.total || a.nome.localeCompare(x.nome, 'pt-BR'));
+  }
+
+  /** produtos-lead: telefones dos contatos ligados a estas empresas (filtro "propriedade vinculada" do Pipeline). */
+  async telefonesDasEmpresas(chaves: string[]): Promise<string[]> {
+    const quero = new Set(chaves);
+    if (!quero.size) return [];
+    const fichas = await this.o.armazem.contatos(this.o.empresaId);
+    return fichas.filter((f) => quero.has(chaveEmpresaContato(f.empresa ?? {}) ?? '')).map((f) => f.telefone);
   }
 
   /** Telefone já cadastrado com a mesma chave (com/sem 55, com/sem 9), ou undefined. */
@@ -397,7 +419,7 @@ export class Leads {
         if (e.success) email = e.data;
         else avisos.push('E-mail inválido (ficou de fora)');
       }
-      const unidadeLinha = unidadeDe(l.unidade);
+      const unidadeLinha = unidadeDoTexto(l.unidade);
       if (unidadeLinha === null) avisos.push(`Unidade "${l.unidade}" não reconhecida (usada a padrão)`);
       const unidade = unidadeLinha || p.unidade;
       const etapaLinha = etapaDe(l.etapa);
@@ -452,7 +474,7 @@ export class Leads {
       let conversa = b.conversas.find((c) => c.telefone === telefone && c.unidade === unidade);
       const criarConversa = p.criarConversa && !conversa;
       const canalId = criarConversa ? this.o.canalDa(unidade) : undefined;
-      if (criarConversa && !canalId) avisos.push(`Sem número de WhatsApp na unidade ${UNIDADES[unidade].nome}: conversa não criada`);
+      if (criarConversa && !canalId) avisos.push(`Sem número de WhatsApp na unidade ${unidadeDe(unidade).nome}: conversa não criada`);
       let mudouTags = false;
 
       if (!p.simular) {

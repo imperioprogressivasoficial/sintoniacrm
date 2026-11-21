@@ -10,7 +10,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ABAS = [['atendentes', 'Por atendente'], ['equipe', 'Equipe'], ['fila', 'Sem resposta agora']];
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const CHAVE = 'sintonia.desempenho.filtro';
-  const UNI = { norte: 'Norte', sumare: 'Sumaré' };
+  /* unidades: nomes do cadastro (Empresa › Unidades), o mesmo objeto do app (ui.UNIDADE) */
+  const UNI = window.Sintonia?.ui?.UNIDADE || {};
 
   const CSS = `
   .dp-caixa.dp-caixa { grid-template-columns: minmax(0, 1fr); overflow-x: hidden; padding: 14px 16px 0; gap: 0; }
@@ -258,7 +259,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ranking = painel(ui, 'Ranking de atendentes', [], ui.el('div', { style: 'margin:-4px 0 14px' }, trilhoC),
       crit === 'tempo' ? barras(ui, ordenadas, (a) => a.primeiraResposta.mediaMs / 60000, (a) => a.nome, (v) => fmtMin(v)) : barras(ui, ordenadas, fC, (a) => a.nome, fmtC));
     const ia = d.iaEquipe.ia, eq = d.iaEquipe.equipe;
-    const lado = (t, x) => el('div', {}, el('h3', { text: t }), el('p', {}, el('span', { text: 'Mensagens' }), el('b', { text: fmtN(x.mensagens) })), el('p', {}, el('span', { text: '1ª respostas' }), el('b', { text: fmtN(x.primeiras) })), el('p', {}, el('span', { text: '1ª resposta média' }), el('b', { text: fmtT(x.primeiraMediaMs) })), el('p', {}, el('span', { text: 'Agendamentos' }), el('b', { text: fmtN(x.agendamentos) })), el('p', {}, el('span', { text: 'Valor' }), el('b', { text: fmtR(x.valor) })));
+    const lado = (t, x) => el('div', {}, t === 'IA' && window.SintoniaSerenaSelo ? el('h3', { style: 'display:flex;align-items:center;gap:8px' }, window.SintoniaSerenaSelo({ tam: 22, titulo: 'Serena (IA)' }), document.createTextNode('Serena (IA)')) : el('h3', { text: t }), /* conversa-extra */ el('p', {}, el('span', { text: 'Mensagens' }), el('b', { text: fmtN(x.mensagens) })), el('p', {}, el('span', { text: '1ª respostas' }), el('b', { text: fmtN(x.primeiras) })), el('p', {}, el('span', { text: '1ª resposta média' }), el('b', { text: fmtT(x.primeiraMediaMs) })), el('p', {}, el('span', { text: 'Agendamentos' }), el('b', { text: fmtN(x.agendamentos) })), el('p', {}, el('span', { text: 'Valor' }), el('b', { text: fmtR(x.valor) })));
     const tot = d.totais;
     const valorBloco = painel(ui, 'Com valor × sem valor', [], barras(ui, [{ n: 'Com valor', v: tot.comValor }, { n: 'Sem valor', v: tot.semValor }], (x) => x.v, (x) => x.n), el('p', { class: 'dp-legenda', text: `Soma: ${fmtR(tot.valor)} · valor gravado no agendamento ou da tabela de preços do Comercial.` }));
     const tl = el('div', { class: 'dp-tl' }, el('div', { class: 'dp-tl-l' }, el('span', { text: '' }), ...Array.from({ length: 24 }, (_, h) => el('span', { style: 'text-align:center;color:var(--sub)', text: h % 3 === 0 ? String(h) : '' }))));

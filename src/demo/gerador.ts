@@ -3,7 +3,7 @@ import { ETAPAS, type Conversa, type Etapa, type Mensagem, type ModoAtendimento 
 import type { Contato, TipoCampo } from '../contatos/contatos.js';
 import type { Evento, TipoEvento } from '../store/repositorio.js';
 import { ajustarParaJanelaAtiva, estaAberta, proximaAbertura } from '../engine/horario.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { canalTesteDa } from '../channels/teste.js';
 import { bahia, DIA, HORA, MIN, nomeDiaSemana, partesBahia } from '../util/tempo.js';
 import {
@@ -188,7 +188,7 @@ class Roteiro {
     return this.g.c.agora.getTime();
   }
   private aberta(t = this.t) {
-    return estaAberta(UNIDADES[this.p.unidade], new Date(t));
+    return estaAberta(unidadeDe(this.p.unidade), new Date(t));
   }
   private ev(tipo: TipoEvento, dados?: Record<string, unknown>, em = this.t) {
     this.evs.push({ tipo, conversaId: this.id, unidade: this.p.unidade, em: new Date(em), ...(dados ? { dados } : {}) });
@@ -272,7 +272,7 @@ class Roteiro {
     if (this.modo === 'humano') {
       // "Só eu": a IA nunca responde; fora do horário a atendente responde quando a loja abre.
       if (!this.aberta()) {
-        const abre = proximaAbertura(UNIDADES[this.p.unidade], new Date(this.t));
+        const abre = proximaAbertura(unidadeDe(this.p.unidade), new Date(this.t));
         if (abre) this.t = abre.getTime();
       }
       this.equipe(texto, this.s.entre(...this.p.atendente.ritmo));
@@ -478,7 +478,7 @@ export class Gerador {
       r.cliente(q.cliente, this.s.entre(1, 35));
       if (q.especial === 'gestante') {
         r.marcarTag('Gestante', r.p.atendente.nome);
-        if (r.modo === 'ia' || !estaAberta(UNIDADES[r.p.unidade], new Date(r.t))) {
+        if (r.modo === 'ia' || !estaAberta(unidadeDe(r.p.unidade), new Date(r.t))) {
           // A IA não decide sozinha: passa para a equipe, que responde quando abre.
           r.ia('Ótima pergunta! Vou pedir para nossa especialista te responder direitinho, tá? 💛', undefined, 'Fora do horário de atendimento.');
           r.evs.push({ tipo: 'passou_para_humano', conversaId: r.id, unidade: r.p.unidade, em: new Date(r.t), dados: { motivo: 'Cliente gestante: precisa da orientação da equipe' } });

@@ -12,6 +12,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import type { Tags } from '../tags/tags.js';
 import { normalizarCelular } from '../util/telefone.js';
 import { resumoConversa, resumoMensagem } from './webhooks.js';
+import { idsUnidades, zUnidade } from '../unidades.js';
 
 /**
  * O que a API pública (/api/v1) e o MCP (/mcp) fazem, num lugar só. Sempre na empresa da chave:
@@ -96,7 +97,7 @@ function paginar<T>(lista: T[], em: (x: T) => Date, id: (x: T) => string, limite
 
 // ------------------------------------------------------------------ esquemas de entrada
 
-const UNIDADE = z.enum(['norte', 'sumare', 'feira']);
+const UNIDADE = zUnidade({ ativa: true });
 export const Limite = z.coerce.number().int().min(1).max(100).default(25);
 const Telefone = z.string().trim().min(8).max(40);
 const Texto = z.string().trim().min(1, 'Escreva a mensagem.').max(4096);
@@ -251,7 +252,7 @@ export class ServicoApi {
   /** Unidade por onde falar: a pedida, senão a primeira com WhatsApp conectado. */
   private unidadePara(pedida?: UnidadeId): { unidade: UnidadeId; canalId: string } {
     if (!this.o.canalDa) throw indisponivel('O envio por número');
-    const candidatas = pedida ? [pedida] : (UNIDADE.options as UnidadeId[]);
+    const candidatas = pedida ? [pedida] : idsUnidades();
     for (const u of candidatas) {
       const c = this.o.canalDa(u);
       if ('canalId' in c) return { unidade: u, canalId: c.canalId };

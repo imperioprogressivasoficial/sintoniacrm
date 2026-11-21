@@ -252,7 +252,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   };
 
   // estado que sobrevive entre aberturas da aba
-  const teste = { msgs: [], unidade: 'norte', nome: '', enviando: false, rascunho: '' };
+  const teste = { msgs: [], unidade: '', nome: '', enviando: false, rascunho: '' }; /* unidades: '' = a primeira unidade ativa */
   let geracao = 0;
 
   // ------------------------------------------------------------ utilidades
@@ -766,8 +766,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const campo = el('textarea', { rows: '1', placeholder: ligada ? 'Escreva como se fosse a cliente…' : 'Ligue a IA para testar', 'aria-label': 'Mensagem da cliente (teste)' });
       campo.value = teste.rascunho;
       const enviarBtn = el('button', { class: 'iax-enviar', type: 'button', html: SVG.enviar, 'aria-label': 'Enviar para o teste' });
-      const unidade = el('select', { 'aria-label': 'Unidade do teste' }, ...Object.entries(ui.UNIDADE).map(([k, v]) => el('option', { value: k, text: v })));
-      unidade.value = teste.unidade;
+      const unidade = el('select', { 'aria-label': 'Unidade do teste' }, ...(ui.unidadesAtivas ? ui.unidadesAtivas().map((u) => [u.id, u.nome]) : Object.entries(ui.UNIDADE)).map(([k, v]) => el('option', { value: k, text: v })));
+      unidade.value = teste.unidade || unidade.options[0]?.value || ''; teste.unidade = unidade.value; /* unidades */
       unidade.addEventListener('change', () => { teste.unidade = unidade.value; });
       const nome = el('input', { placeholder: 'Nome da cliente (opcional)', maxlength: '60', 'aria-label': 'Nome da cliente no teste' });
       nome.value = teste.nome;
@@ -780,7 +780,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       campo.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(hover: hover)').matches) { e.preventDefault(); enviar(); } });
       enviarBtn.addEventListener('click', () => enviar());
 
-      const SUGESTOES = ['Oi! Quanto fica a progressiva?', 'Vi no Instagram, tem horário sábado?', 'Quero reclamar do atendimento'];
+      const SUGESTOES = ['Oi! Quanto fica o serviço?', 'Vi no Instagram, tem horário sábado?', 'Quero reclamar do atendimento'];
       function desenharChat() {
         const itens = [];
         if (!teste.msgs.length) {

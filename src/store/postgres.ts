@@ -219,7 +219,7 @@ export class RepositorioPostgres implements Repositorio {
     };
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }) {
     const valores = [m.id ?? randomUUID(), m.conversaId, m.autor, m.autorNome ?? null, m.texto, m.idExterno || null, m.em];
     const inserir = `insert into sintonia.mensagens (id, conversa_id, autor, autor_nome, texto, id_externo, em)
        values ($1, $2, $3, $4, $5, $6, $7)
@@ -232,11 +232,24 @@ export class RepositorioPostgres implements Repositorio {
     const a = m.anexo;
     const r = await this.pool.query(
       `with nova as (${inserir} returning id)
-       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal)
-       select id, $8, $9, $10, $11, $12, $13, $14, $15, $16 from nova`,
-      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, m.refMidia ?? null],
+       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa)
+       select id, $8, $9, $10, $11, $12, $13, $14, $15, $16, coalesce($17::timestamptz, '-infinity') from nova`,
+      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, m.refMidia ?? null, m.proximaMidia ?? null],
     );
     return (r.rowCount ?? 0) > 0;
+  }
+
+  async completarMidia(conversaId: string, idExterno: string, a: Anexo, o: { ref?: string; proxima?: Date } = {}) {
+    // Só a mensagem desta conversa, e só se ainda não tem mídia (o "on conflict" segura dois resgates ao mesmo tempo).
+    const { rows } = await this.pool.query<{ mensagem_id: string }>(
+      `insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa)
+       select m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12::timestamptz, '-infinity')
+         from sintonia.mensagens m where m.id_externo = $2 and m.conversa_id = $1
+       on conflict (mensagem_id) do nothing
+       returning mensagem_id`,
+      [conversaId, idExterno, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, o.ref ?? null, o.proxima ?? null],
+    );
+    return rows[0]?.mensagem_id;
   }
 
   async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date) {

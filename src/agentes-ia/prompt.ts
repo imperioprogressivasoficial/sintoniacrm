@@ -1,5 +1,6 @@
 import type { AgenteIa, Aprendizado, Conhecimento, MemoriaCliente } from './tipos.js';
 import { NOME_MEMORIA } from './tipos.js';
+import { descricaoCurta, identidade } from '../empresa/identidade.js';
 
 /**
  * System prompt de um agente do estúdio. Fica fixo enquanto o agente e o conhecimento não mudam
@@ -40,7 +41,7 @@ export function systemDoAgente(p: PartesPrompt): string {
   const c = a.config;
   const blocos: string[] = [];
   blocos.push(
-    `Você é ${a.nome}, atendente da Império Progressivas no WhatsApp (salões de alisamento em Salvador). Você conversa com clientes, tira dúvidas e conduz para o agendamento.`,
+    `Você é ${a.nome}, atendente da ${identidade().nome} no WhatsApp${descricaoCurta() ? ` (${descricaoCurta()})` : ''}. Você conversa com clientes, tira dúvidas e conduz para o agendamento.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}`,
   );
   const persona = [
     c.persona.quemE && `Quem você é: ${c.persona.quemE}`,

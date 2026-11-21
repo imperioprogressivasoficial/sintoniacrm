@@ -628,7 +628,9 @@ export interface OpcoesFunis {
    * Filtro por produto (Empresa › Produtos e serviços): conversas ligadas a algum dos produtos.
    * Sem isto ligado, o filtro por produto é ignorado e o quadro avisa (`avisos: ['produtos']`).
    */
-  conversasComProdutos?: (produtoIds: string[]) => Promise<string[]>;
+  conversasComProdutos?: (f: { produtos: string[]; categorias: string[] }) => Promise<string[]>;
+  /** produtos-lead: telefones dos contatos ligados às empresas (chaves de Clientes › Empresas). Sem isto: aviso 'empresas'. */
+  telefonesDasEmpresas?: (chaves: string[]) => Promise<string[]>;
 }
 
 function validarNomeFunil(bruto: string): string {
@@ -653,6 +655,12 @@ export class Funis implements DelegadoEtapas {
     this.empresaId = o.empresaId;
     this.agora = o.agora ?? (() => new Date());
     this.log = o.log ?? (() => {});
+  }
+
+  /** produtos-lead: liga os filtros que dependem de outros módulos (produtos vinculados e empresa do contato). */
+  ligarFiltros(f: Pick<OpcoesFunis, 'conversasComProdutos' | 'telefonesDasEmpresas'>): void {
+    if (f.conversasComProdutos) this.o.conversasComProdutos = f.conversasComProdutos;
+    if (f.telefonesDasEmpresas) this.o.telefonesDasEmpresas = f.telefonesDasEmpresas;
   }
 
   /** Avisado a cada movimento de cartão (as automações escutam aqui). */
@@ -916,11 +924,16 @@ export class Funis implements DelegadoEtapas {
       if (!donas.length) donas.push('00000000-0000-0000-0000-000000000000'); // "meus" + outra pessoa: ninguém
     }
     let comProdutos: string[] | null = null;
-    if (f.produtos.length) {
-      if (this.o.conversasComProdutos) comProdutos = await this.o.conversasComProdutos(f.produtos);
+    if (f.produtos.length || f.categorias.length) {
+      if (this.o.conversasComProdutos) comProdutos = await this.o.conversasComProdutos({ produtos: f.produtos, categorias: f.categorias });
       else avisos.push('produtos');
     }
-    return { filtro: { ...f, donas, etapasOk, usuarioId, comProdutos }, avisos };
+    let comTelefones: string[] | null = null;
+    if (f.empresas.length) {
+      if (this.o.telefonesDasEmpresas) comTelefones = await this.o.telefonesDasEmpresas(f.empresas);
+      else avisos.push('empresas');
+    }
+    return { filtro: { ...f, donas, etapasOk, usuarioId, comProdutos, comTelefones }, avisos };
   }
 
   /** Ids dos leads do quadro que passam no filtro (para a transmissão e as ações em massa). */

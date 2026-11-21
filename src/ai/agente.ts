@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Conversa, Mensagem } from '../domain.js';
 import { contextoDaConversa, historicoParaTurnos, INSTRUCAO_ATIVA, instrucaoObjetivo, systemPrompt } from './prompt.js';
+import { apresentacao, identidade } from '../empresa/identidade.js';
 import {
   type AcaoAgente,
   type Agenda,
@@ -17,6 +18,8 @@ export interface OpcoesAgente {
   esforco: Esforco;
   /** Limite de idas e vindas com ferramentas por resposta. */
   maxPassos?: number;
+  /** produtos-lead: produtos e serviços vinculados ao lead (texto curto ou null). Vai no contexto da conversa. */
+  produtosDoLead?: (c: Conversa) => Promise<string | null>;
 }
 
 export interface PedidoAgente {
@@ -65,7 +68,9 @@ export class Agente {
   /** System prompt da base atual (refeito só quando a base muda, para aproveitar o cache de prompt). */
   private async systemAtual(): Promise<string> {
     const base = typeof this.baseConhecimento === 'string' ? this.baseConhecimento : await this.baseConhecimento();
-    if (this.system?.base !== base) this.system = { base, texto: systemPrompt(base) };
+    // A empresa entra no system prompt: refeito também quando o nome/segmento muda em Empresa › Dados.
+    const chave = `${base}\u0000${apresentacao()}\u0000${identidade().sobre}`;
+    if (this.system?.base !== chave) this.system = { base: chave, texto: systemPrompt(base) };
     return this.system.texto;
   }
 
@@ -78,7 +83,7 @@ export class Agente {
       ...(p.tagsDisponiveis?.length ? [ferramentaMarcarTag(p.tagsDisponiveis)] : []),
     ];
     const system = await this.systemAtual();
-    const messages = this.montarMensagens(p);
+    const messages = await this.montarMensagens(p);
     const maxPassos = this.opcoes.maxPassos ?? 8;
 
     for (let passo = 0; passo < maxPassos; passo++) {
@@ -137,10 +142,12 @@ export class Agente {
     };
   }
 
-  private montarMensagens(p: PedidoAgente): Anthropic.Beta.Messages.BetaMessageParam[] {
+  private async montarMensagens(p: PedidoAgente): Promise<Anthropic.Beta.Messages.BetaMessageParam[]> {
     const turnos = historicoParaTurnos(p.mensagens);
     const contexto = contextoDaConversa(p.conversa, p.agora);
     const extra: string[] = [contexto];
+    const produtos = this.opcoes.produtosDoLead ? await this.opcoes.produtosDoLead(p.conversa).catch(() => null) : null;
+    if (produtos) extra.push(`<produtos_do_lead>${produtos}</produtos_do_lead>`);
     if (p.tipoAtivo) {
       extra.push(
         `<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`,
