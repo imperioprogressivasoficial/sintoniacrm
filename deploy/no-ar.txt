@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 20:37 UTC (21/11, 17h37 na Bahia)
-commit: 6c0f40a
-pacote sha256: c0fe271648bb4acf116c2e105d2ca4f8876230cc9f3d01f0a56c5cff8dde7ac1
+data: 2026-11-21 20:42 UTC (21/11, 17h42 na Bahia)
+commit: d7c603c
+pacote sha256: eda0a21aa70fd2e3be17478951e48cdc6f4c1baadd5b7c09c72b5e5b6684faf1
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-6c0f40a.b64); pode apagar depois.
-observação: em cima do 6eb1a6c. Entram: rotas-celular 2 (respostas em cartões, relatórios, rastreio, bolinha), notificacoes2 (710: modelo C por categoria, junta repetidos), fluidez2 (compressão br/gzip, cache ?v=, prioridade.js, carregando desfocado, puxar sem linha, Ocultar dados).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-d7c603c.b64); pode apagar depois.
+observação: em cima do 6c0f40a. Entra: bolinhas de número menores.

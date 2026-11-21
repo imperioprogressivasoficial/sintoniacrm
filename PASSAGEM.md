@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 17h42 (Bahia):** no ar d7c603c — bolinhas menores. Rodando: etapa-entrada (720: etapa fixa Entrada de leads + grade de automações por etapa).
 - **21/11 17h37 (Bahia):** no ar 6c0f40a — notificações modelo C (710), fluidez2 (compressão, prioridade.js, privacidade.js), ajustes de telas no celular. Sem agentes rodando. Propostas pendentes: carregar telas sob demanda; miniatura do WhatsApp desfocada nas fotos.
 - **21/11 17h12 (Bahia):** no ar 6eb1a6c — rotas-celular (public/telas/voltar-celular.js; window.SintoniaConfigArea). Rodando: fluidez2 (parte 2: privacidade), notificacoes2 (C por categoria), rotas-celular (2º commit: telas).
 - **21/11 16h59 (Bahia):** no ar db3e3bb — capa com foto e atalhos por pessoa (700). Rodando: rotas-celular, fluidez2, notificacoes2 (esperando o dono escolher A/B/C; fazendo a limpeza do servidor).
