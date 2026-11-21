@@ -38,6 +38,12 @@ import { RepositorioMemoria, type Repositorio } from './store/repositorio.js';
 import { FilaMemoria, FilaPostgres, type FilaEntrada } from './fila/entrada.js';
 import { Trabalhador } from './fila/trabalhador.js';
 import { TravaMemoria, TravaPostgres, type Trava } from './fila/trava.js';
+import { FilaComReserva } from './fila/reserva.js';
+import { umaPorVez } from './util/relogio.js';
+import { FilaIa } from './app/fila-ia.js';
+import { criarPool, esperarBanco, ehErroDeConexao } from './store/banco.js';
+import { homedir } from 'node:os';
+import path from 'node:path';
 import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
 import { UNIDADES } from './unidades.js';
@@ -124,6 +130,22 @@ import { montarIntegracoes } from './integracoes/rotas.js';
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
 
+/* robustez: um erro esquecido (promessa sem catch, conexão do banco que caiu) não derruba o app inteiro.
+   Erro de conexão com o banco só é registrado (o pool reconecta); outro erro inesperado também fica no log,
+   mas sem sair: o Docker só reinicia se o processo morrer, e reiniciar no meio do atendimento perde o que estava em memória. */
+process.on('unhandledRejection', (e) => {
+  if (ehErroDeConexao(e)) log('Banco fora do ar (tarefa em segundo plano); tentando de novo depois', String((e as Error)?.message ?? e));
+  else log('Erro sem tratamento numa tarefa em segundo plano', e instanceof Error ? (e.stack ?? e.message) : String(e));
+});
+process.on('uncaughtException', (e) => {
+  if (ehErroDeConexao(e)) {
+    log('Conexão com o banco caiu; o app continua e reconecta sozinho', String(e?.message ?? e));
+    return;
+  }
+  log('Erro inesperado; encerrando para o Docker religar', e?.stack ?? String(e));
+  process.exit(1);
+});
+
 // A chave da IA pode chegar depois (tela de Conexões): o agente usa sempre o cliente em vigor.
 let claudeAtual = new Anthropic({ apiKey: cfg.ANTHROPIC_API_KEY || 'sem-chave' });
 // Cada chamada à IA tem o uso (tokens, custo, créditos) medido e passa pelo porteiro do plano (src/planos):
@@ -140,15 +162,22 @@ let fila: FilaEntrada;
 let trava: Trava;
 let contas: Contas;
 let pool: pg.Pool | undefined;
+/* robustez: o banco pode reiniciar ou derrubar conexões sem derrubar o app (src/store/banco.ts). */
+let poolTravas: pg.Pool | undefined;
+let reservaEntrada: FilaComReserva | undefined;
 if (cfg.DATABASE_URL) {
-  pool = new pg.Pool({ connectionString: cfg.DATABASE_URL, max: 20 });
+  pool = criarPool({ url: cfg.DATABASE_URL, max: 20, log });
+  await esperarBanco(pool, log);
   const aplicadas = await migrar(pool);
   if (aplicadas.length) log('Migrações aplicadas', aplicadas);
   repo = new RepositorioPostgres(pool);
-  fila = new FilaPostgres(pool);
+  // Banco fora: o webhook guarda a mensagem no disco e ela entra na fila quando o banco voltar (src/fila/reserva.ts).
+  reservaEntrada = new FilaComReserva(new FilaPostgres(pool), process.env.SINTONIA_RESERVA_DIR || path.join(homedir(), 'sintonia-reserva'), log);
+  fila = reservaEntrada;
   // Pool só das travas: cada conversa em atendimento segura uma conexão aqui, e o trabalho usa o pool principal.
-  // Tamanho: conversas simultâneas da fila + tarefas do relógio + folga.
-  trava = new TravaPostgres(new pg.Pool({ connectionString: cfg.DATABASE_URL, max: cfg.SINTONIA_PARALELO + 8 }));
+  // Tamanho: conversas simultâneas da fila + da IA + tarefas do relógio + folga.
+  poolTravas = criarPool({ url: cfg.DATABASE_URL, max: cfg.SINTONIA_PARALELO + cfg.SINTONIA_PARALELO_IA + 8, log, nome: 'banco (travas)' });
+  trava = new TravaPostgres(poolTravas);
   contas = new ContasPostgres(pool);
 } else {
   log('Aviso: DATABASE_URL ausente; dados em memória (somem ao reiniciar). Use só para teste local.');
@@ -459,7 +488,11 @@ const agentesIa = montarAgentesIa({
 // Correções da equipe às sugestões viram aprendizados para a gestão aprovar.
 observarEventos(repo, (e) => void agentesIa.controle.aoEvento(e));
 
+/* robustez: fila própria da IA (src/app/fila-ia.ts): a mensagem aparece na tela na hora e a IA pensa por trás,
+   com SINTONIA_PARALELO_IA conversas ao mesmo tempo. SINTONIA_FILA_IA=0 volta ao jeito antigo (pensa dentro da entrada). */
+const filaIa = process.env.SINTONIA_FILA_IA === '0' ? undefined : new FilaIa({ pensar: (id) => sintonia.pensar(id), paralelo: cfg.SINTONIA_PARALELO_IA, log });
 const sintonia = new Sintonia({
+  filaIa,
   rastreio,
   ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -468,6 +501,8 @@ const sintonia = new Sintonia({
   // Porteiro do plano da IA: sem plano, fora da janela ou sem cota, a conversa fica para a equipe.
   agente: comPorteiro(agentesIa.agente, { planos, empresaId: cfg.SINTONIA_EMPRESA_ID, log }),
   modoInicial: agentesIa.modoInicial,
+  /* robustez: sem chave da IA, a IA não é chamada e a conversa nova nasce com a equipe. */
+  iaDisponivel: (c) => agentesIa.temIaPara(c),
   log,
   trava,
   midias,
@@ -539,7 +574,7 @@ const app = criarServidor({
   repo,
   log,
   auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}) },
-  fila: { fila, avisar: () => trabalhador.avisar() },
+  fila: { fila, avisar: () => trabalhador.avisar(), ...(filaIa ? { ia: () => filaIa.situacao() } : {}), ...(reservaEntrada ? { reserva: () => reservaEntrada!.pendentesNaReserva() } : {}) },
   contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
     return agendaLigada ? agendas : undefined;
@@ -801,10 +836,13 @@ if (pool) {
 let emailTick: ReturnType<typeof setInterval> | undefined;
 let emailImap: ReturnType<typeof setInterval> | undefined;
 if (email) {
-  const andar = () => void email.tick().catch((e) => log('Falha na fila de e-mails', String(e)));
+  /* robustez: cada relógio só começa uma rodada quando a anterior terminou (src/util/relogio.ts). */
+  const filaEmail = umaPorVez('e-mails', () => email.tick(), log);
+  const andar = () => void filaEmail();
   registrarEmail(app, { email, avisar: andar });
   emailTick = setInterval(andar, 10_000);
-  emailImap = setInterval(() => void email.lerCaixas().catch((e) => log('Falha ao ler as caixas de e-mail', String(e))), 120_000);
+  const caixas = umaPorVez('caixas de e-mail', () => email.lerCaixas(), log);
+  emailImap = setInterval(() => void caixas(), 120_000);
 }
 
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
@@ -908,7 +946,8 @@ registrarChatEquipe(app, {
 
 // Relógio: reavaliações, lembretes e follow-ups a cada 30 s; relatório às 20h.
 let relatorioEnviadoEm = '';
-const relogio = setInterval(async () => {
+/* robustez: a rodada de 30 s nunca começa por cima da anterior (src/util/relogio.ts). */
+const rodadaRelogio = umaPorVez('30 s', async () => {
   await sintonia.tick().catch((e) => log('Falha no relógio', String(e)));
   await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
@@ -931,28 +970,34 @@ const relogio = setInterval(async () => {
       await sintonia.enviarAvulso(real, destino, texto).catch((e) => log('Falha no relatório', String(e)));
     }
   }
-}, 30_000);
+}, log);
+const relogio = setInterval(() => void rodadaRelogio(), 30_000);
 
 // integracoes: fila dos webhooks de saída, a cada 5 s.
-const relogioWebhooks = setInterval(() => {
-  integracoes.tick().catch((e) => log('Falha na fila dos webhooks', String(e)));
-}, 5_000);
+const rodadaWebhooks = umaPorVez('webhooks de saída', () => integracoes.tick(), log);
+const relogioWebhooks = setInterval(() => void rodadaWebhooks(), 5_000);
 
 // Fila das transmissões: a cada 2 s (o ritmo de cada número decide quantas saem).
-const relogioTransmissoes = setInterval(() => {
-  transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
-}, 2_000);
+const rodadaTransmissoes = umaPorVez('transmissões', async () => transmissoes?.tick(), log);
+const relogioTransmissoes = setInterval(() => void rodadaTransmissoes(), 2_000);
 
 // msg-agendada: mensagens agendadas, a cada 15 s (sai no máximo 15 s depois da hora marcada).
-const relogioAgendadas = setInterval(() => {
-  motorAgendadas.tick().catch((e) => log('Falha no relógio das mensagens agendadas', String(e)));
-}, 15_000);
+const rodadaAgendadas = umaPorVez('mensagens agendadas', () => motorAgendadas.tick(), log);
+const relogioAgendadas = setInterval(() => void rodadaAgendadas(), 15_000);
 
 // respostas-fluxos: passos dos fluxos de mensagens (esperas de segundos), a cada 1 s.
-const relogioFluxos = setInterval(() => {
-  motorFluxos.tick().catch((e) => log('Falha no relógio dos fluxos de mensagens', String(e)));
-  void motorFluxos.limpar(cfg.SINTONIA_EMPRESA_ID);
-}, 1_000);
+const rodadaFluxos = umaPorVez('fluxos de mensagens', async () => {
+  await motorFluxos.tick();
+  await motorFluxos.limpar(cfg.SINTONIA_EMPRESA_ID);
+}, log);
+const relogioFluxos = setInterval(() => void rodadaFluxos(), 1_000);
+
+/* robustez: a reserva em disco (mensagens que chegaram com o banco fora) volta para a fila assim que o banco responde. */
+const rodadaReserva = umaPorVez('reserva em disco', async () => {
+  if (await reservaEntrada?.descarregar()) trabalhador.avisar();
+});
+const relogioReserva = setInterval(() => void rodadaReserva(), 5_000);
+void rodadaReserva();
 
 trabalhador.iniciar();
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
@@ -967,15 +1012,20 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     clearInterval(relogioFluxos);
     clearInterval(relogioAgendadas);
     clearInterval(relogioWebhooks);
+    clearInterval(relogioReserva);
     whatsappSaude.parar();
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
     await trabalhador.parar();
+    // A IA em andamento tem até 15 s para terminar; o que ficar na fila volta pela tarefa "reavaliar" do banco.
+    await Promise.race([filaIa?.ocioso(), new Promise((r) => setTimeout(r, 15_000))]);
+    await Promise.all([rodadaRelogio.ocioso(), rodadaFluxos.ocioso(), rodadaAgendadas.ocioso(), rodadaTransmissoes.ocioso(), rodadaWebhooks.ocioso(), rodadaReserva.ocioso()]).catch(() => {});
     await notificador.ocioso().catch(() => {});
     await integracoes.webhooks.ocioso().catch(() => {});
     await whatsappSaude.ocioso().catch(() => {});
-    await pool?.end();
+    await pool?.end().catch(() => {});
+    await poolTravas?.end().catch(() => {});
     process.exit(0);
   });
 }

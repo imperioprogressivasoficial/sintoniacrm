@@ -87,6 +87,15 @@ export function montarAgentesIa(o: OpcoesAgentesIa) {
     comandos,
     /** Agente para a Sintonia (roteia para o agente do estúdio quando a conversa tem um). */
     agente: controle.roteador(),
+    /**
+     * robustez: há IA para esta conversa? Chave geral (Conexões) ou, se a conversa tem um agente do estúdio, a chave
+     * dele. Sem nenhuma, a Sintonia nem chama a IA (antes chamava e falhava a cada 2 min, para sempre).
+     */
+    temIaPara: async (c: Conversa): Promise<boolean> => {
+      if (o.chaveGeral('anthropic')) return true;
+      const a = await controle.agenteDe(c).catch(() => undefined);
+      return Boolean(a && temChave(a));
+    },
     /** Gancho `modoInicial` da Sintonia ("IA atende primeiro"). */
     modoInicial: (c: Conversa, agora: Date) => controle.modoInicial(c, agora),
     /** Para o construtor visual de bot (bloco "Agente de IA"). Não envia nada: devolve texto e ações. */

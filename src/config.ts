@@ -34,6 +34,8 @@ const Env = z.object({
   ADMIN_SENHA: z.string().optional(),
   ADMIN_SENHA_HASH: z.string().transform((h) => h.replaceAll('$$', '$')).pipe(z.string().startsWith('scrypt$')).optional(),
   SINTONIA_PARALELO: z.coerce.number().int().min(1).max(64).default(8),
+  /** robustez: quantas conversas a IA pensa ao mesmo tempo (fila própria da IA; a mensagem aparece na tela antes). */
+  SINTONIA_PARALELO_IA: z.coerce.number().int().min(1).max(128).default(24),
 });
 
 export const NumerosConfig = z.array(

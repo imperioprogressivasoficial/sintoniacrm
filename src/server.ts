@@ -48,7 +48,13 @@ export interface DependenciasServidor {
   sociais?: OpcoesWebhooksSociais;
   revisar?: (conversaId: string, rascunho: string) => Promise<Revisao>;
   /** Fila persistente: o webhook só grava e responde; os trabalhadores processam. */
-  fila?: { fila: FilaEntrada; avisar?: () => void };
+  fila?: {
+    fila: FilaEntrada;
+    avisar?: () => void;
+    /* robustez: situação da fila da IA e da reserva em disco (banco fora), para /saude. */
+    ia?: () => { esperando: number; pensando: number; feitas: number };
+    reserva?: () => Promise<number>;
+  };
   /** Agenda do salão (Trinks, Avec ou AppBarber, por unidade): habilita o botão "Agendar" dentro do CRM. */
   agenda?: Agenda;
   agora?: () => Date;
@@ -187,7 +193,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return n;
   }
 
-  app.get('/saude', async () => ({ ok: true, fila: d.fila ? await d.fila.fila.situacao() : undefined }));
+  app.get('/saude', async () => ({
+    ok: true,
+    fila: d.fila ? await d.fila.fila.situacao() : undefined,
+    ...(d.fila?.ia ? { ia: d.fila.ia() } : {}),
+    ...(d.fila?.reserva ? { reservaEmDisco: await d.fila.reserva().catch(() => null) } : {}),
+  }));
 
   // ---------- WhatsApp não oficial (Evolution) ----------
   /** Token do cabeçalho x-sintonia-token, comparado em tempo constante. */
