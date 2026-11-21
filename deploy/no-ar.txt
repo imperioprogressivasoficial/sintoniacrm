@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 16:05 UTC (21/11, 13h05 na Bahia)
-commit: ce257bb
-pacote sha256: 6bddbb7898a171c435fa23b807eddc4b56b12d1928ee38404ea46ef3dd4074c9
+data: 2026-11-21 16:30 UTC (21/11, 13h30 na Bahia)
+commit: dbb8693
+pacote sha256: a3750f84ab242d65b75ab7192e844c9d11da58a49f8a686ff63125f829795f10
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ce257bb.b64); pode apagar depois.
-observação: em cima do 38cbd6f. Entra: sem botões de recarregar no celular (Grupos busca ao puxar para baixo).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-dbb8693.b64); pode apagar depois.
+observação: em cima do ce257bb. Entra: contadores sem brilho; no escuro bolinha branca com número azul-marinho.
