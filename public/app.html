@@ -1140,19 +1140,25 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       </div>
 
       <div class="lt-grupo" data-grupo="configuracoes">
-        <button class="lt-cab" type="button" aria-expanded="false" title="Empresa e conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v15M14 10h5a1 1 0 0 1 1 1v10M3 21h18M8 9h2M8 13h2M8 17h2"/></svg><span class="lt-rot">Empresa e conta</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="lt-cab" type="button" aria-expanded="false" title="Empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v15M14 10h5a1 1 0 0 1 1 1v10M3 21h18M8 9h2M8 13h2M8 17h2"/></svg><span class="lt-rot">Empresa</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
+          <!-- empresa-conta: menu Empresa (public/telas/empresa.js abre na aba de cada item); a Conta abre pelo nome no rodapé -->
+          <button class="lt-item lt-emp" data-emp="geral" type="button" title="Visão geral da empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="lt-rot">Visão geral</span></button>
+          <button class="lt-item lt-emp" data-emp="dados" id="lt-empresa-item" type="button" title="Dados da empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg><span class="lt-rot">Dados da empresa</span></button>
+          <button class="lt-item lt-emp" data-emp="unidades" type="button" title="Unidades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span class="lt-rot">Unidades</span></button>
+          <button class="lt-item lt-emp" data-emp="produtos" type="button" title="Produtos e serviços"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg><span class="lt-rot">Produtos e serviços</span></button>
+          <button class="lt-item lt-emp" data-emp="precos" type="button" title="Tabelas de preço"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="lt-rot">Tabelas de preço</span></button>
+          <button class="lt-item lt-emp" data-emp="documentos" type="button" title="Documentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><span class="lt-rot">Documentos</span></button>
           <button class="so-gestao nav lt-item" data-vista="acessos" id="lt-acessos" title="Atendentes e acessos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="lt-rot">Atendentes e acessos</span></button>
-          <button class="so-admin nav lt-item" data-vista="empresa" id="lt-empresa-item" type="button" title="Empresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></svg><span class="lt-rot">Empresa</span></button>
           <a class="so-admin lt-item" id="lt-conexoes" href="/conexoes" title="Conexões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 7V3M15 7V3M6 7h12v4a6 6 0 0 1-12 0V7ZM12 17v4"/></svg><span class="lt-rot">Conexões</span></a>
           <button class="so-admin nav lt-item" data-vista="planos" id="lt-plano-ia" type="button" title="Plano e uso da IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg><span class="lt-rot">Plano e uso da IA</span></button>
-          <button class="lt-item" id="lt-pref-notif" type="button" title="Preferências de notificação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 4a5.5 5.5 0 0 1 5.5 5.5v4.2l1.6 2.3a.8.8 0 0 1-.7 1.2H5.6a.8.8 0 0 1-.7-1.2l1.6-2.3V9.5A5.5 5.5 0 0 1 12 4Z"/><path d="M10.2 20.2h3.6"/><path d="M3 7.5a6 6 0 0 1 1.8-3M21 7.5a6 6 0 0 0-1.8-3"/></svg><span class="lt-rot">Notificações</span></button>
+          <button class="lt-item" id="lt-pref-notif" type="button" hidden title="Preferências de notificação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M12 4a5.5 5.5 0 0 1 5.5 5.5v4.2l1.6 2.3a.8.8 0 0 1-.7 1.2H5.6a.8.8 0 0 1-.7-1.2l1.6-2.3V9.5A5.5 5.5 0 0 1 12 4Z"/><path d="M10.2 20.2h3.6"/><path d="M3 7.5a6 6 0 0 1 1.8-3M21 7.5a6 6 0 0 0-1.8-3"/></svg><span class="lt-rot">Notificações</span></button>
         </div></div>
       </div>
     </nav>
     <span class="lt-espaco"></span>
     <label class="lt-item lt-noite" title="Modo noturno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a.6.6 0 0 0-.8-.7A8.6 8.6 0 1 0 20.2 15.4a.6.6 0 0 0-.7-.8Z"/></svg><span class="lt-rot">Modo noturno</span><input type="checkbox" id="lt-noite" role="switch"><i class="lt-chave"></i></label>
-    <button class="lt-eu" data-vista="configuracoes" id="lt-eu" title="Conta"><span class="avatar eu" id="lt-avatar">··</span><span class="lt-rot"><b id="lt-eu-nome"></b><small id="lt-eu-email"></small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/></svg></button>
+    <button class="lt-eu" data-vista="conta" id="lt-eu" title="Conta"><span class="avatar eu" id="lt-avatar">··</span><span class="lt-rot"><b id="lt-eu-nome"></b><small id="lt-eu-email"></small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/></svg></button>
   </aside>
   <nav class="trilho" aria-label="Abas">
     <picture class="marca"><source srcset="/simbolo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/simbolo.png" alt="Sintonia" width="40" height="40"></picture>
@@ -1334,6 +1340,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     <!-- layout-telas: Empresa e conta abrem dentro do painel, na largura toda -->
     <section class="vista" id="v-acessos"><div class="painel" id="acessos"></div></section>
     <section class="vista" id="v-empresa"><div class="painel" id="empresa"></div></section>
+    <section class="vista" id="v-conta"><div class="painel" id="conta"></div></section><!-- empresa-conta: Conta (public/telas/conta.js) -->
     <section class="vista" id="v-planos"><div class="painel" id="planos"></div></section>
     <section class="vista" id="v-links"><div class="painel" id="links"></div></section>
     <section class="vista" id="v-criativos"><div class="painel" id="criativos"></div></section><!-- marketing: Central de criativos -->
@@ -1681,6 +1688,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (v === 'chat-equipe' && window.SintoniaTelas?.equipe) window.SintoniaTelas.equipe.desenhar($('chat-equipe'), window.Sintonia.ui);
     /* msg-agendada: Atendimento › Mensagens agendadas */
     if (v === 'agendadas' && window.SintoniaTelas?.agendadas) window.SintoniaTelas.agendadas.desenhar($('agendadas'), window.Sintonia.ui);
+    /* empresa-conta: Conta da pessoa (Perfil, Área de trabalho, Notificações, Faturamento, E-mail, Integrações) */
+    if (v === 'conta' && window.SintoniaTelas?.conta) window.SintoniaTelas.conta.desenhar($('conta'), window.Sintonia.ui);
     /* clientes-tags: tela Vendas › Tags */
     if (v === 'tags' && window.SintoniaTelas?.tags) window.SintoniaTelas.tags.desenhar($('tags-tela'), window.Sintonia.ui);
     if (v === 'comercial' && window.SintoniaTelas?.comercial) window.SintoniaTelas.comercial.desenhar($('comercial-tela'), window.Sintonia.ui);
@@ -3073,9 +3082,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { nome: 'Horários e funil', sub: 'Picos e tempo parado por etapa', ic: IC.relatorio, cor: '#6d28d9', acao: () => { window.SintoniaTelas?.analises?.focar?.('horarios'); mostrar('analises'); } },
         { nome: 'Painel da TV', sub: 'Link para a TV da sala', ic: IC.relatorio, cor: '#5b21b6', acao: () => { window.SintoniaTelas?.analises?.focar?.('tv'); mostrar('analises'); } },
       ] },
-      gestor && { id: 'empresa', titulo: 'Empresa e conta', ic: IC.empresa, cor: '#475569', itens: [
-        { nome: 'Equipe e acessos', ic: IC.equipe, cor: '#334155', acao: () => mostrar('acessos') },
-        adm && { nome: 'Empresa e unidades', ic: IC.empresa, cor: '#475569', acao: () => mostrar('empresa') },
+      /* empresa-conta: "Empresa" (dados, unidades, produtos, preços, documentos); a Conta abre pela foto no topo */
+      { id: 'empresa', titulo: 'Empresa', ic: IC.empresa, cor: '#475569', itens: [
+        ...[['geral', 'Visão geral'], ['dados', 'Dados da empresa'], ['unidades', 'Unidades'], ['produtos', 'Produtos e serviços'], ['precos', 'Tabelas de preço'], ['documentos', 'Documentos']].map(([a, nome]) => ({ nome, ic: IC.empresa, cor: '#475569', acao: () => { window.SintoniaTelas?.empresa?.irAba?.(a); mostrar('empresa'); } })),
+        gestor && { nome: 'Equipe e acessos', ic: IC.equipe, cor: '#334155', acao: () => mostrar('acessos') },
         adm && { nome: 'Conexões', sub: 'WhatsApp, Instagram, agenda, pagamentos', ic: IC.link, cor: '#25d366', acao: () => { location.href = '/conexoes'; } },
         adm && { nome: 'Plano e uso da IA', ic: IC.plano, cor: '#0f766e', acao: () => window.SintoniaPlanos?.abrir() },
         adm && { nome: 'Dados de demonstração', ic: IC.campos, cor: '#94a3b8', acao: abrirDemo },
@@ -3138,7 +3148,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     });
     const btBusca = el('button', { class: 'icone redondo', type: 'button', title: 'Buscar nas opções', 'aria-label': 'Buscar nas opções', html: IC.busca, onclick: () => { busca.hidden = !busca.hidden; if (!busca.hidden) busca.focus(); else { busca.value = ''; busca.dispatchEvent(new Event('input')); } } });
     const papelUnidade = [PAPEL[eu.papel] || eu.papel, nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : '')].filter(Boolean).join(' · ');
-    const perfil = el('button', { class: 'mais-perfil', type: 'button', title: 'Minha conta', onclick: () => abrirMinhaConta() }, avatarPessoa(eu.nome, '', eu.id),
+    const perfil = el('button', { class: 'mais-perfil', type: 'button', title: 'Minha conta', onclick: () => (window.SintoniaTelas?.conta ? (window.SintoniaTelas.conta.irAba('perfil'), mostrar('conta')) : abrirMinhaConta()) }, /* empresa-conta */ avatarPessoa(eu.nome, '', eu.id),
       el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: papelUnidade })), el('span', { class: 'mais-seta', html: IC.seta }));
     $('configuracoes').replaceChildren(el('div', { class: 'mais' },
       el('div', { class: 'mais-barra' }, btBusca, window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),
@@ -3235,7 +3245,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const r = $('casca').classList.toggle('recolhida');
     try { localStorage.setItem('sintonia.lateral', r ? 'recolhida' : 'aberta'); } catch {}
   });
-  $('lt-eu').addEventListener('click', () => mostrar('configuracoes'));
+  $('lt-eu').addEventListener('click', () => { if (!window.SintoniaTelas?.conta) return mostrar('configuracoes'); if (estado.vista !== 'conta') window.SintoniaTelas.conta.irAba('perfil'); mostrar('conta'); }); /* empresa-conta: Conta da pessoa */
   // ---------- menu lateral em cascata ----------
   window.SintoniaMenu = (() => {
     const CHAVE = 'sintonia.menu.grupo';
@@ -3354,7 +3364,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const grupo = item?.closest('.lt-grupo');
       const partes = [];
       if (grupo) partes.push(grupo.querySelector('.lt-cab .lt-rot').textContent);
-      const nome = item ? item.querySelector('.lt-rot')?.textContent : estado.vista === 'configuracoes' ? 'Conta' : estado.vista === 'acessos' ? 'Atendentes e acessos' : '';
+      const nome = item ? item.querySelector('.lt-rot')?.textContent : estado.vista === 'configuracoes' ? 'Conta' : estado.vista === 'conta' ? 'Conta' : estado.vista === 'acessos' ? 'Atendentes e acessos' : '';
       if (nome && nome !== partes[0]) partes.push(nome);
       caixa.replaceChildren(...partes.flatMap((p, i) => [i ? el('span', { class: 'tp-sep', 'aria-hidden': 'true', text: '›' }) : null, el(i === partes.length - 1 ? 'b' : 'span', { text: p })].filter(Boolean)));
     }
@@ -3567,6 +3577,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
 <script src="/telas/scripts.js" defer></script>
 <script src="/telas/empresa.js" defer></script><!-- layout-telas -->
+<script src="/telas/conta.js" defer></script><!-- empresa-conta: Conta da pessoa -->
 <script src="/telas/chanfro.js" defer></script>
 <script src="/telas/puxar.js" defer></script>
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->

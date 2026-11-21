@@ -39,7 +39,8 @@ export const ConfigComercial = z.object({
       soQuemAgendou: z.boolean().default(true),
     })
     .prefault({}),
-  precos: z.array(z.object({ servico: z.string().trim().min(1).max(80), valor: Dinheiro })).max(200).default([]),
+  // empresa-conta: os preços vêm de Empresa › Produtos e serviços (até 5.000 itens), por isso o limite subiu de 200.
+  precos: z.array(z.object({ servico: z.string().trim().min(1).max(80), valor: Dinheiro })).max(5000).default([]),
   tv: z.object({ rotacao: z.boolean().default(true), ultimosNomes: z.boolean().default(true) }).prefault({}),
 });
 export type ConfigComercial = z.infer<typeof ConfigComercial>;

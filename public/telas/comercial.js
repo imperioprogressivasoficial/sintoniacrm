@@ -293,6 +293,9 @@
       el('label', { class: 'cm-sub' }, soQuem, ' Só conta para quem agendou pela conversa (desmarcado: o que a IA agendou vai para a dona da conversa)'),
       el('div', { class: 'cm-rolar' }, tabR), el('div', {}, el('button', { class: 'cm-bt', type: 'button', text: '+ Regra', onclick: () => addRegra() })),
       el('h4', { text: 'Tabela de preços (quando o agendamento não traz valor)' }),
+      /* empresa-conta: os preços moram em Empresa › Produtos e serviços; o que muda aqui vai para lá */
+      el('div', { class: 'cm-sub' }, 'Estes preços vêm de Empresa › Produtos e serviços: preço mudado ou novo aqui vai para lá. Para tirar um serviço, desative ou apague em Produtos e serviços. ',
+        el('button', { class: 'cm-bt', type: 'button', text: 'Abrir Produtos e serviços', onclick: () => { d.close(); window.SintoniaTelas?.empresa?.irAba?.('produtos'); window.Sintonia?.mostrar?.('empresa'); } })),
       el('div', { class: 'cm-rolar' }, tabP), el('div', {}, el('button', { class: 'cm-bt', type: 'button', text: '+ Preço', onclick: () => addPreco() })),
       el('h4', { text: 'Relatório de comissão' }),
       el('div', { class: 'cm-ab' }, de, ate, el('button', { class: 'cm-bt', type: 'button', text: 'Ver', onclick: verRel }),
