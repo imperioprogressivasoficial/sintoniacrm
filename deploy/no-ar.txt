@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 15:22 UTC (21/11, 12h22 na Bahia)
-commit: 5eb7335
-pacote sha256: b4dd1253f2875806f48f7057dfd0a5779b81775b86cc43b36d44fcbf24b40991
+data: 2026-11-21 15:48 UTC (21/11, 12h48 na Bahia)
+commit: 38cbd6f
+pacote sha256: 6c648ad8e31b7a8de754cc6135eef31786bc07481aa21b8605ac633378da7ba7
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-5eb7335.b64); pode apagar depois.
-observação: em cima do 0a846e8. Entra: arrastar de lado troca de aba no celular (abas-deslizar.js) e o agente ia-completa (ferramentas novas da IA, travas de falha, tela "O que a IA faz", IA cobre quem fica indisponível — migração 610).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-38cbd6f.b64); pode apagar depois.
+observação: em cima do 5eb7335. Entra: Grupos e Equipe com o mesmo topo de Conversas no celular (topo-lista.js).
