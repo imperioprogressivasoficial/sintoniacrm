@@ -211,7 +211,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       const canalId = ch.canalDaInstancia?.(a.instancia) ?? a.instancia;
       const conversas = await d.repo.listarConversas({ empresaId: ch.empresaId, telefone: a.telefone });
       const c = conversas.find((x) => x.canalId === canalId) ?? conversas[0];
-      await ch.armazem.registrar({ empresaId: ch.empresaId, conversaId: c?.id ?? null, telefone: a.telefone, direcao, resultado: a.status, atendenteId: null, atendenteNome: null, unidade: c?.unidade ?? null, em: a.em ?? agora(), origem: 'whatsapp', idExterno: a.idExterno });
+      await ch.armazem.registrar({ empresaId: ch.empresaId, conversaId: c?.id ?? null, telefone: a.telefone, direcao, resultado: a.status, atendenteId: null, atendenteNome: null, unidade: c?.unidade ?? null, em: a.em ?? agora(), origem: 'whatsapp', idExterno: a.idExterno, modo: 'whatsapp' /* ligacoes-modos */ });
       n++;
     }
     return n;
@@ -668,6 +668,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     atendente: z.string().min(1).optional(),
     /** A ligação que o app já registrou ao tocar em Ligar (tela Ligações): só recebe o resultado. */
     chamadaId: z.string().max(64).optional(),
+    /** ligacoes-modos: por onde foi (quando a ligação não passou pela tela Ligações). */
+    modo: z.enum(['telefone', 'whatsapp']).optional(),
   });
   app.post('/api/conversas/:id/ligacao', async (req) => {
     const c = await conversaVisivel(req);
@@ -676,7 +678,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     if (d.chamadas) {
       const ja = b.chamadaId ? await d.chamadas.armazem.buscar(b.chamadaId) : undefined;
       if (ja && ja.conversaId === c.id) await d.chamadas.armazem.atualizar(ja.id, { resultado: b.resultado });
-      else await d.chamadas.armazem.registrar({ empresaId: c.empresaId, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: b.resultado, atendenteId: req.usuario?.id ?? null, atendenteNome: nomeDe(req, b.atendente), unidade: c.unidade, em: agora(), origem: 'app' });
+      else await d.chamadas.armazem.registrar({ empresaId: c.empresaId, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: b.resultado, atendenteId: req.usuario?.id ?? null, atendenteNome: nomeDe(req, b.atendente), unidade: c.unidade, em: agora(), origem: 'app', modo: b.modo ?? null });
     }
     return { ok: true };
   });

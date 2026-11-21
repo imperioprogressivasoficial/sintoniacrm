@@ -398,6 +398,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
     // nps-posvenda: modelos prontos (pesquisa de satisfação, pós-venda, régua 1/3/7 dias).
     if (window.SintoniaTelas.nps?.prontos) tela.append(window.SintoniaTelas.nps.prontos(ui, { aoMudar: () => desenhar(caixa, ui), abrirFollowup: fu ? () => { s.aba = 'followup'; desenhar(caixa, ui); } : null }));
+    /* ligacoes-modos: "Serena liga para reconfirmar" — desenhado e travado (Em breve), de public/telas/ligacoes.js */
+    if (window.SintoniaTelas.ligacoes?.cartaoSerena) tela.append(ui.el('div', { style: 'margin:14px 0' }, window.SintoniaTelas.ligacoes.cartaoSerena(ui)));
     /* atendimento-extra: menu Automações › Modelos prontos rola até os "Prontos para usar". */
     if (s.rolarModelos) { s.rolarModelos = false; requestAnimationFrame(() => tela.querySelector('.np-prontos')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })); }
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));

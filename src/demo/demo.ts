@@ -265,10 +265,10 @@ export class Demo {
 
     // Ligações (tela Ligações): as registradas hoje (efetuadas) e algumas recebidas/perdidas dos últimos dias.
     if (o.chamadas) {
-      for (const e of plano.eventos.filter((x) => x.tipo === 'ligacao')) {
+      for (const [n, e] of plano.eventos.filter((x) => x.tipo === 'ligacao').entries()) {
         const c = plano.conversas.find((x) => x.id === e.conversaId);
         if (!c) continue;
-        await o.chamadas.registrar({ empresaId: E, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: String(e.dados?.resultado ?? '') || null, atendenteId: String(e.dados?.atendenteId ?? '') || null, atendenteNome: String(e.dados?.atendente ?? '') || null, unidade: c.unidade, em: e.em, origem: 'demo' });
+        await o.chamadas.registrar({ empresaId: E, conversaId: c.id, telefone: c.telefone, direcao: 'efetuada', resultado: String(e.dados?.resultado ?? '') || null, atendenteId: String(e.dados?.atendenteId ?? '') || null, atendenteNome: String(e.dados?.atendente ?? '') || null, unidade: c.unidade, em: e.em, origem: 'demo', modo: n % 3 === 1 ? 'whatsapp' : 'telefone' /* ligacoes-modos */ });
       }
       const outras = plano.conversas.filter((c) => c.etapa !== 'perdida').slice(5, 16);
       for (const [i, c] of outras.entries()) {
@@ -276,7 +276,8 @@ export class Demo {
         const quem = atendentes.find((a) => a.id === c.responsavelId) ?? atendentes[i % Math.max(1, atendentes.length)];
         const em = new Date(agora.getTime() - (i * 7 + 2) * HORA - i * 11 * MIN);
         await o.chamadas.registrar({ empresaId: E, conversaId: c.id, telefone: c.telefone, direcao, resultado: direcao === 'efetuada' ? (i % 2 ? 'atendeu' : 'nao_atendeu') : null,
-          atendenteId: direcao === 'perdida' ? null : (quem?.id ?? null), atendenteNome: direcao === 'perdida' ? null : (quem?.nome ?? null), unidade: c.unidade, em, origem: 'demo' });
+          atendenteId: direcao === 'perdida' ? null : (quem?.id ?? null), atendenteNome: direcao === 'perdida' ? null : (quem?.nome ?? null), unidade: c.unidade, em, origem: 'demo',
+          modo: direcao === 'efetuada' && i % 4 === 2 ? 'telefone' : 'whatsapp' });
       }
     }
 

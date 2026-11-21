@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { UnidadeId } from '../domain.js';
+import type { ModoLigacao } from './canal-voz.js';
 
 /**
  * Histórico de ligações (tela "Ligações", como a aba do WhatsApp).
@@ -9,6 +10,7 @@ import type { UnidadeId } from '../domain.js';
  * - "efetuada": alguém tocou em Ligar no app (a ligação sai do celular dela; a Sintonia não faz VoIP,
  *   então não há duração e o resultado só existe se ela contar depois);
  * - "recebida"/"perdida": o WhatsApp avisou (Evolution, evento CALL). Sem o aviso, nada é inventado.
+ * ligacoes-modos: cada chamada guarda o jeito usado ('telefone' | 'whatsapp' | 'voip'); null = antiga, sem essa informação.
  */
 
 export type Direcao = 'efetuada' | 'recebida' | 'perdida';
@@ -26,9 +28,11 @@ export interface Chamada {
   em: Date;
   origem: 'app' | 'whatsapp' | 'demo';
   idExterno: string | null;
+  /** ligacoes-modos: por onde a ligação foi (chip, WhatsApp ou linha VoIP). */
+  modo: ModoLigacao | null;
 }
 
-export type NovaChamada = Omit<Chamada, 'id' | 'resultado' | 'idExterno'> & { resultado?: string | null; idExterno?: string | null };
+export type NovaChamada = Omit<Chamada, 'id' | 'resultado' | 'idExterno' | 'modo'> & { resultado?: string | null; idExterno?: string | null; modo?: ModoLigacao | null };
 
 export interface FiltroChamadas {
   empresaId: string;
@@ -62,7 +66,7 @@ export class ArmazemChamadasMemoria implements ArmazemChamadas {
   private readonly limpezas = new Map<string, Date>();
   private readonly favs = new Map<string, Set<string>>();
   async registrar(c: NovaChamada) {
-    const n: Chamada = { resultado: null, idExterno: null, ...c, id: randomUUID() };
+    const n: Chamada = { resultado: null, idExterno: null, ...c, modo: c.modo ?? null, id: randomUUID() };
     this.itens.push(n);
     return { ...n };
   }
@@ -121,6 +125,7 @@ interface Linha {
   em: Date;
   origem: Chamada['origem'];
   id_externo: string | null;
+  modo: ModoLigacao | null;
 }
 const daLinha = (l: Linha): Chamada => ({
   id: l.id,
@@ -135,17 +140,18 @@ const daLinha = (l: Linha): Chamada => ({
   em: l.em,
   origem: l.origem,
   idExterno: l.id_externo,
+  modo: l.modo ?? null,
 });
-const COLUNAS = 'id::text, empresa_id, conversa_id::text, telefone, direcao, resultado, atendente_id::text, atendente_nome, unidade, em, origem, id_externo';
+const COLUNAS = 'id::text, empresa_id, conversa_id::text, telefone, direcao, resultado, atendente_id::text, atendente_nome, unidade, em, origem, id_externo, modo';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class ArmazemChamadasPostgres implements ArmazemChamadas {
   constructor(private readonly pool: pg.Pool) {}
   async registrar(c: NovaChamada) {
     const { rows } = await this.pool.query<Linha>(
-      `insert into sintonia.chamadas (id, empresa_id, conversa_id, telefone, direcao, resultado, atendente_id, atendente_nome, unidade, em, origem, id_externo)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning ${COLUNAS}`,
-      [randomUUID(), c.empresaId, c.conversaId, c.telefone, c.direcao, c.resultado ?? null, c.atendenteId && UUID.test(c.atendenteId) ? c.atendenteId : null, c.atendenteNome, c.unidade, c.em, c.origem, c.idExterno ?? null],
+      `insert into sintonia.chamadas (id, empresa_id, conversa_id, telefone, direcao, resultado, atendente_id, atendente_nome, unidade, em, origem, id_externo, modo)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) returning ${COLUNAS}`,
+      [randomUUID(), c.empresaId, c.conversaId, c.telefone, c.direcao, c.resultado ?? null, c.atendenteId && UUID.test(c.atendenteId) ? c.atendenteId : null, c.atendenteNome, c.unidade, c.em, c.origem, c.idExterno ?? null, c.modo ?? null],
     );
     return daLinha(rows[0]!);
   }
