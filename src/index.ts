@@ -72,6 +72,8 @@ import { registrarFunis } from './rotas/funis.js';
 import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
+import { EnvioAosPoucos, registrarSerenaFaz, transmitirPelaSerena, type ServicosSerenaFaz } from './serena/confirmar.js'; /* serena-faz */
+import { regrasDosAgentes } from './serena/fazer.js'; /* serena-faz */
 import { fontesDoBanco, funisComEtapas } from './serena/acoes.js';
 import { RespostasMemoria, RespostasPostgres } from './conversa/respostas.js';
 import { FluxosMemoria, FluxosPostgres, MotorFluxos } from './conversa/fluxos.js';
@@ -763,9 +765,11 @@ async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void>
 const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 /* usuarios: um só armazém de perfis (Conta › Perfil e o telefone que a gestão usa para mandar o convite pelo WhatsApp). */
 const perfisUsuario = pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria();
+/* serena-faz: a mesma auditoria vale para as ações da Serena (enviar, agendar, mover). */
+const auditoria = pool ? new AuditoriaPostgres(pool) : new AuditoriaMemoria();
 const app = criarServidor({
   /* banco-seguranca: auditoria das ações sensíveis, LGPD (exportar/apagar dados de cliente) e CSP (SINTONIA_CSP) */
-  protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria: pool ? new AuditoriaPostgres(pool) : new AuditoriaMemoria(), ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
+  protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria, ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   sintonia,
   repo,
@@ -1132,6 +1136,22 @@ if (email) {
   emailImap = setInterval(() => void caixas(), 120_000);
 }
 
+/* serena-faz: a Serena da tela também faz (mensagem, agenda, funil), sempre com cartão e "Confirmar". */
+const servicosSerena: ServicosSerenaFaz = {
+  agenda: agendas,
+  crm: crmIa,
+  ...(transmissoes ? { descadastrado: (tel: string) => transmissoes!.descadastrado(tel), transmitir: transmitirPelaSerena(transmissoes) } : {}),
+  mover: async (c, funilId, etapaId, perda, por) => {
+    const limpar = await perdas.antesDeMover(c, funilId, etapaId, perda ?? undefined);
+    try {
+      return await funis.mover(c.id, funilId, etapaId, por);
+    } finally {
+      limpar();
+    }
+  },
+};
+registrarSerenaFaz(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, sintonia, servicos: servicosSerena, auditoria, envio: new EnvioAosPoucos({ log }), log });
+
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
 registrarConversa(app, {
   repo,
@@ -1153,6 +1173,8 @@ registrarConversa(app, {
     tags: () => tags.listar(),
     conferirAutomacao: (d) => automacoes.conferir(d),
   }),
+  serenaFaz: servicosSerena /* serena-faz */,
+  regrasIa: async () => regrasDosAgentes(await agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID)) /* serena-faz */,
 });
 
 /* respostas-fluxos: fluxos de mensagens (Respostas rápidas › Fluxos). O servidor envia os passos sozinho, com espera e "digitando…". */

@@ -57,6 +57,8 @@ export type TipoEvento =
   | 'radar'
   /** ia-completa: a IA agiu no CRM/agenda (dados.acao: remarcou, cancelou, mover_funil, vincular_produto, tarefa_equipe, retorno, enviar_arquivo). */
   | 'ia_acao'
+  /** serena-faz: a Serena agiu a pedido de alguém da equipe, depois do "Confirmar" (dados.acao: enviou, agendou, remarcou, cancelou, moveu; porId, porNome). */
+  | 'serena_acao'
   | 'falha';
 
 export interface Evento {

@@ -210,6 +210,8 @@ export interface ContextoFerramentas {
   sessao?: SessaoFerramentas;
   /** ia-completa: quanto esperar a agenda antes de desistir (padrão 25 s). */
   prazoAgendaMs?: number;
+  /** serena-faz: quem agendou, gravado na observação do agendamento (padrão: "IA via WhatsApp"). */
+  origemAgendamento?: string;
 }
 
 /** Chamadas idênticas permitidas numa resposta antes de a ferramenta recusar (laço). */
@@ -536,7 +538,7 @@ async function agendarComConferencia(ctx: ContextoFerramentas, i: PedidoIa, hora
     const r = await agendar(
       ctx.agenda,
       ctx.conversa,
-      { unidade: i.unidade, servicoId: i.servico_id, profissionalId: i.profissional_id, data: i.data, hora, nomeCliente: i.nome_cliente, origem: 'IA via WhatsApp' },
+      { unidade: i.unidade, servicoId: i.servico_id, profissionalId: i.profissional_id, data: i.data, hora, nomeCliente: i.nome_cliente, origem: ctx.origemAgendamento ?? 'IA via WhatsApp' },
       ctx.agora,
     );
     ctx.acoes.push({ tipo: 'agendou', clienteTrinksId: r.clienteTrinksId, agendamento: r.agendamento });

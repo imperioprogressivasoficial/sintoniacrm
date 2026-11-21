@@ -4,6 +4,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { AutomacaoNova, type Gatilho, type Passo } from '../automacoes/esquema.js';
 import { DadosLink } from '../reunioes/reunioes.js';
+import { FazerSerena, type FontesFazer, type PodeFazer } from './fazer.js';
 
 /**
  * Serena faz coisas no CRM (tool use do Claude), sempre com prévia e confirmação:
@@ -15,7 +16,8 @@ import { DadosLink } from '../reunioes/reunioes.js';
  * etiquetas, scripts e links, para ela não inventar.
  */
 
-export type TipoArtefato = 'script' | 'automacao' | 'link' | 'etiqueta';
+/** serena-faz: envio, agendamento e mover são AÇÕES (cartão com Confirmar/Cancelar; src/serena/fazer.ts). */
+export type TipoArtefato = 'script' | 'automacao' | 'link' | 'etiqueta' | 'envio' | 'agendamento' | 'mover';
 
 /** Um passo do fluxo já com nomes (para a prévia em cartões ligados). */
 export interface NoFluxo {
@@ -85,11 +87,21 @@ const EtiquetaPedido = z.object({ nome: z.string().trim().min(1, 'Dê um nome à
 
 export class AcoesSerena {
   readonly artefatos: Artefato[] = [];
+  /** serena-faz: mandar mensagem, agendar e mover (com Confirmar). Ausente = só cria coisas. */
+  private readonly fazer?: FazerSerena;
 
   constructor(
     private readonly fontes: FontesSerena,
     private readonly pode: PodeSerena,
-  ) {}
+    fazer?: { fontes: FontesFazer; pode: PodeFazer },
+  ) {
+    if (fazer) this.fazer = new FazerSerena(fazer.fontes, fazer.pode, (a) => this.guardar(a));
+  }
+
+  /** serena-faz: a Serena também faz (envia, agenda, move)? */
+  get faz(): boolean {
+    return Boolean(this.fazer);
+  }
 
   /** Linha do contexto que diz à IA o que ela pode fazer por esta pessoa. */
   regras(): string {
@@ -104,6 +116,7 @@ export class AcoesSerena {
     return [
       `Você pode criar no CRM, para esta pessoa: ${pode.join(', ') || 'nada por enquanto'}.`,
       nao.length ? `Esta pessoa NÃO pode criar ${nao.join(' nem ')} (só a gestão). Se pedir, explique com gentileza e sugira falar com a gerência.` : '',
+      ...(this.fazer?.regras() ?? []),
     ]
       .filter(Boolean)
       .join('\n');
@@ -216,11 +229,13 @@ Máximo de 40 passos no total. Mensagens curtas, no jeito de WhatsApp.`,
         },
       });
     }
+    if (this.fazer) f.push(...this.fazer.ferramentas());
     return f;
   }
 
   /** Executa uma ferramenta. Erro de conferência volta para a IA corrigir (is_error). */
   async executar(nome: string, entrada: unknown): Promise<ResultadoFerramenta> {
+    if (this.fazer && FazerSerena.NOMES.has(nome)) return this.fazer.executar(nome, entrada);
     try {
       switch (nome) {
         case 'consultar_crm':

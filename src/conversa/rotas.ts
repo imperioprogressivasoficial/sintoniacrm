@@ -14,6 +14,7 @@ import { conversarComIa, LIMITE_IMAGEM_B64, LIMITE_TEXTO, TIPOS_IMAGEM } from '.
 import { quemLigar } from '../app/ligacoes.js';
 import { resumoSerena, type ControleSerena } from '../serena/resumo.js';
 import { AcoesSerena, type FontesSerena } from '../serena/acoes.js';
+import { podeFazerDe, type ServicosSerenaFaz } from '../serena/confirmar.js';
 import { pode } from '../auth/permissoes.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
@@ -51,6 +52,10 @@ export interface OpcoesConversa {
   controleIa?: () => Promise<ControleSerena>;
   /** O que a Serena consulta para criar coisas no CRM (scripts, fluxos, links, etiquetas). Sem isto ela só conversa. */
   serenaAcoes?: (empresaId: string) => FontesSerena;
+  /** serena-faz: com isto a Serena também manda mensagem, agenda e move (cartão com Confirmar; ver src/serena/confirmar.ts). */
+  serenaFaz?: ServicosSerenaFaz;
+  /** serena-faz: regras "sempre/nunca" dos agentes de IA (o treinamento também vale para a Serena da tela). */
+  regrasIa?: () => Promise<string>;
 }
 
 // Unidade do cadastro (Empresa › Unidades); para conversa nova, só as ativas.
@@ -232,8 +237,9 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     const ve = (c: Conversa) => c.empresaId === o.empresaId && visivel(req, c);
     const p = partesBahia(ag);
     const inicioHoje = bahia(p.ano, p.mes, p.dia);
-    const [baseConhecimento, hoje, todas, agenda, ligar] = await Promise.all([
+    const [baseConhecimento, regrasEmpresa, hoje, todas, agenda, ligar] = await Promise.all([
       o.ia.base().catch(() => ''),
+      o.regrasIa ? o.regrasIa().catch(() => '') : Promise.resolve(''),
       iaHoje(o.repo, ag, ve),
       o.repo.listarConversas(),
       agendamentosEntre(o.repo, inicioHoje, new Date(inicioHoje.getTime() + 2 * DIA), { ...escopoDe(req.usuario), empresaId: o.empresaId }).catch(() => []),
@@ -245,8 +251,12 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     });
     try {
       // Ferramentas da Serena: só prévias; quem salva é a pessoa, pelas rotas de sempre (que conferem a permissão de novo).
+      // serena-faz: e também as ações (enviar, agendar, mover), só com as conversas que a pessoa vê.
+      const fazer = o.serenaFaz
+        ? { fontes: { ...o.serenaFaz, conversas: async () => todas.filter(ve), agora: () => ag }, pode: podeFazerDe(req) }
+        : undefined;
       const acoes = o.serenaAcoes
-        ? new AcoesSerena(o.serenaAcoes(req.usuario?.empresaId ?? o.empresaId), { automacoes: pode(req, 'automacoes'), etiquetas: !req.usuario || ehGestor(req.usuario) })
+        ? new AcoesSerena(o.serenaAcoes(req.usuario?.empresaId ?? o.empresaId), { automacoes: pode(req, 'automacoes'), etiquetas: !req.usuario || ehGestor(req.usuario) }, fazer)
         : undefined;
       return await conversarComIa(o.ia.claude, { modelo: o.ia.modelo }, b.mensagens, {
         agora: ag,
@@ -256,6 +266,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
         esperando,
         agenda,
         ligar,
+        regrasEmpresa,
       }, acoes);
     } catch (e) {
       if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
