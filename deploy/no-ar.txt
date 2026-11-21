@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 17:40 UTC (21/11, 14h40 na Bahia)
-commit: 59870a1
-pacote sha256: 4a7dcb4e9bbb70ce93f3eec0b7ab30054690ece3b717907fcfbd84ee641b617e
+data: 2026-11-21 17:50 UTC (21/11, 14h50 na Bahia)
+commit: 2081418
+pacote sha256: 55869d523662f49620d2de8c2b7ae9ed0db86d9f3186fe852fb605bcd75ccb8b
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-59870a1.b64); pode apagar depois.
-observação: em cima do afc2b56. Entra: prints novos na página de vendas (mesma página; o dono NÃO quis a página nova da branch claude/pagina-vendas-nova).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-2081418.b64); pode apagar depois.
+observação: em cima do 59870a1. Entra: ?v=2111 nos prints da página de vendas (o navegador guardava os antigos por 1 h).
