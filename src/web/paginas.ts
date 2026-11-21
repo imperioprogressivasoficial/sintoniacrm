@@ -87,6 +87,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/serena.js': { arquivo: 'telas/serena.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ligacoes.js': { arquivo: 'telas/ligacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/funil.js': { arquivo: 'telas/funil.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/funil-topo.js': { arquivo: 'telas/funil-topo.js', tipo: 'text/javascript; charset=utf-8' }, // crm-topo
   '/telas/funil-celular.js': { arquivo: 'telas/funil-celular.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/automacoes.js': { arquivo: 'telas/automacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/bot.js': { arquivo: 'telas/bot.js', tipo: 'text/javascript; charset=utf-8' },
