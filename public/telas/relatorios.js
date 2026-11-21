@@ -28,7 +28,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .rl-topo .rl-quando { display: block; font-size: 13.5px; font-weight: 600; color: var(--sub); letter-spacing: 0; margin-top: 2px; }
   .rl-numeros { display: flex; gap: 22px; overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; min-width: 0; padding: 2px; }
   .rl-numeros::-webkit-scrollbar { display: none; }
-  @media (max-width: 760px) { .rl-numeros { flex-basis: 100%; gap: 18px; margin: 0 -16px; padding: 2px 16px; } }
+  /* rotas-celular: no celular os 4 números ficam em 2 colunas (antes rolavam de lado e o 2º saía cortado na borda) */
+  @media (max-width: 760px) { .rl-numeros { flex-basis: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; overflow: visible; margin: 0; padding: 2px 0; }
+    .rl-numeros .rl-num { min-width: 0; align-items: flex-start; } .rl-numeros .rl-num > div { min-width: 0; } .rl-numeros .rl-num small { white-space: normal; line-height: 1.3; } }
   .rl-num { display: flex; align-items: center; gap: 10px; flex: none; }
   .rl-circ { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); flex: none; box-sizing: border-box; }
   .rl-circ svg { width: 19px; height: 19px; }
