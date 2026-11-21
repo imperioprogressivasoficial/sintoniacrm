@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 11:05 UTC (21/11, 08h05 na Bahia)
-commit: 6f59829
-pacote sha256: 10985ad459c355df33e767989a7adacdf8de46bfb1cd089a129333ed432d61f4
+data: 2026-11-21 11:20 UTC (21/11, 08h20 na Bahia)
+commit: 659e1f4
+pacote sha256: 2e76ecc4685a48f3ef9da7a759368b8625aaaa858178fa6fafcaadfe002bfb25
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-6f59829.b64); pode apagar depois.
-observação: em cima do 6f90f0d. Entra: automacao-vendas (570: rodízio de leads — desligado por padrão —, prazos por etapa com escalada, gatilhos sem_resposta/agendou/mensagem_recebida; tela Atendimento › Distribuição e prazos).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-659e1f4.b64); pode apagar depois.
+observação: em cima do 6f59829. Entra: perdas-saude (580: motivo de perda obrigatório + Análises › Perdas, Análises › Saúde do sistema, limite de login por conta, scripts/carga.mjs).
