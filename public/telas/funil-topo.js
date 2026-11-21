@@ -199,32 +199,54 @@
     #v-funil .fn-cartao::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: ${FIO(12, 'var(--vidro-borda)')}; }
   }
 
-  /* ---------- lista ---------- */
+  /* ---------- lista (pipeline-modos: revista, mais densa) ---------- */
   .ft-lista { flex: 1; min-height: 0; margin: 0 20px 16px; display: flex; flex-direction: column; overflow: hidden; background: color-mix(in srgb, var(--vidro-fundo) 70%, transparent); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .ft-lista[hidden] { display: none; }
-  .ft-lista-rolar { flex: 1; min-height: 0; overflow: auto; }
+  .ft-lista-rolar { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
   .ft-tab { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
-  .ft-tab th { position: sticky; top: 0; z-index: 2; text-align: left; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding: 11px 12px; background: var(--fundo); border-bottom: 1px solid var(--linha); white-space: nowrap; }
-  .ft-tab td { padding: 9px 12px; border-bottom: 1px solid var(--vidro-linha, var(--linha)); color: var(--texto); vertical-align: middle; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ft-tab th { position: sticky; top: 0; z-index: 2; text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--sub); padding: 10px 10px; background: var(--fundo); border-bottom: 1px solid var(--linha); white-space: nowrap; }
+  html[data-tema="escuro"] .ft-tab th { background: color-mix(in srgb, var(--fundo) 94%, #fff); }
+  .ft-tab td { height: 44px; padding: 0 9px; border-bottom: 1px solid color-mix(in srgb, var(--linha) 70%, transparent); color: var(--texto); vertical-align: middle; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ft-tab tbody tr { cursor: pointer; }
   .ft-tab tbody tr:hover td { background: var(--vidro-item); }
+  .ft-tab tbody tr:hover td:first-child, .ft-tab tbody tr:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--cor, #3aa0ff); }
+  .ft-tab tbody tr:focus-visible { outline: none; }
+  .ft-tab tbody tr:focus-visible td { background: var(--vidro-ativo); }
   .ft-tab tbody tr[aria-selected="true"] td { background: color-mix(in srgb, var(--marca-azul) 10%, transparent); }
-  .ft-tab .ft-sel { width: 34px; padding-right: 0; }
-  .ft-tab input[type="checkbox"] { width: 17px; height: 17px; accent-color: #106ebe; cursor: pointer; }
-  .ft-tab .ft-nome { display: flex; align-items: center; gap: 10px; font-weight: 700; min-width: 180px; }
-  .ft-tab .ft-nome .avatar { width: 30px; height: 30px; font-size: 12px; flex: none; margin: 0; }
+  .ft-tab tbody tr.ft-destaque td { animation: ft-destaque 2.2s ease; }
+  @keyframes ft-destaque { 0%, 60% { background: color-mix(in srgb, #3aa0ff 22%, transparent); } 100% { background: transparent; } }
+  .ft-tab .ft-sel { width: 30px; padding-right: 0; padding-left: 14px; }
+  .ft-tab input[type="checkbox"] { width: 16px; height: 16px; accent-color: #106ebe; cursor: pointer; vertical-align: middle; }
+  .ft-tab .ft-nome { display: flex; align-items: center; gap: 10px; font-weight: 700; min-width: 170px; }
+  .ft-tab .ft-nome .avatar { width: 28px; height: 28px; font-size: 11px; flex: none; margin: 0; }
   .ft-tab .ft-nome span { overflow: hidden; text-overflow: ellipsis; }
-  .ft-etapa { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
+  .ft-tab .ft-num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ft-tab th.ft-fim, .ft-tab td.ft-fim { position: sticky; right: 0; width: 40px; padding: 0 8px 0 4px; }
+  .ft-tab td.ft-fim { background: var(--fundo); }
+  .ft-tab tbody tr:hover td.ft-fim { background: color-mix(in srgb, var(--vidro-ativo) 40%, var(--fundo)); }
+  .ft-tab th.ft-fim { z-index: 3; }
+  .ft-etapa { display: inline-flex; align-items: center; gap: 7px; font-weight: 650; }
   .ft-etapa i { width: 8px; height: 8px; border-radius: 50%; background: var(--cor); flex: none; }
-  .ft-tab .fn-tag { max-width: 120px; }
+  .ft-passos { display: inline-flex; gap: 2px; margin-left: 2px; }
+  .ft-passos i { width: 7px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--sub) 25%, transparent); }
+  .ft-passos i.feito { background: #7fd3ff; }
+  .ft-passos i.aqui { width: 12px; background: linear-gradient(90deg, #0ffcbe, #3aa0ff); }
+  .ft-tab .fn-tag { max-width: 110px; }
   .ft-tab .ft-mais { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); }
   .ft-tab .ft-mais:hover { background: var(--vidro-ativo); color: var(--texto); }
   .ft-tab .ft-mais svg { width: 17px; height: 17px; }
-  .ft-lista-pe { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--linha); font-size: 13px; color: var(--sub); }
+  .ft-lista-pe { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--linha); font-size: 13px; color: var(--sub); }
   .ft-lista-pe .ft-bt { height: 34px; font-size: 13px; }
+  .ft-ordem { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .ft-ordem > span { font-size: 12px; padding: 0 8px 0 9px; }
+  .ft-ordem button { all: unset; box-sizing: border-box; cursor: pointer; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 650; color: var(--sub); }
+  .ft-ordem button:hover { color: var(--texto); }
+  .ft-ordem button[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .ft-ordem button:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 1px; }
   .ft-massa { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .ft-massa b { color: var(--texto); }
   .ft-vazio-l { padding: 40px 16px; text-align: center; color: var(--sub); }
+  @media (prefers-reduced-motion: reduce) { .ft-tab tbody tr.ft-destaque td { animation: none; } }
 
   /* ---------- painel de filtros ---------- */
   .ft-fil .grupo-filtro h4 { display: flex; align-items: center; gap: 8px; }
@@ -340,9 +362,10 @@
   }
   function desenharVistas(ctx) {
     const { s } = ctx; const { el } = s.ui;
+    if (window.SintoniaFunilModos) return; // pipeline-modos: o seletor de 3 modos (Foco · Lista · Colunas) é desenhado por /telas/funil-modos.js
     const bt = (id, nome, ic) => el('button', { type: 'button', 'aria-pressed': String(s.vista === id), title: nome, onclick: () => { if (s.vista === id) return; s.vista = id; gravarLocal('sintonia.crm.vista', id); desenharVistas(ctx); ctx.desenharQuadro(); } },
       el('span', { html: ic, style: 'display:grid' }), el('span', { text: nome }));
-    s.ftVistas.replaceChildren(bt('quadro', 'Quadro', IC.quadro), bt('lista', 'Lista', IC.lista));
+    s.ftVistas.replaceChildren(bt('colunas', 'Quadro', IC.quadro), bt('lista', 'Lista', IC.lista));
   }
   function desenharPilulas(ctx) {
     const { s } = ctx; if (!s.ftPilulas) return;
@@ -714,8 +737,38 @@
   }
 
   // ---------- lista ----------
-  const visiveis = (ctx) => (ctx.s.q?.colunas || []).flatMap((col) => col.cartoes.filter(ctx.passa).map((c) => ({ c, col })))
-    .sort((a, b) => new Date(b.c.atualizadaEm) - new Date(a.c.atualizadaEm));
+  /* pipeline-modos: a Lista ordena por prioridade (quem precisa de você primeiro, a mesma regra do Foco) ou pelos mais recentes */
+  const CURTO = { valor: 'Valor', situacao: 'Última mensagem', desde: 'Na etapa', criado: 'Criado', atualizado: 'Atualizado' }; // títulos curtos na Lista densa
+  const ORDENS = [['prioridade', 'Prioridade', 'Quem precisa de você primeiro'], ['recentes', 'Recentes', 'Atualizados por último primeiro']];
+  const ordemLista = () => { const o = lerLocal('sintonia.crm.listaOrdem'); return ORDENS.some((x) => x[0] === o) ? o : 'prioridade'; };
+  function visiveis(ctx) {
+    const todos = (ctx.s.q?.colunas || []).flatMap((col) => col.cartoes.filter(ctx.passa).map((c) => ({ c, col })));
+    const r = window.SintoniaFunilCelular?.regras;
+    if (ordemLista() === 'prioridade' && r) {
+      const rc = { ui: ctx.s.ui, q: ctx.s.q, funil: ctx.funil(), passa: ctx.passa, dinheiro: ctx.dinheiro, haTexto: ctx.haTexto };
+      return r.ordenar(rc, todos.map((x) => ({ cartao: x.c, col: x.col }))).map((x) => ({ c: x.cartao, col: x.col }));
+    }
+    return todos.sort((a, b) => new Date(b.c.atualizadaEm) - new Date(a.c.atualizadaEm));
+  }
+  /** Passos do caminho do funil, em miniatura (a etapa atual em degradê). */
+  function miniPassos(ctx, col) {
+    const { el } = ctx.s.ui;
+    const cols = (ctx.s.q?.colunas || []).filter((x) => x.etapa.chaveSistema !== 'perdida');
+    const i = cols.indexOf(col);
+    const p = el('span', { class: 'ft-passos' + (i < 0 ? ' ft-perdido' : ''), 'aria-hidden': 'true' });
+    for (let k = 0; k < cols.length; k++) p.append(el('i', { class: k < i ? 'feito' : k === i ? 'aqui' : '' }));
+    return p;
+  }
+  /** Busca do topo com a Lista aberta: rola até a linha e destaca. */
+  function destacarNaLista(ctx, id) {
+    desenharLista(ctx);
+    const tr = [...(ctx.s.listaEl?.querySelectorAll('tr[data-id]') || [])].find((x) => x.dataset.id === id); // (CSS aqui é o texto do estilo)
+    if (!tr) return;
+    tr.scrollIntoView({ block: 'center', behavior: 'auto' });
+    tr.classList.remove('ft-destaque'); void tr.offsetWidth; tr.classList.add('ft-destaque');
+    setTimeout(() => tr.classList.remove('ft-destaque'), 2300);
+    tr.focus({ preventScroll: true });
+  }
   function desenharLista(ctx) {
     const { s } = ctx; const { el } = s.ui;
     const caixa = s.listaEl; if (!caixa) return;
@@ -727,7 +780,7 @@
     const quando = (d) => (d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—');
     const celula = (k, x) => {
       const { c: cartao, col } = x;
-      if (k === 'etapa') { const e = el('span', { class: 'ft-etapa' }, el('i'), el('span', { text: col.etapa.nome })); e.style.setProperty('--cor', col.etapa.cor); return e; }
+      if (k === 'etapa') { const e = el('span', { class: 'ft-etapa' }, el('i'), el('span', { text: col.etapa.nome }), miniPassos(ctx, col)); e.style.setProperty('--cor', col.etapa.cor); return e; }
       if (k === 'valor') return el('span', { style: 'font-weight:750;font-variant-numeric:tabular-nums', text: cartao.valor != null ? ctx.dinheiro(cartao.valor) : '—' });
       if (k === 'responsavel') return cartao.modo === 'ia' ? el('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 20 }) : null, document.createTextNode(window.SintoniaSerenaSelo ? 'Serena (IA)' : 'IA')) /* conversa-extra */ : el('span', { text: cartao.dona?.nome || 'Sem responsável' });
       if (k === 'origem') return ctx.origemEl(cartao);
@@ -750,15 +803,16 @@
       marca.checked = s.selecao.has(id);
       marca.addEventListener('click', (e) => e.stopPropagation());
       marca.addEventListener('change', () => { if (marca.checked) s.selecao.add(id); else s.selecao.delete(id); desenharLista(ctx); });
-      const tr = el('tr', { 'aria-selected': String(s.selecao.has(id)), tabindex: '0', onclick: () => s.ui.abrir(id), onkeydown: (e) => { if (e.key === 'Enter') s.ui.abrir(id); } },
+      const tr = el('tr', { 'data-id': id, 'aria-selected': String(s.selecao.has(id)), tabindex: '0', onclick: () => s.ui.abrir(id), onkeydown: (e) => { if (e.key === 'Enter' && e.target === tr) s.ui.abrir(id); } },
         el('td', { class: 'ft-sel' }, marca),
         el('td', {}, el('div', { class: 'ft-nome' }, s.ui.avatar({ id, nome: x.c.nome, telefone: x.c.telefone }), el('span', { text: nome }))),
-        ...c.lista.map((k) => el('td', {}, celula(k, x))),
-        el('td', { style: 'width:40px' }, el('button', { class: 'ft-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: IC.pontos, onclick: (e) => { e.stopPropagation(); ctx.menuCartao(id); } })));
+        ...c.lista.map((k) => el('td', { class: k === 'valor' ? 'ft-num' : null }, celula(k, x))),
+        el('td', { class: 'ft-fim' }, el('button', { class: 'ft-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: IC.pontos, onclick: (e) => { e.stopPropagation(); ctx.menuCartao(id); } })));
+      tr.style.setProperty('--cor', x.col.etapa.cor || '#3aa0ff');
       return tr;
     });
     const tabela = el('table', { class: 'ft-tab' },
-      el('thead', {}, el('tr', {}, el('th', { class: 'ft-sel' }, todos), el('th', { text: 'Nome' }), ...c.lista.map((k) => el('th', { text: nomeCampo.get(k) })), el('th'))),
+      el('thead', {}, el('tr', {}, el('th', { class: 'ft-sel' }, todos), el('th', { text: 'Nome' }), ...c.lista.map((k) => el('th', { class: k === 'valor' ? 'ft-num' : null, text: CURTO[k] || nomeCampo.get(k) })), el('th', { class: 'ft-fim' }))),
       el('tbody', {}, ...corpo));
     const faltam = (s.q?.colunas || []).reduce((n, col) => n + Math.max(0, col.total - col.cartoes.length), 0);
     const algumaMais = (s.q?.colunas || []).some((col) => col.mais);
@@ -772,6 +826,9 @@
         el('button', { class: 'ft-mini', type: 'button', text: 'Desmarcar', onclick: () => { s.selecao.clear(); desenharLista(ctx); } }))
         : el('span', { text: `${linhas.length} lead${linhas.length === 1 ? '' : 's'} na lista${faltam ? ` · mais ${faltam} para carregar` : ''}` }),
       el('span', { style: 'flex:1' }),
+      el('div', { class: 'ft-ordem', role: 'group', 'aria-label': 'Ordem da lista' }, el('span', { text: 'Ordem' }),
+        ...ORDENS.map(([id, nome, dica]) => el('button', { type: 'button', 'aria-pressed': String(ordemLista() === id), title: dica, text: nome,
+          onclick: () => { gravarLocal('sintonia.crm.listaOrdem', id); desenharLista(ctx); } }))),
       algumaMais ? el('button', { class: 'ft-bt', type: 'button', text: 'Carregar mais', onclick: () => ctx.carregarMaisTodas() }) : null);
     const rolar = caixa.querySelector('.ft-lista-rolar');
     const topo = rolar ? rolar.scrollTop : 0;
@@ -820,5 +877,5 @@
     setTimeout(() => { try { window.print(); } catch { /* sem impressão */ } setTimeout(() => { if (folha.isConnected && !matchMedia('print').matches) fim(); }, 1500); }, 60);
   }
 
-  window.SintoniaFunilTopo = { estilo, config, lerFiltro, gravarFiltro, filtroUrl, paraServidor, vazio, contar, pilulas, montarTopo, desenharPilulas, desenharVistas, abrirFiltro, menuMais, desenharLista, novaTransmissao, abrirAutomacoes, editarFunil, configurarLista, imprimir, lembrarPessoas, VAZIO };
+  window.SintoniaFunilTopo = { destacarNaLista, estilo, config, lerFiltro, gravarFiltro, filtroUrl, paraServidor, vazio, contar, pilulas, montarTopo, desenharPilulas, desenharVistas, abrirFiltro, menuMais, desenharLista, novaTransmissao, abrirAutomacoes, editarFunil, configurarLista, imprimir, lembrarPessoas, VAZIO };
 })();

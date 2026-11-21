@@ -546,8 +546,8 @@ describe('EvolutionAdmin: reconectar e eventos do webhook', () => {
     const { adm, pedidos } = evo({ estado: 'open', connect: {}, webhook });
     expect(await adm.atualizarEventos('sintonia-c1')).toBe(true);
     const set = pedidos.find((p) => p.url.includes('/webhook/set/'))!;
-    expect(set.corpo).toMatchObject({ webhook: { url: webhook.url, headers: webhook.headers, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE'] } });
-    const outro = evo({ estado: 'open', connect: {}, webhook: { ...webhook, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE'] } });
+    expect(set.corpo).toMatchObject({ webhook: { url: webhook.url, headers: webhook.headers, base64: true, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE'] } });
+    const outro = evo({ estado: 'open', connect: {}, webhook: { ...webhook, webhookBase64: true, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE'] } });
     expect(await outro.adm.atualizarEventos('sintonia-c1')).toBe(false);
     expect(await outro.adm.atualizarEventos('assia')).toBe(false);
   });

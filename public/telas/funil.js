@@ -377,10 +377,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     arrasto: null, aperto: null, abertos: 0, assinaturaFunis: '', dona: lerLocal('sintonia.crm.dona') || '', assinaturaPessoas: '',
     origem: lerLocal('sintonia.crm.origem') || '', etiqueta: '', periodo: '',
     /* crm-topo: filtro completo (vai para o servidor), vista Quadro | Lista e seleção da lista */
-    filtro: null, vista: lerLocal('sintonia.crm.vista') === 'lista' ? 'lista' : 'quadro', selecao: new Set(), avisos: [],
+    filtro: null, vista: lerLocal('sintonia.crm.vista') === 'lista' ? 'lista' : 'colunas', selecao: new Set(), avisos: [], /* pipeline-modos: foco | lista | colunas */
   };
   s.dona = ''; // o filtro de atendente agora é "Responsável" no painel Filtrar (s.filtro.donas)
   const T = () => window.SintoniaFunilTopo;
+  const M = () => window.SintoniaFunilModos; // pipeline-modos: Foco · Lista · Colunas no computador
   const filtroAtual = () => { if (!s.filtro && T()) s.filtro = T().lerFiltro(s.funilId); return s.filtro; };
   const PAGINA = 25;
   const DIA = 86400000;
@@ -527,6 +528,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.quadro = el('div', { class: 'fn-quadro' });
     s.listaEl = el('div', { class: 'ft-lista', hidden: '', 'aria-label': 'Lista de leads' }); // crm-topo: vista Lista
     s.cel = el('div', { class: 'fc', hidden: '' }); // pipeline-celular: o CRM do celular (/telas/funil-celular.js)
+    s.focoEl = el('div', { class: 'fm-foco', hidden: '', 'aria-label': 'Foco: um lead por vez' }); // pipeline-modos: modo Foco no computador
+    if (M()) s.vista = M().modoInicial(); // pipeline-modos: ?modo= do endereço ou a última escolha
     filtroAtual();
     // crm-topo: no computador o topo (busca + Filtrar, transmissão, Automações, Novo lead, ⋯) mora no cabeçalho da vista.
     const topo = T() ? T().montarTopo(ctx, busca, s.achados) : null;
@@ -538,7 +541,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'fn-topo' },
         topo ? null : el('div', { class: 'fn-buscar' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.achados),
         topo ? null : s.botaoFiltros, el('div', { class: 'fn-funis-linha' }, s.barraFunis, topo ? topo.vistas : null)),
-      s.quadro, s.listaEl, s.cel,
+      s.quadro, s.listaEl, s.focoEl, s.cel,
     );
     s.colEls.clear(); s.cartaoEls.clear();
     // cabeçalho da vista (em app.html): números ao lado do título
@@ -666,6 +669,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       s.quadro.replaceChildren(el('div', { class: 'fn-erro' }, el('span', { text: s.erro ? `Não deu para carregar o quadro: ${s.erro}` : 'Carregando…' }),
         s.erro ? el('button', { class: 'botao leve', type: 'button', text: 'Tentar de novo', onclick: () => carregarQuadro() }) : null));
       s.colEls.clear();
+      s.quadro.hidden = false; s.listaEl.hidden = true; if (s.focoEl) s.focoEl.hidden = true; // pipeline-modos: o "Carregando…" fica à vista
       desenharNumeros();
       desenharCelular();
       return;
@@ -729,10 +733,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     desenharPessoas();
     desenharNumeros();
     // crm-topo: Quadro | Lista, pílulas dos filtros e o painel "Editar funil" aberto
-    const lista = s.vista === 'lista' && !!T();
-    s.quadro.hidden = lista; s.listaEl.hidden = !lista;
-    if (lista) T().desenharLista(ctx);
+    // pipeline-modos: Foco · Lista · Colunas (sem /telas/funil-modos.js, só Lista e Colunas)
+    const modo = s.vista === 'foco' && M() ? 'foco' : s.vista === 'lista' && T() ? 'lista' : 'colunas';
+    s.quadro.hidden = modo !== 'colunas'; s.listaEl.hidden = modo !== 'lista'; if (s.focoEl) s.focoEl.hidden = modo !== 'foco';
+    if (modo === 'lista') T().desenharLista(ctx);
     if (T()) { T().lembrarPessoas(s); T().desenharPilulas(ctx); }
+    M()?.desenhar(ctx);
     s.aoRedesenhar?.();
     desenharCelular();
     if (s.ficha) s.ficha.atualizar();
@@ -1268,6 +1274,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       desenharQuadro();
     }
     if (celularLigado()) { window.SintoniaFunilCelular.focar(conversaId, etapaId); return; }
+    if (s.vista === 'foco' && M()) { M().focar(ctx, conversaId, etapaId); return; } // pipeline-modos
+    if (s.vista === 'lista' && T()) { T().destacarNaLista?.(ctx, conversaId); return; }
     const c = s.colEls.get(etapaId);
     const no = s.cartaoEls.get(conversaId)?.no;
     if (!c) return;
@@ -1577,6 +1585,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     get s() { return s; },
     funil, ehGestao, folha, pedir, tentar, dinheiro, haTexto, tagEl, situacaoEl, menuCartao, novoLead, novoFunil, novaEtapa, editarEtapa, reordenar, apagarEtapa, apagarFunil,
     carregarAutos, abrirRaio, lixeira, carregarMaisTodas, passa: (x) => passaCliente(x), abrirFiltrosAntigo,
+    mover, carregarMais, editarValor, abrirFicha, /* pipeline-modos: o Foco do computador usa estas ações */
     recarregar: () => recarregarTudo(), carregarQuadro: () => carregarQuadro(), desenharQuadro: () => desenharQuadro(),
     aplicouFiltro: () => { s.assinaturaFunis = ''; desenharBarra(); desenharQuadro(); carregarQuadro(); },
     origemEl: (c) => { const ra = window.SintoniaRastreio; const o = c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : (ra?.selo(c.conversaId) || { icone: 'desconhecido' }); return s.ui.el('span', { class: 'fn-origem' }, ra ? ra.iconeEl(o) : null, s.ui.el('span', { text: NOME_ORIGEM[o.icone] || 'Sem origem' })); },
