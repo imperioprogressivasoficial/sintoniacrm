@@ -117,13 +117,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   try {
     const g = JSON.parse(localStorage.getItem(CHAVE) || '{}');
     if (VISTAS.some(([v]) => v === g.vista)) s.vista = g.vista;
+    /* rotas-celular: no celular a vista é guardada à parte (padrão "3 dias"): a semana inteira não cabe em 390 px */
+    s.vistaPc = s.vista;
+    s.vistaCel = VISTAS.some(([v]) => v === g.vistaCel) ? g.vistaCel : '3dias';
     s.offUni = new Set(g.offUni || []);
     s.offProf = new Set(g.offProf || []);
     s.cores = g.cores && typeof g.cores === 'object' ? g.cores : {};
     s.ladoFechado = Boolean(g.ladoFechado);
   } catch { /* sem armazenamento: segue o padrão */ }
   function guardar() {
-    try { localStorage.setItem(CHAVE, JSON.stringify({ vista: s.vista, offUni: [...s.offUni], offProf: [...s.offProf], cores: s.cores, ladoFechado: s.ladoFechado })); } catch { /* ignora */ }
+    try { localStorage.setItem(CHAVE, JSON.stringify({ vista: s.vistaPc || s.vista, vistaCel: s.vistaCel || '3dias', offUni: [...s.offUni], offProf: [...s.offProf], cores: s.cores, ladoFechado: s.ladoFechado })); } catch { /* ignora */ }
   }
 
   function estilo() {
@@ -458,6 +461,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function trocarVista(v) {
     if (v === s.vista) return;
     s.vista = v;
+    if (mqPc.matches) s.vistaPc = v; else s.vistaCel = v; // rotas-celular
     s.rolagem = null;
     guardar();
     desenharTudo();
@@ -498,6 +502,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     alvo.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' || s.buscando) return;
       if (!ehMini && s.vista === 'prog') return;
+      if (!ehMini && !s.pc && e.clientX < 24) return; // rotas-celular: a borda esquerda é do "voltar" (fluidez.js)
       x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); id = e.pointerId; modo = null; dx = 0;
       s.arrastou = false;
     });
@@ -990,11 +995,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       clearTimeout(t);
       t = setTimeout(() => {
         if (!visivel()) return;
-        if (mqPc.matches !== s.pc) { s.pc = mqPc.matches; s.rolagem = null; s.miniAberto = false; desenharTudo(); }
+        if (mqPc.matches !== s.pc) { s.pc = mqPc.matches; s.vista = escolherVista(); s.rolagem = null; s.miniAberto = false; desenharTudo(); }
         else if (s.vista !== 'prog') desenharConteudo();
       }, 150);
     });
   }
+
+  /** rotas-celular: a vista do aparelho (celular e computador lembram cada um a sua). */
+  const escolherVista = () => (mqPc.matches ? s.vistaPc || 'semana' : s.vistaCel || '3dias');
 
   window.SintoniaTelas.agenda = {
     /** Novo agendamento (escolhe a cliente e abre o Agendar). Precisa da tela já desenhada uma vez (s.ui). */
@@ -1006,6 +1014,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const hoje = local(new Date()).iso;
       if (hoje !== s.hoje || !s.foco) { s.hoje = hoje; s.foco = hoje; }
       s.buscando = false;
+      s.vista = escolherVista(); // rotas-celular
       s.miniAberto = false;
       s.rolagem = null;
       ligarUmaVez();

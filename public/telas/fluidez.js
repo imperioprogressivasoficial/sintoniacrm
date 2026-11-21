@@ -194,7 +194,59 @@
       return null;
     }
     if (vc?.classList.contains('abrindo') && vc.classList.contains('ativa') && !folhaAberta() && !d?.open) return alvoConversa();
+    /* rotas-celular: tela de dentro (Agenda, Respostas, Clientes…) volta para a tela de onde veio */
+    if (!folhaAberta() && !d?.open && window.SintoniaVoltar?.dentro?.()) return alvoTela();
     return null;
+  }
+  /* rotas-celular: a tela de dentro acompanha o dedo para a direita e a de onde ela veio aparece por baixo, chegando
+   * de -24% (o mesmo jeito das páginas do painel). Ao soltar além do meio, volta de verdade (SintoniaVoltar.voltar). */
+  function alvoTela() {
+    const V = window.SintoniaVoltar;
+    const cima = document.querySelector('.area > .vista.ativa');
+    if (!cima) return null;
+    const area = cima.parentElement;
+    let baixo = $('v-' + V.destino());
+    if (baixo === cima) baixo = null;
+    let guardado = null;
+    const limpar = () => {
+      cima.classList.remove('fz-cima'); cima.style.transform = '';
+      if (baixo) { baixo.classList.remove('fz-baixo'); for (const k of ['transform', 'left', 'top', 'width', 'height']) baixo.style[k] = ''; }
+      if (guardado) { area.style.position = guardado.pos; area.style.overflow = guardado.ov; guardado = null; }
+    };
+    const pintar = (p) => { cima.style.transform = `translate3d(${p * 100}%,0,0)`; if (baixo) baixo.style.transform = `translate3d(${-24 * (1 - p)}%,0,0)`; };
+    return {
+      largura: () => cima.clientWidth || innerWidth,
+      comecar() {
+        if (baixo && !baixo.textContent.trim()) window.SintoniaAbas?.preparar?.(baixo.id.slice(2));
+        guardado = { pos: area.style.position, ov: area.style.overflow };
+        area.style.position = 'relative'; area.style.overflow = 'hidden';
+        if (baixo) {
+          const r = cima.getBoundingClientRect(), ra = area.getBoundingClientRect();
+          Object.assign(baixo.style, { left: (r.left - ra.left) + 'px', top: (r.top - ra.top) + 'px', width: r.width + 'px', height: r.height + 'px' });
+          baixo.classList.add('fz-baixo');
+        }
+        cima.classList.add('fz-cima');
+        pintar(0);
+      },
+      mover: pintar,
+      soltar(vai, p, v) {
+        const resta = vai ? 1 - p : p;
+        const dur = Math.max(140, Math.min(300, (resta * (cima.clientWidth || 390)) / Math.max(0.8, v || 0)));
+        const op = { duration: dur, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' };
+        const fim = vai ? 1 : 0;
+        const a1 = cima.animate([{ transform: `translate3d(${p * 100}%,0,0)` }, { transform: `translate3d(${fim * 100}%,0,0)` }], op);
+        const a2 = baixo?.animate([{ transform: `translate3d(${-24 * (1 - p)}%,0,0)` }, { transform: `translate3d(${vai ? 0 : -24}%,0,0)` }], op);
+        a1.finished.then(() => {
+          pintar(fim); a1.cancel(); a2?.cancel();
+          if (!vai) { limpar(); return; }
+          // a tela de dentro fica fora da vista até o app trocar de tela (sem piscar); depois tudo volta ao normal
+          const obs = new MutationObserver(() => { if (!cima.classList.contains('ativa')) { obs.disconnect(); requestAnimationFrame(limpar); } });
+          obs.observe(cima, { attributes: true, attributeFilter: ['class'] });
+          setTimeout(() => { obs.disconnect(); limpar(); }, 900);
+          V.voltar({ arrastou: true });
+        }, () => limpar());
+      },
+    };
   }
   function alvoConversa() {
     return {

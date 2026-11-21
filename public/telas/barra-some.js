@@ -19,6 +19,12 @@
   const mostrar = () => document.body.classList.remove('barra-some');
   const esconder = () => { if (!document.querySelector('dialog[open]')) document.body.classList.add('barra-some'); };
 
+  /* rotas-celular: só some quando a PESSOA rola (dedo ou roda, dentro da lista que rolou). Rolagem feita pela tela (a Agenda abre já na
+     hora de agora, por exemplo) não esconde a barra. */
+  let mexeu = 0, tocado = null;
+  const marcarMexeu = (e) => { mexeu = Date.now(); tocado = e.target instanceof Node ? e.target : null; };
+  for (const ev of ['touchstart', 'wheel', 'pointerdown']) document.addEventListener(ev, marcarMexeu, { capture: true, passive: true });
+  const pessoaRolou = (alvo) => Date.now() - mexeu < 3000 && tocado && (alvo === document.scrollingElement || alvo.contains(tocado));
   function aoRolar(e) {
     if (!celular.matches) return;
     const alvo = e.target === document ? document.scrollingElement : e.target;
@@ -33,7 +39,7 @@
       if (!ultimo.has(alvo)) { ultimo.set(alvo, 0); }
       const antes = ultimo.get(alvo);
       if (y < 24) mostrar();
-      else if (y > antes + 8 && y > 80) esconder();
+      else if (y > antes + 8 && y > 80 && pessoaRolou(alvo)) esconder();
       else if (y < antes - 6) mostrar();
       if (Math.abs(y - antes) > 6 || y < 24) ultimo.set(alvo, y);
     });

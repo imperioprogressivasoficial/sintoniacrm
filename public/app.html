@@ -3322,6 +3322,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const fecharE = (fn) => () => { if (window.SintoniaPainel?.aberto?.()) window.SintoniaPainel.fechar(); setTimeout(fn, 60); };
       const abrirArea = (g) => window.SintoniaPainel.abrir({ id: 'cfg-' + g.id, titulo: g.titulo, montar: (corpo) => corpo.append(el('div', { class: 'mais-lista' }, ...g.itens.map((it) => linhaItem({ ...it, acao: fecharE(it.acao) })))) });
+      window.SintoniaConfigArea = (id) => { const g = grupos.find((x) => 'cfg-' + x.id === id); if (g) abrirArea(g); return Boolean(g); }; /* rotas-celular: reabre a área ao voltar de uma tela */
       const perfilCapa = el('button', { class: 'mais-perfil cfg-perfil', type: 'button', title: 'Minha conta', onclick: perfil.onclick || (() => (window.SintoniaTelas?.conta ? (window.SintoniaTelas.conta.irAba('perfil'), mostrar('conta')) : abrirMinhaConta())) },
         avatarPessoa(eu.nome, '', eu.id), el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: PAPEL[eu.papel] || eu.papel })));
       /* capa-perfil (dono 21/11): sem os chips de unidades e e-mail; capa com foto (public/telas/capa-perfil.js) e
@@ -3857,6 +3858,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/conversa-ux.js" defer></script>
 <script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
 <script src="/telas/conversa-extra.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/voltar-celular.js" defer></script><!-- rotas-celular: botão "Voltar" nas telas de dentro (celular) -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)
