@@ -13,6 +13,7 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
 
+- **21/11 21:26 UTC — no ar o 112adc2:** topo da conversa como o WhatsApp Web (public/telas/topo-conversa.js: Vídeo, Ligar, Agendar, Pesquisar em todas as mensagens via /api/conversas/:id/busca, ⋯ com ficha, radar, IA, atribuir, etapa, tarefa, favorito, silenciar, arquivar, papel de parede, exportar .txt via /api/conversas/:id/exportar, finalizar, fechar). Ocultar dados só em Conta › Privacidade. Juntada claude/brilho-cortado. Ainda rodando: etapa-entrada (720) e serena-super.
 - **21/11 20:55 UTC — no ar o 0c1929c:** olho (ocultar dados) no topo da conversa. Modelos da estética dos 4 botões aguardando escolha do dono: https://claude.ai/artifact/K2i22HwLQdqQKJj1YwHSiW
 - **20/11 20:25 UTC — no ar o ff41414:** gestos nas Conversas (arrastar/segurar, como o WhatsApp iOS). Antes disso: Foco do pipeline em baralho e pipeline mais sóbrio.
 - **20/11 16:40 UTC — no ar o ab191f6:** juntadas pipeline-celular, respostas-fluxos, whatsapp-estavel e nps-posvenda. Falta: chat da equipe + grupos, tirar Norte/Sumaré fixos, segurança do servidor (aguarda ok), barra de baixo encolher.

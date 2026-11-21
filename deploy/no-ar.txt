@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 20:55 UTC (21/11, 17h55 na Bahia)
-commit: 0c1929c
-pacote sha256: 6c5768e69573b95a683777e0948b225254e2533824717adaecafbd3a268b915b
+data: 2026-11-21 21:26 UTC (21/11, 18h26 na Bahia)
+commit: 112adc2
+pacote sha256: 157000ee76c7f84049836040271dec63dd4da811efc3c0ab1b7829906464af35
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-0c1929c.b64); pode apagar depois.
-observação: em cima do 62f7cfe. Entra: olho do modo oculto sai dos filtros e vai para o topo da conversa (Radar, Olho, Agendar, Ligar).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-112adc2.b64); pode apagar depois.
+observação: em cima do 0c1929c. Entra: topo da conversa como o WhatsApp Web (vídeo, ligar, agendar, pesquisar, ⋯ com radar/exportar etc.), Ocultar dados só em Conta › Privacidade, e a branch claude/brilho-cortado (brilhos sem corte, chips menores no celular).
