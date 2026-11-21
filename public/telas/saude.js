@@ -168,7 +168,7 @@
 
     const rodape = el('div', { class: 'sd-rodape' },
       el('span', { text: 'Atualiza sozinho a cada 15 s enquanto esta tela está aberta.' }),
-      el('button', { type: 'button', text: 'Atualizar agora', onclick: () => caixa.dispatchEvent(new Event('sd-agora')) }));
+      el('button', { type: 'button', class: 'so-pc', text: 'Atualizar agora', onclick: () => caixa.dispatchEvent(new Event('sd-agora')) }));
     caixa.replaceChildren(el('div', { class: 'sd' }, geral, el('div', { class: 'rl-grade' }, filas, aparecer, iaP, whats, midias, proc, banco), rodape));
   }
 

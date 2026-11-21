@@ -31,7 +31,9 @@
     const mais = document.createElement('button'); mais.type = 'button'; mais.className = 'icone redondo'; mais.title = 'Mais opções'; mais.setAttribute('aria-label', 'Mais opções'); mais.innerHTML = PONTOS;
     mais.addEventListener('click', (e) => { e.stopPropagation(); caixaMenu.hidden = !caixaMenu.hidden; });
     document.addEventListener('pointerdown', (e) => { if (!caixaMenu.hidden && !caixaMenu.contains(e.target) && e.target !== mais && !mais.contains(e.target)) caixaMenu.hidden = true; }, true);
-    if (!menu.length) mais.style.visibility = 'hidden';
+    // ⋯ só aparece quando o menu tem alguma opção à mostra (ex.: Grupos sem arquivados)
+    const conferir = () => { mais.style.visibility = [...caixaMenu.children].some((b) => !b.hidden) ? '' : 'hidden'; };
+    conferir(); new MutationObserver(conferir).observe(caixaMenu, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
     const espaco = document.createElement('span'); espaco.className = 'espaco';
     topo.append(mais, espaco);
     if (window.SintoniaTopoGrupo) topo.append(window.SintoniaTopoGrupo());

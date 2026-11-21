@@ -186,7 +186,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     voltaArq.addEventListener('click', () => trocarArquivo(false));
     /* topo-lista: no celular, a mesma barra de cima de Conversas (⋯ com as opções, lua e sino) */
     const barraCima = window.SintoniaTopoLista?.({ menu: [
-      { id: 'sinc', nome: 'Buscar grupos do WhatsApp', ic: ICONE_SINC, acao: sincronizar },
       { id: 'arq', nome: 'Grupos arquivados', ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg>', acao: () => trocarArquivo(true) },
     ] });
     const topo = el('div', { class: 'lista-topo' }, barraCima || null,
@@ -223,7 +222,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const caixa = $('.gp-itens'); if (!caixa) return;
     if (s.arquivo && !s.arquivadas.total) s.arquivo = false;
     const sinc = $('.gp-sinc'); if (sinc) sinc.hidden = !s.podeSincronizar || s.arquivo;
-    const itSinc = $('.tl-menu [data-id="sinc"]'); if (itSinc) itSinc.hidden = !s.podeSincronizar;
     const itArq = $('.tl-menu [data-id="arq"]'); if (itArq) itArq.hidden = s.arquivo || !s.arquivadas?.total;
     const volta = $('.gp-volta-arq'); if (volta) volta.hidden = !s.arquivo;
     const titulo = $('.gp-titulo'); const t = s.arquivo ? 'Arquivadas' : 'Grupos'; if (titulo && titulo.textContent !== t) titulo.textContent = t;
@@ -551,7 +549,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { carregarLista(); if (ativa() && s.aberto) carregarMensagens(false); } });
 
+  /* Puxar para baixo (celular, public/telas/puxar.js): lista nova na hora e, por trás, busca os grupos do WhatsApp. */
+  async function recarregar() {
+    if (s.podeSincronizar && !s.arquivo) s.ui?.post('/api/grupos/sincronizar').then(() => carregarLista()).catch(() => {});
+    await carregarLista();
+  }
   window.SintoniaTelas.grupos = {
+    recarregar,
     desenhar(caixa, ui) {
       garantirEstilo();
       s.ui = ui;
