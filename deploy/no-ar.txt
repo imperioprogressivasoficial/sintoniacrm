@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 10:10 UTC (21/11, 07h10 na Bahia)
-commit: 79f1b3c
-pacote sha256: 62d9891885240e008590fdb22d68aa688390a398b279b27c866953aaf167a547
+data: 2026-11-21 10:20 UTC (21/11, 07h20 na Bahia)
+commit: 9102e3e
+pacote sha256: b80ba202c23aee47029179949bea05a46691c50ad3bbddfa904afd5304fbd4a1
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-79f1b3c.b64); pode apagar depois.
-observação: em cima do 1f47263. Entra: barra de baixo do celular some ao rolar (public/telas/barra-some.js, modelo Some).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-9102e3e.b64); pode apagar depois.
+observação: em cima do 79f1b3c. Correção: mídias do WhatsApp baixam direto do mmg.whatsapp.net (src/channels/whatsapp-cdn.ts), Evolution como reserva; resgate refaz as que falharam.
