@@ -42,3 +42,17 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
       Automações = Chatbot, Fluxos, Agente de IA, Follow-up (20/11).
 - [ ] Pipeline no celular: modelo "Junção" aprovado (Foco/Lista/Colunas com ícones de contorno verde→azul,
       métrica principal escolhida pela pessoa). Canvas: https://claude.ai/artifact/4yhSyAvGmsEMWvw4yvW6jo
+
+## Revisão de 21/11 (00h40 Bahia) — o que ficou para trás e onde está
+Em andamento (agentes):
+- Papel de parede da conversa (cores, por pessoa, claro/escuro); foto da Serena no lugar de "IA" em todo lugar (Pipeline, ficha, painéis); silenciar conversa; arquivar conversas individuais — agente `conversa-extra`.
+- Produtos e serviços ligados ao lead (ficha e cartão, valor = soma), filtro por produto e por empresa vinculada no Pipeline — agente `produtos-lead`.
+- Unidades vindas do cadastro em todo o sistema (sem Norte/Sumaré fixos; qualquer empresa) — agente `unidades`.
+- Resgate/histórico trazendo fotos e áudios; avisos e lembretes do Agendamento online + reservas na Agenda; organizar o menu Automações — agente `atendimento-extra`.
+- Auditoria completa + teste de carga — agente `auditoria` (só relatório).
+Esperando o dono:
+- Barra de baixo do celular encolhendo ao rolar (escolher modelo).
+- Fluidez: folhas do celular sem vidro (ok?); lista guardada no aparelho (ok?).
+- Firewall e backup fora do servidor (docs/SEGURANCA-SERVIDOR.md) — precisa do ok.
+- Chave nova do Claude, Trinks e Asaas em Conexões; conta/token da Meta Ads para o gasto na Central de criativos.
+- Testar no real: áudio no iPhone, grupos do WhatsApp, resgatar mensagens.
