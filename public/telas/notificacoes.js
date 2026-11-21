@@ -66,7 +66,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--cor-ic, var(--marca-azul)); background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 14%, transparent); }
   .nt-ic svg { width: 17px; height: 17px; }
   .nt-ic.t-espera { --cor-ic: #d97706; } .nt-ic.t-ia_equipe { --cor-ic: #0a8f7a; } .nt-ic.t-transferida { --cor-ic: #106ebe; }
-  .nt-ic.t-agenda_mudou { --cor-ic: #7c3aed; } .nt-ic.t-lembrete_ligacao { --cor-ic: #0369a1; } .nt-ic.t-radar { --cor-ic: #106ebe; } .nt-ic.t-nps_baixa { --cor-ic: #d97706; } .nt-ic.t-falha, .nt-ic.t-problema { --cor-ic: #dc2626; }
+  .nt-ic.t-agenda_mudou { --cor-ic: #7c3aed; } .nt-ic.t-reuniao { --cor-ic: #0e7490; } .nt-ic.t-lembrete_ligacao { --cor-ic: #0369a1; } .nt-ic.t-radar { --cor-ic: #106ebe; } .nt-ic.t-nps_baixa { --cor-ic: #d97706; } .nt-ic.t-falha, .nt-ic.t-problema { --cor-ic: #dc2626; }
   [data-tema="escuro"] .nt-ic { background: color-mix(in srgb, var(--cor-ic, var(--marca-azul)) 26%, transparent); filter: brightness(1.35); }
   .nt-titulo { font-size: 15px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nt-nova .nt-titulo { font-weight: 800; }
@@ -150,7 +150,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     fechar: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 'stroke-width="2.2"'),
     engrenagem: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'),
   };
-  IC.agenda_mudou = IC.agendamento; IC.problema = IC.falha;
+  IC.agenda_mudou = IC.agendamento; IC.problema = IC.falha; IC.reuniao = IC.agendamento; /* atendimento-extra */
   const CLASSE_IC = new Proxy({}, { get: (_, t) => `t-${String(t)}` });
   // Só o que pede ação (o servidor não cria mais "nova cliente", "mensagem" nem "a IA agendou").
   const TIPOS = [
@@ -158,6 +158,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['ia_equipe', 'A IA passou para a equipe', 'Quando a IA precisa de uma pessoa (com o motivo).'],
     ['transferida', 'Conversa passada para você', 'Transferida ou atribuída a você.'],
     ['agenda_mudou', 'Agendamento cancelado ou remarcado', 'Quando a cliente pede para remarcar.'],
+    /* atendimento-extra */ ['reuniao', 'Reunião online', 'Alguém marcou ou desmarcou pelo link de agendamento, e o lembrete antes da reunião.'],
     ['lembrete_ligacao', 'Lembrete de ligação', 'Ligações programadas, na hora marcada.'],
     ['radar', 'Radar disparou', 'Aconteceu o que você pediu para vigiar numa conversa (ou chegou o prazo).'],
     ['nps_baixa', 'Nota baixa na pesquisa de satisfação', 'Cliente deu nota de 0 a 6 (só para a gestão).'],

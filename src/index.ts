@@ -120,6 +120,8 @@ import { UNIDADES_EQUIPE } from './auth/acesso.js';
 /* integracoes: área de desenvolvedores (chaves de API, API v1, webhooks de saída e MCP) */
 import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integracoes/armazem.js';
 import { montarIntegracoes } from './integracoes/rotas.js';
+/* atendimento-extra: avisos do agendamento online (sino, WhatsApp para o contato e lembrete antes) */
+import { AvisosReuniao } from './reunioes/avisos.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -534,6 +536,33 @@ const integracoes = montarIntegracoes({
 });
 observarEventos(repo, (e) => integracoes.aoEvento(e));
 
+/* atendimento-extra: quem marca ou desmarca pelo link de agendamento avisa a dona do link e a gestão (sino + push);
+ * o contato recebe a confirmação e o lembrete pelo WhatsApp (conversa do número, ou uma nova no primeiro número conectado). */
+const avisosReuniao = pool
+  ? new AvisosReuniao({
+      pool,
+      log,
+      urlPublica: () => process.env.SINTONIA_URL_PUBLICA,
+      avisarPessoa: (id, a) => notificador.avisarPessoa(id, a),
+      avisarGestao: (a) => notificador.avisarGestao(a),
+      whatsapp: async (telefone, nome, texto) => {
+        const n = numeros.find(ehReal);
+        if (!n) return undefined;
+        const agora = new Date();
+        const r = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade: n.unidade, canalId: n.canalId, telefone, nome, agora });
+        if (r.nova) {
+          await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: r.conversa.id, unidade: r.conversa.unidade, em: agora, dados: { origem: 'agendamento_online' } });
+          await sintonia.mudarModo(r.conversa.id, (await agentesIa.modoInicial(r.conversa, agora)) ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
+        }
+        await sintonia.comConversa(r.conversa.id, async (c) => {
+          await sintonia.enviarAutomatico(c, texto, 'Agendamento online');
+          await repo.salvarConversa(c);
+        });
+        return { conversaId: r.conversa.id };
+      },
+    })
+  : undefined;
+
 const app = criarServidor({
   sintonia,
   repo,
@@ -549,6 +578,7 @@ const app = criarServidor({
   },
   grupos,
   aoReuniao: integracoes.aoReuniao,
+  avisosReuniao, // atendimento-extra
   conexoes: {
     conexoes,
     agendas,
@@ -920,6 +950,7 @@ const relogio = setInterval(async () => {
   await followup.tick().catch((e) => log('Falha no relógio do follow-up', String(e))); // cadências e confirmações de agenda
   await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
   await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
+  await avisosReuniao?.tick().catch((e) => log('Falha no relógio do agendamento online', String(e))); // atendimento-extra: lembrete antes da reunião
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);
