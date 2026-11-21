@@ -24,12 +24,14 @@
   :root { --cux-anel: linear-gradient(135deg, #0ffcbe 0%, #3aa0ff 58%, #106ebe 100%); }
   html[data-tema="escuro"] { --cux-anel: linear-gradient(135deg, #0ffcbe 0%, #3aa0ff 100%); }
   #itens .item > .avatar:has(> img), #c-avatar:has(> img), #f-avatar:has(> img) {
-    --cux-fio: 1.75px; box-shadow: none !important; background: var(--cux-anel) !important; }
-  #c-avatar:has(> img) { --cux-fio: 1.75px; }
-  #f-avatar:has(> img) { --cux-fio: 2.5px; }
+    --cux-fio: 2px; box-shadow: none !important; background: var(--cux-anel) !important; }
+  /* números inteiros: com 1,75 px o computador (tela 1x) arredondava cada lado de um jeito e a foto parecia cortada */
+  #c-avatar:has(> img) { --cux-fio: 2px; }
+  #f-avatar:has(> img) { --cux-fio: 3px; }
   #itens .item > .avatar:has(> img) > img, #c-avatar:has(> img) > img, #f-avatar:has(> img) > img,
   #itens .item > .avatar:has(> img) > svg, #c-avatar:has(> img) > svg, #f-avatar:has(> img) > svg {
-    position: absolute; inset: var(--cux-fio); width: calc(100% - 2 * var(--cux-fio)) !important; height: calc(100% - 2 * var(--cux-fio)) !important; border-radius: 50%; }
+    position: absolute; inset: var(--cux-fio); width: calc(100% - 2 * var(--cux-fio)) !important; height: calc(100% - 2 * var(--cux-fio)) !important; border-radius: 50%;
+    object-fit: cover; object-position: center; box-shadow: 0 0 0 1px var(--fundo); }
   #itens .item > .avatar:has(> img) > svg, #c-avatar:has(> img) > svg, #f-avatar:has(> img) > svg { background: var(--boneco-fundo); }
 
   /* ---------- topo da conversa: ícones do mesmo tamanho e peso ---------- */
