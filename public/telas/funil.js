@@ -8,7 +8,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const SVG = {
     mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     pontos: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>',
-    raio: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.5 4.8 13.4c-.3.4 0 1 .5 1h5.2l-1.4 7.1c-.1.6.7.9 1 .4l8.4-10.9c.3-.4 0-1-.5-1h-5.2l1.4-7.1c.1-.6-.7-.9-1-.4Z"/></svg>',
+    /* crm-topo: o raio amarelo (⚡) saiu; automação agora é o ícone de fluxo, em traço */
+    raio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="6" height="6" rx="1.6"/><rect x="14.5" y="14.5" width="6" height="6" rx="1.6"/><path d="M6.5 9.5v3a2 2 0 0 0 2 2h6"/></svg>',
+    aviao: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10 14"/><path d="M21 3 14.5 21l-4.5-7-7-4.5Z"/></svg>',
+    voltar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>',
     busca: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
     relogio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
     fechar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -130,14 +133,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-cab .fn-redondo:hover { color: var(--texto); }
   .fn-cab .fn-redondo svg { width: 16px; height: 16px; }
   .fn-cab .fn-redondo.fn-menu { background: transparent; box-shadow: none; }
-  .fn-raio { all: unset; cursor: pointer; flex: none; height: 30px; min-width: 30px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
-    color: #f5b800; font-size: 12.5px; font-weight: 800; }
-  .fn-raio svg { width: 18px; height: 18px; filter: drop-shadow(0 0 5px rgba(245,184,0,.65)); }
-  .fn-raio:hover { background: rgba(245,184,0,.14); }
-  .fn-raio.fn-tem { background: rgba(245,184,0,.16); box-shadow: inset 0 0 0 1px rgba(245,184,0,.45), 0 0 12px rgba(245,184,0,.25); color: #a87400; }
-  html[data-tema="escuro"] .fn-raio.fn-tem { color: #ffd34d; }
-  .fn-raio:not(.fn-tem) { opacity: .8; }
-  .fn-raio:not(.fn-tem) b { display: none; }
+  /* crm-topo: automações da etapa em traço discreto (sem raio amarelo); só aparece quando a etapa tem alguma */
+  .fn-raio { all: unset; cursor: pointer; flex: none; height: 28px; min-width: 28px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    color: var(--sub); font-size: 12px; font-weight: 800; box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .fn-raio svg { width: 15px; height: 15px; }
+  .fn-raio:hover { background: var(--vidro-ativo); color: var(--texto); }
+  .fn-raio.fn-tem { color: var(--texto); }
+  .fn-raio:not(.fn-tem) { display: none; }
   .fn-lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 8px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; }
   .fn-vazio { margin: 4px 2px 10px; padding: 22px 12px; border-radius: 18px; border: 1.5px dashed var(--vidro-borda); color: var(--sub); font-size: 13.5px; text-align: center; line-height: 1.4; }
   .fn-col.fn-alvo .fn-vazio { border-color: var(--cor); color: var(--texto); }
@@ -374,7 +376,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     colEls: new Map(), cartaoEls: new Map(), autos: [], autosEm: 0, cores: [],
     arrasto: null, aperto: null, abertos: 0, assinaturaFunis: '', dona: lerLocal('sintonia.crm.dona') || '', assinaturaPessoas: '',
     origem: lerLocal('sintonia.crm.origem') || '', etiqueta: '', periodo: '',
+    /* crm-topo: filtro completo (vai para o servidor), vista Quadro | Lista e seleção da lista */
+    filtro: null, vista: lerLocal('sintonia.crm.vista') === 'lista' ? 'lista' : 'quadro', selecao: new Set(), avisos: [],
   };
+  s.dona = ''; // o filtro de atendente agora é "Responsável" no painel Filtrar (s.filtro.donas)
+  const T = () => window.SintoniaFunilTopo;
+  const filtroAtual = () => { if (!s.filtro && T()) s.filtro = T().lerFiltro(s.funilId); return s.filtro; };
   const PAGINA = 25;
   const DIA = 86400000;
 
@@ -461,6 +468,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const p = new URLSearchParams();
     if (s.unidade) p.set('unidade', s.unidade);
     if (s.dona) p.set('dona', s.dona);
+    filtroAtual();
+    const fu = T()?.filtroUrl(s);
+    if (fu) p.set('filtro', fu);
     for (const [k, v] of Object.entries(extra)) p.set(k, String(v));
     return `/api/funis/${s.funilId}/quadro?${p}`;
   }
@@ -479,7 +489,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         if (cr) { c.cartoes = c.cartoes.concat(cr.cartoes); c.mais = cr.mais; }
       }));
       if (geracao !== s.geracao || s.arrasto) return; // chegou depois de um movimento: ignora para não voltar o cartão
-      s.q = q; s.erro = null;
+      s.q = q; s.erro = null; s.avisos = q.avisos || [];
       desenharQuadro();
     } catch (x) {
       if (geracao !== s.geracao) return;
@@ -515,12 +525,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.botaoFiltros = el('button', { class: 'fn-filtros-bt', type: 'button', title: 'Filtrar por origem, atendente, unidade, etiqueta ou período', onclick: abrirFiltros },
       el('span', { html: SVG.filtro, style: 'display:grid' }), el('span', { text: 'Filtros' }), s.qtdFiltros);
     s.quadro = el('div', { class: 'fn-quadro' });
+    s.listaEl = el('div', { class: 'ft-lista', hidden: '', 'aria-label': 'Lista de leads' }); // crm-topo: vista Lista
     s.cel = el('div', { class: 'fc', hidden: '' }); // pipeline-celular: o CRM do celular (/telas/funil-celular.js)
+    filtroAtual();
+    // crm-topo: no computador o topo (busca + Filtrar, transmissão, Automações, Novo lead, ⋯) mora no cabeçalho da vista.
+    const topo = T() ? T().montarTopo(ctx, busca, s.achados) : null;
+    const cabeca = s.caixa.closest('#v-funil')?.querySelector('.cabeca-vista');
+    cabeca?.querySelector('.ft-barra')?.remove();
+    if (topo && cabeca) cabeca.append(topo.barra);
     s.caixa.replaceChildren(
+      ...(topo ? [topo.pilulas] : []),
       el('div', { class: 'fn-topo' },
-        el('div', { class: 'fn-buscar' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.achados),
-        s.botaoFiltros, el('div', { class: 'fn-funis-linha' }, s.barraFunis)),
-      s.quadro, s.cel,
+        topo ? null : el('div', { class: 'fn-buscar' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.achados),
+        topo ? null : s.botaoFiltros, el('div', { class: 'fn-funis-linha' }, s.barraFunis, topo ? topo.vistas : null)),
+      s.quadro, s.listaEl, s.cel,
     );
     s.colEls.clear(); s.cartaoEls.clear();
     // cabeçalho da vista (em app.html): números ao lado do título
@@ -552,6 +570,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function trocarFunil(id) {
     if (id === s.funilId) return;
     s.funilId = id; gravarLocal('sintonia.crm.funil', id);
+    s.filtro = T() ? T().lerFiltro(id) : null; s.selecao.clear();
     s.q = null; s.carregados = {}; s.colEls.clear(); s.cartaoEls.clear(); s.quadro.replaceChildren(); s.quadro.scrollLeft = 0;
     s.assinaturaFunis = ''; desenharBarra();
     carregarQuadro();
@@ -586,6 +605,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------- filtros (janela) ----------
   const PERIODOS = [['', 'Qualquer data'], ['1', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias']];
   const passaEtiqueta = (c) => !s.etiqueta || (c.tags || []).some((t) => t.id === s.etiqueta);
+  const passaCliente = (x) => { const ra = window.SintoniaRastreio; return passaDona(x) && passaEtiqueta(x) && passaPeriodo(x) && (!ra || ra.passa(x.conversaId, x.origem, s.origem)); };
   const passaPeriodo = (c) => {
     if (!s.periodo) return true;
     const d = Number(s.periodo);
@@ -593,12 +613,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return new Date(c.ultima?.em || c.atualizadaEm || 0).getTime() >= desde;
   };
   function contarFiltros() {
+    if (T() && s.ftPilulas) { T().desenharPilulas(ctx); return; }
     if (!s.qtdFiltros) return;
     const n = [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo].filter(Boolean).length;
     s.qtdFiltros.textContent = n ? String(n) : '';
     s.botaoFiltros.setAttribute('aria-label', n ? `Filtros (${n} ligado${n === 1 ? '' : 's'})` : 'Filtros');
   }
-  function abrirFiltros() {
+  /** crm-topo: o painel completo "Filtrar" (computador e celular). */
+  function abrirFiltros() { if (T()) T().abrirFiltro(ctx); else abrirFiltrosAntigo(); }
+  function abrirFiltrosAntigo() {
     const { el } = s.ui;
     const ra = window.SintoniaRastreio;
     const d = el('dialog', { class: 'folha fn-folha fn-filtros', 'aria-label': 'Filtros do CRM' });
@@ -660,8 +683,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       c.col = col;
       pintar(c.raiz, col.etapa.cor || '#8B8D98');
       c.nome.textContent = col.etapa.nome;
-      const ra = window.SintoniaRastreio;
-      const vis = col.cartoes.filter((x) => passaDona(x) && passaEtiqueta(x) && passaPeriodo(x) && (!ra || ra.passa(x.conversaId, x.origem, s.origem)));
+      const vis = col.cartoes.filter(passaCliente);
       c.total.textContent = String(s.dona || vis.length !== col.cartoes.length ? vis.length : col.total);
       c.total.title = s.dona ? `${vis.length} desta dona entre as carregadas` : `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
       // Paradas há +3 dias: contadas no servidor (com os filtros do servidor), não só nas carregadas.
@@ -671,7 +693,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       c.sub.classList.toggle('fn-alerta', !!c.sub.textContent);
       c.mais.hidden = !gestao;
       const autos = autosDaEtapa(id);
-      c.raio.hidden = !gestao;
+      c.raio.hidden = !gestao || !autos.length;
       c.raio.classList.toggle('fn-tem', autos.length > 0);
       c.raioQtd.textContent = autos.length ? String(autos.length) : '';
       const ligadas = autos.filter((a) => a.ligada).length;
@@ -681,7 +703,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       // cartões: reaproveita os elementos que não mudaram (não pisca nem recarrega a foto)
       const nos = vis.map((cartao) => cartaoEl(cartao, id));
       const topo = c.lista.scrollTop;
-      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: (s.origem || s.etiqueta || s.periodo) && col.cartoes.length ? 'Ninguém com esses filtros aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
+      const comFiltro = !!(s.origem || s.etiqueta || s.periodo || (T() && !T().vazio(s.filtro)));
+      if (!nos.length) nos.push(el('div', { class: 'fn-vazio', text: s.filtro?.excluidos ? 'Nenhum lead excluído nesta etapa.' : comFiltro ? 'Ninguém com esses filtros aqui.' : 'Nenhuma cliente nesta etapa. Arraste um cartão para cá.' }));
       const atuais = [...c.lista.children];
       if (atuais.length !== nos.length || atuais.some((n, i) => n !== nos[i])) { c.lista.replaceChildren(...nos); c.lista.scrollTop = topo; }
       const faltam = col.total - col.cartoes.length;
@@ -705,6 +728,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     for (const k of s.cartaoEls.keys()) if (!ids.has(k)) s.cartaoEls.delete(k);
     desenharPessoas();
     desenharNumeros();
+    // crm-topo: Quadro | Lista, pílulas dos filtros e o painel "Editar funil" aberto
+    const lista = s.vista === 'lista' && !!T();
+    s.quadro.hidden = lista; s.listaEl.hidden = !lista;
+    if (lista) T().desenharLista(ctx);
+    if (T()) { T().lembrarPessoas(s); T().desenharPilulas(ctx); }
+    s.aoRedesenhar?.();
     desenharCelular();
     if (s.ficha) s.ficha.atualizar();
   }
@@ -723,8 +752,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ra = window.SintoniaRastreio;
     window.SintoniaFunilCelular.desenhar(s.cel, {
       ui: s.ui, q: s.q, erro: s.erro, funis: s.funis, funil: funil(), gestao: ehGestao(),
-      filtros: [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo],
-      passa: (x) => passaDona(x) && passaEtiqueta(x) && passaPeriodo(x) && (!ra || ra.passa(x.conversaId, x.origem, s.origem)),
+      filtros: [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo, T()?.filtroUrl(s) || ''],
+      passa: passaCliente,
       dinheiro, haTexto,
       mover, carregarMais, adicionarCliente, menuCartao, editarValor, novoLead, trocarFunil, menuTopo, abrirFiltros, pular, folha,
       recarregar: () => recarregarTudo(),
@@ -773,7 +802,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { el } = s.ui;
     const previa = el('div', { class: 'fn-previa' });
     if (u) {
-      const quem = u.autor === 'cliente' ? '' : u.autor === 'ia' ? (u.autorNome && /^Automação/.test(u.autorNome) ? '⚡ ' : 'IA: ') : `${primeiroNome(u.autorNome) || 'Equipe'}: `;
+      const quem = u.autor === 'cliente' ? '' : u.autor === 'ia' ? (u.autorNome && /^Automação/.test(u.autorNome) ? 'Automação: ' : 'IA: ') : `${primeiroNome(u.autorNome) || 'Equipe'}: `;
       if (quem) previa.append(el('i', { text: quem }));
       previa.append(document.createTextNode(u.texto || '(mídia)'));
     } else { previa.textContent = 'Sem mensagens ainda'; previa.classList.add('fn-nada'); }
@@ -811,7 +840,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   function cartaoEl(cartao, etapaId) {
     const selo = window.SintoniaRastreio?.selo(cartao.conversaId);
-    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000), selo]);
+    const campos = T() ? T().config().cartao : ['valor', 'origem', 'situacao', 'responsavel'];
+    const tem = (k) => campos.includes(k);
+    const assinatura = JSON.stringify([cartao, etapaId, Math.floor(Date.now() / 60000), selo, campos]);
     const cache = s.cartaoEls.get(cartao.conversaId);
     if (cache && cache.assinatura === assinatura) return cache.no;
     const { el, nomeDe } = s.ui;
@@ -823,14 +854,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       : bolinha(cartao.dona, cartao.dona ? `Atendida por ${cartao.dona.nome}` : 'Sem atendente');
     const ra = window.SintoniaRastreio;
     const origem = cartao.origem?.icone && cartao.origem.icone !== 'desconhecido' ? cartao.origem : (ra?.selo(cartao.conversaId) || { icone: 'desconhecido' });
+    const quando = (d) => (d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '');
+    const l2 = [
+      tem('valor') ? (cartao.valor != null ? el('span', { class: 'fn-valor', text: dinheiro(cartao.valor) }) : el('span', { class: 'fn-valor fn-vazio-v', title: 'Sem valor (defina no ⋯ do cartão)', text: 'R$ —' })) : null,
+      tem('origem') ? el('span', { class: 'fn-origem', title: `Origem: ${NOME_ORIGEM[origem.icone] || 'Sem origem'}` }, ra ? ra.iconeEl(origem) : null, el('span', { text: NOME_ORIGEM[origem.icone] || 'Sem origem' })) : null,
+    ].filter(Boolean);
+    const extras = [
+      tem('telefone') ? el('span', { text: s.ui.formatarTel(cartao.telefone) }) : null,
+      tem('desde') && cartao.desde ? desdeEl(cartao) : null,
+      tem('criado') && cartao.criadaEm ? el('span', { title: 'Criado em', text: `Criado ${quando(cartao.criadaEm)}` }) : null,
+    ].filter(Boolean);
+    const pe = [tem('situacao') ? situacaoEl(cartao, etapaId) : el('span'), tem('responsavel') ? atende : null].filter(Boolean);
     const no = el('div', { class: 'fn-cartao', role: 'button', tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}. Abrir conversa` },
       s.ui.avatar({ id: cartao.conversaId, nome: cartao.nome, telefone: cartao.telefone }),
       el('div', { class: 'fn-corpo' },
         el('div', { class: 'fn-nome' }, el('span', { text: nome })),
-        el('div', { class: 'fn-l2' },
-          cartao.valor != null ? el('span', { class: 'fn-valor', text: dinheiro(cartao.valor) }) : el('span', { class: 'fn-valor fn-vazio-v', title: 'Sem valor (defina no ⋯ do cartão)', text: 'R$ —' }),
-          el('span', { class: 'fn-origem', title: `Origem: ${NOME_ORIGEM[origem.icone] || 'Sem origem'}` }, ra ? ra.iconeEl(origem) : null, el('span', { text: NOME_ORIGEM[origem.icone] || 'Sem origem' }))),
-        el('div', { class: 'fn-pe' }, situacaoEl(cartao, etapaId), atende)),
+        l2.length ? el('div', { class: 'fn-l2' }, ...l2) : null,
+        extras.length ? el('div', { class: 'fn-linha2' }, ...extras) : null,
+        tem('tags') && (cartao.tags || []).length ? el('div', { class: 'fn-tags' }, ...cartao.tags.slice(0, 3).map(tagEl)) : null,
+        pe.length > 1 || tem('situacao') ? el('div', { class: 'fn-pe' }, ...pe) : null),
       mais);
     // Clicar no cartão abre a conversa; a ficha (observações, etapa, tags) fica no ⋯.
     no.addEventListener('click', () => { if (s.semClique) return; s.ui.abrir(cartao.conversaId); });
@@ -1095,7 +1137,32 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const outros = [{ nome: 'Abrir conversa', icone: SVG.conversa, acao: () => s.ui.abrir(conversaId) }, { nome: 'Ficha e observações', info: 'Etapa, responsável, observações e tags', icone: SVG.lapis, acao: () => abrirFicha(conversaId) },
       { nome: 'Valor do negócio', info: cartao.valor != null ? dinheiro(cartao.valor) : 'Sem valor ainda', icone: SVG.tendencia, acao: () => editarValor(cartao) }];
     if (f && !f.sistema) outros.push({ nome: `Tirar do funil ${f.nome}`, info: 'A cliente continua nas Conversas', icone: SVG.sair, perigo: true, acao: () => mover(conversaId, null) });
+    // crm-topo: lixeira do pipeline (recuperável pelo filtro "Excluídos")
+    if (s.filtro?.excluidos) outros.push({ nome: 'Recuperar lead', info: 'Volta para o quadro, na mesma etapa', icone: SVG.voltar, acao: () => lixeira([conversaId], false) });
+    else outros.push({ nome: 'Excluir lead', info: 'Sai do quadro; dá para recuperar em Filtrar › Excluídos', icone: SVG.lixo, perigo: true, acao: () => lixeira([conversaId], true) });
     folha('Mover para…', cartao.nome || s.ui.formatarTel(cartao.telefone), [etapas, outros]);
+  }
+
+  /** crm-topo: manda para a lixeira (ou recupera). Nada é apagado: a conversa e a ficha continuam. */
+  async function lixeira(ids, excluir) {
+    if (!ids.length || !s.funilId) return false;
+    if (excluir) {
+      const n = ids.length;
+      const r = await pedir({ titulo: n === 1 ? 'Excluir este lead?' : `Excluir ${n} leads?`, aviso: 'Sai do quadro e da lista. A conversa e a ficha continuam; para trazer de volta, use Filtrar › Excluídos › Recuperar.', ok: 'Excluir', perigo: true });
+      if (!r) return false;
+    }
+    const url = `/api/funis/${s.funilId}/excluidos${excluir ? '' : '/recuperar'}`;
+    try {
+      for (let i = 0; i < ids.length; i += 200) await s.ui.post(url, { ids: ids.slice(i, i + 200) });
+      s.ui.toast(excluir ? (ids.length === 1 ? 'Lead excluído (dá para recuperar)' : `${ids.length} leads excluídos`) : (ids.length === 1 ? 'Lead recuperado ✓' : `${ids.length} leads recuperados ✓`));
+      s.selecao.clear(); s.funisEm = 0;
+      await recarregarTudo();
+      return true;
+    } catch (x) { s.ui.toast(x.message); return false; }
+  }
+  /** "Carregar mais" de todas as colunas que têm mais (a Lista). */
+  async function carregarMaisTodas() {
+    for (const col of (s.q?.colunas || []).filter((c) => c.mais)) await carregarMais(col);
   }
 
   async function editarValor(cartao) {
@@ -1111,6 +1178,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /** Menu ⋯ do topo do CRM: funis, etapas e automações. */
   function menuTopo() {
+    if (T()) { T().menuMais(ctx); return; }
     const f = funil();
     const gestao = ehGestao();
     const grupo1 = gestao ? [
@@ -1231,6 +1299,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     folha(col.etapa.nome, `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`, [[
       { nome: 'Renomear e mudar a cor', icone: SVG.lapis, acao: () => editarEtapa(col) },
       { nome: 'Automações desta etapa', icone: SVG.raio, acao: () => abrirRaio(col) },
+      ...(T() ? [{ nome: 'Nova transmissão para esta etapa', info: 'Com os filtros ligados', icone: SVG.aviao, acao: () => T().novaTransmissao(ctx, col) }] : []),
       { nome: 'Mover para a esquerda', icone: SVG.esquerda, desligado: i <= 0, acao: () => reordenar(col, -1) },
       { nome: 'Mover para a direita', icone: SVG.direita, desligado: i >= n - 1, acao: () => reordenar(col, 1) },
     ], col.etapa.chaveSistema ? [] : [
@@ -1498,6 +1567,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       s.ui.toast(x.message);
     }
   }
+
+  // ---------- crm-topo: o que o topo (/telas/funil-topo.js) usa daqui ----------
+  const ctx = {
+    get s() { return s; },
+    funil, ehGestao, folha, pedir, tentar, dinheiro, haTexto, tagEl, situacaoEl, menuCartao, novoLead, novoFunil, novaEtapa, editarEtapa, reordenar, apagarEtapa, apagarFunil,
+    carregarAutos, abrirRaio, lixeira, carregarMaisTodas, passa: (x) => passaCliente(x), abrirFiltrosAntigo,
+    recarregar: () => recarregarTudo(), carregarQuadro: () => carregarQuadro(), desenharQuadro: () => desenharQuadro(),
+    aplicouFiltro: () => { s.assinaturaFunis = ''; desenharBarra(); desenharQuadro(); carregarQuadro(); },
+    origemEl: (c) => { const ra = window.SintoniaRastreio; const o = c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : (ra?.selo(c.conversaId) || { icone: 'desconhecido' }); return s.ui.el('span', { class: 'fn-origem' }, ra ? ra.iconeEl(o) : null, s.ui.el('span', { text: NOME_ORIGEM[o.icone] || 'Sem origem' })); },
+    nomeOrigem: (c) => { const ra = window.SintoniaRastreio; const o = c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : (ra?.selo(c.conversaId) || { icone: 'desconhecido' }); return NOME_ORIGEM[o.icone] || 'Sem origem'; },
+  };
 
   // ---------- entrada ----------
   async function desenhar(caixa, ui) {

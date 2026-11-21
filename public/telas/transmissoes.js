@@ -530,8 +530,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const quantidade = el('div', { class: 'tx-seg', role: 'group', 'aria-label': 'Quantidade' },
       el('button', { type: 'button', 'aria-pressed': String(!p.quantidade), onclick: () => mudar((x) => { x.publico.quantidade = null; }, true) }, 'Todas'),
       el('button', { type: 'button', 'aria-pressed': String(Boolean(p.quantidade)), onclick: () => mudar((x) => { x.publico.quantidade = x.publico.quantidade || Math.min(200, s.previa?.disponiveis || 200) || 200; }, true) }, 'Só uma parte'));
+    /* crm-topo: leads escolhidos no Pipeline (com o filtro de lá) */
+    const doPipeline = (p.conversas || []).length ? el('div', { class: 'tx-nota', style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap' },
+      el('b', { style: 'color:var(--texto)', text: `${fmtN(p.conversas.length)} lead${p.conversas.length === 1 ? '' : 's'} escolhido${p.conversas.length === 1 ? '' : 's'} no Pipeline${p.origemLista ? ` (${p.origemLista})` : ''}` }),
+      el('span', { text: 'Só entram os da unidade escolhida acima. Os filtros abaixo também valem.' }),
+      el('button', { type: 'button', class: 'tx-chip', onclick: () => mudar((x) => { x.publico.conversas = []; x.publico.origemLista = undefined; }, true) }, 'Usar a unidade toda')) : null;
     return el('div', { class: 'tx-bloco' },
       el('h2', {}, 'Público', el('small', { text: 'Quem tiver QUALQUER uma das tags marcadas (ou todas, se preferir). Sem tag marcada = toda a unidade.' })),
+      doPipeline,
       soltas.length ? el('div', { class: 'tx-chips', role: 'group', 'aria-label': 'Tags' }, ...soltas.map((t) => chipTag(t, 'tags'))) : el('div', { class: 'tx-nota', text: 'Nenhuma tag ainda: suba uma lista acima ou crie tags em Configurações › Tags.' }),
       p.tags.length > 1 ? el('label', { class: 'tx-marcar' }, el('input', { type: 'checkbox', ...(p.tagsTodas ? { checked: '' } : {}), onchange: (e) => mudar((x) => { x.publico.tagsTodas = e.target.checked; }, true) }), el('span', { text: 'Precisa ter TODAS as tags marcadas' })) : null,
       el('details', { class: 'tx-dobra', ...(p.etapas.length || p.semTags.length || p.tags.some((id) => etapas.some((e) => e.id === id)) ? { open: '' } : {}) }, el('summary', { text: 'Etapa do funil e exclusões por tag' }),
@@ -920,11 +926,27 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         caixa.replaceChildren(ui.el('div', { class: 'tx' }, ui.el('h1', { class: 'titulo-grande', text: 'Transmissões' }), ui.el('div', { class: 'tx-vazio' }, ui.el('b', { text: 'Só para a gestão' }), ui.el('span', { text: 'Transmissões ficam com a gerência, a direção e a administração.' }))));
         return;
       }
+      if (s.pendente) s.vista = 'lista'; // crm-topo: veio do Pipeline com o público pronto
       if (s.vista === 'campanha' && s.atual) { abrirCampanha(s.atual.id); return; }
       if (s.vista !== 'lista') { desenhar(); return; }
       desenhar();
       await Promise.all([carregarLista(), carregarApoio()]);
+      if (s.pendente) {
+        const p = s.pendente; s.pendente = null;
+        s.rasc = rascunhoNovo(); s.passo = 0; s.previa = null; s.imp = null;
+        s.rasc.nome = p.nome || '';
+        s.rasc.publico.conversas = p.conversas;
+        s.rasc.publico.origemLista = p.origemLista;
+        ir('assistente');
+        await carregarModelos(s.rasc.unidade);
+        atualizarPrevia();
+        return;
+      }
       desenhar();
+    },
+    /** crm-topo: "Nova transmissão" do Pipeline: abre o assistente já com os leads filtrados (até 5000). */
+    novaComPublico({ conversas = [], origemLista = '', nome = '' } = {}) {
+      s.pendente = { conversas: conversas.slice(0, 5000), origemLista: String(origemLista).slice(0, 120), nome: String(nome).slice(0, 80) };
     },
   };
 })();

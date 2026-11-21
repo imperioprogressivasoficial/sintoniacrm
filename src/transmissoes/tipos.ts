@@ -33,6 +33,10 @@ export const Publico = z.object({
   excluirRecebeuDias: z.number().int().min(0).max(365).default(7),
   /** Fora quem está conversando com a loja agora (mensagem nas últimas 24 h). */
   excluirConversaAberta: z.boolean().default(true),
+  /** Só estas conversas (leads escolhidos no Pipeline, com o filtro de lá). Vazio = não limita. */
+  conversas: z.array(z.string().uuid()).max(5000).default([]),
+  /** Texto para lembrar de onde veio a lista (ex.: "Pipeline Comercial · Proposta"). */
+  origemLista: z.string().trim().max(120).optional(),
 });
 export type Publico = z.infer<typeof Publico>;
 
