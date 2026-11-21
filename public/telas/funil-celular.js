@@ -731,5 +731,7 @@
     redesenhar(false);
   }
 
-  window.SintoniaFunilCelular = { desenhar, focar, ACOES };
+  /* pipeline-modos: as mesmas regras (prioridade, etapas, selo, ação do cartão) valem no modo Foco do computador (/telas/funil-modos.js) */
+  const regras = { abertas, colGanho, caminho, ehPerdida, ordenar, urgencia, selo, metricas, acaoDoFunil, fazerAcao, situacao, METRICAS };
+  window.SintoniaFunilCelular = { desenhar, focar, ACOES, regras };
 })();
