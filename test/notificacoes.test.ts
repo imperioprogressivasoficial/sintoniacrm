@@ -1,4 +1,5 @@
-import { problemasDaSituacao } from '../src/notificacoes/rotas.js';
+import { readFileSync } from 'node:fs';
+import { problemasDaSituacao, type Problema } from '../src/notificacoes/rotas.js';
 import { describe, expect, it } from 'vitest';
 import { Sintonia } from '../src/app/sintonia.js';
 import { ContasMemoria, ContasPostgres, type Contas, type Papel, type Usuario } from '../src/auth/contas.js';
@@ -63,7 +64,8 @@ async function montar(amb: Ambiente) {
     agente: { executar: async () => ({ texto: 'Sugestão', acoes: [], recusou: false }) },
     agora: () => relogio.t,
   });
-  const app = criarServidor({ sintonia, repo, agora: () => relogio.t, auth: { contas, agora: () => relogio.t }, notificacoes: { notificador, armazem, chaves } });
+  const situacao = { problemas: [] as Problema[] };
+  const app = criarServidor({ sintonia, repo, agora: () => relogio.t, auth: { contas, agora: () => relogio.t }, notificacoes: { notificador, armazem, chaves, problemas: () => situacao.problemas } });
 
   const h = await hashPadrao;
   const pessoa = (nome: string, papel: Papel, unidades: string[]) =>
@@ -89,7 +91,7 @@ async function montar(amb: Ambiente) {
     return (await repo.listarConversas()).find((c) => c.telefone === telefone)!;
   };
   const de = async (u: Usuario) => armazem.listar(u.id, relogio.t, 100);
-  return { app, repo, armazem, notificador, sintonia, relogio, gente, como, cliente, de, pushes, falso };
+  return { app, repo, armazem, notificador, sintonia, relogio, gente, como, cliente, de, pushes, falso, situacao };
 }
 
 describe('Regras puras', () => {
@@ -121,7 +123,7 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     for (const u of [gente.carla, gente.bia, gente.rita, gente.gerente, gente.admin]) expect(await de(u)).toHaveLength(0);
   });
 
-  it('clientes esperando contam como um item só no sino; tipos antigos não aparecem nem contam', async () => {
+  it('cada cliente esperando conta no sino ("Precisa de você"); tipos antigos não aparecem nem contam', async () => {
     const { gente, cliente, notificador, armazem, relogio, como } = await montar(amb);
     await cliente('norte', '5571988000011', 'Oi', 'Ana');
     await cliente('norte', '5571988000012', 'Oi', 'Rosana');
@@ -133,8 +135,10 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     // Uma notificação antiga de "nova cliente" (de antes da mudança) fica escondida e não conta.
     await armazem.criar({ usuarioId: gente.carla.id, tipo: 'nova_cliente', titulo: 'Nova cliente: Velha', texto: 'x', criadaEm: relogio.t });
     const j = (await como(gente.carla, 'GET', '/api/notificacoes')).json();
-    expect(j.itens.map((n: { tipo: string }) => n.tipo)).toEqual(['espera', 'espera', 'espera']);
-    expect(j.naoLidas).toBe(1); // três esperando = um item no sino
+    // notificacoes2: a espera vem da lista de verdade (campo "esperando"), não como três notificações.
+    expect(j.itens).toEqual([]);
+    expect(j.esperando.map((x: { nome: string }) => x.nome).sort()).toEqual(['Ana', 'Bia', 'Rosana']);
+    expect(j.naoLidas).toBe(3); // notificacoes2 (modelo C): cada uma pede uma resposta
   });
 
   it('troca de dona avisa quem recebeu; "quer remarcar" vai para dona e gestão; "agendou" não avisa', async () => {
@@ -204,7 +208,7 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
   });
 
   it('falha importante só para a administração, no máximo uma por hora', async () => {
-    const { gente, de, repo, notificador, relogio } = await montar(amb);
+    const { gente, de, repo, notificador, relogio, armazem } = await montar(amb);
     const falha = (erro: string) => repo.registrarEvento({ tipo: 'falha', em: relogio.t, dados: { erro } });
     await falha('AuthenticationError: 401 invalid x-api-key');
     await falha('AuthenticationError: 401 invalid x-api-key');
@@ -213,10 +217,143 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     expect(await de(gente.admin)).toHaveLength(1);
     expect((await de(gente.admin))[0]).toMatchObject({ tipo: 'falha', vista: 'conexoes', titulo: 'A chave da IA foi recusada' });
     for (const u of [gente.carla, gente.gerente]) expect(await de(u)).toHaveLength(0);
+    // notificacoes2: uma hora depois, o mesmo aviso não vira outro: sobe com contador 2 e volta a ficar não lido.
+    await armazem.marcarTodas(gente.admin.id, relogio.t);
     relogio.t = new Date(relogio.t.getTime() + 61 * MIN);
     await falha('AuthenticationError: 401 invalid x-api-key');
     await notificador.ocioso();
-    expect(await de(gente.admin)).toHaveLength(2);
+    const l = await de(gente.admin);
+    expect(l).toHaveLength(1);
+    expect(l[0]).toMatchObject({ titulo: 'A chave da IA foi recusada', contador: 2, atualizadaEm: relogio.t });
+    expect(l[0]!.lidaEm).toBeUndefined();
+    // Dentro da mesma hora, nada muda.
+    relogio.t = new Date(relogio.t.getTime() + 10 * MIN);
+    await falha('AuthenticationError: 401 invalid x-api-key');
+    await notificador.ocioso();
+    expect((await de(gente.admin))[0]!.contador).toBe(2);
+  });
+
+  it('pausar e ligar a Serena atualiza um aviso só para cada pessoa (com o estado mais novo)', async () => {
+    const { gente, notificador, de, relogio, armazem, pushes, como } = await montar(amb);
+    await como(gente.bia, 'POST', '/api/push/inscrever', { endpoint: 'https://push.exemplo.test/bia', keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } });
+    await notificador.avisarEquipe({ titulo: 'Bruno pausou a Serena até 15h', texto: 'A equipe atende tudo.', chave: 'serena-chave', agrupar: true, vista: 'ia' });
+    await armazem.marcarTodas(gente.carla.id, relogio.t);
+    relogio.t = new Date(relogio.t.getTime() + MIN);
+    await notificador.avisarEquipe({ titulo: 'Bruno ligou a Serena de novo', texto: 'A Serena voltou a atender.', chave: 'serena-chave', agrupar: true, vista: 'ia' });
+    for (const u of [gente.carla, gente.bia, gente.rita, gente.admin]) {
+      const l = await de(u);
+      expect(l).toHaveLength(1);
+      expect(l[0]).toMatchObject({ tipo: 'ia_equipe', titulo: 'Bruno ligou a Serena de novo', texto: 'A Serena voltou a atender.', contador: 2, vista: 'ia' });
+      expect(l[0]!.lidaEm).toBeUndefined();
+    }
+    // O celular troca o aviso no lugar (mesma etiqueta), em vez de empilhar dois.
+    expect(pushes.map((p) => p.carga.etiqueta)).toEqual(['grupo-serena-chave', 'grupo-serena-chave']);
+    expect(pushes[1]!.carga).toMatchObject({ titulo: 'Bruno ligou a Serena de novo', texto: 'A Serena voltou a atender.' });
+  });
+
+  it('cliente esperando sai do sino de todo mundo quando alguém responde ou a conversa para de esperar', async () => {
+    const { gente, cliente, notificador, armazem, relogio, sintonia, como } = await montar(amb);
+    const ana = await cliente('norte', '5571988000021', 'Oi', 'Ana');
+    const rosa = await cliente('norte', '5571988000022', 'Oi', 'Rosa');
+    relogio.t = new Date(relogio.t.getTime() + 8 * MIN);
+    await notificador.tick();
+    const abertas = async (u: Usuario) => (await armazem.listar(u.id, relogio.t, 50)).filter((n) => n.tipo === 'espera' && !n.lidaEm);
+    expect(await abertas(gente.carla)).toHaveLength(2);
+    expect(await abertas(gente.bia)).toHaveLength(2);
+    // Carla respondeu a Ana: o aviso da Ana some na hora para a Carla e para a Bia.
+    await sintonia.equipeEnviou(ana.id, 'Oi Ana, já vejo para você!', 'Carla Lima', gente.carla);
+    await notificador.ocioso();
+    for (const u of [gente.carla, gente.bia]) expect((await abertas(u)).map((n) => n.conversaId)).toEqual([rosa.id]);
+    const j = (await como(gente.bia, 'GET', '/api/notificacoes')).json();
+    expect(j.esperando.map((x: { nome: string }) => x.nome)).toEqual(['Rosa']);
+    expect(j.naoLidas).toBe(1);
+    // A Rosa parou de esperar sem resposta da equipe (a IA assumiu): sai no minuto seguinte.
+    await sintonia.mudarModo(rosa.id, 'ia');
+    relogio.t = new Date(relogio.t.getTime() + MIN);
+    await notificador.tick();
+    for (const u of [gente.carla, gente.bia]) expect(await abertas(u)).toHaveLength(0);
+    const j2 = (await como(gente.bia, 'GET', '/api/notificacoes')).json();
+    expect(j2).toMatchObject({ esperando: [], naoLidas: 0 });
+  });
+
+  it('clientes esperando sempre aparecem no sino, mesmo com muitos avisos mais novos', async () => {
+    const { gente, cliente, notificador, relogio, como } = await montar(amb);
+    for (const [tel, nome] of [['5571988000031', 'Ana'], ['5571988000032', 'Rosa'], ['5571988000033', 'Lia']] as const) await cliente('norte', tel, 'Oi', nome);
+    relogio.t = new Date(relogio.t.getTime() + 8 * MIN);
+    await notificador.tick();
+    for (let i = 0; i < 25; i++) {
+      relogio.t = new Date(relogio.t.getTime() + 1000);
+      await notificador.avisarEquipe({ titulo: `Aviso ${i}`, texto: 'x', chave: `aviso-${i}` });
+    }
+    const r = await como(gente.carla, 'GET', '/api/notificacoes?limite=20');
+    const j = r.json();
+    expect(j.itens).toHaveLength(20);
+    expect(j.itens.some((n: { tipo: string }) => n.tipo === 'espera')).toBe(false);
+    expect(j.esperando.map((x: { nome: string }) => x.nome).sort()).toEqual(['Ana', 'Lia', 'Rosa']);
+    // O número do sino é o que está em "Precisa de você" (3 esperando); os 25 avisos da equipe são "para saber".
+    expect(j).toMatchObject({ naoLidas: 3, novas: 25 });
+    expect(JSON.parse(String(r.headers['x-notificacoes'])).n).toBe(3);
+    // Outra unidade não vê; quem desligou o aviso de espera também não.
+    expect((await como(gente.rita, 'GET', '/api/notificacoes')).json()).toMatchObject({ esperando: [], naoLidas: 0, novas: 25 });
+    await como(gente.bia, 'PUT', '/api/notificacoes/preferencias', { tipos: { espera: false } });
+    expect((await como(gente.bia, 'GET', '/api/notificacoes')).json().esperando).toEqual([]);
+  });
+
+  it('problema fixo no topo conta uma vez; o aviso de falha do mesmo problema não repete na lista', async () => {
+    const { gente, repo, notificador, relogio, como, situacao } = await montar(amb);
+    await repo.registrarEvento({ tipo: 'falha', em: relogio.t, dados: { erro: 'AuthenticationError: 401 invalid x-api-key' } });
+    await notificador.ocioso();
+    situacao.problemas = [{ chave: 'ia', titulo: 'Falta a chave da IA', texto: 'A IA está desligada.', vista: 'conexoes' }];
+    const r = await como(gente.admin, 'GET', '/api/notificacoes');
+    const j = r.json();
+    expect(j.problemas.map((p: { titulo: string }) => p.titulo)).toEqual(['Falta a chave da IA']);
+    expect(j.itens).toEqual([]);
+    expect(j.naoLidas).toBe(1);
+    expect(JSON.parse(String(r.headers['x-notificacoes'])).n).toBe(1);
+    // O sino das outras respostas do app (lista de conversas) mostra o mesmo número.
+    expect(JSON.parse(String((await como(gente.admin, 'GET', '/api/conversas')).headers['x-notificacoes'])).n).toBe(1);
+    // Atendente não vê os problemas fixos (nem conta).
+    expect((await como(gente.carla, 'GET', '/api/notificacoes')).json()).toMatchObject({ problemas: [], naoLidas: 0 });
+    // Resolvido: o problema sai do topo e o aviso volta a ser uma linha normal do histórico.
+    situacao.problemas = [];
+    const j2 = (await como(gente.admin, 'GET', '/api/notificacoes')).json();
+    expect(j2.itens.map((n: { titulo: string }) => n.titulo)).toEqual(['A chave da IA foi recusada']);
+    expect(j2.naoLidas).toBe(1);
+  });
+
+  it('"Lembrar em 1 h" tira o aviso e o problema fixo até lá; limpar tira do histórico (só os próprios)', async () => {
+    const { gente, repo, notificador, relogio, como, situacao, pushes } = await montar(amb);
+    await como(gente.admin, 'POST', '/api/push/inscrever', { endpoint: 'https://push.exemplo.test/admin', keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } });
+    await repo.registrarEvento({ tipo: 'falha', em: relogio.t, dados: { erro: 'Evolution recusou o envio (500): Connection Closed' } });
+    await notificador.ocioso();
+    const lista = async () => (await como(gente.admin, 'GET', '/api/notificacoes')).json();
+    const [aviso] = (await lista()).itens;
+    expect(aviso).toMatchObject({ tipo: 'falha', titulo: 'O WhatsApp parou de enviar', lida: false });
+    expect((await lista()).naoLidas).toBe(1);
+    expect(pushes).toHaveLength(1);
+    // Lembrar em 1 h: some agora, volta não lido (e com push) depois de uma hora.
+    expect((await como(gente.carla, 'POST', `/api/notificacoes/${aviso.id}/adiar`, { minutos: 60 })).statusCode).toBe(404); // não é dela
+    expect((await como(gente.admin, 'POST', `/api/notificacoes/${aviso.id}/adiar`, { minutos: 60 })).json().ok).toBe(true);
+    expect(await lista()).toMatchObject({ itens: [], naoLidas: 0 });
+    relogio.t = new Date(relogio.t.getTime() + 61 * MIN);
+    await notificador.tick();
+    expect((await lista()).itens.map((n: { id: string; lida: boolean }) => [n.id, n.lida])).toEqual([[aviso.id, false]]);
+    expect((await lista()).naoLidas).toBe(1);
+    expect(pushes).toHaveLength(2);
+    // Problema fixo: "Lembrar em 1 h" vale só para quem pediu e só até lá.
+    situacao.problemas = [{ chave: 'whatsapp', titulo: 'WhatsApp desconectado', texto: 'x', vista: 'conexoes' }];
+    expect((await lista()).problemas).toHaveLength(1);
+    expect((await como(gente.carla, 'POST', '/api/notificacoes/problemas/adiar', { chave: 'whatsapp' })).statusCode).toBe(403);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/problemas/adiar', { chave: 'whatsapp', minutos: 60 })).json().ok).toBe(true);
+    expect(await lista()).toMatchObject({ problemas: [], naoLidas: 1 }); // o aviso de falha volta a aparecer enquanto o fixo está adiado
+    relogio.t = new Date(relogio.t.getTime() + 61 * MIN);
+    expect((await lista()).problemas.map((p: { chave: string }) => p.chave)).toEqual(['whatsapp']);
+    // Limpar: só os próprios avisos saem.
+    expect((await como(gente.carla, 'POST', '/api/notificacoes/limpar', { ids: [aviso.id] })).json().limpas).toBe(0);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/limpar', { ids: [] })).statusCode).toBe(400);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/limpar', { ids: [aviso.id] })).json().limpas).toBe(1);
+    situacao.problemas = [];
+    expect(await lista()).toMatchObject({ itens: [], naoLidas: 0 });
   });
 
   it('lembrete de ligação aparece na hora marcada; cliente esperando avisa uma vez', async () => {
@@ -326,5 +463,29 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     expect(a.publica).toBe(b.publica);
     expect(b.privada).toBe(a.privada);
     expect(await armazem.config('vapid')).not.toContain(a.privada);
+  });
+});
+
+describe.skipIf(!temPostgres)('Migração 710: junta avisos repetidos que já existem', () => {
+  it('falha:<classe> e serena-chave-* viram uma linha por pessoa, com o total no contador', async () => {
+    const pool = await poolDeTeste();
+    const contas = new ContasPostgres(pool);
+    const armazem = new ArmazemNotificacoesPostgres(pool);
+    const u = await contas.criarUsuario({ empresaId: 'imperio', nome: 'Bruno', email: 'bruno.mig@imperio.com', papel: 'admin', unidades: [], senhaHash: await hashPadrao });
+    const t0 = bahia(2026, 11, 20, 9);
+    const em = (h: number) => new Date(t0.getTime() + h * 3600_000);
+    for (let h = 0; h < 5; h++) await armazem.criar({ usuarioId: u.id, tipo: 'falha', titulo: 'A chave da IA foi recusada', texto: 'x', chave: 'falha:ia', criadaEm: em(h) });
+    await armazem.criar({ usuarioId: u.id, tipo: 'ia_equipe', titulo: 'Bruno pausou a Serena até 15h', texto: 'a', chave: `serena-chave-pausou-${em(1).getTime()}`, criadaEm: em(1) });
+    await armazem.criar({ usuarioId: u.id, tipo: 'ia_equipe', titulo: 'Bruno ligou a Serena de novo', texto: 'b', chave: `serena-chave-ligou-${em(2).getTime()}`, criadaEm: em(2) });
+    await armazem.criar({ usuarioId: u.id, tipo: 'radar', titulo: 'Radar', texto: 'c', chave: 'radar-1', criadaEm: em(3) });
+    const sql = readFileSync(new URL('../db/migrations/710_notificacoes_juntar.sql', import.meta.url), 'utf8');
+    await pool.query(sql);
+    await pool.query(sql); // de novo: não estraga nada
+    const l = await armazem.listar(u.id, em(10), 50);
+    expect(l.map((n) => [n.titulo, n.contador, n.chave])).toEqual([
+      ['A chave da IA foi recusada', 5, 'falha:ia'],
+      ['Radar', 1, 'radar-1'],
+      ['Bruno ligou a Serena de novo', 2, 'serena-chave'],
+    ]);
   });
 });

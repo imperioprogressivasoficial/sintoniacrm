@@ -39,6 +39,29 @@ export function problemasDaSituacao(s: { iaLigada: boolean; numerosReais: number
   return lista;
 }
 
+/** notificacoes2: "Lembrar em 1 h" de problema fixo, por pessoa (chave do problema → até quando), guardado na config. */
+const adiadosCache = new Map<string, Promise<Record<string, string>>>();
+const chaveAdiados = (u: Usuario) => `nt-adiar:${u.id}`;
+function adiados(o: OpcoesNotificacoes, u: Usuario): Promise<Record<string, string>> {
+  let p = adiadosCache.get(u.id);
+  if (!p) {
+    p = o.armazem.config(chaveAdiados(u)).then((v) => (v ? (JSON.parse(v) as Record<string, string>) : {})).catch(() => ({}));
+    adiadosCache.set(u.id, p);
+  }
+  return p;
+}
+/** Problemas fixos que esta pessoa vê (só quem resolve: gestão), menos os que ela pediu para lembrar depois. */
+async function problemasPara(o: OpcoesNotificacoes, u: Usuario): Promise<Problema[]> {
+  if (!o.problemas || !(ehGestor(u) || veTudo(u))) return [];
+  const lista = o.problemas();
+  if (!lista.length) return lista;
+  const ate = await adiados(o, u);
+  const agora = (o.agora?.() ?? new Date()).getTime();
+  return lista.filter((p) => !(ate[p.chave] && new Date(ate[p.chave]!).getTime() > agora));
+}
+/** notificacoes2: o aviso de falha que repete um problema fixo ("falha:ia" = problema "ia") não aparece nem conta de novo. */
+const chavesRepetidas = (ps: Problema[]) => ps.map((p) => `falha:${p.chave}`);
+
 const exigeLogin = (req: FastifyRequest): Usuario => {
   if (!req.usuario) throw Object.assign(new Error('Faça login para continuar.'), { statusCode: 401 });
   return req.usuario;
@@ -68,10 +91,11 @@ const cursorDe = (n: Notificacao) => `${n.atualizadaEm.getTime()}_${n.id}`;
  * Cabeçalho com o resumo das notificações (não lidas, versão e se está no "não perturbe"),
  * posto nas respostas que o app já busca periodicamente: o sino se atualiza sem chamada nova.
  */
-export async function cabecalhoNotificacoes(o: OpcoesNotificacoes | undefined, req: FastifyRequest, reply: FastifyReply): Promise<{ naoLidas: number; versao: number; silencio: boolean } | undefined> {
+export async function cabecalhoNotificacoes(o: OpcoesNotificacoes | undefined, req: FastifyRequest, reply: FastifyReply): Promise<{ naoLidas: number; novas: number; versao: number; silencio: boolean } | undefined> {
   if (!o || !req.usuario) return undefined;
   try {
-    const r = await o.notificador.resumo(req.usuario.id);
+    const ps = await problemasPara(o, req.usuario);
+    const r = await o.notificador.resumo(req.usuario, { problemas: ps.length, excluirChaves: chavesRepetidas(ps) });
     const prefs = await o.notificador.preferencias(req.usuario.id);
     const resumo = { ...r, silencio: emNaoPerturbe(prefs, o.agora?.() ?? new Date()) };
     reply.header('x-notificacoes', JSON.stringify({ n: resumo.naoLidas, v: resumo.versao, s: resumo.silencio ? 1 : 0 }));
@@ -87,16 +111,21 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
   app.get('/api/notificacoes', async (req, reply) => {
     const u = exigeLogin(req);
     const q = z.object({ antes: z.string().max(80).optional(), limite: z.coerce.number().int().min(1).max(100).default(30) }).parse(req.query);
-    const itens = await o.notificador.listar(u.id, q.limite + 1, lerCursor(q.antes));
+    const problemas = await problemasPara(o, u);
+    const itens = await o.notificador.listar(u.id, q.limite + 1, lerCursor(q.antes), chavesRepetidas(problemas));
     const pagina = itens.slice(0, q.limite);
     const resumo = await cabecalhoNotificacoes(o, req, reply);
+    // notificacoes2: "clientes esperando" vem da lista de verdade (sempre aparece, mesmo com o sino cheio).
+    const esperando = q.antes ? [] : await o.notificador.esperasDoSino(u).catch(() => []);
     return {
       itens: pagina.map(paraTela),
       proximo: itens.length > q.limite && pagina.length ? cursorDe(pagina[pagina.length - 1]!) : null,
       naoLidas: resumo?.naoLidas ?? 0,
+      novas: resumo?.novas ?? 0,
       versao: resumo?.versao ?? 0,
-      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; não entram no contador.
-      problemas: o.problemas && (ehGestor(u) || veTudo(u)) ? o.problemas() : [],
+      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; cada um conta uma vez no número do sino.
+      problemas,
+      esperando: esperando.map((x) => ({ conversaId: x.conversaId, nome: x.nome, unidade: x.unidade, nivel: x.nivel, minutos: x.minutos, desde: x.desde, dona: x.dona })),
       silencio: resumo?.silencio ?? false,
     };
   });
@@ -104,6 +133,36 @@ export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoe
   app.post('/api/notificacoes/lidas', async (req) => {
     const u = exigeLogin(req);
     return { ok: true, marcadas: await o.armazem.marcarTodas(u.id, agora()) };
+  });
+
+  /* notificacoes2: "Lembrar em 1 h" (some até lá e volta com push), limpar do histórico, adiar um problema fixo. */
+  app.post('/api/notificacoes/:id/adiar', async (req, reply) => {
+    const u = exigeLogin(req);
+    const { id } = z.object({ id: z.string().min(1).max(64) }).parse(req.params);
+    const { minutos } = z.object({ minutos: z.number().int().min(5).max(24 * 60).default(60) }).parse(req.body ?? {});
+    const ate = new Date(agora().getTime() + minutos * 60_000);
+    if (!(await o.armazem.adiar(u.id, id, ate))) return reply.code(404).send({ erro: 'Notificação não encontrada' });
+    return { ok: true, ate };
+  });
+
+  app.post('/api/notificacoes/limpar', async (req) => {
+    const u = exigeLogin(req);
+    const { ids } = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(req.body);
+    return { ok: true, limpas: await o.armazem.limpar(u.id, ids) };
+  });
+
+  app.post('/api/notificacoes/problemas/adiar', async (req, reply) => {
+    const u = exigeLogin(req);
+    const b = z.object({ chave: z.string().min(1).max(120), minutos: z.number().int().min(5).max(24 * 60).default(60) }).parse(req.body);
+    if (!(ehGestor(u) || veTudo(u))) return reply.code(403).send({ erro: 'Só a gestão vê esses avisos.' });
+    const atual = { ...(await adiados(o, u)) };
+    const t = agora().getTime();
+    for (const [k, v] of Object.entries(atual)) if (new Date(v).getTime() <= t) delete atual[k]; // os vencidos saem
+    const ate = new Date(t + b.minutos * 60_000);
+    atual[b.chave] = ate.toISOString();
+    await o.armazem.gravarConfig(chaveAdiados(u), JSON.stringify(atual));
+    adiadosCache.set(u.id, Promise.resolve(atual));
+    return { ok: true, ate };
   });
 
   app.post('/api/notificacoes/:id/lida', async (req, reply) => {

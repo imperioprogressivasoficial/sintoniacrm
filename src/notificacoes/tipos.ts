@@ -8,6 +8,13 @@ export const TIPOS_NOTIFICACAO = ['nova_cliente', 'mensagem', 'ia_equipe', 'espe
  * não são mais criadas, e as antigas desses tipos não aparecem no sino nem contam (filtro na leitura).
  */
 export const TIPOS_VISIVEIS = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha', 'teste', 'reuniao'] as const;
+/**
+ * notificacoes2 (modelo "Precisa de você"): avisos que pedem uma ação de quem recebe e entram no número do sino.
+ * A IA pediu ajuda (com conversa), conversa passada para você e problema que impede o trabalho. O resto é "para saber".
+ */
+export const pedeAcao = (n: { tipo: string; conversaId?: string | null }): boolean =>
+  n.tipo === 'transferida' || n.tipo === 'falha' || (n.tipo === 'ia_equipe' && Boolean(n.conversaId));
+
 /** Categorias que aparecem nas preferências (engrenagem), na ordem da tela. */
 export const TIPOS_PREFERENCIA = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'reuniao', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha'] as const;
 export type TipoNotificacao = (typeof TIPOS_NOTIFICACAO)[number] | 'teste';

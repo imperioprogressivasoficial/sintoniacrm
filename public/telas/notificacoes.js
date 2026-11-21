@@ -15,7 +15,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   const CSS = `
   .nt-bolinha { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: grid; place-items: center;
-    font: 800 10.5px/1 var(--fonte); background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 0 2px var(--fundo), 0 0 10px color-mix(in srgb, var(--badge) 60%, transparent); pointer-events: none; }
+    font: 800 10.5px/1 var(--fonte); background: var(--badge); color: var(--badge-txt); box-shadow: 0 0 0 2px var(--fundo); pointer-events: none; }
+  /* notificacoes2: no escuro, contador branco com o número azul-marinho, sem brilho */
+  [data-tema="escuro"] .nt-bolinha, [data-tema="escuro"] .nt-qtd, [data-tema="escuro"] .nt-chip i { background: #fff; color: #0d2240; }
   #sino-cel { position: relative; }
   @media (min-width: 761px) { #sino-cel { display: none !important; } }
   #sino-cel svg, #lt-sino svg { transform-origin: 50% 10%; }
@@ -115,6 +117,99 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .nt-horas input { font: 600 15px var(--fonte); color: var(--texto); background: var(--entrada); border: 1px solid var(--linha); border-radius: 10px; padding: 6px 8px; }
   .nt-dica { font-size: 13px; line-height: 1.45; color: var(--aviso-txt); background: var(--aviso); border-radius: 14px; padding: 10px 12px; margin: 4px 4px 6px; }
   .nt-acoes { display: flex; gap: 8px; flex-wrap: wrap; padding: 6px 4px 2px; }
+  /* ---------- notificacoes2: modelo C "Precisa de você" ---------- */
+  .nt-painel-c { --nt-urg: #dc2626; --nt-at: #d97706; display: block; }
+  [data-tema="escuro"] .nt-painel-c, [data-tema="escuro"] .nt-lista-h { --nt-urg: #ff7b7b; --nt-at: #ffb547; }
+  .nt-qtd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; font: 800 11.5px/1 var(--fonte); letter-spacing: 0; text-transform: none; background: var(--badge); color: var(--badge-txt); }
+  .nt-faixa { display: flex; align-items: center; gap: 8px; margin: 2px 2px 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--nt-urg); }
+  .nt-faixa .nt-qtd { background: var(--nt-urg); color: #fff; }
+  [data-tema="escuro"] .nt-faixa .nt-qtd { background: #fff; color: #0d2240; }
+  .nt-card { position: relative; overflow: hidden; margin: 0 0 10px; padding: 12px 14px 12px 16px; border-radius: 18px; background: var(--painel); border: 1px solid var(--linha); max-height: 640px; }
+  .nt-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--nt-cor, var(--marca-azul)); }
+  .nt-card.urg { --nt-cor: var(--nt-urg); } .nt-card.at { --nt-cor: var(--nt-at); }
+  .nt-card-topo { display: flex; gap: 10px; align-items: flex-start; }
+  .nt-card-topo > div { flex: 1; min-width: 0; }
+  .nt-card .nt-titulo { white-space: normal; font-weight: 700; }
+  .nt-card .nt-texto { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; margin-top: 1px; }
+  .nt-rotulo { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--nt-cor); margin-bottom: 1px; }
+  .nt-rotulo span + span { color: var(--sub); font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 12px; white-space: nowrap; }
+  .nt-card-bts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; padding-left: 42px; }
+  .nt-card-bts:empty { display: none; }
+  .nt-bt { all: unset; cursor: pointer; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border-radius: 999px; font: 700 13px var(--fonte); white-space: nowrap; background: var(--marca-azul, #106ebe); color: #fff; flex: none; }
+  [data-tema="escuro"] .nt-bt { background: #fff; color: #0d2240; }
+  .nt-bt.leve, [data-tema="escuro"] .nt-bt.leve { background: var(--fundo); color: var(--texto); box-shadow: inset 0 0 0 1px var(--linha); }
+  .nt-bt:hover { filter: brightness(1.07); }
+  .nt-bt:focus-visible, .nt-cat:focus-visible, .nt-chip:focus-visible, .nt-mini:focus-visible { outline: 2px solid var(--marca-azul); outline-offset: 2px; }
+  [data-tema="escuro"] :is(.nt-bt, .nt-cat, .nt-chip, .nt-mini):focus-visible { outline-color: var(--marca-menta); }
+  .nt-pessoas { margin-top: 8px; }
+  .nt-pessoa { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--linha); }
+  .nt-av { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 11.5px var(--fonte); color: #fff; }
+  .nt-nm { flex: 1; min-width: 0; }
+  .nt-nm b { display: block; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-nm small { display: block; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-min { font-size: 12.5px; font-weight: 800; white-space: nowrap; color: var(--nt-at); }
+  .nt-min.urg { color: var(--nt-urg); }
+  .nt-pessoa .nt-bt { height: 30px; padding: 0 12px; font-size: 12.5px; }
+  .nt-mais { display: block; margin: 6px 0 0 auto; }
+  .nt-ok { display: flex; gap: 12px; align-items: center; padding: 14px; margin: 0 0 10px; border-radius: 18px; background: color-mix(in srgb, #0a8f7a 9%, var(--fundo)); border: 1px solid color-mix(in srgb, #0a8f7a 30%, var(--linha)); }
+  .nt-ok b { display: block; font-size: 15px; } .nt-ok span { font-size: 13px; color: var(--sub); }
+  .nt-ic.t-ok { --cor-ic: #0a8f7a; }
+  [data-tema="escuro"] .nt-ic.t-ok { --cor-ic: #0ffcbe; }
+  .nt-grupo-saber { display: flex; align-items: center; justify-content: space-between; padding: 12px 2px 6px; }
+  .nt-grupo-saber .nt-link, .nt-lista-h .nt-grupo .nt-link { font-size: 12.5px; letter-spacing: 0; text-transform: none; }
+  .nt-cats { border: 1px solid var(--linha); border-radius: 18px; overflow: hidden; background: var(--fundo); }
+  .nt-cat { all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; gap: 12px; align-items: center; padding: 11px 14px; }
+  .nt-cat:hover { background: var(--sel); }
+  .nt-cats > * + * { border-top: 1px solid var(--linha); }
+  .nt-cat-corpo { flex: 1; min-width: 0; display: grid; gap: 1px; }
+  .nt-cat-nome { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .nt-cat-nome b { font-weight: 700; } .nt-cat.nt-nova .nt-cat-nome b { font-weight: 800; }
+  .nt-total { font-size: 12.5px; color: var(--sub); font-weight: 600; }
+  .nt-cat .nt-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-seta { flex: none; display: grid; color: var(--sub); transition: transform .2s ease; }
+  .nt-seta svg { width: 18px; height: 18px; }
+  .nt-cat[aria-expanded="true"] .nt-seta { transform: rotate(90deg); }
+  .nt-cat-lista { background: var(--painel); }
+  .nt-cat-lista .nt-item { padding: 9px 14px 9px 18px; }
+  .nt-ic.k-clientes { --cor-ic: #106ebe; } .nt-ic.k-agenda { --cor-ic: #7c3aed; } .nt-ic.k-equipe { --cor-ic: #0a8f7a; } .nt-ic.k-sistema { --cor-ic: #dc2626; }
+  .nt-hist { display: block; margin: 16px auto 4px; }
+  /* histórico: filtros por assunto, limpar (arrastar no celular, botões no computador) */
+  .nt-chips { display: flex; gap: 6px; overflow-x: auto; margin: -4px -16px 6px; padding: 0 16px 6px; scrollbar-width: none; }
+  .nt-chips::-webkit-scrollbar { display: none; }
+  .nt-chip { all: unset; cursor: pointer; box-sizing: border-box; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; font: 600 13px var(--fonte); white-space: nowrap; color: var(--texto); background: var(--painel); box-shadow: inset 0 0 0 1px var(--linha); }
+  .nt-chip i { font-style: normal; font-size: 11px; font-weight: 800; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center; background: var(--badge); color: var(--badge-txt); }
+  .nt-chip[aria-pressed="true"] { background: var(--marca-azul); color: #fff; box-shadow: none; }
+  .nt-chip[aria-pressed="true"] i { background: #fff; color: #0d2240; }
+  [data-tema="escuro"] .nt-chip[aria-pressed="true"] { background: #fff; color: #0d2240; }
+  [data-tema="escuro"] .nt-chip[aria-pressed="true"] i { background: #0d2240; color: #fff; }
+  .nt-chip-pt { width: 8px; height: 8px; border-radius: 50%; background: var(--cor-pt); }
+  .nt-chip.k-clientes { --cor-pt: #106ebe; } .nt-chip.k-agenda { --cor-pt: #7c3aed; } .nt-chip.k-equipe { --cor-pt: #0a8f7a; } .nt-chip.k-sistema { --cor-pt: #dc2626; }
+  [data-tema="escuro"] .nt-chip.k-clientes { --cor-pt: #5fb0ff; } [data-tema="escuro"] .nt-chip.k-agenda { --cor-pt: #b69bff; } [data-tema="escuro"] .nt-chip.k-equipe { --cor-pt: #0ffcbe; } [data-tema="escuro"] .nt-chip.k-sistema { --cor-pt: #ff7b7b; }
+  .nt-lista-h .nt-grupo { display: flex; align-items: center; justify-content: space-between; }
+  .nt-linha-h { position: relative; overflow: hidden; max-height: 240px; }
+  .nt-fundo-limpar { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-right: 20px; background: #dc2626; color: #fff; font: 700 13px var(--fonte); }
+  .nt-fundo-limpar svg { width: 18px; height: 18px; }
+  .nt-linha-h > .nt-item { position: relative; z-index: 1; background: var(--fundo); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .nt-linha-h > .nt-item:hover { background: var(--sel); }
+  .nt-linha-h + .nt-linha-h .nt-corpo { box-shadow: 0 -1px 0 var(--linha); }
+  .nt-h-acoes { display: none; gap: 4px; }
+  .nt-mini { all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--painel); box-shadow: inset 0 0 0 1px var(--linha); }
+  .nt-mini svg { width: 14px; height: 14px; }
+  @media (hover: hover) and (min-width: 761px) {
+    .nt-linha-h:hover .nt-h-acoes, .nt-linha-h:focus-within .nt-h-acoes { display: inline-flex; }
+    .nt-linha-h:hover .nt-quando-tx, .nt-linha-h:hover .nt-ponto { display: none; }
+  }
+  .nt-saindo { transition: opacity .2s ease, max-height .24s ease .04s; opacity: 0; max-height: 0 !important; }
+  .nt-dica-limpar { display: flex; align-items: center; gap: 8px; margin: 0 16px 6px; padding: 8px 8px 8px 12px; border-radius: 12px; font-size: 12.5px; color: var(--sub); background: var(--painel); }
+  .nt-dica-limpar span { flex: 1; }
+  .nt-dica-limpar .nt-x { all: unset; cursor: pointer; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); }
+  .nt-dica-limpar .nt-x svg { width: 13px; height: 13px; }
+  @media (prefers-reduced-motion: reduce) { .nt-saindo, .nt-seta { transition: none; } }
+  @media (min-width: 761px) {
+    .nt-card { padding: 11px 13px 11px 15px; }
+    .nt-card-bts { padding-left: 38px; }
+  }
+  
   /* layout-telas: no computador, preferências em 2 colunas (painel largo) e linhas mais densas; o sino também mais denso */
   @media (min-width: 761px) {
     dialog.pl.larga .nt-pref-corpo { display: block; columns: 2 250px; column-gap: 14px; }
@@ -150,6 +245,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     fechar: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 'stroke-width="2.2"'),
     engrenagem: SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'),
   };
+  IC.equipe = SVG('<circle cx="9" cy="8.5" r="3.2"/><path d="M3 19.5a6 6 0 0 1 12 0"/><circle cx="17" cy="9.5" r="2.5"/><path d="M15.5 14.2a5 5 0 0 1 5.5 5.3"/>'); /* notificacoes2 */
+  IC.seta = SVG('<path d="m9 6 6 6-6 6"/>');
+  IC.lixo = SVG('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5h6V7"/>');
   IC.agenda_mudou = IC.agendamento; IC.problema = IC.falha; IC.reuniao = IC.agendamento; /* atendimento-extra */
   const CLASSE_IC = new Proxy({}, { get: (_, t) => `t-${String(t)}` });
   // Só o que pede ação (o servidor não cria mais "nova cliente", "mensagem" nem "a IA agendou").
@@ -165,7 +263,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['falha', 'Problemas que impedem o trabalho', 'WhatsApp desconectado, chave da IA, agenda (só administração e direção).'],
   ];
 
-  const est = { problemas: [], itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
+  const est = { problemas: [], esperando: [], abertas: new Set(), itens: [], proximo: null, carregando: false, aberto: false, n: 0, versao: null, silencio: false, prefs: null, tituloBase: document.title.replace(/^\(\d+\+?\)\s*/, ''), toastAtual: null, vistas: new Set() };
 
   // ---------------------------------------------------------------- tempo
   const diaDe = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -179,7 +277,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (grupoDe(d) === 'Ontem') return `ontem, ${hm}`;
     return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + `, ${hm}`;
   }
-  const textoDe = (n) => (n.contador > 1 ? `${n.texto} · ${n.contador} mensagens` : n.texto);
+  // notificacoes2: aviso que se repetiu vira um item só com "(26×)".
+  const textoDe = (n) => (n.contador > 1 ? `${n.texto} (${n.contador}×)` : n.texto);
 
   // ---------------------------------------------------------------- contador, título, ícone da aba
   const iconeOriginal = document.querySelector('link[rel="icon"][sizes="64x64"]') || document.querySelector('link[rel="icon"]');
@@ -204,7 +303,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     est.n = n;
     const txt = n > 99 ? '99+' : String(n);
     for (const id of ['lt-sino-qtd', 'sino-cel-qtd']) { const b = $(id); if (b) { b.hidden = !n; b.textContent = txt; } }
-    for (const id of ['lt-sino', 'sino-cel']) { const b = $(id); if (b) b.setAttribute('aria-label', n ? `Notificações, ${n} não lida${n > 1 ? 's' : ''}` : 'Notificações'); }
+    for (const id of ['lt-sino', 'sino-cel']) { const b = $(id); if (b) b.setAttribute('aria-label', n ? `Notificações, ${n} precisa${n > 1 ? 'm' : ''} de você` : 'Notificações'); }
     document.title = n ? `(${txt}) ${est.tituloBase}` : est.tituloBase;
     desenharIcone(n);
     if ($('nt-marcar')) $('nt-marcar').disabled = !n;
@@ -243,8 +342,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   async function tocarItem(n) {
     fechar();
+    if (n.sinteticaEspera) { irPara(n); return; }
     if (!n.lida) {
-      n.lida = true; mostrarContador(Math.max(0, est.n - 1));
+      if (pedeAcao(n)) mostrarContador(Math.max(0, est.n - 1)); /* notificacoes2: o número conta só o que pede ação */
+      n.lida = true;
       post(`/api/notificacoes/${n.id}/lida`).catch(() => {});
     }
     irPara(n);
@@ -275,6 +376,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const r = await api('/api/notificacoes?' + q);
       est.itens = mais ? est.itens.concat(r.itens.filter((x) => !est.itens.some((y) => y.id === x.id))) : r.itens;
       est.proximo = r.proximo; est.silencio = r.silencio; est.problemas = r.problemas || [];
+      if (!mais) est.esperando = r.esperando || []; /* notificacoes2: quem está esperando de verdade */
       mostrarContador(r.naoLidas);
       if (r.versao) est.versao = Math.max(est.versao ?? 0, r.versao);
       return r;
@@ -283,8 +385,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /** Chegou versão nova pelo cabeçalho: busca, e avisa (toast + som) do que é novo e ainda não lido. */
   async function novidades(versaoAntiga) {
+    const antes = new Set(est.esperando.map((x) => x.conversaId));
     const r = await buscar(false).catch(() => null);
     if (!r) return;
+    /* notificacoes2: cliente que começou a esperar agora (a espera não vem mais nas notificações da lista) */
+    const novaEspera = est.esperando.find((x) => !antes.has(x.conversaId) && !est.vistas.has('espera:' + x.conversaId + ':' + x.desde));
+    if (novaEspera) {
+      est.vistas.add('espera:' + novaEspera.conversaId + ':' + novaEspera.desde);
+      r.itens = r.itens.concat({ id: 'espera-' + novaEspera.conversaId, tipo: 'espera', titulo: `${novaEspera.nome} está esperando`, texto: `Sem resposta há ${novaEspera.minutos} min`, contador: 1, conversaId: novaEspera.conversaId, em: new Date().toISOString(), lida: false, sinteticaEspera: true });
+    }
     if (est.aberto) desenharLista();
     const novas = r.itens.filter((n) => !n.lida && new Date(n.em).getTime() > versaoAntiga && !est.vistas.has(n.id + ':' + n.em));
     novas.forEach((n) => est.vistas.add(n.id + ':' + n.em));
@@ -309,62 +418,250 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   });
 
   // ---------------------------------------------------------------- painel (página do painel lateral)
-  let lista, sentinela, observador;
+  /* notificacoes2: modelo C "Precisa de você" (escolhido pelo dono em 21/11).
+   * No topo, só o que pede ação: clientes esperando (Responder), a IA pediu ajuda (Assumir), conversa passada para você
+   * (Responder) e problemas (Resolver / Lembrar em 1 h). Embaixo, "Para saber" em blocos por assunto
+   * (Clientes, Agenda, Equipe, Sistema) que abrem. O histórico completo tem filtros por assunto e limpar. */
+  let lista;
   const P = () => window.SintoniaPainel;
   const nomesCurto = (nomes) => (nomes.length <= 2 ? nomes.join(' e ') : `${nomes.slice(0, 2).join(', ')} e mais ${nomes.length - 2}`);
+  const CATS = [['clientes', 'Clientes'], ['agenda', 'Agenda'], ['equipe', 'Equipe'], ['sistema', 'Sistema']];
+  const IC_CAT = { clientes: IC.mensagem, agenda: IC.agendamento, equipe: IC.equipe, sistema: IC.falha };
+  /** Assunto de cada aviso (as mesmas quatro caixas do histórico). */
+  function categoria(n) {
+    if (n.tipo === 'falha') return 'sistema';
+    if (n.tipo === 'agenda_mudou' || n.tipo === 'reuniao' || n.tipo === 'lembrete_ligacao') return 'agenda';
+    if (n.tipo === 'transferida' || n.tipo === 'teste' || (n.tipo === 'ia_equipe' && !n.conversaId)) return 'equipe';
+    return 'clientes';
+  }
+  /** Pede uma ação sua (o mesmo critério do servidor, src/notificacoes/tipos.ts: pedeAcao). */
+  const pedeAcao = (n) => !n.lida && (n.tipo === 'transferida' || n.tipo === 'falha' || (n.tipo === 'ia_equipe' && Boolean(n.conversaId)));
+  const iniciais = (nome) => String(nome || '?').replace(/^\+/, '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?';
+  const CORES_AV = ['#106ebe', '#0a8f7a', '#7c3aed', '#c2410c', '#0369a1', '#be185d', '#4d7c0f'];
+  const corDe = (s) => CORES_AV[[...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % CORES_AV.length];
+  const primeiroNome = (s) => String(s || '').trim().split(/\s+/)[0] || '';
+  /** Quanto tempo esperando, curto: "6 min", "2 h", "1 h 20", "1 dia". */
+  const tempoEspera = (m) => (m < 60 ? `${m} min` : m < 1440 ? `${Math.floor(m / 60)} h${m % 60 && m < 600 ? ` ${String(m % 60).padStart(2, '0')}` : ''}` : `${Math.floor(m / 1440)} dia${m >= 2880 ? 's' : ''}`);
+
+  /** Marca como lidas (no servidor também) e ajusta o número do sino. */
+  function marcarLidas(ns) {
+    const novas = ns.filter((n) => !n.lida);
+    if (!novas.length) return;
+    const acoes = novas.filter(pedeAcao).length;
+    for (const n of novas) { n.lida = true; post(`/api/notificacoes/${n.id}/lida`).catch(() => {}); }
+    if (acoes) mostrarContador(Math.max(0, est.n - acoes));
+    desenharLista();
+  }
+  async function assumir(n) {
+    marcarLidas([n]);
+    fechar();
+    try { await post(`/api/conversas/${n.conversaId}/assumir`); toast('A conversa agora é sua.'); } catch (x) { toast(x.message || 'Não deu para assumir.'); }
+    ui.abrir(n.conversaId);
+  }
+  async function lembrarDepois(n) {
+    const r = await post(`/api/notificacoes/${n.id}/adiar`, { minutos: 60 }).catch((x) => { toast(x.message); return null; });
+    if (!r) return;
+    est.itens = est.itens.filter((x) => x.id !== n.id);
+    if (!n.lida) mostrarContador(Math.max(0, est.n - 1));
+    desenharLista(); toast('Combinado: aviso de novo em 1 hora.');
+  }
+  async function lembrarProblema(pr) {
+    const r = await post('/api/notificacoes/problemas/adiar', { chave: pr.chave, minutos: 60 }).catch((x) => { toast(x.message); return null; });
+    if (!r) return;
+    est.problemas = est.problemas.filter((x) => x.chave !== pr.chave);
+    mostrarContador(Math.max(0, est.n - 1));
+    desenharLista(); toast('Combinado: aviso de novo em 1 hora.');
+  }
+
+  const botao = (texto, onclick, leve = false) => el('button', { class: 'nt-bt' + (leve ? ' leve' : ''), type: 'button', text: texto, onclick });
+  function cartao({ classe, ic, icClasse, rotulo, quando, titulo, texto, botoes }) {
+    return el('div', { class: 'nt-card ' + classe },
+      el('div', { class: 'nt-card-topo' }, el('span', { class: 'nt-ic ' + icClasse, html: ic }),
+        el('div', {}, el('div', { class: 'nt-rotulo' }, el('span', { text: rotulo }), quando ? el('span', { text: quando }) : null),
+          el('div', { class: 'nt-titulo', text: titulo }), texto ? el('div', { class: 'nt-texto', text: texto }) : null)),
+      el('div', { class: 'nt-card-bts' }, ...botoes));
+  }
+  function cartaoEspera(esperas) {
+    const qtd = esperas.length;
+    const mostrar = esperas.slice(0, 6);
+    return el('div', { class: 'nt-card urg' },
+      el('div', { class: 'nt-card-topo' }, el('span', { class: 'nt-ic t-espera', html: IC.espera }),
+        el('div', {}, el('div', { class: 'nt-titulo', text: qtd === 1 ? '1 cliente esperando resposta' : `${qtd} clientes esperando resposta` }),
+          el('div', { class: 'nt-texto', text: 'Ninguém respondeu dentro do prazo. A que espera há mais tempo vem primeiro.' }))),
+      el('div', { class: 'nt-pessoas' }, ...mostrar.map((x) => el('div', { class: 'nt-pessoa' },
+        el('span', { class: 'nt-av', style: `background:${corDe(x.nome)}`, text: iniciais(x.nome), 'aria-hidden': 'true' }),
+        el('span', { class: 'nt-nm' }, el('b', { text: x.nome }), el('small', { text: x.dona ? `Com ${primeiroNome(x.dona)}` : 'Sem dona' })),
+        el('span', { class: 'nt-min' + (x.nivel === 2 ? ' urg' : ''), text: tempoEspera(x.minutos) }),
+        el('button', { class: 'nt-bt', type: 'button', text: 'Responder', 'aria-label': `Responder ${x.nome}`, onclick: () => { fechar(); ui.abrir(x.conversaId); } })))),
+      qtd > mostrar.length ? el('button', { class: 'nt-link nt-mais', type: 'button', text: `Ver as ${qtd} em Conversas`, onclick: () => abrirEsperando(esperas) }) : null);
+  }
+  function cartaoProblema(pr) {
+    return cartao({ classe: 'urg', ic: IC.falha, icClasse: 't-problema', rotulo: 'Impede o trabalho', titulo: pr.titulo, texto: pr.texto,
+      botoes: [botao('Resolver', () => { fechar(); irPara({ vista: pr.vista }); }), botao('Lembrar em 1 h', () => lembrarProblema(pr), true)] });
+  }
+  function cartaoAcao(n) {
+    const quando = relativo(n.em);
+    if (n.tipo === 'ia_equipe') return cartao({ classe: 'at', ic: IC.ia_equipe, icClasse: 't-ia_equipe', rotulo: 'A IA pediu ajuda', quando, titulo: n.titulo, texto: textoDe(n),
+      botoes: [botao('Assumir', () => assumir(n)), botao('Depois', () => marcarLidas([n]), true)] });
+    if (n.tipo === 'transferida') return cartao({ classe: 'at', ic: IC.transferida, icClasse: 't-transferida', rotulo: 'Para você', quando, titulo: n.titulo, texto: textoDe(n),
+      botoes: [botao('Responder', () => tocarItem(n)), botao('Depois', () => marcarLidas([n]), true)] });
+    return cartao({ classe: 'urg', ic: IC.falha, icClasse: 't-falha', rotulo: 'Impede o trabalho', quando, titulo: n.titulo, texto: textoDe(n),
+      botoes: [botao(n.conversaId ? 'Abrir' : 'Resolver', () => tocarItem(n)), botao('Lembrar em 1 h', () => lembrarDepois(n), true)] });
+  }
+  /** Uma linha de aviso (Para saber e histórico). */
+  function linhaAviso(n, tag = 'button') {
+    const props = tag === 'button' ? { class: 'nt-item' + (n.lida ? '' : ' nt-nova'), type: 'button', 'data-id': n.id, onclick: () => tocarItem(n) }
+      : { class: 'nt-item' + (n.lida ? '' : ' nt-nova'), role: 'button', tabindex: '0', 'data-id': n.id };
+    return el(tag, props,
+      el('span', { class: 'nt-ic ' + CLASSE_IC[n.tipo], html: IC[n.tipo] || IC.sino }),
+      el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: n.titulo }),
+        el('span', { class: 'nt-quando' }, el('span', { class: 'nt-quando-tx', text: relativo(n.em) }), n.lida ? null : el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
+        n.texto ? el('span', { class: 'nt-texto', text: textoDe(n) }) : null));
+  }
 
   function desenharLista() {
     if (!lista || !lista.isConnected) return;
-    observador?.disconnect();
     const frag = [];
-    // Problemas que impedem o trabalho: fixos no topo até alguém resolver.
-    if (est.problemas.length) {
-      frag.push(el('div', { class: 'nt-grupo', text: 'Precisa de atenção' }));
-      for (const pr of est.problemas) frag.push(el('button', { class: 'nt-item nt-nova', onclick: () => { fechar(); irPara({ vista: pr.vista }); } },
-        el('span', { class: 'nt-ic t-problema', html: IC.falha }),
-        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: pr.titulo }), el('span', { class: 'nt-quando' }, el('span', { text: 'Resolver' })), el('span', { class: 'nt-texto', text: pr.texto }))));
+    const acoes = est.itens.filter(pedeAcao);
+    const total = est.esperando.length + est.problemas.length + acoes.length;
+    if (total) {
+      frag.push(el('div', { class: 'nt-faixa' }, el('span', { text: 'Precisa de você' }), el('span', { class: 'nt-qtd', text: String(total) })));
+      if (est.esperando.length) frag.push(cartaoEspera(est.esperando));
+      for (const pr of est.problemas) frag.push(cartaoProblema(pr));
+      for (const n of acoes) frag.push(cartaoAcao(n));
+    } else {
+      frag.push(el('div', { class: 'nt-ok' }, el('span', { class: 'nt-ic t-ok', html: IC.teste }),
+        el('div', {}, el('b', { text: 'Nada precisa de você agora' }), el('span', { text: 'Quando uma cliente esperar ou a IA pedir ajuda, aparece aqui no topo.' }))));
     }
-    // Clientes esperando: um item só, atualizado no lugar.
-    const esperas = est.itens.filter((n) => n.tipo === 'espera' && !n.lida);
-    const outras = est.itens.filter((n) => n.tipo !== 'espera');
-    if (esperas.length) {
-      const nomes = [...new Set(esperas.map((n) => (n.titulo || '').replace(/^Urgente: /, '').replace(/ (está esperando|espera há .*)$/, '')))];
-      const qtd = nomes.length;
-      const mais = esperas.reduce((a, n) => (new Date(n.em) > new Date(a.em) ? n : a), esperas[0]);
-      frag.push(el('div', { class: 'nt-grupo', text: 'Agora' }));
-      frag.push(el('button', { class: 'nt-item nt-nova', onclick: () => abrirEsperando(esperas) },
-        el('span', { class: 'nt-ic t-espera', html: IC.espera }),
-        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: qtd === 1 ? '1 cliente esperando resposta' : `${qtd} clientes esperando resposta` }),
-          el('span', { class: 'nt-quando' }, el('span', { text: relativo(mais.em) }), el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
-          el('span', { class: 'nt-texto', text: nomesCurto(nomes) }))));
+    const resto = est.itens.filter((n) => !pedeAcao(n));
+    if (resto.length) {
+      const novas = resto.filter((n) => !n.lida);
+      frag.push(el('div', { class: 'nt-grupo nt-grupo-saber' }, el('span', { text: 'Para saber' }),
+        el('button', { class: 'nt-link', type: 'button', text: 'Marcar como lido', disabled: novas.length ? undefined : '', onclick: () => marcarLidas(novas) })));
+      const caixa = el('div', { class: 'nt-cats' });
+      for (const [c, nome] of CATS) {
+        const l = resto.filter((n) => categoria(n) === c);
+        if (!l.length) continue;
+        const nn = l.filter((n) => !n.lida).length;
+        const aberta = est.abertas.has(c);
+        caixa.append(el('button', { class: 'nt-cat' + (nn ? ' nt-nova' : ''), type: 'button', 'aria-expanded': String(aberta), 'data-cat': c,
+          onclick: () => { if (aberta) est.abertas.delete(c); else est.abertas.add(c); desenharLista(); } },
+          el('span', { class: 'nt-ic k-' + c, html: IC_CAT[c] }),
+          el('span', { class: 'nt-cat-corpo' },
+            el('span', { class: 'nt-cat-nome' }, el('b', { text: nome }), nn ? el('span', { class: 'nt-qtd', text: String(nn), 'aria-label': `${nn} não lida${nn > 1 ? 's' : ''}` }) : el('span', { class: 'nt-total', text: String(l.length) })),
+            el('span', { class: 'nt-texto', text: l.slice(0, 2).map((n) => n.titulo).join(' · ') + (l.length > 2 ? ` · +${l.length - 2}` : '') })),
+          el('span', { class: 'nt-seta', html: IC.seta })));
+        if (aberta) caixa.append(el('div', { class: 'nt-cat-lista' }, ...l.map((n) => linhaAviso(n))));
+      }
+      frag.push(caixa);
     }
-    let grupo = '';
-    for (const n of outras) {
-      const g = grupoDe(n.em);
-      if (g !== grupo) { grupo = g; frag.push(el('div', { class: 'nt-grupo', text: g })); }
-      frag.push(el('button', { class: 'nt-item' + (n.lida ? '' : ' nt-nova'), 'data-id': n.id, onclick: () => tocarItem(n) },
-        el('span', { class: 'nt-ic ' + CLASSE_IC[n.tipo], html: IC[n.tipo] || IC.sino }),
-        el('span', { class: 'nt-corpo' }, el('span', { class: 'nt-titulo', text: n.titulo }),
-          el('span', { class: 'nt-quando' }, el('span', { text: relativo(n.em) }), n.lida ? null : el('i', { class: 'nt-ponto', 'aria-label': 'não lida' })),
-          n.texto ? el('span', { class: 'nt-texto', text: textoDe(n) }) : null)));
-    }
-    if (!frag.length) { lista.replaceChildren(el('div', { class: 'nt-vazio', text: 'Tudo em dia ✓' })); return; }
-    if (est.proximo) { sentinela = el('div', { class: 'nt-fim', text: 'Carregando…' }); frag.push(sentinela); }
+    frag.push(el('button', { class: 'nt-link nt-hist', type: 'button', text: 'Ver histórico completo', onclick: abrirHistorico }));
     lista.replaceChildren(...frag);
-    if (est.proximo) observador.observe(sentinela);
-    const marcar = $('nt-marcar'); if (marcar) marcar.disabled = !est.n;
+    const marcar = $('nt-marcar'); if (marcar) marcar.disabled = !est.itens.some((n) => !n.lida);
   }
 
-  /** Toque no "N clientes esperando": marca esses avisos como lidos e mostra a lista de não lidas. */
+  /** Mais de 6 esperando: abre a lista de Conversas no filtro "Esperando". */
   function abrirEsperando(esperas) {
-    for (const n of esperas) { n.lida = true; post(`/api/notificacoes/${n.id}/lida`).catch(() => {}); }
-    mostrarContador(Math.max(0, est.n - 1));
     fechar();
     const ids = [...new Set(esperas.map((n) => n.conversaId).filter(Boolean))];
     if (ids.length === 1) { ui.abrir(ids[0]); return; }
     ui.mostrar('conversas');
     if (innerWidth <= 760 && ui.estado.aberta) $('voltar')?.click();
     document.querySelector('[data-f="esperando"]')?.click();
+  }
+
+  // ---------------------------------------------------------------- histórico completo (filtros + limpar)
+  function abrirHistorico() {
+    const h = { itens: [], proximo: null, filtro: 'tudo', carregando: false, erro: '' };
+    let corpoH;
+    let dica = innerWidth <= 760;
+    try { if (localStorage.getItem('sintonia.nt.dica-limpar') === 'vista') dica = false; } catch {}
+    async function carregar(mais) {
+      if (h.carregando) return;
+      h.carregando = true; desenhar();
+      try {
+        const q = new URLSearchParams({ limite: '50' });
+        if (mais && h.proximo) q.set('antes', h.proximo);
+        const r = await api('/api/notificacoes?' + q);
+        h.itens = mais ? h.itens.concat(r.itens.filter((x) => !h.itens.some((y) => y.id === x.id))) : r.itens;
+        h.proximo = r.proximo; h.erro = '';
+      } catch (x) { h.erro = x.message || 'Não deu para carregar.'; }
+      h.carregando = false; desenhar();
+    }
+    async function limpar(ns) {
+      const ids = ns.map((n) => n.id);
+      corpoH?.querySelectorAll(ids.map((id) => `[data-linha="${id}"]`).join(',')).forEach((e) => { e.style.maxHeight = e.offsetHeight + 'px'; void e.offsetHeight; e.classList.add('nt-saindo'); });
+      const r = await post('/api/notificacoes/limpar', { ids }).catch((x) => { toast(x.message); return null; });
+      if (!r) { desenhar(); return; }
+      const acoes = ns.filter(pedeAcao).length;
+      setTimeout(() => {
+        h.itens = h.itens.filter((n) => !ids.includes(n.id));
+        est.itens = est.itens.filter((n) => !ids.includes(n.id));
+        if (acoes) mostrarContador(Math.max(0, est.n - acoes));
+        desenhar();
+      }, 260);
+    }
+    function ler(n) { marcarLidas([n]); const x = h.itens.find((y) => y.id === n.id); if (x) x.lida = true; desenhar(); }
+    function linhaHist(n) {
+      const item = linhaAviso(n, 'div');
+      item.querySelector('.nt-quando').append(el('span', { class: 'nt-h-acoes' },
+        n.lida ? null : el('button', { class: 'nt-mini', type: 'button', title: 'Marcar como lida', 'aria-label': 'Marcar como lida', html: IC.teste, onclick: (e) => { e.stopPropagation(); ler(n); } }),
+        el('button', { class: 'nt-mini', type: 'button', title: 'Limpar', 'aria-label': 'Limpar este aviso', html: IC.fechar, onclick: (e) => { e.stopPropagation(); limpar([n]); } })));
+      // Arrastar para a esquerda limpa (celular; também com o mouse).
+      let x0 = null, y0 = 0, dx = 0, arrastou = false;
+      item.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; x0 = e.clientX; y0 = e.clientY; dx = 0; arrastou = false; });
+      item.addEventListener('pointermove', (e) => {
+        if (x0 == null) return;
+        const ddx = e.clientX - x0, ddy = e.clientY - y0;
+        if (!arrastou && Math.abs(ddx) > 8 && Math.abs(ddx) > Math.abs(ddy)) { arrastou = true; try { item.setPointerCapture(e.pointerId); } catch {} }
+        if (arrastou) { dx = Math.min(0, ddx); item.style.transform = `translateX(${dx}px)`; }
+      });
+      const soltar = () => {
+        if (x0 == null) return;
+        x0 = null;
+        if (!arrastou) return;
+        item.style.transition = 'transform .18s ease';
+        if (dx < -90) { item.style.transform = 'translateX(-105%)'; try { localStorage.setItem('sintonia.nt.dica-limpar', 'vista'); } catch {} limpar([n]); }
+        else { item.style.transform = ''; setTimeout(() => { item.style.transition = ''; }, 200); }
+      };
+      item.addEventListener('pointerup', soltar);
+      item.addEventListener('pointercancel', soltar);
+      item.addEventListener('click', (e) => { if (arrastou || e.target.closest('button')) return; tocarItem(n); });
+      item.addEventListener('keydown', (e) => { if (e.key === 'Enter') tocarItem(n); if (e.key === 'Delete') limpar([n]); });
+      return el('div', { class: 'nt-linha-h', 'data-linha': n.id }, el('div', { class: 'nt-fundo-limpar', 'aria-hidden': 'true' }, el('span', { html: IC.lixo }), 'Limpar'), item);
+    }
+    function desenhar() {
+      if (!corpoH || !corpoH.isConnected) return;
+      const conta = (c) => h.itens.filter((n) => !n.lida && (c === 'tudo' || categoria(n) === c)).length;
+      const chips = el('div', { class: 'nt-chips', role: 'group', 'aria-label': 'Filtrar por assunto' },
+        ...[['tudo', 'Tudo'], ...CATS].map(([c, nome]) => {
+          const n = conta(c);
+          return el('button', { class: 'nt-chip k-' + c, type: 'button', 'aria-pressed': String(h.filtro === c), onclick: () => { h.filtro = c; desenhar(); } },
+            c === 'tudo' ? null : el('span', { class: 'nt-chip-pt', 'aria-hidden': 'true' }), nome, n ? el('i', { text: String(n) }) : null);
+        }));
+      const filtrados = h.itens.filter((n) => h.filtro === 'tudo' || categoria(n) === h.filtro);
+      const corpo = [];
+      if (dica && filtrados.length) corpo.push(el('div', { class: 'nt-dica-limpar' }, el('span', { text: 'Dica: arraste um aviso para a esquerda para limpar.' }),
+        el('button', { class: 'nt-x', type: 'button', 'aria-label': 'Fechar dica', html: IC.fechar, onclick: () => { dica = false; try { localStorage.setItem('sintonia.nt.dica-limpar', 'vista'); } catch {} desenhar(); } })));
+      let grupo = '', doGrupo = [];
+      const fecharGrupo = () => {
+        if (!doGrupo.length) return;
+        const ns = doGrupo;
+        corpo.push(el('div', { class: 'nt-grupo' }, el('span', { text: grupo }), el('button', { class: 'nt-link', type: 'button', text: 'Limpar', 'aria-label': `Limpar os avisos de ${grupo.toLowerCase()}`, onclick: () => limpar(ns) })));
+        for (const n of ns) corpo.push(linhaHist(n));
+      };
+      for (const n of filtrados) {
+        const g = grupoDe(n.em);
+        if (g !== grupo) { fecharGrupo(); grupo = g; doGrupo = []; }
+        doGrupo.push(n);
+      }
+      fecharGrupo();
+      if (!filtrados.length && !h.carregando) corpo.push(el('div', { class: 'nt-vazio' }, h.erro || (h.filtro === 'tudo' ? 'Nenhum aviso por aqui.' : `Nada em ${CATS.find((x) => x[0] === h.filtro)[1]}.`)));
+      if (h.carregando) corpo.push(el('div', { class: 'nt-fim', text: 'Carregando…' }));
+      else if (h.proximo) corpo.push(el('button', { class: 'nt-link nt-hist', type: 'button', text: 'Carregar mais', onclick: () => carregar(true) }));
+      corpoH.replaceChildren(chips, el('div', { class: 'nt-lista nt-lista-h' }, ...corpo));
+    }
+    P().empurrar({ id: 'nt-historico', titulo: 'Histórico', montar: (corpo) => { corpoH = corpo; desenhar(); carregar(false); }, aoSair: () => { desenharLista(); } });
   }
 
   function desenharConvite(caixa) {
@@ -384,10 +681,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     P().abrir({ id: 'notificacoes', titulo: 'Notificações', acoes: [pref], aoFechar: () => { est.aberto = false; ['lt-sino', 'sino-cel'].forEach((id) => $(id)?.setAttribute('aria-expanded', 'false')); },
       montar: (corpo) => {
         const convite = el('div', { id: 'nt-convite' });
-        lista = el('div', { class: 'nt-lista', id: 'nt-lista' });
-        corpo.append(el('div', { class: 'nt-topo-lista' }, el('button', { class: 'nt-link', id: 'nt-marcar', type: 'button', text: 'Marcar todas como lidas', onclick: marcarTodas })), convite, lista);
+        lista = el('div', { class: 'nt-painel-c', id: 'nt-lista' });
+        corpo.append(el('div', { class: 'nt-topo-lista' }, el('button', { class: 'nt-link', id: 'nt-marcar', type: 'button', text: 'Marcar tudo como lido', onclick: marcarTodas })), convite, lista);
         desenharConvite(convite);
-        observador = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) buscar(true).then((r) => r && desenharLista()); }, { root: corpo, rootMargin: '120px' });
         desenharLista();
       } });
     await buscar(false).catch(() => {});
@@ -397,10 +693,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (P()?.aberto('notificacoes')) P().fechar();
     est.aberto = false;
   }
+  /** Marca todos os avisos como lidos: os que pedem ação descem para "Para saber"; esperas e problemas continuam no topo. */
   async function marcarTodas() {
     await post('/api/notificacoes/lidas').catch(() => {});
     est.itens.forEach((n) => (n.lida = true));
-    mostrarContador(0); desenharLista(); toast('Tudo marcado como lido.');
+    mostrarContador(est.esperando.length + est.problemas.length); desenharLista(); toast('Tudo marcado como lido.');
   }
 
   for (const id of ['lt-sino', 'sino-cel']) {
