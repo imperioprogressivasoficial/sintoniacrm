@@ -106,6 +106,12 @@ import { registrarDesempenho } from './desempenho/rotas.js';
 import { FonteAnalisesMemoria, FonteAnalisesPostgres } from './analises/fonte.js';
 import { OrigensConversa } from './analises/origens.js';
 import { registrarAnalises } from './analises/rotas.js';
+/* relatorio-dia */
+import { agendamentosEntre } from './agenda/agenda-dia.js';
+import { ArmazemEnvioRelatorioMemoria, ArmazemEnvioRelatorioPostgres } from './relatorio-dia/envio.js';
+import { FonteRelatorioDiaMemoria, FonteRelatorioDiaPostgres } from './relatorio-dia/fonte.js';
+import { registrarRelatorioDia } from './relatorio-dia/rotas.js';
+import { RelatorioDia } from './relatorio-dia/servico.js';
 /* perdas-saude: motivo de perda obrigatório, relatório de perdas e painel de saúde da gestão */
 import { Perdas } from './perdas/perdas.js';
 import { ArmazemPerdasMemoria, ArmazemPerdasPostgres } from './perdas/armazem.js';
@@ -1029,6 +1035,40 @@ registrarAnalises(app, {
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });
+/* relatorio-dia: Análises › Dia a dia (leads novos × agendaram, por dia e por grupo de leads) e relatórios
+   automáticos pelo WhatsApp (a Serena como gerente de vendas). Tudo começa desligado. */
+const armazemRelatorioDia = pool ? new ArmazemEnvioRelatorioPostgres(pool) : new ArmazemEnvioRelatorioMemoria();
+const relatorioDia = new RelatorioDia({
+  fonte: pool ? new FonteRelatorioDiaPostgres(pool) : new FonteRelatorioDiaMemoria(repo),
+  armazem: armazemRelatorioDia,
+  armazemComercial,
+  comercial: pool ? new FonteComercialPostgres(pool) : new FonteComercialMemoria(repo),
+  origens: (empresaId, ids) => new OrigensConversa({ repo, contatos: armazemContatos, leads: extras.armazem, selos: (x) => rastreio.selos(x) }).de(empresaId, ids),
+  agendaEntre: (inicio, fim, escopo) => agendamentosEntre(repo, inicio, fim, escopo),
+  enviar: async (d, texto, unidadeEnvio) => {
+    if (d.tipo === 'grupo') {
+      const g = await armazemGrupos.buscar(d.destino);
+      if (!g) throw new Error('Grupo não encontrado');
+      await grupos.enviarTexto(g, texto, { nome: 'Serena (relatório)' });
+      return;
+    }
+    const n = (unidadeEnvio && numeros.find((x) => x.unidade === unidadeEnvio && ehReal(x))) || numeros.find(ehReal);
+    if (!n) throw new Error('Nenhum WhatsApp conectado para enviar');
+    await sintonia.enviarAvulso(n, d.destino, texto);
+  },
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  log,
+});
+registrarRelatorioDia(app, {
+  servico: relatorioDia,
+  armazem: armazemRelatorioDia,
+  contas,
+  telefoneDe: async (id) => (await perfisUsuario.ler(id)).telefone,
+  grupos: async (empresaId) => (await armazemGrupos.listar(empresaId)).map((g) => ({ id: g.id, nome: g.nome ?? 'Grupo sem nome', unidade: g.unidade })),
+  canais: () => [...new Set(numeros.filter(ehReal).map((n) => n.unidade))],
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  agora: () => new Date(),
+});
 /* perdas-saude: painel de saúde da gestão (Análises › Saúde do sistema) */
 const painelSaude = new PainelSaude({
   fonte: pool ? new FonteSaudePostgres(pool) : new FonteSaudeMemoria(repo),
@@ -1222,6 +1262,7 @@ const rodadaRelogio = umaPorVez('30 s', async () => {
   await nps.tick().catch((e) => log('Falha no relógio da pesquisa de satisfação', String(e))); // pesquisas sem resposta no prazo
   await radar.tick().catch((e) => log('Falha no relógio do radar', String(e))); // prazos vencidos e respostas da IA pedidas pelo radar
   await avisosReuniao?.tick().catch((e) => log('Falha no relógio do agendamento online', String(e))); // atendimento-extra: lembrete antes da reunião
+  await relatorioDia.tick().catch((e) => log('Falha no relógio dos relatórios automáticos', String(e))); // relatorio-dia: uma vez só (chave única no banco)
   const agora = new Date();
   const p = partesBahia(agora);
   const real = numeros.find(ehReal);

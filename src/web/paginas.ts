@@ -136,6 +136,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/analises.js': { arquivo: 'telas/analises.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/perdas.js': { arquivo: 'telas/perdas.js', tipo: 'text/javascript; charset=utf-8' }, // perdas-saude
   '/telas/saude.js': { arquivo: 'telas/saude.js', tipo: 'text/javascript; charset=utf-8' }, // perdas-saude
+  '/telas/relatorio-dia.js': { arquivo: 'telas/relatorio-dia.js', tipo: 'text/javascript; charset=utf-8' }, // relatorio-dia
   '/telas/clientes.js': { arquivo: 'telas/clientes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/tags.js': { arquivo: 'telas/tags.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/respostas.js': { arquivo: 'telas/respostas.js', tipo: 'text/javascript; charset=utf-8' },
