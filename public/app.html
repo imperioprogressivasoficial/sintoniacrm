@@ -1038,6 +1038,14 @@ html, body, body * { scrollbar-width: none; }
 html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { display: none; width: 0; height: 0; }
 </style>
 <link rel="stylesheet" href="/responsivo.css">
+<style id="contadores-puros">
+  /* contadores (dono 21/11, modelo 3): sem brilho em volta; no escuro a bolinha fica branca com o número azul-marinho */
+  html[data-tema="escuro"] { --badge: #ffffff; --badge-txt: #0d2240; }
+  .badge, .contador, .lt-qtd, .tp-qtd, .nt-bolinha, .cv-aba i, .ds-badge, .iax-pend, .iax-leitura mark { box-shadow: none !important; }
+  .lt-aviso { box-shadow: none !important; }
+  .topo-grupo::after { display: none !important; }
+  .trilho .nav[aria-current="page"] { box-shadow: none !important; }
+</style>
 </head>
 <body>
 <div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo suas conversas">
