@@ -170,6 +170,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/capa-perfil.js': { arquivo: 'telas/capa-perfil.js', tipo: 'text/javascript; charset=utf-8' }, // capa-perfil: capa com foto e atalhos
   '/telas/papel-parede.js': { arquivo: 'telas/papel-parede.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
   '/telas/conversa-extra.js': { arquivo: 'telas/conversa-extra.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
+  '/telas/topo-conversa.js': { arquivo: 'telas/topo-conversa.js', tipo: 'text/javascript; charset=utf-8' }, // topo da conversa como o WhatsApp Web
   '/telas/chanfro.js': { arquivo: 'telas/chanfro.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },

@@ -111,14 +111,14 @@ describe('fluidez2: Ocultar dados dos clientes', () => {
     expect((await como('GET')).json().preferencias.ocultarDados).toBe(true);
   });
 
-  it('o app carrega o modo privacidade e a ordem de chegada antes de tudo, e tem o atalho no ⋯ das Conversas', async () => {
+  it('o app carrega o modo privacidade e a ordem de chegada antes de tudo, e o Ocultar mora em Conta › Privacidade (não no ⋯ das Conversas)', async () => {
     const { app, cookie } = await montar();
     const html = (await app.inject({ url: '/app', headers: { cookie } })).body;
     const pos = (x: string) => html.indexOf(x);
     expect(pos('/telas/prioridade.js?v=')).toBeGreaterThan(0);
     expect(pos('/telas/privacidade.js?v=')).toBeGreaterThan(pos('/telas/fone.js?v='));
     expect(pos('/telas/privacidade.js?v=')).toBeLessThan(pos('</head>'));
-    expect(html).toContain('data-acao="privacidade"');
+    expect(html).not.toContain('data-acao="privacidade"');
     const js = await app.inject({ url: '/telas/privacidade.js' });
     expect(js.statusCode).toBe(200);
     expect(js.body).toContain('html.privacidade');

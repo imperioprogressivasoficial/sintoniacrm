@@ -1328,7 +1328,6 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
             <button role="menuitem" data-acao="selecionar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span>Selecionar conversas</span></button>
             <button role="menuitem" data-acao="lidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12.5a8 8 0 0 1-11.7 7L4 20.5l1.1-3.9A8 8 0 1 1 20 12.5Z"/><path d="m8.5 12.5 2.3 2.3 4.7-4.8"/></svg><span>Marcar tudo como lido</span></button>
             <button role="menuitem" data-acao="etapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg><span>Filtrar por etapa do CRM</span></button>
-            <button role="menuitem" data-acao="privacidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.6 10.6 0 0 1 12 5c5.5 0 9 5.5 9 7a10.8 10.8 0 0 1-2.6 3.6M6.4 6.5C4.3 7.9 3 10.4 3 12c0 1.5 3.5 7 9 7 1.8 0 3.4-.6 4.7-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg><span>Ocultar dados dos clientes</span></button><!-- fluidez2: modo privacidade -->
           </div>
           <div class="barra-selecao" id="barra-selecao" hidden><button class="link" id="sel-cancelar">Cancelar</button><b id="sel-qtd">Selecione conversas</b><button class="link" id="sel-todas">Todas</button></div>
           <div class="titulo-linha"><h1 class="titulo-grande">Conversas</h1></div>
@@ -3921,7 +3920,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/produtos-lead.js" defer></script><!-- produtos-lead: produtos e serviços vinculados ao lead (ficha e cartão do Pipeline) -->
 <script src="/telas/conversa-ux.js" defer></script>
 <script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
-<script src="/telas/conversa-extra.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/conversa-extra.js" defer></script><script src="/telas/topo-conversa.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/voltar-celular.js" defer></script><!-- rotas-celular: botão "Voltar" nas telas de dentro (celular) -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>

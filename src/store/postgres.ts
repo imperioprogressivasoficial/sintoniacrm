@@ -421,6 +421,18 @@ export class RepositorioPostgres implements Repositorio {
     return rows.map(paraMensagem);
   }
 
+  async buscarMensagens(conversaId: string, termo: string, limite = 50) {
+    const padrao = '%' + termo.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+    const { rows } = await this.pool.query<LinhaMensagem>(
+      `select ${COLUNAS_MENSAGEM}
+         from sintonia.mensagens m left join sintonia.midias md on md.mensagem_id = m.id
+        where m.conversa_id = $1 and m.texto ilike $2
+        order by m.em desc, m.id desc limit $3`,
+      [conversaId, padrao, limite],
+    );
+    return rows.map(paraMensagem);
+  }
+
   async registrarEnviadoPorNos(idExterno: string) {
     if (!idExterno) return;
     await this.pool.query('insert into sintonia.enviados (id_externo) values ($1) on conflict do nothing', [idExterno]);

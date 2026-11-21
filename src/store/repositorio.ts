@@ -162,6 +162,8 @@ export interface Repositorio {
   /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
   rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** Pesquisar dentro de uma conversa (lupa do topo): as mais recentes primeiro, sem diferenciar maiúsculas. */
+  buscarMensagens?(conversaId: string, termo: string, limite?: number): Promise<Mensagem[]>;
   /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
   foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
   salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
@@ -361,6 +363,14 @@ export class RepositorioMemoria implements Repositorio {
     return this.msgs
       .filter((m) => m.conversaId === conversaId)
       .slice(-limite)
+      .map((m) => this.comAnexo(m));
+  }
+
+  async buscarMensagens(conversaId: string, termo: string, limite = 50) {
+    const t = termo.toLocaleLowerCase('pt-BR');
+    return this.msgs
+      .filter((m) => m.conversaId === conversaId && m.texto.toLocaleLowerCase('pt-BR').includes(t))
+      .slice(-limite).reverse()
       .map((m) => this.comAnexo(m));
   }
 

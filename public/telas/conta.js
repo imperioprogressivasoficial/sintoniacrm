@@ -223,9 +223,6 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       cartao('geral', 'Aparência',
         opcao('Tema', 'Automático segue o modo claro ou escuro do aparelho.', tema),
         opcao('Densidade', 'Compacta mostra mais conversas na tela.', densidade),
-        /* fluidez2: modo privacidade (também no ⋯ das Conversas) */
-        window.SintoniaPrivacidade ? opcao('Ocultar dados dos clientes (para mostrar a tela)', 'Nomes, números e fotos das clientes ficam desfocados. As mensagens continuam legíveis.',
-          chave(window.SintoniaPrivacidade.ligada(), (v) => window.SintoniaPrivacidade.definir(v), 'Ocultar dados dos clientes')) : null,
         el('p', { class: 'ec-sub', text: 'Vale em todos os aparelhos em que você entrar.' })),
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v10h14V10"/></svg>', 'Ao abrir a Sintonia',
         opcao('Tela inicial', 'A primeira tela quando você abre o app.', tela),
@@ -255,7 +252,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ------------------------------------------------------------ privacidade (sem-pagamento: App Store 5.1.1)
   const SETA_FORA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>';
   function telaPrivacidade(corpo) {
-    const { cartao, botao } = EC;
+    const { cartao, botao, opcao, chave } = EC;
     const link = (href, titulo, sub) => { const a = el('a', { class: 'ct-link', href, target: '_blank', rel: 'noopener' }, el('span', {}, document.createTextNode(titulo), el('small', { text: sub }))); a.insertAdjacentHTML('beforeend', SETA_FORA); return a; };
     const secLinks = cartao('doc', 'Privacidade e termos',
       el('p', { class: 'ec-sub', text: 'Como a Sintonia usa e protege os dados, as regras de uso e como falar com a gente.' }),
@@ -274,7 +271,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('p', { class: 'ec-sub', text: 'Seu acesso é desligado e os seus dados pessoais são apagados: nome, e-mail, telefone, foto e preferências. As conversas e vendas da empresa continuam, aparecendo como "Usuário excluído". Não dá para desfazer.' }),
       el('div', { class: 'ec-acoes' }, botao('Excluir minha conta', excluirConta, 'perigo')));
     secExcluir.classList.add('ct-perigo');
-    encher(corpo, el('div', { class: 'ec-grade ec-2' }, secLinks, el('div', { style: 'display:grid;gap:16px;min-width:0' }, secDados, secExcluir)));
+    /* Ocultar dados (dono 21/11): mora só aqui, em Conta › Privacidade (saiu do topo da conversa e do ⋯ das Conversas) */
+    const secOcultar = window.SintoniaPrivacidade ? cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.6A10 10 0 0 1 12 5.5C18 5.5 21.5 12 21.5 12a17 17 0 0 1-3.2 4.1M6.6 6.6C4 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.7 0 3.2-.5 4.5-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>', 'Ocultar dados dos clientes',
+      opcao('Ocultar nomes, números e fotos', 'Para mostrar a tela a alguém: nomes, números e fotos das clientes ficam desfocados. As mensagens continuam legíveis.',
+        chave(window.SintoniaPrivacidade.ligada(), (v) => window.SintoniaPrivacidade.definir(v), 'Ocultar dados dos clientes')),
+      el('p', { class: 'ec-sub', text: 'Vale em todos os aparelhos em que você entrar.' })) : null;
+    encher(corpo, el('div', { class: 'ec-grade ec-2' }, el('div', { style: 'display:grid;gap:16px;min-width:0' }, secOcultar, secLinks), el('div', { style: 'display:grid;gap:16px;min-width:0' }, secDados, secExcluir)));
   }
   function excluirConta() {
     EC.janela('Excluir minha conta', (form, fechar) => {

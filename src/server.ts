@@ -18,7 +18,7 @@ import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida, StatusRecebido } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
-import { exigir } from './auth/permissoes.js';
+import { exigir, pode } from './auth/permissoes.js';
 import { escopoDe, podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
 import type { Conversa } from './domain.js';
 import { registrarCompressao } from './web/compressao.js';
@@ -445,6 +445,35 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const ids = (b.ids ?? []).filter((id) => visiveis.has(id));
     await d.leituras.desmarcar(req.usuario.id, ids);
     return { ok: true, marcadas: ids.length };
+  });
+
+  /* Lupa do topo da conversa: pesquisa em todas as mensagens dela (não só nas 200 que a tela carrega). */
+  app.get('/api/conversas/:id/busca', async (req) => {
+    const conversa = await conversaVisivel(req);
+    const q = String((req.query as { q?: unknown })?.q ?? '').trim().slice(0, 100);
+    if (q.length < 2) return { termo: q, resultados: [] };
+    const achadas = d.repo.buscarMensagens
+      ? await d.repo.buscarMensagens(conversa.id, q, 50)
+      : (await d.repo.mensagens(conversa.id, 5000)).filter((m) => m.texto.toLocaleLowerCase('pt-BR').includes(q.toLocaleLowerCase('pt-BR'))).reverse().slice(0, 50);
+    return { termo: q, resultados: achadas.map((m) => ({ id: m.id, texto: m.texto, em: m.em, autor: m.autor, autorNome: m.autorNome ?? null })) };
+  });
+
+  /* ⋯ do topo da conversa › Exportar conversa: um .txt com todas as mensagens (permissão "exportar", como os relatórios). */
+  app.get('/api/conversas/:id/exportar', async (req, reply) => {
+    const conversa = await conversaVisivel(req);
+    if (req.usuario && !pode(req, 'exportar')) throw Object.assign(new Error('Você não tem permissão para exportar. Fale com a gestão.'), { statusCode: 403 });
+    const msgs = await d.repo.mensagens(conversa.id, 20000);
+    const dois = (n: number) => String(n).padStart(2, '0');
+    const quando = (em: Date) => { const p = partesBahia(new Date(em)); return `${dois(p.dia)}/${dois(p.mes)}/${p.ano} ${dois(p.hora)}:${dois(p.minuto)}`; };
+    const cliente = conversa.nome || conversa.telefone || 'Cliente';
+    const quem = (m: (typeof msgs)[number]) => (m.autor === 'cliente' ? cliente : m.autor === 'ia' ? 'IA' : m.autor === 'equipe' ? (m.autorNome || 'Equipe') : 'Sistema');
+    const texto = [`Conversa com ${cliente}${conversa.telefone ? ` (${conversa.telefone})` : ''}`, `Exportada pela Sintonia em ${quando(new Date())} (horário da Bahia)`, '',
+      ...msgs.map((m) => `[${quando(m.em)}] ${quem(m)}: ${m.texto}`)].join('\r\n');
+    const arquivo = `Conversa ${cliente}`.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'Conversa';
+    reply.header('content-type', 'text/plain; charset=utf-8');
+    reply.header('content-disposition', `attachment; filename="conversa.txt"; filename*=UTF-8''${encodeURIComponent(arquivo)}.txt`);
+    reply.header('cache-control', 'no-store');
+    return '\ufeff' + texto;
   });
 
   app.get('/api/conversas/:id', async (req, reply) => {
