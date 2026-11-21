@@ -9,6 +9,8 @@
 <script src="/telas/atualizando.js"></script>
 <!-- contato-nome: telefone no padrão "+55 (71) 99220-0365" em todas as telas (antes do resto, que já usa). -->
 <script src="/telas/fone.js"></script>
+<!-- fluidez2: ordem de chegada na abertura (lista primeiro; contadores e o resto depois) e pedidos repetidos juntados -->
+<script src="/telas/prioridade.js"></script>
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
@@ -1051,6 +1053,11 @@ html[data-tema="escuro"] .fz-veu { --fz-v1: rgba(58,160,255,.20); --fz-v2: rgba(
 .esq-msgs i.e { justify-self: start; border-top-left-radius: 4px; } .esq-msgs i.d { justify-self: end; border-top-right-radius: 4px; background: var(--esq-d, rgba(16,110,190,.13)); }
 html[data-tema="escuro"] .esq-msgs { --esq: rgba(233,243,255,.08); --esq-d: rgba(58,160,255,.16); }
 @keyframes fz-aparece { to { opacity: 1; } }
+/* fluidez2: contadores (não lidas, sino, grupos, menu) entram com um esmaecer curto quando aparecem, em vez de "pular" na tela */
+#contador, #lt-qtd, #qtd-nao-lidas, #voltar-qtd, #radar-num, #sino-cel-qtd, #lt-grupos-qtd, #lt-chat-equipe-qtd, #lt-agendadas-qtd, #lt-rotina-qtd, .lt-qtd, .cv-aba .badge { animation: fz-surge .35s ease 1 both; }
+@keyframes fz-surge { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+.pn-esq { filter: blur(.8px); }
+@media (prefers-reduced-motion: reduce) { #contador, #lt-qtd, #qtd-nao-lidas, #voltar-qtd, #radar-num, #sino-cel-qtd, .lt-qtd { animation: none; } }
 .avatar.foto img.fz-av { transition: opacity .3s ease; } .avatar.foto img.fz-av:not(.fz-ok) { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .fz-img, .avatar.foto img.fz-av { transition: none; } .esq-msgs { animation-duration: .01s; } }
 /* largura-total (pedido do dono 20/11): no computador as telas ocupam toda a largura do painel, sem faixa vazia
@@ -1128,11 +1135,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   try { veio = Date.now() - Number(sessionStorage.getItem('sintonia.abertura') || 0) < 15000; sessionStorage.removeItem('sintonia.abertura'); } catch {}
   let p = 0;
   const por = (v) => { p = Math.max(p, Math.min(1, v)); ab.style.setProperty('--ab-p', String(p)); };
+  /* fluidez2: a tela cheia "Abrindo suas conversas" só continua a passagem do login. No F5 (computador) e ao abrir o app no
+     celular, a casca (menu, barra, título) e o esqueleto desfocado da lista aparecem na hora, sem cobrir nada. */
+  if (!veio) { ab.remove(); window.SintoniaAbertura = { pronto: () => window.SintoniaPrioridade?.liberar() }; return; }
   por(veio ? 0.72 : 0.14);
   const passo = setInterval(() => por(p + (0.94 - p) * 0.14), 220);
   let feito = false;
   const pronto = () => {
     if (feito) return; feito = true; clearInterval(passo); por(1);
+    window.SintoniaPrioridade?.liberar(); /* fluidez2: lista na tela: o resto pode vir */
     setTimeout(() => { ab.classList.add('ab-saindo'); ab.setAttribute('aria-hidden', 'true'); setTimeout(() => ab.remove(), 700); }, 240);
   };
   window.SintoniaAbertura = { pronto };
@@ -1914,7 +1925,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       caixa.append(v); return;
     }
     const hoje = new Date().toDateString(); const desejadas = cxTopo ? [cxTopo] : []; const vistas = new Set();
-    for (const c of lista) {
+    /* fluidez2: primeira vez (lista vazia na tela): desenha as 25 de cima já e o resto no quadro seguinte, quando o navegador estiver livre */
+    let fatia = lista;
+    if (!linhasFz.size && lista.length > 40 && !caixa.querySelector('.item')) { fatia = lista.slice(0, 25); (window.requestIdleCallback || setTimeout)(() => desenharLista(), { timeout: 300 }); }
+    for (const c of fatia) {
       const ass = hoje + '|' + assinaturaLinha(c, estado.selecao);
       const velha = linhasFz.get(c.id);
       vistas.add(c.id);
