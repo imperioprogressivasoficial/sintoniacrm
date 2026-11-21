@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 16:30 UTC (21/11, 13h30 na Bahia)
-commit: dbb8693
-pacote sha256: a3750f84ab242d65b75ab7192e844c9d11da58a49f8a686ff63125f829795f10
+data: 2026-11-21 17:10 UTC (21/11, 14h10 na Bahia)
+commit: 8f874e9
+pacote sha256: 086cab534472b2ffbdc8aa457201a1b130353c554eb25fbc70985965ece16143
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-dbb8693.b64); pode apagar depois.
-observação: em cima do ce257bb. Entra: contadores sem brilho; no escuro bolinha branca com número azul-marinho.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-8f874e9.b64); pode apagar depois.
+observação: em cima do dbb8693. Entra: contato-nome (nome do perfil do WhatsApp nas conversas sem nome, rotina de nomes a cada 6 h, telefone +55 (71) 9xxxx-xxxx em todas as telas, nomes longos com reticências).
