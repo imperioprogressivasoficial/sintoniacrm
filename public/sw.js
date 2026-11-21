@@ -92,7 +92,7 @@ self.addEventListener('notificationclick', (e) => {
     // Marca como lida (a sessão vai no cookie). Se falhar, o app marca quando abrir.
     if (dados.id) await fetch(`/api/notificacoes/${dados.id}/lida`, { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const app = janelas.find((c) => new URL(c.url).pathname === '/app');
+    const app = janelas.find((c) => /^\/app(\/|$)/.test(new URL(c.url).pathname)); /* rotas-fontes: /app/conversas/… também é o app */
     if (app) {
       app.postMessage({ tipo: 'sintonia:abrir', dados });
       return app.focus();

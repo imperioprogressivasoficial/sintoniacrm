@@ -325,7 +325,7 @@ export class EmailMarketing {
         para: { email: email.parse(para) },
         responderPara: l.responder_para,
         assunto: 'Teste da Sintonia: sua conta de e-mail está funcionando ✓',
-        html: `<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#0B2540;padding:24px"><h2 style="color:#106EBE">Tudo certo!</h2><p>Este é um e-mail de teste enviado pela Sintonia usando a conta <b>${l.nome.replace(/</g, '&lt;')}</b>.</p><p>Se ele chegou na caixa de entrada (e não no spam), a configuração está boa. Se caiu no spam, confira o SPF, o DKIM e o DMARC do domínio.</p></body></html>`,
+        html: `<!DOCTYPE html><html lang="pt-BR"><body style="font-family:Poppins,'Segoe UI',Helvetica,Arial,sans-serif;color:#0B2540;padding:24px"><h2 style="color:#106EBE">Tudo certo!</h2><p>Este é um e-mail de teste enviado pela Sintonia usando a conta <b>${l.nome.replace(/</g, '&lt;')}</b>.</p><p>Se ele chegou na caixa de entrada (e não no spam), a configuração está boa. Se caiu no spam, confira o SPF, o DKIM e o DMARC do domínio.</p></body></html>`,
         texto: `Tudo certo! Este é um e-mail de teste enviado pela Sintonia usando a conta ${l.nome}.`,
         messageId: `<teste-${token}@${dominio(l.remetente_email)}>`,
       });

@@ -51,7 +51,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ra-item .ra-l1 b { font-size: 15px; }
   .ra-item .ra-l1 span { font-size: 12.5px; color: var(--sub); }
   .ra-copia { display: flex; gap: 6px; min-width: 0; }
-  .ra-copia input { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 13px; background: var(--vidro-ativo); border: 1px solid var(--vidro-borda); border-radius: 10px; padding: 9px 10px; color: var(--texto); }
+  .ra-copia input { flex: 1; min-width: 0; font-family: var(--fonte-mono); font-size: 13px; background: var(--vidro-ativo); border: 1px solid var(--vidro-borda); border-radius: 10px; padding: 9px 10px; color: var(--texto); }
   .ra-numeros { display: flex; gap: 16px; font-size: 13px; color: var(--sub); flex-wrap: wrap; }
   .ra-numeros b { color: var(--texto); font-size: 16px; font-variant-numeric: tabular-nums; margin-right: 4px; }
   .ra-dica { font-size: 13px; color: var(--sub); line-height: 1.5; }

@@ -132,6 +132,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/whatsapp-saude.js': { arquivo: 'telas/whatsapp-saude.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/equipe.js': { arquivo: 'telas/equipe.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/rotas.js': { arquivo: 'telas/rotas.js', tipo: 'text/javascript; charset=utf-8' }, // rotas-fontes: endereços /app/<tela>
   // Tela "Estamos atualizando melhorias" (camada do app durante uma publicação; a página inteira é /atualizando.html).
   '/telas/atualizando.js': { arquivo: 'telas/atualizando.js', tipo: 'text/javascript; charset=utf-8' },
   // Service worker do push: na raiz (escopo /) e sem cache longo, para a versão nova valer logo.
@@ -145,6 +146,15 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   // Calculadora de custo da IA (mesma fórmula na página de vendas e no app).
   '/calculadora-ia.js': { arquivo: 'calculadora-ia.js', tipo: 'text/javascript; charset=utf-8' },
 };
+
+/** rotas-fontes: endereço de volta depois do login. Só aceita caminhos do próprio app (/app, /app/…, /conexoes):
+ * nada de outro site (//site, http:, barra invertida), para o /entrar não virar redirecionador aberto. */
+export function voltaSegura(v: unknown): string | null {
+  if (typeof v !== 'string' || v.length > 300) return null;
+  if (!/^\/(app|conexoes)(?=[/?]|$)/.test(v)) return null;
+  if (/[\\\s]|\/\/|%2f%2f|%5c/i.test(v)) return null;
+  return v;
+}
 
 export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void {
   const cache = new Map<string, Buffer>();
@@ -189,7 +199,8 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
         const u = await usuarioDaRequisicao(req, auth);
         if ((rota === '/app' || rota === '/conexoes') && !u) return reply.redirect('/entrar');
         if (rota === '/conexoes' && u && u.papel !== 'admin' && u.papel !== 'direcao') return reply.redirect('/app');
-        if (rota === '/entrar' && u) return reply.redirect('/app');
+        /* rotas-fontes: quem já entrou e caiu no /entrar?volta=/app/... volta para onde estava */
+        if (rota === '/entrar' && u) return reply.redirect(voltaSegura((req.query as Record<string, unknown> | undefined)?.volta) ?? '/app');
       }
       reply
         .header('content-type', tipo)
@@ -209,6 +220,25 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
       return reply.send(ler(arquivo));
     });
   }
+
+  /* rotas-fontes: endereços do app (/app/conversas, /app/pipelines/<id>, /app/analises/vendas…) servem o mesmo app.html;
+     quem abre o app escolhe a tela pelo endereço (public/telas/rotas.js). Sem login: /entrar?volta=<endereço> e, ao entrar, volta. */
+  app.get('/app/*', async (req, reply) => {
+    if (auth) {
+      const u = await usuarioDaRequisicao(req, auth);
+      if (!u) {
+        const volta = voltaSegura(req.url);
+        return reply.redirect(volta ? `/entrar?volta=${encodeURIComponent(volta)}` : '/entrar');
+      }
+    }
+    return reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('cache-control', 'no-store, max-age=0')
+      .header('x-content-type-options', 'nosniff')
+      .header('referrer-policy', 'strict-origin-when-cross-origin')
+      .header('x-frame-options', 'DENY')
+      .send(comVersoes('app.html'));
+  });
 
   // Página de atualização: guardada pelo service worker (public/sw.js) e mostrada quando o servidor está reiniciando.
   // Precisa ser autossuficiente, então o script da tela entra aqui dentro.

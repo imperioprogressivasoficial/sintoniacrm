@@ -8,27 +8,27 @@
 <link rel="icon" href="/favicon-64.png" type="image/png">
 <!-- Endereço que não existe (setNotFoundHandler em src/web/paginas.ts). Tudo aqui dentro: sem depender de outros arquivos. -->
 <style>
-:root{--fundo:linear-gradient(160deg,#f6faff,#e6f0fb);--texto:#0d2240;--sub:rgba(13,34,64,.66);--cartao:rgba(255,255,255,.86);--borda:rgba(13,34,64,.10);
+:root{--fonte:'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;--fonte-mono:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;--fundo:linear-gradient(160deg,#f6faff,#e6f0fb);--texto:#0d2240;--sub:rgba(13,34,64,.66);--cartao:rgba(255,255,255,.86);--borda:rgba(13,34,64,.10);
   --term:#0d2240;--cod:rgba(13,34,64,.10);--botao2:rgba(16,110,190,.08)}
 :root[data-tema="escuro"]{--fundo:linear-gradient(160deg,#041427,#0a2d52);--texto:#e9f3ff;--sub:rgba(233,243,255,.66);--cartao:rgba(6,25,47,.74);--borda:rgba(233,243,255,.10);
   --term:rgba(2,12,24,.62);--cod:rgba(233,243,255,.07);--botao2:rgba(233,243,255,.08)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%}
 body{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px;color:var(--texto);
-  font-family:Poppins,system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;
+  font-family:var(--fonte);-webkit-font-smoothing:antialiased;
   background:radial-gradient(60% 50% at 50% 38%,rgba(15,252,190,.13),transparent 70%),radial-gradient(80% 70% at 50% 110%,rgba(58,160,255,.2),transparent 70%),var(--fundo);
   background-color:#f6faff}
 :root[data-tema="escuro"] body{background-color:#041427}
-.fundo{position:fixed;inset:0;overflow:hidden;pointer-events:none;column-width:320px;column-gap:40px;column-fill:auto;font:500 13px/2.1 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--cod);white-space:pre;padding:12px 20px;
+.fundo{position:fixed;inset:0;overflow:hidden;pointer-events:none;column-width:320px;column-gap:40px;column-fill:auto;font:500 13px/2.1 var(--fonte-mono);color:var(--cod);white-space:pre;padding:12px 20px;
   -webkit-mask-image:radial-gradient(70% 60% at 50% 50%,transparent 30%,#000 75%);mask-image:radial-gradient(70% 60% at 50% 50%,transparent 30%,#000 75%)}
 .cartao{position:relative;width:min(460px,100%);padding:34px 26px 26px;border-radius:22px;text-align:center;background:var(--cartao);border:1px solid var(--borda);
   box-shadow:0 30px 80px rgba(2,12,24,.18);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:entra .5s cubic-bezier(.2,.7,.2,1) both}
 .cartao::before{content:'';position:absolute;left:22px;right:22px;top:-1px;height:1.5px;border-radius:2px;background:linear-gradient(90deg,transparent,#0ffcbe,#3aa0ff,transparent)}
-.num{margin:0;font-size:84px;line-height:1;font-weight:800;letter-spacing:-.04em;background:linear-gradient(90deg,#106ebe,#3aa0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.num{margin:0;font-size:84px;line-height:1;font-weight:700;letter-spacing:-.04em;background:linear-gradient(90deg,#106ebe,#3aa0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 :root[data-tema="escuro"] .num{background:linear-gradient(90deg,#3aa0ff,#0ffcbe);-webkit-background-clip:text;background-clip:text}
 h1{margin:10px 0 0;font-size:22px;line-height:1.25;font-weight:700}
 p.sub{margin:8px auto 0;max-width:36ch;font-size:14px;line-height:1.5;color:var(--sub)}
-.term{margin:20px 0 0;padding:12px 14px;border-radius:12px;background:var(--term);text-align:left;font:500 12.5px/1.75 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:rgba(233,243,255,.8);overflow:hidden}
+.term{margin:20px 0 0;padding:12px 14px;border-radius:12px;background:var(--term);text-align:left;font:500 12.5px/1.75 var(--fonte-mono);color:rgba(233,243,255,.8);overflow:hidden}
 .term div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .term .k{color:#3aa0ff}.term .n{color:#ff8a8a}.term .ok{color:#0ffcbe}
 .acoes{margin-top:22px;display:flex;flex-direction:column;gap:10px}

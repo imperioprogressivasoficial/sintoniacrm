@@ -18,7 +18,7 @@
     radial-gradient(80% 70% at 50% 110%, rgba(58, 160, 255, .22), transparent 70%),
     linear-gradient(160deg, var(--ab-fundo-1), var(--ab-fundo-2));
   color: var(--ab-texto);
-  font-family: Poppins, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: var(--fonte, "Poppins", ui-sans-serif, system-ui, sans-serif);
   opacity: 1; transition: opacity .5s ease, visibility 0s linear 0s;
 }
 .abertura[hidden] { display: none; }

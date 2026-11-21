@@ -7,16 +7,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const CSS = `
   .ac-fundo { position: fixed; inset: 0; z-index: 60; overflow-y: auto; overflow-x: hidden; background: var(--fundo, #f4f7fb); background-image: var(--aurora, none); padding: max(16px, env(safe-area-inset-top)) 16px 120px; box-sizing: border-box; }
-  .ac-tela { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; min-width: 0; font-family: Poppins, system-ui, sans-serif; color: var(--texto, #08243f); }
+  .ac-tela { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; min-width: 0; font-family: var(--fonte); color: var(--texto, #08243f); }
   .ac-topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .ac-topo h1 { margin: 0; font-family: Sintony, Poppins, sans-serif; font-size: clamp(26px, 6vw, 36px); font-weight: 800; flex: 1 1 200px; }
+  .ac-topo h1 { margin: 0; font-family: var(--fonte-titulo); font-size: clamp(26px, 6vw, 36px); font-weight: 700; flex: 1 1 200px; }
   .ac-voltar { all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--vidro-item, rgba(127,127,127,.1)); box-shadow: inset 0 0 0 1px var(--vidro-borda, rgba(127,127,127,.25)); }
   .ac-voltar svg { width: 20px; height: 20px; }
   .ac-abas { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--vidro-fundo, rgba(255,255,255,.6)); border: 1px solid var(--vidro-borda, rgba(127,127,127,.2)); max-width: 100%; overflow-x: auto; }
   .ac-aba { all: unset; cursor: pointer; padding: 0 16px; min-height: 40px; display: inline-flex; align-items: center; border-radius: 999px; font-weight: 700; font-size: 14px; color: var(--sub, #5b6b7e); white-space: nowrap; }
   .ac-aba[aria-selected="true"] { background: color-mix(in srgb, #0ffcbe 28%, transparent); color: var(--texto); box-shadow: inset 0 0 0 1px color-mix(in srgb, #0ffcbe 60%, transparent) !important; }
   .ac-painel { border-radius: 24px; padding: 16px; display: grid; gap: 12px; min-width: 0; background: var(--vidro-fundo, rgba(255,255,255,.7)); border: 1px solid var(--vidro-borda, rgba(127,127,127,.2)); box-shadow: var(--vidro-brilho, none); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
-  .ac-painel h2 { margin: 0; font-size: 16px; font-weight: 800; } .ac-painel h2 small { display: block; font-size: 12.5px; font-weight: 500; color: var(--sub); margin-top: 3px; }
+  .ac-painel h2 { margin: 0; font-size: 16px; font-weight: 700; } .ac-painel h2 small { display: block; font-size: 12.5px; font-weight: 500; color: var(--sub); margin-top: 3px; }
   .ac-lista { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
   .ac-pessoa { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 4px; padding: 14px; border-radius: 18px; background: var(--vidro-item, rgba(127,127,127,.08)); box-shadow: inset 0 0 0 1px var(--vidro-borda); min-width: 0; }
   .ac-pessoa:hover { transform: translateY(-1px); } .ac-pessoa.inativa { opacity: .6; }
@@ -25,7 +25,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-selos { display: flex; flex-wrap: wrap; gap: 4px; }
   .ac-selo { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #106ebe 14%, transparent); color: var(--texto); }
   .ac-selo.coral { background: color-mix(in srgb, #ff7a59 22%, transparent); } .ac-selo.menta { background: color-mix(in srgb, #0ffcbe 30%, transparent); }
-  .ac-botao { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--marca-menta, #0ffcbe); color: #071d33; font-weight: 800; font-size: 14.5px; box-shadow: 0 6px 20px rgba(15,252,190,.25); }
+  .ac-botao { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--marca-menta, #0ffcbe); color: #071d33; font-weight: 700; font-size: 14.5px; box-shadow: 0 6px 20px rgba(15,252,190,.25); }
   .ac-botao.leve { background: var(--vidro-item); color: var(--texto); box-shadow: inset 0 0 0 1px var(--vidro-borda); font-weight: 700; }
   .ac-botao.perigo { background: transparent; color: #d4553a; box-shadow: inset 0 0 0 1px #ff7a59; }
   .ac-botao:focus-visible, .ac-aba:focus-visible, .ac-pessoa:focus-visible { outline: 2px solid #106ebe; outline-offset: 2px; }
@@ -36,7 +36,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-chave i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); transition: transform .18s; }
   .ac-chave input:checked + i { background: #19c3a6; } .ac-chave input:checked + i::after { transform: translateX(18px); }
   .ac-chave input:disabled + i { opacity: .45; } .ac-chave input:focus-visible + i { outline: 2px solid #106ebe; outline-offset: 2px; }
-  .ac-grupo { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--sub); margin: 10px 0 0; }
+  .ac-grupo { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--sub); margin: 10px 0 0; }
   .ac-form { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
   .ac-form label { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--sub); min-width: 0; }
   .ac-form input, .ac-form select, .ac-sel { font: inherit; font-size: 15px; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 12px; padding: 10px 12px; min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; }
@@ -49,7 +49,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-dlg { border: 0; padding: 0; border-radius: 26px; width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--vidro-forte, #fff); color: var(--texto); box-shadow: 0 30px 80px rgba(4,23,43,.35); }
   .ac-dlg::backdrop { background: rgba(4,23,43,.45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .ac-dlg > div { padding: 18px; display: grid; gap: 14px; overflow-y: auto; overflow-x: hidden; grid-template-columns: minmax(0, 1fr); max-height: calc(100dvh - 24px); box-sizing: border-box; }
-  .ac-dlg h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .ac-dlg h2 { margin: 0; font-size: 20px; font-weight: 700; }
   .ac-link { font-size: 13px; padding: 10px 12px; border-radius: 12px; background: var(--vidro-item); overflow-wrap: anywhere; user-select: all; }
   .ac-ev { display: grid; gap: 2px; padding: 10px 2px; border-top: 1px solid var(--vidro-borda); font-size: 13.5px; } .ac-ev:first-child { border-top: 0; } .ac-ev small { color: var(--sub); }
   .ac-pills { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -65,13 +65,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-papel b small { font-size: 12px; color: var(--sub); font-weight: 700; }
   .ac-papel span { font-size: 12.5px; color: var(--sub); line-height: 1.35; }
   .ac-tab { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .ac-tab th { text-align: left; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding: 8px 10px; border-bottom: 1px solid var(--vidro-borda); white-space: nowrap; }
+  .ac-tab th { text-align: left; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding: 8px 10px; border-bottom: 1px solid var(--vidro-borda); white-space: nowrap; }
   .ac-tab td { padding: 10px; border-bottom: 1px solid var(--vidro-borda); vertical-align: middle; min-width: 0; }
   .ac-tab tr:last-child td { border-bottom: 0; }
   .ac-tab tbody tr { cursor: pointer; } .ac-tab tbody tr:hover td { background: var(--sel, rgba(127,127,127,.06)); }
   .ac-tab tbody tr.inativa { opacity: .6; }
   .ac-quem { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .ac-ini { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+  .ac-ini { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
   .ac-quem div { min-width: 0; display: grid; } .ac-quem b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-quem small, .ac-tab td small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-tab .ac-botao { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
@@ -88,9 +88,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-matriz th:first-child { width: 24%; }
   .ac-matriz th, .ac-matriz td { padding: 8px 10px; border-bottom: 1px solid var(--vidro-borda); text-align: center; }
   .ac-matriz th:first-child, .ac-matriz td:first-child { text-align: left; }
-  .ac-matriz thead th { font-size: 13px; font-weight: 800; position: sticky; top: 0; background: var(--vidro-forte, var(--fundo)); }
+  .ac-matriz thead th { font-size: 13px; font-weight: 700; position: sticky; top: 0; background: var(--vidro-forte, var(--fundo)); }
   .ac-matriz thead th small { display: block; font-size: 11.5px; font-weight: 600; color: var(--sub); }
-  .ac-matriz .ac-mg td { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding-top: 16px; text-align: left; }
+  .ac-matriz .ac-mg td { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); padding-top: 16px; text-align: left; }
   .ac-matriz .ac-chave { display: inline-block; vertical-align: middle; }
   .ac-matriz select.ac-sel { width: 100%; max-width: 220px; min-height: 36px; padding: 6px 8px; font-size: 12.5px; text-overflow: ellipsis; }
   `;

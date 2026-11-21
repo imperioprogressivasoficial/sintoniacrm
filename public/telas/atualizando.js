@@ -49,7 +49,8 @@
 
   const CSS = `
 .atz{position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;padding:24px 16px;box-sizing:border-box;overflow:hidden;
-  font-family:Poppins,system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;
+  --atz-fonte:'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;--atz-mono:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-family:var(--atz-fonte);-webkit-font-smoothing:antialiased;
   --atz-fundo:linear-gradient(160deg,#041427,#0a2d52);--atz-texto:#e9f3ff;--atz-sub:rgba(233,243,255,.66);
   --atz-cod:rgba(233,243,255,.22);--atz-k:rgba(15,252,190,.55);--atz-s:rgba(58,160,255,.62);--atz-c:rgba(233,243,255,.16);
   --atz-cartao:rgba(6,25,47,.72);--atz-borda:rgba(233,243,255,.10);--atz-term:rgba(2,12,24,.62);--atz-ok:#0ffcbe;--atz-botao:rgba(233,243,255,.08);
@@ -64,7 +65,7 @@
 .atz-codigo{position:absolute;inset:0;display:flex;justify-content:space-between;gap:28px;padding:0 20px;pointer-events:none;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 18%,#000 82%,transparent)}
 .atz-col{flex:1 1 0;min-width:0;overflow:hidden;position:relative}
-.atz-col pre{margin:0;font:500 12.5px/2.05 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--atz-cod);white-space:pre;
+.atz-col pre{margin:0;font:500 12.5px/2.05 var(--atz-mono);color:var(--atz-cod);white-space:pre;
   animation:atz-sobe var(--atz-dur,30s) linear infinite;animation-delay:var(--atz-atraso,0s);will-change:transform}
 .atz-col:nth-child(even) pre{filter:blur(.4px);opacity:.75}
 .atz-col .k{color:var(--atz-k)} .atz-col .s{color:var(--atz-s)} .atz-col .c{color:var(--atz-c);font-style:italic}
@@ -81,7 +82,7 @@
 .atz[data-atz-tema="escuro"] h1 b{background:linear-gradient(90deg,#3aa0ff,#0ffcbe);-webkit-background-clip:text;background-clip:text}
 .atz-sub{margin:8px auto 0;max-width:34ch;font-size:14px;line-height:1.5;color:var(--atz-sub)}
 .atz-term{margin:20px 0 0;padding:12px 14px;border-radius:12px;background:var(--atz-term);text-align:left;
-  font:500 12.5px/1.75 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:rgba(233,243,255,.78);min-height:94px;box-sizing:border-box}
+  font:500 12.5px/1.75 var(--atz-mono);color:rgba(233,243,255,.78);min-height:94px;box-sizing:border-box}
 .atz-term div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .atz-term .ok::before{content:'✓ ';color:#0ffcbe}
 .atz-term .agora::before{content:'› ';color:#3aa0ff}
@@ -100,7 +101,7 @@
 html.atz-ativo .toast{visibility:hidden!important}
 .atz-aviso{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:2147483600;display:flex;align-items:center;gap:12px;
   max-width:calc(100% - 32px);box-sizing:border-box;padding:10px 10px 10px 16px;border-radius:14px;background:#0d2240;color:#e9f3ff;box-shadow:0 12px 40px rgba(2,12,24,.35);
-  font:500 13.5px/1.35 Poppins,system-ui,sans-serif}
+  font:500 13.5px/1.35 var(--atz-fonte)}
 .atz-aviso button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:8px 14px;cursor:pointer;color:#0d2240;background:linear-gradient(90deg,#3aa0ff,#0ffcbe)}
 `;
 

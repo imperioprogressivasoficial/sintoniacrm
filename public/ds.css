@@ -32,9 +32,13 @@
   --marca-gradiente: linear-gradient(135deg, #1a8be0 0%, #106ebe 50%, #0a4c86 100%);
   --brilho-menta: 0 0 0 1px rgba(15, 252, 190, .3), 0 6px 22px rgba(15, 252, 190, .35);
   --brilho-azul: 0 8px 24px rgba(16, 110, 190, .32);
-  /* tipografia: Sintony nos títulos, Poppins nos textos */
+  /* tipografia (docs/FONTES.md): no máximo 3 famílias no sistema todo.
+   * Poppins nos textos (400 · 500 · 600 · 700), Sintony nos títulos e números de destaque (só 700),
+   * e a monoespaçada do próprio aparelho para códigos, chaves e links (não baixa nada).
+   * Pesos fora da lista (800, 650…) caem no 700/600 que foi carregado. Itálico: sem arquivo próprio. */
   --fonte: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --fonte-titulo: "Sintony", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --fonte-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* superfícies: branco e "papel" azulado da página de vendas */
   --fundo: #ffffff;
@@ -188,7 +192,7 @@
 .ar-editar svg { width: 17px; height: 17px; }
 .ar-editar:hover, .ar-editar:focus-visible { background: rgba(255,255,255,.22); }
 .are .are-dica { margin: 0 2px 4px; font-size: 14px; line-height: 19px; color: var(--sub); }
-.are-sub { margin: 16px 4px 8px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
+.are-sub { margin: 16px 4px 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
 .are-lista { display: grid; border-radius: 18px; overflow: hidden; background: var(--painel); box-shadow: inset 0 0 0 1px var(--linha); }
 .are-linha { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 4px 8px 4px 12px; border-bottom: 1px solid var(--linha); }
 .are-linha:last-child { border-bottom: 0; }
@@ -213,7 +217,7 @@
 @media (prefers-reduced-motion: reduce) { .ar-painel, .ar-fundo, .ar { transition: none; } }
 
 
-/* títulos em Sintony (só tem 400 e 700) */
+/* títulos em Sintony 700 (o único peso carregado) */
 h1, h2, .titulo-grande, .lt-nome b, .folha-topo h2 { font-family: var(--fonte-titulo); font-weight: 700; letter-spacing: -.01em; }
 .ar.aberta { opacity: 0; pointer-events: none; }
 /* Poppins é mais larga: rótulos da barra lateral sem cortar */

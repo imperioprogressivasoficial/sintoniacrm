@@ -129,7 +129,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .em-chip { all: unset; cursor: pointer; padding: 8px 12px; border-radius: 999px; font-size: 13.5px; font-weight: 600; background: var(--vidro-item); border: 1px solid var(--vidro-borda); display: inline-flex; align-items: center; gap: 6px; min-height: 22px; }
   .em-chip[aria-pressed="true"] { background: var(--acento); color: #071d33; border-color: transparent; font-weight: 800; }
   .em-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-  .em-chip.em-var { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; padding: 6px 10px; }
+  .em-chip.em-var { font-family: var(--fonte-mono); font-size: 12.5px; padding: 6px 10px; }
   .em-previa { border-radius: 24px; padding: 12px; display: grid; gap: 10px; justify-items: center; }
   .em-previa .em-acoes { justify-content: center; }
   .em-tela { width: 100%; border-radius: 18px; overflow: hidden; border: 1px solid var(--vidro-borda); background: #eef4fb; transition: max-width .25s; }
