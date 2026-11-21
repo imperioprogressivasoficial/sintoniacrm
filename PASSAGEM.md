@@ -42,6 +42,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
+- **21/11 03h25 (Bahia):** no ar 1f47263 — robustez (550) juntada; pipeline 3 modos e correção de mídia (base64 no webhook) também. Sem agentes rodando. Pendências do dono em docs/PEDIDOS.md (revisão 21/11).
 - **21/11 01h45 (Bahia):** no ar 93110f7 — + atendimento-extra (540) e unidades (530). ATENÇÃO: UnidadeId agora é string; use unidadeDe(id)/zUnidade() (src/unidades.ts), nunca listas fixas. Rodando: robustez (550, correções da auditoria).
 - **21/11 01h10 (Bahia):** no ar f4e93ae — + conversa-extra (510) e produtos-lead (520). Rodando: unidades (530), atendimento-extra (540), robustez (550, correções da auditoria).
 - **21/11 00h20 (Bahia):** no ar 3437a6b — juntados: resgate, rotas-fontes, msg-agendada (470), conversa-ux (ffmpeg p/ áudio no iPhone), crm-topo (480), empresa-conta (490), integracoes (500). Falta só o agente `auditoria` (só docs). Rotas: /app/<tela> (public/telas/rotas.js — tela nova precisa entrar no mapa CAMINHO). O publicar.sh precisa de URL pública para conferir (o /app agora redireciona sem login).
