@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 11:20 UTC (21/11, 08h20 na Bahia)
-commit: 659e1f4
-pacote sha256: 2e76ecc4685a48f3ef9da7a759368b8625aaaa858178fa6fafcaadfe002bfb25
+data: 2026-11-21 11:45 UTC (21/11, 08h45 na Bahia)
+commit: 23a7d3b
+pacote sha256: 107c65633e2c1348b66a2147444ed68ef7f83e1198b427a2364515ac8a46399c
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-659e1f4.b64); pode apagar depois.
-observação: em cima do 6f59829. Entra: perdas-saude (580: motivo de perda obrigatório + Análises › Perdas, Análises › Saúde do sistema, limite de login por conta, scripts/carga.mjs).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-23a7d3b.b64); pode apagar depois.
+observação: em cima do 659e1f4. Entra: abertura direta (sem capa; esqueleto na lista + linha no topo).
