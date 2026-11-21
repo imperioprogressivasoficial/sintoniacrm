@@ -62,7 +62,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     conta = await ui.api('/api/conta').catch(() => null);
     if (!caixa.isConnected) return;
     const corpo = el('div', { style: 'display:grid;gap:16px;min-width:0' });
-    const sair = EC.botao('Sair', async () => { try { localStorage.removeItem('sintonia.fz.lista'); } catch {} await ui.api('/api/auth/sair', { method: 'POST', body: '{}' }).catch(() => {}); location.href = '/entrar'; }, 'perigo', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>');
+    const sair = EC.botao('Sair', async () => { if (window.SintoniaSair) return window.SintoniaSair(); try { localStorage.removeItem('sintonia.fz.lista'); } catch {} await ui.api('/api/auth/sair', { method: 'POST', body: '{}' }).catch(() => {}); location.href = '/entrar'; }, 'perigo', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>');
     caixa.replaceChildren(el('div', { class: 'ec' },
       el('div', { class: 'ec-topo' }, el('div', { class: 'ec-tit' }, el('h1', { text: 'Conta' }), el('p', { text: conta ? `${conta.nome} · ${conta.papelNome}` : 'Suas informações e preferências.' })), sair,
         window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),

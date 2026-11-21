@@ -766,6 +766,7 @@
     .recolhida .lt-filhos-in { padding: 4px 0; margin: 0; border-left: 0; border-top: 1px solid var(--vidro-linha, var(--vidro-borda)); align-items: center; }
     .recolhida .lt-grupo:first-child .lt-filhos-in { border-top: 0; }
     .lt-noite input { position: absolute; opacity: 0; pointer-events: none; }
+    .lt-sair { color: #dc2626; } .lt-sair svg { color: #dc2626; } .lt-sair:hover { background: color-mix(in srgb, #ef4444 10%, transparent); }
     .lt-chave { width: 40px; height: 24px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; flex: none; transition: background .2s ease; }
     .lt-chave::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s ease; }
     .lt-noite input:checked + .lt-chave { background: var(--marca-azul); }
@@ -1288,6 +1289,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     </nav>
     <span class="lt-espaco"></span>
     <label class="lt-item lt-noite" title="Modo noturno"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a.6.6 0 0 0-.8-.7A8.6 8.6 0 1 0 20.2 15.4a.6.6 0 0 0-.7-.8Z"/></svg><span class="lt-rot">Modo noturno</span><input type="checkbox" id="lt-noite" role="switch"><i class="lt-chave"></i></label>
+    <button class="lt-item lt-sair" id="lt-sair" type="button" title="Sair da Sintonia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span class="lt-rot">Sair</span></button><!-- sair: janela "Sair da Sintonia?" com a chave de Disponível (public/telas/sair.js) -->
     <button class="lt-eu" data-vista="conta" id="lt-eu" title="Conta"><span class="avatar eu" id="lt-avatar">··</span><span class="lt-rot"><b id="lt-eu-nome"></b><small id="lt-eu-email"></small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/></svg></button>
   </aside>
   <nav class="trilho" aria-label="Abas">
@@ -3334,7 +3336,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       { nome: 'Acesso rápido', valor: bolinhaLigada ? 'Ligado' : 'Desligado', ic: IC.bolinha, cor: '#0891b2', acao: abrirAcessoRapido },
       ...(window.SintoniaInstalar?.itens?.() || []),
     ].filter(Boolean);
-    const sair = { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { try { localStorage.removeItem('sintonia.fz.lista'); } catch {} await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } }; /* fluidez: apaga a lista guardada */
+    const sair = { nome: 'Sair', ic: IC.sair, cor: '#dc2626', perigo: true, acao: async () => { if (window.SintoniaSair) return window.SintoniaSair(); try { localStorage.removeItem('sintonia.fz.lista'); } catch {} await post('/api/auth/sair').catch(() => {}); location.href = '/entrar'; } }; /* fluidez: apaga a lista guardada */
     function abrirMinhaConta() {
       window.SintoniaPainel.abrir({ id: 'minha-conta', titulo: 'Minha conta', montar: (corpo) => corpo.append(
         el('div', { class: 'mais-lista' }, ...itensConta.map(linhaItem)),
@@ -3929,7 +3931,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/produtos-lead.js" defer></script><!-- produtos-lead: produtos e serviços vinculados ao lead (ficha e cartão do Pipeline) -->
 <script src="/telas/conversa-ux.js" defer></script>
 <script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
-<script src="/telas/conversa-extra.js" defer></script><script src="/telas/topo-conversa.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/conversa-extra.js" defer></script><script src="/telas/topo-conversa.js" defer></script><script src="/telas/sair.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/voltar-celular.js" defer></script><!-- rotas-celular: botão "Voltar" nas telas de dentro (celular) -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
@@ -3977,6 +3979,8 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
       if (s) s.textContent = on ? 'Você aparece disponível para a equipe' : 'Você aparece fora do ar (borda vermelha)';
     });
   }
+  /* sair: a janela de sair lê e desliga a sua chave de Disponível */
+  window.SintoniaPresencaEu = { ligado: () => (eu ? ligado() : null), definir: (on) => definir(on) };
   async function definir(on) {
     if (!eu) return;
     mapa[eu] = on ? 'online' : 'offline';
