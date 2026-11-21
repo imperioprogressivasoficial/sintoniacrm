@@ -680,10 +680,9 @@ export class Sintonia {
   private async eventosDoDia(dia: Date, visivel?: (c: Conversa) => boolean, ocultar?: Set<string>): Promise<{ eventos: Evento[]; conversas: Conversa[] }> {
     const p = partesBahia(dia);
     const inicio = bahia(p.ano, p.mes, p.dia);
-    const [brutos, todas] = await Promise.all([
-      this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)),
-      this.d.repo.listarConversas(),
-    ]);
+    // robustez: só as conversas dos eventos do dia (antes: as 500 mais recentes; as outras sumiam do relatório).
+    const brutos = await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
+    const todas = await this.d.repo.listarConversas({ ids: [...new Set(brutos.flatMap((e) => (e.conversaId ? [e.conversaId] : [])))] });
     // `ocultar`: conversas que não entram (as de demonstração, no relatório que sai pelo WhatsApp às 20h).
     const todos = ocultar?.size ? brutos.filter((e) => !e.conversaId || !ocultar.has(e.conversaId)) : brutos;
     const conversas = ocultar?.size ? todas.filter((c) => !ocultar.has(c.id)) : todas;
@@ -767,7 +766,9 @@ export class Sintonia {
   private async processarAgora(conversaId: string): Promise<void> {
     const { regras } = await this.configAgora();
     for (let rodada = 0; rodada < 3; rodada++) {
-      const c = await this.d.repo.buscarConversa(conversaId);
+      // Lê e decide sob a trava (rápido): o que já estava esperando a conversa (bot, automação, resposta da equipe)
+      // termina antes, e a IA nem é chamada se a mensagem já foi respondida.
+      const c = await this.trava.comTrava(conversaId, () => this.d.repo.buscarConversa(conversaId));
       if (!c) return;
       const agora = this.agora();
       const decisao = decidirQuemResponde(c, UNIDADES[c.unidade], agora, regras);

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
-import { ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type MidiaPendente, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import { digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
 
@@ -28,6 +28,7 @@ interface LinhaConversa {
 }
 
 const ou = <T>(v: T | null): T | undefined => (v === null ? undefined : v);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function paraConversa(l: LinhaConversa): Conversa {
   return {
@@ -168,11 +169,54 @@ export class RepositorioPostgres implements Repositorio {
     );
   }
 
-  async listarConversas() {
+  async listarConversas(f: FiltroConversas = {}) {
+    // robustez: sem o antigo "limit 500". Filtros opcionais no banco (ids, telefone, empresa, escopo de quem vê).
+    const ids = f.ids?.filter((x) => UUID.test(x));
+    if (ids && !ids.length) return [];
+    const e = f.escopo ?? {};
     const { rows } = await this.pool.query<LinhaConversa>(
-      `select ${COLUNAS_CONVERSA} from sintonia.conversas order by atualizada_em desc limit 500`,
+      `select ${COLUNAS_CONVERSA} from sintonia.conversas
+        where ($1::uuid[] is null or id = any($1))
+          and ($2::text is null or telefone = $2)
+          and ($3::text is null or empresa_id = $3)
+          and ($4::text is null or empresa_id = $4)
+          and ($5::text[] is null or unidade = any($5))
+          and ($6::uuid is null or responsavel_id is null or responsavel_id = $6)
+        order by atualizada_em desc, id desc`,
+      [ids ?? null, f.telefone ?? null, f.empresaId ?? null, e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null],
     );
     return rows.map(paraConversa);
+  }
+
+  async paginaConversas(p: PedidoPagina) {
+    const e = p.escopo ?? {};
+    const busca = p.busca?.trim();
+    const padrao = busca ? `%${busca.replace(/[\\%_]/g, (x) => `\\${x}`)}%` : null;
+    const digitos = busca ? digitosBusca(busca) : '';
+    // Cursor por (atualizada_em, id): a rolagem continua certa mesmo com conversas mudando de lugar.
+    // Busca: nome ou telefone (trigramas) ou texto de alguma mensagem (trigramas em mensagens.texto, migração 550).
+    const { rows } = await this.pool.query<LinhaConversa>(
+      `select ${COLUNAS_CONVERSA} from sintonia.conversas c
+        where ($1::text is null or c.empresa_id = $1)
+          and ($2::text[] is null or c.unidade = any($2))
+          and ($3::uuid is null or c.responsavel_id is null or c.responsavel_id = $3)
+          and ($4::timestamptz is null or (c.atualizada_em, c.id) < ($4, $5::uuid))
+          and ($6::text is null
+               or c.nome ilike $6
+               or ($7 <> '' and c.telefone like '%' || $7 || '%')
+               or c.id in (select m.conversa_id from sintonia.mensagens m where m.texto ilike $6))
+          and ($8::uuid is null or exists (select 1 from sintonia.conversa_tags ct where ct.conversa_id = c.id and ct.tag_id = $8))
+        order by c.atualizada_em desc, c.id desc
+        limit $9`,
+      [e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.antes?.em ?? null, p.antes?.id ?? null, padrao, digitos, p.tagId ?? null, p.limite + 1],
+    );
+    const pagina = rows.slice(0, p.limite).map(paraConversa);
+    const ultima = pagina.at(-1);
+    return {
+      conversas: pagina,
+      ultimas: await this.ultimasMensagens(pagina.map((c) => c.id)),
+      proximo: rows.length > p.limite && ultima ? { em: ultima.atualizadaEm, id: ultima.id } : null,
+    };
   }
 
   async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
@@ -300,7 +344,23 @@ export class RepositorioPostgres implements Repositorio {
     );
   }
 
-  async ultimasMensagens() {
+  async ultimasMensagens(ids?: string[]) {
+    if (ids) {
+      ids = ids.filter((x) => UUID.test(x));
+      // robustez: só das conversas pedidas, uma busca no índice (conversa_id, em desc, id desc) por conversa,
+      // em vez de ler e ordenar o histórico inteiro (204 mil mensagens: 250-280 ms e 28 MB em disco a cada chamada).
+      if (!ids.length) return new Map<string, Mensagem>();
+      const { rows } = await this.pool.query<LinhaMensagem>(
+        `select ${COLUNAS_MENSAGEM}
+           from unnest($1::uuid[]) as q(id)
+           cross join lateral (
+             select * from sintonia.mensagens x where x.conversa_id = q.id order by x.em desc, x.id desc limit 1
+           ) m
+           left join sintonia.midias md on md.mensagem_id = m.id`,
+        [ids],
+      );
+      return new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)]));
+    }
     const { rows } = await this.pool.query<LinhaMensagem>(
       `select distinct on (m.conversa_id) ${COLUNAS_MENSAGEM}
          from sintonia.mensagens m left join sintonia.midias md on md.mensagem_id = m.id

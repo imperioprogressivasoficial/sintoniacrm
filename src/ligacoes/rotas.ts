@@ -83,7 +83,7 @@ export function registrarLigacoes(app: FastifyInstance, o: OpcoesLigacoes): void
       telefone = normalizarCelular(b.telefone!) ?? (b.telefone!.replace(/\D/g, '').length >= 8 ? b.telefone!.replace(/\D/g, '') : null);
       if (!telefone) throw erro('Número inválido.', 400);
       // Número de uma cliente que a pessoa vê: liga à conversa dela.
-      c = (await o.repo.listarConversas()).find((x) => x.telefone === telefone && ve(req, x));
+      c = (await o.repo.listarConversas({ telefone })).find((x) => ve(req, x)); // robustez: direto no banco
     }
     const u = quem(req);
     const unidade: UnidadeId | null = c?.unidade ?? (req.usuario?.unidades?.[0] as UnidadeId | undefined) ?? null;
@@ -106,7 +106,7 @@ export function registrarLigacoes(app: FastifyInstance, o: OpcoesLigacoes): void
   app.get('/api/ligacoes/favoritos', async (req) => {
     if (!req.usuario) return [];
     const ids = await o.chamadas.favoritos(req.usuario.id);
-    const conversas = new Map((await o.repo.listarConversas()).map((c) => [c.id, c]));
+    const conversas = new Map((await o.repo.listarConversas({ ids })).map((c) => [c.id, c]));
     return ids.map((id) => conversas.get(id)).filter((c): c is Conversa => Boolean(c && ve(req, c))).map((c) => ({ conversaId: c.id, nome: c.nome ?? null, telefone: c.telefone, unidade: c.unidade }));
   });
   const Favorito = z.object({ conversaId: z.string().min(1).max(64), favorito: z.boolean() });

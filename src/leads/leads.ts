@@ -587,7 +587,7 @@ export class Leads {
     for (const t of lista) {
       const outro = leads.get(t)!;
       for (const c of outro.conversasObj) {
-        const destino = (await this.o.repo.listarConversas()).find((x) => x.empresaId === this.o.empresaId && x.telefone === principal && x.unidade === c.unidade);
+        const destino = (await this.o.repo.listarConversas({ empresaId: this.o.empresaId, telefone: principal })).find((x) => x.unidade === c.unidade);
         if (destino) {
           const juntar = async () => {
             const atual = (await this.o.repo.buscarConversa(destino.id))!;
@@ -639,7 +639,7 @@ export class Leads {
     if (!fichaP.nome && p.nome) fichaP = { ...fichaP, nome: p.nome };
     if (JSON.stringify(fichaP) !== fichaAntes) await this.o.contatos.salvar(this.o.empresaId, fichaP, quem.nome);
 
-    const finais = (await this.o.repo.listarConversas()).filter((c) => c.empresaId === this.o.empresaId && c.telefone === principal);
+    const finais = await this.o.repo.listarConversas({ empresaId: this.o.empresaId, telefone: principal });
     for (const c of finais) {
       await this.o.repo.registrarEvento({
         tipo: 'leads_mesclados',

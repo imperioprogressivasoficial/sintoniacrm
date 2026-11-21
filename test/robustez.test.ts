@@ -501,3 +501,92 @@ describe('Cofre: chave nova sem perder o que foi gravado com a antiga', () => {
     expect(() => new Cofre('outra').decifrar(gravadoAntes)).toThrow();
   });
 });
+
+// ---------------------------------------------------------------- 4 e 5. sem o corte de 500, busca no servidor, ETag
+
+describe.each(fabricas)('Lista de Conversas sem o corte de 500 ($nome)', (f) => {
+  async function povoar(n: number) {
+    const repo = await f.criar();
+    const base = Date.UTC(2026, 9, 1);
+    for (let i = 0; i < n; i++) {
+      const em = new Date(base + i * 60_000);
+      const { conversa } = await repo.buscarOuCriarConversa({ empresaId: 'imperio', unidade: i % 2 ? 'norte' : 'sumare', canalId: i % 2 ? 'imperio-norte' : 'imperio-sumare', telefone: `55719${String(i).padStart(8, '0')}`, nome: i === 0 ? 'Joana Antiguinha' : `Cliente ${i}`, agora: em });
+      await repo.adicionarMensagem({ conversaId: conversa.id, autor: 'cliente', texto: i === 1 ? 'quero saber da escova marroquina' : `oi ${i}`, em, idExterno: `pag-${i}-${Math.random()}` });
+    }
+    return repo;
+  }
+
+  it('listarConversas traz todas (antes: só 500) e filtra no banco por ids, telefone e escopo', async () => {
+    const repo = await povoar(620);
+    const todas = await repo.listarConversas();
+    expect(todas).toHaveLength(620);
+    expect(todas[0]!.atualizadaEm.getTime()).toBeGreaterThan(todas.at(-1)!.atualizadaEm.getTime());
+    expect(await repo.listarConversas({ ids: [todas[5]!.id, todas[600]!.id, 'nao-e-uuid'] })).toHaveLength(2);
+    expect(await repo.listarConversas({ ids: [] })).toHaveLength(0);
+    expect((await repo.listarConversas({ telefone: '5571900000000' }))[0]!.nome).toBe('Joana Antiguinha');
+    expect(await repo.listarConversas({ escopo: { empresaId: 'imperio', unidades: ['norte'] } })).toHaveLength(310);
+  });
+
+  it('página por cursor: 300 + 300 + 20, sem repetir nem pular, e a busca acha cliente antiga por nome, telefone ou texto', async () => {
+    const repo = await povoar(620);
+    const vistas: string[] = [];
+    let antes: { em: Date; id: string } | undefined;
+    const tamanhos: number[] = [];
+    for (;;) {
+      const p = await repo.paginaConversas({ limite: 300, antes });
+      tamanhos.push(p.conversas.length);
+      vistas.push(...p.conversas.map((c) => c.id));
+      expect(p.ultimas.size).toBe(p.conversas.length);
+      if (!p.proximo) break;
+      antes = p.proximo;
+    }
+    expect(tamanhos).toEqual([300, 300, 20]);
+    expect(new Set(vistas).size).toBe(620);
+    const porNome = await repo.paginaConversas({ limite: 50, busca: 'antiguinha' });
+    expect(porNome.conversas.map((c) => c.nome)).toEqual(['Joana Antiguinha']);
+    const porTelefone = await repo.paginaConversas({ limite: 50, busca: '(71) 9000-0000' });
+    expect(porTelefone.conversas.map((c) => c.nome)).toContain('Joana Antiguinha');
+    const porTexto = await repo.paginaConversas({ limite: 50, busca: 'escova MARROQUINA' });
+    expect(porTexto.conversas.map((c) => c.nome)).toEqual(['Cliente 1']);
+    expect(porTexto.ultimas.get(porTexto.conversas[0]!.id)?.texto).toBe('quero saber da escova marroquina');
+    // "%" e "_" na busca são letras, não curingas.
+    expect((await repo.paginaConversas({ limite: 50, busca: '%%' })).conversas).toHaveLength(0);
+  });
+
+  it('última mensagem só das conversas pedidas = a mesma de quando lia todas', async () => {
+    const repo = await povoar(40);
+    const todas = await repo.ultimasMensagens();
+    const ids = (await repo.listarConversas()).slice(0, 10).map((c) => c.id);
+    const so = await repo.ultimasMensagens(ids);
+    expect(so.size).toBe(10);
+    for (const id of ids) expect(so.get(id)).toEqual(todas.get(id));
+  });
+
+  it('GET /api/conversas: 300 por vez com cursor no cabeçalho, ?q= no servidor, e 304 quando nada mudou', async () => {
+    const repo = await povoar(320);
+    const canal = new CanalFalso();
+    const s = new Sintonia({ empresaId: 'imperio', repo, numeros: [{ canalId: 'imperio-norte', unidade: 'norte', canal }, { canalId: 'imperio-sumare', unidade: 'sumare', canal }], agente: { executar: async () => ({ texto: '', acoes: [], recusou: false }) } });
+    const app = criarServidor({ sintonia: s, repo });
+    const r1 = await app.inject({ url: '/api/conversas' });
+    expect(r1.statusCode).toBe(200);
+    expect(r1.json()).toHaveLength(300);
+    const cursor = r1.headers['x-sintonia-proximo'] as string;
+    expect(cursor).toBeTruthy();
+    const r2 = await app.inject({ url: `/api/conversas?antes=${cursor}` });
+    expect(r2.json()).toHaveLength(20);
+    expect(r2.headers['x-sintonia-proximo']).toBeUndefined();
+    expect(r2.json().map((c: { nome: string }) => c.nome)).toContain('Joana Antiguinha');
+    const busca = await app.inject({ url: '/api/conversas?q=antiguinha' });
+    expect(busca.json().map((c: { nome: string }) => c.nome)).toEqual(['Joana Antiguinha']);
+    // Polling sem novidade: 304, sem corpo.
+    const etag = r1.headers['etag'] as string;
+    const r3 = await app.inject({ url: '/api/conversas', headers: { 'if-none-match': etag } });
+    expect(r3.statusCode).toBe(304);
+    expect(r3.body).toBe('');
+    // Chegou mensagem: muda.
+    await s.receber({ canalId: 'imperio-norte', telefone: '5571900000001', nome: 'Cliente 1', texto: 'voltei', deMim: false, idExterno: `volta-${Math.random()}`, em: new Date() });
+    const r4 = await app.inject({ url: '/api/conversas', headers: { 'if-none-match': etag } });
+    expect(r4.statusCode).toBe(200);
+    expect(r4.json()[0].ultima.texto).toBe('voltei');
+  });
+});

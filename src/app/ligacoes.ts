@@ -104,8 +104,10 @@ export async function registrarLigacao(
 
 /** Ligações registradas hoje (mais novas primeiro). */
 export async function ligacoesDoDia(repo: Repositorio, inicio: Date, fim: Date, podeVer: (c: Conversa | undefined) => boolean = () => true) {
-  const conversas = new Map((await repo.listarConversas()).map((c) => [c.id, c]));
-  return (await repo.eventosEntre(inicio, fim))
+  // robustez: só as conversas das ligações do período.
+  const eventos = (await repo.eventosEntre(inicio, fim)).filter((e) => e.tipo === 'ligacao');
+  const conversas = new Map((await repo.listarConversas({ ids: [...new Set(eventos.flatMap((e) => (e.conversaId ? [e.conversaId] : [])))] })).map((c) => [c.id, c]));
+  return eventos
     .filter((e) => e.tipo === 'ligacao' && podeVer(e.conversaId ? conversas.get(e.conversaId) : undefined))
     .map((e) => ({
       conversaId: e.conversaId,

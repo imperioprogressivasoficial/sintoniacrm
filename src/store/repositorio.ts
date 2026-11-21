@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { TipoEnvio } from '../engine/followups.js';
+import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 
 /** Envio ativo programado, ou uma reavaliação de "quem responde". */
 export interface Tarefa {
@@ -109,7 +110,17 @@ export interface Repositorio {
     agora: Date;
   }): Promise<{ conversa: Conversa; nova: boolean }>;
   salvarConversa(c: Conversa): Promise<void>;
-  listarConversas(): Promise<Conversa[]>;
+  /**
+   * Conversas, da mais recente para a mais antiga. robustez: SEM o antigo corte de 500 (com mais clientes que isso,
+   * a busca não achava cliente antiga e os números ficavam menores que a realidade). Use o filtro para não trazer
+   * tudo quando só precisa de algumas: `ids` (as dos eventos do período), `telefone` (achar a cliente), `escopo`.
+   */
+  listarConversas(filtro?: FiltroConversas): Promise<Conversa[]>;
+  /**
+   * robustez: uma página da lista de Conversas, direto no banco: escopo de quem vê, busca por nome, telefone ou
+   * texto das mensagens, e cursor (`antes`) para a rolagem infinita. Vem com a última mensagem de cada uma.
+   */
+  paginaConversas(p: PedidoPagina): Promise<{ conversas: Conversa[]; ultimas: Map<string, Mensagem>; proximo: { em: Date; id: string } | null }>;
 
   /**
    * Retorna false se a mensagem (pelo idExterno) já foi registrada.
@@ -140,8 +151,11 @@ export interface Repositorio {
   /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
   foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
   salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
-  /** Última mensagem de cada conversa (prévia da lista), numa consulta só. */
-  ultimasMensagens(): Promise<Map<string, Mensagem>>;
+  /**
+   * Última mensagem de cada conversa (prévia da lista), numa consulta só. robustez: com `ids`, só dessas conversas
+   * (índice por conversa: rápido mesmo com milhões de mensagens); sem, de todas (lê o histórico inteiro, evite).
+   */
+  ultimasMensagens(ids?: string[]): Promise<Map<string, Mensagem>>;
 
   /** Marca ids de mensagens que a própria Sintonia enviou, para não confundi-las com a atendente. */
   registrarEnviadoPorNos(idExterno: string): Promise<void>;
@@ -171,6 +185,39 @@ export interface Repositorio {
 }
 
 /** Implementação em memória: usada nos testes e para rodar local sem banco. */
+/** robustez: filtro de listarConversas (tudo opcional; vários juntos = todos valem). */
+export interface FiltroConversas {
+  ids?: string[];
+  telefone?: string;
+  empresaId?: string;
+  escopo?: EscopoVisao;
+}
+
+/** robustez: pedido de uma página da lista de Conversas. */
+export interface PedidoPagina {
+  escopo?: EscopoVisao;
+  limite: number;
+  /** Cursor: só as conversas depois desta (mais antigas), na ordem da lista. */
+  antes?: { em: Date; id: string };
+  /** Nome, telefone (dígitos) ou texto de alguma mensagem. */
+  busca?: string;
+  /** Só as conversas com esta tag. */
+  tagId?: string;
+}
+
+/** Dígitos de uma busca que parece telefone (3 ou mais dígitos). */
+export const digitosBusca = (b: string) => {
+  const d = b.replace(/\D/g, '');
+  return d.length >= 3 ? d : '';
+};
+
+const passaFiltro = (f: FiltroConversas | undefined, c: Conversa) =>
+  !f ||
+  ((!f.ids || f.ids.includes(c.id)) &&
+    (!f.telefone || c.telefone === f.telefone) &&
+    (!f.empresaId || c.empresaId === f.empresaId) &&
+    (!f.escopo || noEscopo(f.escopo, c)));
+
 export class RepositorioMemoria implements Repositorio {
   private conversas = new Map<string, Conversa>();
   private msgs: Mensagem[] = [];
@@ -219,9 +266,32 @@ export class RepositorioMemoria implements Repositorio {
     this.conversas.set(c.id, { ...c });
   }
 
-  async listarConversas() {
-    return [...this.conversas.values()].map((c) => ({ ...c }));
+  async listarConversas(filtro?: FiltroConversas) {
+    return [...this.conversas.values()]
+      .filter((c) => passaFiltro(filtro, c))
+      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime() || (a.id < b.id ? 1 : -1))
+      .map((c) => ({ ...c }));
   }
+
+  async paginaConversas(p: PedidoPagina) {
+    const busca = p.busca?.trim().toLowerCase();
+    const digitos = busca ? digitosBusca(busca) : '';
+    const lista = (await this.listarConversas({ escopo: p.escopo })).filter((c) => {
+      if (p.antes && !(c.atualizadaEm.getTime() < p.antes.em.getTime() || (c.atualizadaEm.getTime() === p.antes.em.getTime() && c.id < p.antes.id))) return false;
+      if (!busca) return true;
+      if ((c.nome ?? '').toLowerCase().includes(busca) || (digitos && c.telefone.includes(digitos))) return true;
+      return this.msgs.some((m) => m.conversaId === c.id && m.texto.toLowerCase().includes(busca));
+    });
+    // `tagId`: em memória as tags ficam em outro armazém; a rota filtra depois (no Postgres o filtro é no banco).
+    const pagina = lista.slice(0, p.limite);
+    const ultima = pagina.at(-1);
+    return {
+      conversas: pagina,
+      ultimas: await this.ultimasMensagens(pagina.map((c) => c.id)),
+      proximo: lista.length > p.limite && ultima ? { em: ultima.atualizadaEm, id: ultima.id } : null,
+    };
+  }
+
 
   async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
@@ -318,9 +388,11 @@ export class RepositorioMemoria implements Repositorio {
     this.fotos.set(telefone, { conteudo: foto?.conteudo ?? null, tipo: foto?.tipo ?? null, atualizadaEm: em });
   }
 
-  async ultimasMensagens() {
+  async ultimasMensagens(ids?: string[]) {
     const r = new Map<string, Mensagem>();
+    const quer = ids ? new Set(ids) : undefined;
     for (const m of this.msgs) {
+      if (quer && !quer.has(m.conversaId)) continue;
       const atual = r.get(m.conversaId);
       if (!atual || atual.em.getTime() <= m.em.getTime()) r.set(m.conversaId, m);
     }
