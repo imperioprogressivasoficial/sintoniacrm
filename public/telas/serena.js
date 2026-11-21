@@ -374,6 +374,35 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .srn-ramo > em { color: #0ffcbe; } html[data-tema="escuro"] .srn-ramo.nao > em { color: #ff9b73; }
   .srn-ramo-vazio { font-size: 12.5px; color: var(--sub); padding: 4px 0; }
   @media (max-width: 520px) { .srn-ramos { grid-template-columns: 1fr; } }
+  /* serena-faz: cartões de AÇÃO (enviar, agendar, mover) com Confirmar/Cancelar */
+  .srn-art.acao .srn-art-ic { background: linear-gradient(135deg, #0d2240, #106ebe); }
+  html[data-tema="escuro"] .srn-art.acao .srn-art-ic { background: linear-gradient(135deg, #0ffcbe, #3aa0ff); color: #08243f; }
+  .srn-art-selo.nao { background: rgba(120,130,145,.14); color: var(--sub); }
+  .srn-art-campo { box-sizing: border-box; width: 100%; min-height: 84px; resize: vertical; font: inherit; font-size: 14px; line-height: 1.5; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--linha); background: rgba(8,36,63,.03); color: var(--texto); }
+  html[data-tema="escuro"] .srn-art-campo { background: rgba(255,255,255,.05); }
+  .srn-art-campo:focus { outline: 2px solid var(--srn-azul); outline-offset: 1px; }
+  .srn-art-campo[readonly] { min-height: 0; resize: none; opacity: .85; }
+  .srn-art-dica { font-size: 12.5px; color: var(--sub); line-height: 1.45; }
+  .srn-art-dica b { color: var(--texto); font-weight: 600; }
+  .srn-quem { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--linha); overflow: hidden; }
+  .srn-quem li { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 4px 6px 4px 12px; font-size: 13.8px; }
+  .srn-quem li + li { border-top: 1px solid var(--linha); }
+  .srn-m.ia .srn-quem { margin: 0; padding: 0; } .srn-m.ia .srn-quem li { margin: 0; }
+  .srn-quem .nm { flex: 1; min-width: 0; display: grid; gap: 1px; }
+  .srn-quem .nm b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srn-quem .nm span { font-size: 12px; color: var(--sub); }
+  .srn-quem .tira { all: unset; cursor: pointer; flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); }
+  .srn-quem .tira:hover, .srn-quem .tira:focus-visible { background: var(--srn-acao); color: var(--srn-vermelho); }
+  .srn-quem .tira svg { width: 16px; height: 16px; }
+  .srn-quem .mais { justify-content: center; color: var(--srn-azul); font-weight: 600; cursor: pointer; }
+  .srn-art-marca { display: flex; align-items: center; gap: 10px; font-size: 13.5px; min-height: 36px; cursor: pointer; }
+  .srn-art-marca input { width: 18px; height: 18px; accent-color: #106ebe; margin: 0; }
+  .srn-art-feito { display: flex; gap: 8px; align-items: flex-start; font-size: 13.8px; font-weight: 600; padding: 10px 12px; border-radius: 12px; background: rgba(10,143,122,.09); color: #0a8f7a; }
+  html[data-tema="escuro"] .srn-art-feito { background: rgba(15,252,190,.10); color: #0ffcbe; }
+  .srn-art-feito svg { width: 18px; height: 18px; flex: none; }
+  .srn-art-aviso { font-size: 12.8px; line-height: 1.45; padding: 8px 12px; border-radius: 12px; background: rgba(245,184,0,.13); color: #8a5a00; }
+  html[data-tema="escuro"] .srn-art-aviso { color: #f5c842; }
+  .srn-art-erro { font-size: 13px; color: var(--srn-vermelho); font-weight: 600; }
 
   `;
 
@@ -660,7 +689,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     script: { rotulo: 'Script de venda', vista: 'scripts', ic: '<path d="M7 3.5h8l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 7 20Z"/><path d="M15 3.5V8h4M10 12h6M10 15.5h6"/>' },
     automacao: { rotulo: 'Fluxo de automação', vista: 'automacoes', ic: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/>' },
     link: { rotulo: 'Link de agendamento', vista: 'reunioes', ic: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/>' },
-    etiqueta: { rotulo: 'Etiqueta', vista: 'funil', ic: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>' },
+    etiqueta: { rotulo: 'Etiqueta', vista: 'funil', ic: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>' },    /* serena-faz: ações (Confirmar/Cancelar) */
+    envio: { rotulo: 'Mensagem para clientes', acao: true, ic: '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/>' },
+    agendamento: { rotulo: 'Agenda', acao: true, ic: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M12 13v3l2 1"/>' },
+    mover: { rotulo: 'Mover no funil', acao: true, ic: '<path d="M4 7h11M11 3l4 4-4 4"/><path d="M20 17H9M13 13l-4 4 4 4"/>' },
   };
   const IC_NO = {
     gatilho: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/>',
@@ -753,6 +785,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function cartaoArtefato(m, a) {
     const tipo = ART[a.tipo];
     if (!tipo) return null;
+    if (tipo.acao) return cartaoAcao(m, a, tipo);
     const salvo = a.estado === 'salvo';
     const pe = el('div', { class: 'srn-art-pe' });
     if (!salvo) {
@@ -771,8 +804,127 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /** O que a IA lê das mensagens anteriores: o cartão (e se foi salvo) vem antes do texto, para não ser cortado. */
   function textoParaIa(m) {
     if (m.papel !== 'ia' || !Array.isArray(m.artefatos) || !m.artefatos.length) return m.texto;
-    const notas = m.artefatos.map((a) => `[cartão ${ART[a.tipo]?.rotulo || a.tipo} "${a.titulo}": ${a.estado === 'salvo' ? 'a pessoa SALVOU' : 'ainda NÃO salvo'}] ${JSON.stringify(a.dados || {}).slice(0, 2500)}`);
+    const situacao = (a) => ART[a.tipo]?.acao
+      ? (a.estado === 'feito' ? `a pessoa CONFIRMOU e foi feito: ${a.resultado || ''}` : a.estado === 'cancelado' ? 'a pessoa CANCELOU (nada foi feito)' : 'ainda NÃO confirmado (nada foi feito)')
+      : (a.estado === 'salvo' ? 'a pessoa SALVOU' : 'ainda NÃO salvo');
+    const notas = m.artefatos.map((a) => `[cartão ${ART[a.tipo]?.rotulo || a.tipo} "${a.titulo}": ${situacao(a)}] ${JSON.stringify(a.dados || {}).slice(0, 2500)}`);
     return `${notas.join('\n')}\n\n${m.texto}`.slice(0, 11000);
+  }
+
+  /* ===== serena-faz: cartões de AÇÃO (enviar mensagem, agendar, mover). Nada acontece sem "Confirmar";
+     o servidor confere tudo de novo (POST /api/serena/confirmar). Texto sempre por textContent. ===== */
+  const IC_X = '<path d="M6 6l12 12M18 6 6 18"/>';
+  const IC_OK = '<path d="m5 12.5 4.5 4.5L19 7.5"/>';
+  const reais = (v) => `R$ ${Number(v).toFixed(2).replace('.', ',')}`;
+  const exemploDe = (texto, nome) => String(texto || '').replace(/\{primeiro_nome\}/g, String(nome || '').split(/\s+/)[0] || '').replace(/\{nome\}/g, nome || '').replace(/\{([^{}|]*)\|[^{}]*\}/g, '$1').replace(/[ \t]+([,.!?])/g, '$1');
+  function listaQuem(itens, podeTirar, aoTirar, detalhe) {
+    const ul = el('ul', { class: 'srn-quem' });
+    const VISIVEIS = 6;
+    let todos = false;
+    const desenhar = () => {
+      ul.replaceChildren();
+      const mostrar = todos ? itens : itens.slice(0, VISIVEIS);
+      for (const it of mostrar) {
+        const li = el('li', {}, el('span', { class: 'nm' }, el('b', { text: it.nome }), el('span', { text: detalhe(it) })));
+        if (podeTirar && itens.length > 1) li.append(el('button', { type: 'button', class: 'tira', 'aria-label': `Tirar ${it.nome} da lista`, title: 'Tirar da lista', html: I(IC_X), onclick: () => { aoTirar(it); desenhar(); } }));
+        ul.append(li);
+      }
+      if (!todos && itens.length > VISIVEIS) ul.append(el('li', { class: 'mais', role: 'button', tabindex: '0', text: `Ver todas (${itens.length})`, onclick: () => { todos = true; desenhar(); } }));
+    };
+    desenhar();
+    return ul;
+  }
+  function corpoAcao(a, viva) {
+    const d = a.dados || {};
+    const corpo = el('div', { class: 'srn-art-corpo' });
+    const linha = (k, v) => (v ? el('div', {}, el('dt', { text: k }), el('dd', { text: v })) : null);
+    if (a.tipo === 'envio') {
+      const n = (d.itens || []).length;
+      corpo.append(el('div', { class: 'srn-art-chips' },
+        el('span', { class: 'srn-art-chip', text: d.modo === 'transmissao' ? 'Vai como transmissão, aos poucos' : n === 1 ? 'Sai pelo número da loja' : 'Uma a uma, com intervalo' }),
+        d.assunto ? el('span', { class: 'srn-art-chip', text: d.assunto }) : null));
+      if (d.texto || !(d.itens || []).some((i) => i.texto)) {
+        const campo = el('textarea', { class: 'srn-art-campo', 'aria-label': 'Texto da mensagem', maxlength: '4000', rows: '4' });
+        campo.value = d.texto || '';
+        if (!viva) campo.readOnly = true;
+        const ex = el('div', { class: 'srn-art-dica' });
+        const pinta = () => { const p = (d.itens || [])[0]; ex.replaceChildren(el('b', { text: 'Como chega: ' }), document.createTextNode(exemploDe(campo.value, p ? p.nome : ''))); };
+        campo.addEventListener('input', () => { d.texto = campo.value; pinta(); gravarHistorico(); });
+        pinta();
+        corpo.append(campo, ex);
+        if (viva && /\{primeiro_nome\}/.test(d.texto || '')) corpo.append(el('div', { class: 'srn-art-dica', text: '{primeiro_nome} vira o primeiro nome de cada cliente.' }));
+      }
+      corpo.append(listaQuem(d.itens || [], viva, (it) => { d.itens = d.itens.filter((x) => x !== it); a.titulo = `Enviar para ${d.itens.length} cliente${d.itens.length === 1 ? '' : 's'}`; const t = corpo.closest('.srn-art')?.querySelector('.srn-art-tit b'); if (t) t.textContent = a.titulo; gravarHistorico(); },
+        (it) => (it.texto ? `“${it.texto.slice(0, 90)}${it.texto.length > 90 ? '…' : ''}”` : it.unidade)));
+      if ((d.fora || []).length) corpo.append(el('div', { class: 'srn-art-dica', text: `Ficam de fora: ${d.fora.map((x) => `${x.nome} (${x.motivo})`).join('; ')}.` }));
+    } else if (a.tipo === 'agendamento') {
+      const r = d.resumo || {};
+      corpo.append(el('dl', { class: 'srn-art-linhas' },
+        linha('Cliente', r.cliente),
+        d.acao === 'cancelar' ? linha('Horário', r.antigo) : linha('Serviço', r.servico),
+        d.acao !== 'cancelar' ? linha('Quando', r.quando) : null,
+        linha('Com', r.profissional),
+        linha('Unidade', r.unidade),
+        d.acao === 'remarcar' ? linha('Era', r.antigo) : null,
+        d.acao !== 'cancelar' && r.preco != null ? linha('Preço', reais(r.preco)) : null,
+        d.motivo ? linha('Motivo', d.motivo) : null));
+      if (r.fonte && d.acao !== 'cancelar') corpo.append(el('div', { class: 'srn-art-dica', text: `Horário livre conferido na ${r.fonte}. Ao confirmar, a agenda é conferida de novo.` }));
+      if (viva && d.acao !== 'cancelar') {
+        const caixa = el('input', { type: 'checkbox' });
+        caixa.checked = Boolean(d.enviarConfirmacao);
+        caixa.addEventListener('change', () => { d.enviarConfirmacao = caixa.checked; gravarHistorico(); });
+        corpo.append(el('label', { class: 'srn-art-marca' }, caixa, el('span', { text: 'Mandar a confirmação para a cliente no WhatsApp' })));
+      }
+    } else if (a.tipo === 'mover') {
+      corpo.append(el('div', { class: 'srn-art-chips' }, el('span', { class: 'srn-art-chip', text: `Funil: ${d.funil}` }), el('span', { class: 'srn-art-chip', text: `Etapa: ${d.etapa}` })));
+      if (d.perda) corpo.append(el('div', { class: 'srn-art-dica' }, el('b', { text: 'Motivo da perda: ' }), document.createTextNode(`${d.perda.motivoNome}${d.perda.detalhe ? ` — ${d.perda.detalhe}` : ''}`)));
+      corpo.append(listaQuem(d.itens || [], viva, (it) => { d.itens = d.itens.filter((x) => x !== it); a.titulo = d.itens.length === 1 ? `Mover ${d.itens[0].nome} para "${d.etapa}"` : `Mover ${d.itens.length} conversas para "${d.etapa}"`; const t = corpo.closest('.srn-art')?.querySelector('.srn-art-tit b'); if (t) t.textContent = a.titulo; gravarHistorico(); }, (it) => it.unidade));
+    }
+    if (a.estado === 'feito') corpo.append(el('div', { class: 'srn-art-feito' }, el('span', { html: I(IC_OK), style: 'display:grid' }), el('span', { text: a.resultado || 'Feito ✓' })));
+    if (a.aviso) corpo.append(el('div', { class: 'srn-art-aviso', text: a.aviso }));
+    return corpo;
+  }
+  function corpoConfirmar(a) {
+    const d = a.dados || {};
+    if (a.tipo === 'envio') return { texto: d.texto || '', assunto: d.assunto || null, itens: (d.itens || []).map((i) => ({ conversaId: i.conversaId, ...(i.texto ? { texto: i.texto } : {}) })) };
+    if (a.tipo === 'agendamento') { const { resumo, ...resto } = d; return resto; }
+    return { funilId: d.funilId, etapaId: d.etapaId, perda: d.perda ? { motivo: d.perda.motivo, detalhe: d.perda.detalhe || null } : null, itens: (d.itens || []).map((i) => ({ conversaId: i.conversaId })) };
+  }
+  async function confirmarAcao(a, bt, erroEl) {
+    if (a.tipo === 'envio' && !String(a.dados?.texto || '').trim() && !(a.dados?.itens || []).every((i) => i.texto)) { erroEl.textContent = 'Escreva a mensagem.'; return; }
+    bt.setAttribute('aria-busy', 'true'); erroEl.textContent = '';
+    try {
+      const r = await post('/api/serena/confirmar', { tipo: a.tipo, dados: corpoConfirmar(a) });
+      a.estado = 'feito'; a.resultado = String(r.resumo || 'Feito ✓');
+      const extras = [r.aviso, (r.fora || []).length ? `Ficaram de fora: ${r.fora.map((x) => `${x.nome} (${x.motivo})`).join('; ')}.` : '', (r.falhas || []).length ? `Não deu para: ${r.falhas.map((x) => `${x.nome} (${x.erro})`).join('; ')}.` : ''].filter(Boolean);
+      if (extras.length) a.aviso = extras.join(' ');
+      gravarHistorico();
+      toast(a.resultado);
+      ultimoQtd = 1e9; desenharMiolo();
+    } catch (x) {
+      bt.removeAttribute('aria-busy');
+      erroEl.textContent = x.message || 'Não deu certo agora. Nada foi feito.';
+    }
+  }
+  function cartaoAcao(m, a, tipo) {
+    const viva = !a.estado || a.estado === 'previa';
+    const d = a.dados || {};
+    const pe = el('div', { class: 'srn-art-pe' });
+    const erroEl = el('div', { class: 'srn-art-erro', role: 'alert' });
+    if (viva) {
+      const rotulo = a.tipo === 'envio' ? ((d.itens || []).length > 1 ? `Confirmar e enviar (${d.itens.length})` : 'Confirmar e enviar') : a.tipo === 'mover' ? 'Confirmar e mover' : d.acao === 'cancelar' ? 'Confirmar cancelamento' : 'Confirmar';
+      const bt = el('button', { type: 'button', class: 'srn-acao forte' }, icone(IC_OK), document.createTextNode(rotulo));
+      bt.addEventListener('click', () => confirmarAcao(a, bt, erroEl));
+      pe.append(bt, el('button', { type: 'button', class: 'srn-acao', onclick: () => { a.estado = 'cancelado'; gravarHistorico(); ultimoQtd = 1e9; desenharMiolo(); } }, icone(IC_X), document.createTextNode('Cancelar')));
+    }
+    if (a.tipo === 'agendamento' && d.conversaId) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => abrirConversa(d.conversaId) }, icone('<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/>'), document.createTextNode('Abrir conversa')));
+    const sub = a.tipo === 'agendamento' ? ({ agendar: 'Agendar', remarcar: 'Remarcar', cancelar: 'Cancelar horário' }[d.acao] || tipo.rotulo) : tipo.rotulo;
+    const selo = a.estado === 'feito' ? ['Feito ✓', ' ok'] : a.estado === 'cancelado' ? ['Cancelado', ' nao'] : ['Confira', ''];
+    return el('section', { class: 'srn-art acao srn-vidro', 'aria-label': `${sub}: ${a.titulo}` },
+      el('div', { class: 'srn-art-cab' }, el('span', { class: 'srn-art-ic', html: I(tipo.ic) }),
+        el('span', { class: 'srn-art-tit' }, el('small', { text: sub }), el('b', { text: a.titulo })),
+        el('span', { class: 'srn-art-selo' + selo[1], text: selo[0] })),
+      corpoAcao(a, viva), viva ? el('div', { style: 'padding:0 14px' }, erroEl) : null, pe.childNodes.length ? pe : null);
   }
   /* serena-acoes: fim */
   function bolhaEu(m, nova) {

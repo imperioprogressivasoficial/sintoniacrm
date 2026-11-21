@@ -595,6 +595,17 @@ export class Sintonia {
     if (existe && modo !== 'humano') await this.processar(conversaId);
   }
 
+  /**
+   * serena-faz: a Serena remarcou ou cancelou na agenda a pedido de alguém da equipe (depois do "Confirmar").
+   * Mesmos efeitos da IA (lembretes, funil, nota e aviso), com o nome de quem pediu.
+   */
+  async equipeMudouAgenda(conversaId: string, acoes: Array<Extract<AcaoAgente, { tipo: 'remarcou' | 'cancelou' }>>, atendente: string, quem?: Quem): Promise<void> {
+    await this.mutar(conversaId, async (c) => {
+      await this.aplicarAcoes(c, acoes, 'equipe', atendente, quem?.id);
+      await this.d.repo.salvarConversa(c);
+    });
+  }
+
   /** Agendamento feito pela atendente no botão "Agendar" do CRM (já gravado no Trinks). */
   async equipeAgendou(conversaId: string, acao: Extract<AcaoAgente, { tipo: 'agendou' }>, atendente: string, quem?: Quem): Promise<void> {
     await this.mutar(conversaId, async (c) => {
@@ -1227,7 +1238,7 @@ export class Sintonia {
           duracaoMin: a.agendamento.duracaoMin,
         });
       }
-      if (a.tipo === 'remarcou' || a.tipo === 'cancelou') await this.aplicarMudancaDeAgenda(c, a);
+      if (a.tipo === 'remarcou' || a.tipo === 'cancelou') await this.aplicarMudancaDeAgenda(c, a, autor === 'equipe' && atendente ? atendente : 'IA');
       if (a.tipo === 'mover_funil' || a.tipo === 'vincular_produto' || a.tipo === 'tarefa_equipe' || a.tipo === 'retorno' || a.tipo === 'enviar_arquivo') {
         await this.aplicarCrm(c, a).catch(async (e) => {
           this.log(`Falha ao aplicar ação da IA (${a.tipo})`, String(e));
@@ -1246,7 +1257,7 @@ export class Sintonia {
   }
 
   /** ia-completa: a IA remarcou ou cancelou na agenda: lembretes, funil, nota na conversa e aviso para a equipe. */
-  private async aplicarMudancaDeAgenda(c: Conversa, a: Extract<AcaoAgente, { tipo: 'remarcou' | 'cancelou' }>): Promise<void> {
+  private async aplicarMudancaDeAgenda(c: Conversa, a: Extract<AcaoAgente, { tipo: 'remarcou' | 'cancelou' }>, por = 'IA'): Promise<void> {
     await this.d.repo.cancelarTarefas(c.id, LEMBRETES);
     const quem = `${nomeOuTelefone(c.nome, c.telefone)} (${unidadeDe(c.unidade).nome})`;
     const antigo = `${a.antigo.servico ?? 'horário'} de ${a.antigo.inicio.replace('T', ' ').slice(0, 16)}`;
@@ -1263,12 +1274,12 @@ export class Sintonia {
         duracaoMin: a.agendamento.duracaoMin,
         remarcadoDe: a.antigo.id,
       });
-      await this.nota(c, `IA remarcou ${antigo} para ${diaHora(a.agendamento.inicio)}${a.cancelouAntigo ? '' : ' (o horário antigo NÃO foi cancelado na agenda: cancele à mão)'}.`);
-      await this.d.avisarEquipe?.(`A IA remarcou ${quem}: ${antigo} → ${diaHora(a.agendamento.inicio)}.${a.cancelouAntigo ? '' : ` ATENÇÃO: o horário antigo não foi cancelado na agenda (${a.erroCancelar ?? 'erro'}). Cancele à mão.`}`, c)?.catch(() => undefined);
+      await this.nota(c, `${por} remarcou ${antigo} para ${diaHora(a.agendamento.inicio)}${a.cancelouAntigo ? '' : ' (o horário antigo NÃO foi cancelado na agenda: cancele à mão)'}.`);
+      await this.d.avisarEquipe?.(`${por === 'IA' ? 'A IA' : por} remarcou ${quem}: ${antigo} → ${diaHora(a.agendamento.inicio)}.${a.cancelouAntigo ? '' : ` ATENÇÃO: o horário antigo não foi cancelado na agenda (${a.erroCancelar ?? 'erro'}). Cancele à mão.`}`, c)?.catch(() => undefined);
     } else {
       if (a.restam === 0) await this.moverFunil(c, { tipo: 'agendamento_cancelado' });
-      await this.nota(c, `IA cancelou ${antigo}. Motivo: ${a.motivo || 'não informado'}.`);
-      await this.d.avisarEquipe?.(`A IA cancelou o horário de ${quem}: ${antigo}. Motivo: ${a.motivo || 'não informado'}.`, c)?.catch(() => undefined);
+      await this.nota(c, `${por} cancelou ${antigo}. Motivo: ${a.motivo || 'não informado'}.`);
+      await this.d.avisarEquipe?.(`${por === 'IA' ? 'A IA' : por} cancelou o horário de ${quem}: ${antigo}. Motivo: ${a.motivo || 'não informado'}.`, c)?.catch(() => undefined);
     }
     await this.evento('ia_acao', c, { acao: a.tipo, agendamentoId: a.antigo.id, inicio: a.antigo.inicio, servico: a.antigo.servico, ...(a.tipo === 'cancelou' ? { motivo: a.motivo } : { para: a.agendamento.inicio.toISOString(), cancelouAntigo: a.cancelouAntigo }) });
   }

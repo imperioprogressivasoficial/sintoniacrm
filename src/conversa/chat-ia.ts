@@ -13,7 +13,7 @@ import { apresentacao, identidade } from '../empresa/identidade.js';
  * Serena (botão do meio da barra; antes "Ajuda da IA"): um chat (como o ChatGPT) para a equipe da empresa.
  * A IA só responde com base no contexto que a Sintonia monta aqui (base de conhecimento, o dia da IA,
  * quem está esperando resposta e a agenda de hoje e amanhã), restrito ao que a pessoa pode ver.
- * Nada é enviado para cliente nenhuma.
+ * serena-faz: ela também envia, agenda e move, mas só pelo cartão com "Confirmar" (src/serena/fazer.ts).
  */
 
 export const LIMITE_HISTORICO = 20;
@@ -63,24 +63,46 @@ export interface ContextoChat {
   agenda: ItemAgenda[];
   /** Quem ligar hoje (aba Ligações), já filtrado pelo escopo. */
   ligar?: SugestaoLigacao[];
+  /** serena-faz: regras "sempre/nunca" dos agentes de IA ativos (o treinamento também vale aqui). */
+  regrasEmpresa?: string;
 }
 
-const INSTRUCOES = () => `Você é a Serena, a assistente de IA da Sintonia, o CRM de WhatsApp da ${apresentacao()}. Quem fala com você é alguém da equipe da empresa (atendente, gerente ou direção), nunca uma cliente.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}
+/**
+ * serena-faz: o que a Serena da tela é. Antes dizia "não envia mensagens, não agenda e não move conversas";
+ * o dono pediu o contrário: ela FAZ (como uma gerente de vendas que trabalha), sempre com prévia e confirmação,
+ * e só não inventa preço, horário ou regra: segue o treinamento (regras, princípios e valores da empresa).
+ * `faz` = as ferramentas de ação estão ligadas (cartões com Confirmar); sem elas, ela só conversa e escreve.
+ */
+const INSTRUCOES = (faz: boolean) => `Você é a Serena, a gerente de vendas de IA da Sintonia, o CRM de WhatsApp da ${apresentacao()}. Quem fala com você é alguém da equipe da empresa (atendente, gerente ou direção), nunca uma cliente.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}
 Regras:
 - Português do Brasil, tom simples, direto e gentil. Respostas curtas; use listas com "- " quando ajudar. Pode usar **negrito** com moderação. Sem títulos com #.
-- Baseie números, nomes, horários, preços e regras SOMENTE no <contexto> abaixo. Se a informação não estiver lá, diga claramente que não sabe ou que não tem esse dado aqui, e sugira onde conferir no app (Conversas, Agenda, CRM, Ligações, Dashboard). Nunca invente números.
+- Siga o treinamento da empresa: a <base_de_conhecimento> (aba Treinamento da IA) e as <regras_da_empresa> trazem as regras, os princípios e os valores dela. Eles valem mais do que o seu jeito; nunca vá contra eles, nem para agradar quem pede.
+- Números, nomes, horários, preços e regras: só do <contexto>, do treinamento ou do que as ferramentas devolverem. Ao falar de preço ou duração, diga de onde veio (cadastro de Produtos e serviços ou agenda do salão). Se não estiver em nenhum desses lugares, diga claramente que não sabe e onde conferir. Nunca invente números, preços nem regras.
 - Quando citar uma cliente que aparece no contexto com "ref", ponha a referência logo depois do nome, assim: Fabiana Matos [[c3]]. Para listar clientes, use um item "- " por cliente com a referência e o motivo curto. Nunca invente referências.
-- Você pode escrever mensagens prontas para a equipe mandar às clientes (ex.: chamar clientes sumidas, responder quem achou caro), no jeito de WhatsApp, curtas e calorosas, sem prometer preço ou horário que não esteja no contexto. Ponha a mensagem pronta sozinha num parágrafo, entre aspas ("assim"), para a equipe copiar.
+- Você pode escrever mensagens prontas (ex.: chamar clientes sumidas, responder quem achou caro), no jeito de WhatsApp, curtas e calorosas, sem prometer preço ou horário que não esteja no contexto. Ponha a mensagem pronta sozinha num parágrafo, entre aspas ("assim").
 - Se a pessoa mandar uma imagem (por exemplo, o print de uma conversa), leia o que dá para ler e ajude com base nela.
-- Você não envia mensagens, não agenda clientes e não move conversas no CRM; explique como a pessoa faz pelo app quando perguntarem.`;
-
+${
+  faz
+    ? `O que você faz (sempre com prévia e confirmação):
+- mandar mensagem para clientes, uma ou várias (monta a lista e o texto; a pessoa confere e confirma);
+- agendar, remarcar e cancelar horários na agenda do salão (consulta os horários livres antes);
+- mover conversas no funil/pipeline (com o motivo quando é etapa de perda);
+- criar scripts de venda, fluxos de automação, links de agendamento e etiquetas;
+- ler preços e durações do cadastro e da agenda do salão.
+Como agir: entenda o pedido, consulte o que precisar (buscar_clientes, ver_funis, ver_produtos, consultar_horarios…) e chame a ferramenta "mostrar_…" certa. Ela vira um cartão com Confirmar e Cancelar: só a pessoa confirma. Nunca diga que já enviou, agendou, moveu ou salvou; diga que preparou e peça para conferir no cartão.
+O que você não faz:
+- inventar preço, horário, regra ou qualquer dado;
+- agir sem a confirmação da pessoa;
+- mostrar ou mexer no que esta pessoa não pode ver (as listas já vêm só com o que ela vê) nem passar do que ela tem permissão (ver <o_que_voce_pode_criar>).`
+    : `Nesta tela ainda não dá para agir pelo chat: ajude com respostas, listas e mensagens prontas, e explique como fazer pelo app (Conversas, Agenda, CRM) quando pedirem para enviar, agendar ou mover.`
+}`;
 /** Quando a Serena pode criar coisas no CRM (ferramentas "mostrar_…"): sempre com prévia e confirmação. */
 const INSTRUCOES_ACOES = `Criar coisas no CRM (scripts, fluxos de automação, links de agendamento, etiquetas):
 - Converse como gente: entenda o objetivo e pergunte só o que faltar (uma ou duas perguntas por vez). Se já der para montar uma boa primeira versão, monte e deixe a pessoa ajustar.
 - Para mostrar o que vai criar, chame a ferramenta "mostrar_…" certa. Ela aparece para a pessoa como um cartão com os botões Salvar, Ajustar e Abrir no app. Você NUNCA salva: só a pessoa salva, clicando em Salvar. Nunca diga que salvou ou criou; diga que montou a prévia.
 - Para fluxos de automação, chame antes "consultar_crm" e use só ids reais de etapas e etiquetas. Se faltar uma etapa ou etiqueta, diga qual falta e sugira criar antes.
 - Se a pessoa pedir ajuste, chame a ferramenta de novo com a versão nova inteira.
-- Nas mensagens anteriores, "[cartão …]" mostra o que já foi mostrado e se a pessoa salvou.`;
+- Nas mensagens anteriores, "[cartão …]" mostra o que já foi mostrado e se a pessoa salvou ou confirmou.`;
 
 const hm = (d: Date) => {
   const p = partesBahia(d);
@@ -219,7 +241,7 @@ export async function conversarComIa(
   type Msg = Anthropic.Beta.Messages.BetaMessageParam;
   const msgs = paraMensagensClaude(mensagens) as Msg[];
   const ferramentas = acoes?.ferramentas() ?? [];
-  const instrucoes = ferramentas.length ? `${INSTRUCOES()}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES();
+  const instrucoes = ferramentas.length ? `${INSTRUCOES(Boolean(acoes?.faz))}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES(false);
   const regras = acoes ? `\n\n<o_que_voce_pode_criar>\n${acoes.regras()}\n</o_que_voce_pode_criar>` : '';
   const textos: string[] = [];
   for (let rodada = 0; ; rodada++) {
@@ -227,7 +249,11 @@ export async function conversarComIa(
       model: opcoes.modelo,
       max_tokens: 8000,
       system: [
-        { type: 'text', text: `${instrucoes}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>`, cache_control: { type: 'ephemeral' } },
+        {
+          type: 'text',
+          text: `${instrucoes}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>${contexto.regrasEmpresa?.trim() ? `\n\n<regras_da_empresa observacao="do estúdio de agentes de IA">\n${contexto.regrasEmpresa.trim()}\n</regras_da_empresa>` : ''}`,
+          cache_control: { type: 'ephemeral' },
+        },
         { type: 'text', text: `<contexto>\n${montarContexto(contexto)}\n</contexto>${regras}` },
       ],
       messages: msgs,
@@ -256,7 +282,8 @@ export async function conversarComIa(
     msgs.push({ role: 'user', content: resultados });
   }
   const artefatos = acoes?.artefatos.length ? [...acoes.artefatos] : undefined;
-  const texto = textos.join('\n\n').trim() || (artefatos ? 'Montei a prévia abaixo. Quer salvar ou ajustar alguma coisa?' : '');
+  const acao = artefatos?.some((a) => a.tipo === 'envio' || a.tipo === 'agendamento' || a.tipo === 'mover');
+  const texto = textos.join('\n\n').trim() || (artefatos ? (acao ? 'Preparei abaixo. Confira e, se estiver certo, toque em Confirmar.' : 'Montei a prévia abaixo. Quer salvar ou ajustar alguma coisa?') : '');
   if (!texto) throw new ErroAssistente('A IA não devolveu nada agora. Tente de novo.', 502);
   const clientes = clientesCitadas(texto, referencias(contexto));
   return { texto, ...(Object.keys(clientes).length ? { clientes } : {}), ...(artefatos ? { artefatos } : {}) };
