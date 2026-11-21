@@ -40,7 +40,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
   const ms = (d) => (d ? new Date(d).getTime() : 0);
   const dois = (n) => String(n).padStart(2, '0');
-  const hm = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const FMT_HM = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }); /* fluidez2: um formatador só */
+  const hm = (d) => FMT_HM.format(new Date(d));
+  const FMT_DM = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
+  const zeroH = (t) => { const x = new Date(t); x.setHours(0, 0, 0, 0); return x.getTime(); };
 
   /** Cronômetro: 0:42 · 4:07 · 1:04:12 · 2d 03h */
   function cronometro(seg) {
@@ -102,7 +105,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (finalizada(c) || !esperando(c)) return null;
     const s = document.createElement('span');
     const d = new Date(c.ultimaMensagemCliente); const hoje = new Date(); const ontem = new Date(hoje.getTime() - 86400000);
-    const dia = d.toDateString() === hoje.toDateString() ? '' : d.toDateString() === ontem.toDateString() ? 'Ontem ' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ';
+    const dk = zeroH(d); /* fluidez2: dia por número e formatador guardado */
+    const dia = dk === zeroH(hoje) ? '' : dk === zeroH(ontem) ? 'Ontem ' : FMT_DM.format(d) + ' ';
     s.className = 'ts-chegou'; s.textContent = dia + hm(d); s.title = 'Horário em que a mensagem chegou';
     return s;
   }

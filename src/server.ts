@@ -21,6 +21,7 @@ import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { exigir } from './auth/permissoes.js';
 import { escopoDe, podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
 import type { Conversa } from './domain.js';
+import { registrarCompressao } from './web/compressao.js';
 import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
 import { ligacoesDoDia, quemLigar, registrarLigacao } from './app/ligacoes.js';
@@ -175,6 +176,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     reply.header('x-sintonia', '1').header('x-sintonia-versao', VERSAO_SERVIDOR);
     return corpo;
   });
+  registrarCompressao(app); /* fluidez2: HTML, CSS, JS e JSON saem comprimidos (brotli/gzip) */
 
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
   if (d.auth) registrarAuth(app, d.auth);

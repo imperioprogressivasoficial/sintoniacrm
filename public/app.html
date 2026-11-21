@@ -9,6 +9,8 @@
 <script src="/telas/atualizando.js"></script>
 <!-- contato-nome: telefone no padrão "+55 (71) 99220-0365" em todas as telas (antes do resto, que já usa). -->
 <script src="/telas/fone.js"></script>
+<!-- fluidez2: ordem de chegada na abertura (lista primeiro; contadores e o resto depois) e pedidos repetidos juntados -->
+<script src="/telas/prioridade.js"></script>
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
@@ -1032,6 +1034,32 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
 .esq-li span { display: grid; gap: 8px; } .esq-li b { height: 12px; width: 62%; } .esq-li em { height: 10px; width: 40%; } .esq-li small { width: 30px; height: 10px; align-self: start; margin-top: 6px; }
 html[data-tema="escuro"] .esq-li { --esq: rgba(233,243,255,.08); }
 @media (max-width: 760px) { .esq-li { grid-template-columns: 56px 1fr auto; padding: 10px 16px; } .esq-li i { width: 56px; height: 56px; } }
+/* fluidez2: carregando "desfocado". Foto/vídeo: caixa no tamanho certo com um véu suave (degradê desfocado) e a foto entra
+   nítida aos poucos. Balões da conversa: esqueleto parado e desfocado enquanto as mensagens chegam (aparece só se demorar).
+   Fotos de perfil: entram com um esmaecer curto. Nada fica se mexendo em repetição. */
+.esq-li { filter: blur(.6px); }
+.fz-veu { background: radial-gradient(120% 90% at 20% 15%, var(--fz-v1, rgba(58,160,255,.22)), transparent 60%), radial-gradient(110% 80% at 85% 90%, var(--fz-v2, rgba(15,252,190,.16)), transparent 60%), var(--midia-caixa); }
+html[data-tema="escuro"] .fz-veu { --fz-v1: rgba(58,160,255,.20); --fz-v2: rgba(15,252,190,.10); }
+.mid-foto.fz-veu:not(.fz-ok) { width: min(240px, 60vw); aspect-ratio: var(--fz-proporcao, 4 / 3); min-height: 0; }
+.bal.fig .mid-foto.fz-veu:not(.fz-ok) { width: 150px; aspect-ratio: 1; background: transparent; }
+.mid-foto.fz-veu:not(.fz-ok) img { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; }
+.fz-img { transition: opacity .35s ease, filter .45s ease; }
+.fz-img:not(.fz-ok) { opacity: 0; filter: blur(14px); }
+.mid-video.fz-veu:not(.fz-ok) { aspect-ratio: 16 / 9; }
+.mid-foto.fz-veu.fz-ok { background: var(--midia-caixa); } .bal.fig .mid-foto.fz-veu { background: transparent; }
+.mid-espera.fz-veu { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.esq-msgs { display: grid; gap: 10px; padding: 14px 4px; filter: blur(2.5px); opacity: 0; animation: fz-aparece .4s ease .25s 1 forwards; pointer-events: none; }
+.esq-msgs i { display: block; height: 38px; border-radius: 14px; background: var(--esq, rgba(13,34,64,.09)); }
+.esq-msgs i.e { justify-self: start; border-top-left-radius: 4px; } .esq-msgs i.d { justify-self: end; border-top-right-radius: 4px; background: var(--esq-d, rgba(16,110,190,.13)); }
+html[data-tema="escuro"] .esq-msgs { --esq: rgba(233,243,255,.08); --esq-d: rgba(58,160,255,.16); }
+@keyframes fz-aparece { to { opacity: 1; } }
+/* fluidez2: contadores (não lidas, sino, grupos, menu) entram com um esmaecer curto quando aparecem, em vez de "pular" na tela */
+#contador, #lt-qtd, #qtd-nao-lidas, #voltar-qtd, #radar-num, #sino-cel-qtd, #lt-grupos-qtd, #lt-chat-equipe-qtd, #lt-agendadas-qtd, #lt-rotina-qtd, .lt-qtd, .cv-aba .badge { animation: fz-surge .35s ease 1 both; }
+@keyframes fz-surge { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+.pn-esq { filter: blur(.8px); }
+@media (prefers-reduced-motion: reduce) { #contador, #lt-qtd, #qtd-nao-lidas, #voltar-qtd, #radar-num, #sino-cel-qtd, .lt-qtd { animation: none; } }
+.avatar.foto img.fz-av { transition: opacity .3s ease; } .avatar.foto img.fz-av:not(.fz-ok) { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .fz-img, .avatar.foto img.fz-av { transition: none; } .esq-msgs { animation-duration: .01s; } }
 /* largura-total (pedido do dono 20/11): no computador as telas ocupam toda a largura do painel, sem faixa vazia
    dos lados (como Conversas). A Serena mantém a coluna de leitura no centro. */
 @media (min-width: 761px) {
@@ -1119,11 +1147,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   try { veio = Date.now() - Number(sessionStorage.getItem('sintonia.abertura') || 0) < 15000; sessionStorage.removeItem('sintonia.abertura'); } catch {}
   let p = 0;
   const por = (v) => { p = Math.max(p, Math.min(1, v)); ab.style.setProperty('--ab-p', String(p)); };
+  /* fluidez2: a tela cheia "Abrindo suas conversas" só continua a passagem do login. No F5 (computador) e ao abrir o app no
+     celular, a casca (menu, barra, título) e o esqueleto desfocado da lista aparecem na hora, sem cobrir nada. */
+  if (!veio) { ab.remove(); window.SintoniaAbertura = { pronto: () => window.SintoniaPrioridade?.liberar() }; return; }
   por(veio ? 0.72 : 0.14);
   const passo = setInterval(() => por(p + (0.94 - p) * 0.14), 220);
   let feito = false;
   const pronto = () => {
     if (feito) return; feito = true; clearInterval(passo); por(1);
+    window.SintoniaPrioridade?.liberar(); /* fluidez2: lista na tela: o resto pode vir */
     setTimeout(() => { ab.classList.add('ab-saindo'); ab.setAttribute('aria-hidden', 'true'); setTimeout(() => ab.remove(), 700); }, 240);
   };
   window.SintoniaAbertura = { pronto };
@@ -1309,7 +1341,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
 
       <div class="chat" id="chat">
         <div class="sem-conversa" id="sem-conversa"><div>
-          <picture><source srcset="/logo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/logo.png" alt="Sintonia" width="220"></picture>
+          <picture><source srcset="/logo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/logo.png" alt="Sintonia" width="220" loading="lazy" decoding="async"></picture><!-- fluidez2: só baixa no computador (no celular fica escondida) -->
           <p>Escolha uma conversa para começar. A IA lê cada mensagem e deixa uma sugestão de resposta logo acima da caixa de texto.</p>
         </div></div>
         <div id="chat-aberto" style="display:none">
@@ -1633,7 +1665,10 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     document.querySelectorAll('meta[name="theme-color"]').forEach((m, i) => { m.media = tema === 'auto' ? (i ? '(prefers-color-scheme: dark)' : '(prefers-color-scheme: light)') : (i ? (tema === 'escuro' ? 'all' : 'not all') : (tema === 'claro' ? 'all' : 'not all')); });
     window.dispatchEvent(new Event('tema'));
   }
-  new MutationObserver(aplicar).observe(document.head, { childList: true });
+  /* fluidez2: cada tela põe o seu <style> no <head>; antes, cada um refazia TODAS as folhas de estilo (~150 ms na abertura,
+     celular lento). Agora só a folha que entrou recebe o tema (o resto já está certo). */
+  const aplicarNova = (n) => { try { if (n.sheet) aplicarEm(n.sheet.cssRules); else if (n.tagName === 'LINK') n.addEventListener('load', () => { try { aplicarEm(n.sheet.cssRules); } catch {} }, { once: true }); } catch {} };
+  new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.tagName === 'STYLE' || n.tagName === 'LINK') aplicarNova(n); }).observe(document.head, { childList: true });
   escuroDoAparelho.addEventListener('change', aplicar);
   window.SintoniaTema = {
     get: () => tema,
@@ -1704,8 +1739,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const avatar = (c, classe = '') => {
     const a = el('span', { class: 'avatar foto ' + classe, html: BONECO });
     if (c.id && !semFoto.has(c.id)) {
-      const img = el('img', { alt: '', loading: 'lazy', decoding: 'async', width: '54', height: '54', src: `/api/conversas/${c.id}/foto` }); /* fluidez: decodifica fora do quadro */
+      const img = el('img', { class: 'fz-av', alt: '', loading: 'lazy', decoding: 'async', width: '54', height: '54', src: `/api/conversas/${c.id}/foto` }); /* fluidez: decodifica fora do quadro */
       img.addEventListener('error', () => { semFoto.add(c.id); img.remove(); });
+      img.addEventListener('load', () => img.classList.add('fz-ok'), { once: true }); /* fluidez2: a foto entra esmaecendo, sem "pular" */
       a.append(img);
     }
     return a;
@@ -1763,11 +1799,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   /* contato-nome: um só formato de telefone (public/telas/fone.js); nome que é só número/símbolos mostra o telefone formatado. */
   const formatarTel = (t) => window.SintoniaFone ? window.SintoniaFone.formatar(t) : String(t || '');
   const nomeDe = (c) => window.SintoniaFone ? window.SintoniaFone.rotulo(c.nome, c.telefone) : (c.nome || formatarTel(c.telefone));
-  const hm = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  /* fluidez2: formatadores de data criados uma vez (toLocale… cria um a cada chamada: ~30 ms por lista no celular) */
+  const FMT_HM = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }), FMT_SEMANA = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }), FMT_DIA = new Intl.DateTimeFormat('pt-BR');
+  const hm = (d) => FMT_HM.format(new Date(d));
   const diaChave = (d) => new Date(d).toDateString();
+  const zeroH = (t) => { const x = new Date(t); x.setHours(0, 0, 0, 0); return x.getTime(); }; /* fluidez2: compara o dia por número (toDateString era caro na lista) */
   const rotuloDia = (d) => { const x = new Date(d), h = new Date(); const ontem = new Date(h); ontem.setDate(h.getDate() - 1);
-    if (x.toDateString() === h.toDateString()) return 'Hoje'; if (x.toDateString() === ontem.toDateString()) return 'Ontem';
-    return (h - x) < 6 * 864e5 ? x.toLocaleDateString('pt-BR', { weekday: 'long' }) : x.toLocaleDateString('pt-BR'); };
+    const dx = zeroH(x); if (dx === zeroH(h)) return 'Hoje'; if (dx === zeroH(ontem)) return 'Ontem';
+    return (h - x) < 6 * 864e5 ? FMT_SEMANA.format(x) : FMT_DIA.format(x); };
   const horaLista = (d) => { if (!d) return ''; const r = rotuloDia(d); return r === 'Hoje' ? hm(d) : r; };
   const quando = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
   // Não lida = a cliente escreveu depois da última vez que ESTA pessoa abriu (e ainda espera resposta).
@@ -1898,7 +1937,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       caixa.append(v); return;
     }
     const hoje = new Date().toDateString(); const desejadas = cxTopo ? [cxTopo] : []; const vistas = new Set();
-    for (const c of lista) {
+    /* fluidez2: primeira vez (lista vazia na tela): desenha as 25 de cima já e o resto no quadro seguinte, quando o navegador estiver livre */
+    let fatia = lista;
+    if (!linhasFz.size && lista.length > 40 && !caixa.querySelector('.item')) { fatia = lista.slice(0, 25); (window.requestIdleCallback || setTimeout)(() => desenharLista(), { timeout: 300 }); }
+    for (const c of fatia) {
       const ass = hoje + '|' + assinaturaLinha(c, estado.selecao);
       const velha = linhasFz.get(c.id);
       vistas.add(c.id);
@@ -2124,6 +2166,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
      e a versão nova do servidor entra por baixo, sem piscar. Nunca mostra a conversa anterior por engano. */
   const conversasGuardadas = new Map();
   function guardarConversa(d, ass) { conversasGuardadas.delete(d.conversa.id); conversasGuardadas.set(d.conversa.id, { d, ass }); if (conversasGuardadas.size > 40) conversasGuardadas.delete(conversasGuardadas.keys().next().value); }
+  /* fluidez2: esqueleto parado e desfocado dos balões (só aparece se a conversa demorar mais que ¼ s) */
+  const esqueletoMsgs = () => el('div', { class: 'esq-msgs', 'aria-hidden': 'true', html: ['e" style="width:58%', 'e" style="width:40%', 'd" style="width:52%', 'e" style="width:66%', 'd" style="width:34%', 'd" style="width:60%'].map((x) => `<i class="${x}"></i>`).join('') });
   function mostrarJa(id) {
     const g = conversasGuardadas.get(id);
     try {
@@ -2136,11 +2180,11 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
         $('c-avatar').replaceWith(Object.assign(el('span', { class: 'avatar p foto', html: BONECO }), { id: 'c-avatar' }));
         $('c-nome').textContent = ''; $('c-sub').textContent = ''; $('modo-txt').textContent = '';
-        $('msgs').replaceChildren(); $('sugestao').hidden = true;
+        $('msgs').replaceChildren(esqueletoMsgs()); $('sugestao').hidden = true; /* fluidez2 */
         return;
       }
       estado.detalhe = { conversa: { ...c, tags: c.tags || [] }, mensagens: [], sugestao: null, digitando: [], permissoes: { assumir: false, transferir: false } };
-      desenharConversa(); $('msgs').replaceChildren(); $('sugestao').hidden = true;
+      desenharConversa(); $('msgs').replaceChildren(esqueletoMsgs()); $('sugestao').hidden = true; /* fluidez2: balões desfocados até chegar */
     } catch { estado.detalhe = null; estado.assinatura = ''; }
   }
   async function abrir(id) {
@@ -2480,7 +2524,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const a = m.anexo, url = urlMidia(c, m);
     const visual = a.tipo === 'imagem' || a.tipo === 'video' || a.tipo === 'figurinha';
     if (a.situacao === 'pendente') {
-      return visual ? el('div', { class: 'mid-espera' }, el('span', { class: 'girando' }), el('span', { text: 'Baixando…' }))
+      return visual ? el('div', { class: 'mid-espera fz-veu' }, el('span', { class: 'girando' }), el('span', { text: 'Baixando…' })) /* fluidez2: véu desfocado */
         : linhaDoc(a, 'Baixando…', el('span', { class: 'girando' }));
     }
     if (a.situacao === 'grande') return linhaDoc(a, `Arquivo grande demais para guardar${a.tamanho ? ' (' + tamanhoTxt(a.tamanho) + ')' : ''}. Veja no celular da loja.`);
@@ -2493,14 +2537,24 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       return linhaDoc(a, 'Arquivo não baixado', tentar);
     }
     if (a.tipo === 'imagem' || a.tipo === 'figurinha') {
-      const img = el('img', { src: url, alt: a.tipo === 'imagem' ? (a.legenda || 'Foto') : 'Figurinha', loading: 'lazy', decoding: 'async' });
+      const img = el('img', { class: 'fz-img', src: url, alt: a.tipo === 'imagem' ? (a.legenda || 'Foto') : 'Figurinha', loading: 'lazy', decoding: 'async' });
+      /* fluidez2: até a foto chegar, a caixa já tem o tamanho dela (ou um tamanho padrão) com um véu desfocado; depois a foto entra nítida aos poucos */
+      const pronta = () => { img.classList.add('fz-ok'); img.parentElement?.classList.add('fz-ok'); };
+      img.addEventListener('load', pronta, { once: true });
+      img.addEventListener('error', pronta, { once: true });
       // A foto carrega depois: se a conversa estava no fim, continua no fim.
       img.addEventListener('load', () => { const cx = $('msgs'); if (cx.contains(img) && cx.scrollHeight - cx.scrollTop - cx.clientHeight < img.clientHeight + 120) cx.scrollTop = cx.scrollHeight; });
-      const b = el('button', { class: 'mid-foto', type: 'button', 'aria-label': a.tipo === 'imagem' ? 'Abrir foto' : 'Figurinha' }, img);
+      const b = el('button', { class: 'mid-foto fz-veu', type: 'button', 'aria-label': a.tipo === 'imagem' ? 'Abrir foto' : 'Figurinha' }, img);
+      if (a.largura > 0 && a.altura > 0) b.style.setProperty('--fz-proporcao', `${a.largura} / ${a.altura}`); /* fluidez2: proporção certa quando o WhatsApp informa */
+      if (img.complete && img.naturalWidth) pronta();
       if (a.tipo === 'imagem') b.addEventListener('click', () => abrirVisor(url, a.legenda, m.autor === 'cliente' ? nomeDe(c) : (m.autor === 'ia' ? 'IA da Sintonia' : m.autorNome || 'Equipe'), m.em));
       return b;
     }
-    if (a.tipo === 'video') return el('video', { class: 'mid-video', src: url, controls: '', preload: 'metadata', playsinline: '' });
+    if (a.tipo === 'video') { /* fluidez2: véu até o primeiro quadro chegar */
+      const v = el('video', { class: 'mid-video fz-veu', src: url, controls: '', preload: 'metadata', playsinline: '' });
+      const ok = () => v.classList.add('fz-ok'); v.addEventListener('loadeddata', ok, { once: true }); v.addEventListener('error', ok, { once: true });
+      return v;
+    }
     if (a.tipo === 'audio') return playerAudio(url, a, m, c);
     const sub = [extDe(a.nomeArquivo, a.mimetype), tamanhoTxt(a.tamanho)].filter(Boolean).join(' · ');
     return linhaDoc(a, sub || 'Documento', el('span', { class: 'baixar', html: BAIXAR }), url + '?baixar=1');

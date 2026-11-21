@@ -79,7 +79,10 @@
   // ---------- faixas roláveis com esmaecer ----------
   const faixas = new WeakSet();
   function marcarFaixa(f) {
-    const ajustar = () => {
+    /* fluidez2: no máximo uma medida por quadro (antes media a cada mudança da faixa, forçando o navegador a recalcular a tela) */
+    let marcado = false;
+    const ajustar = () => { if (marcado) return; marcado = true; requestAnimationFrame(() => { marcado = false; medir(); }); };
+    const medir = () => {
       const max = f.scrollWidth - f.clientWidth;
       f.classList.toggle('rs-tem-esq', f.scrollLeft > 2);
       f.classList.toggle('rs-tem-dir', max > 2 && f.scrollLeft < max - 2);

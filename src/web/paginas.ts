@@ -98,6 +98,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/vendas/logo-hubspot.png': { arquivo: 'vendas/logo-hubspot.png', tipo: 'image/png' },
   '/vendas/logo-rdstation.png': { arquivo: 'vendas/logo-rdstation.png', tipo: 'image/png' },
   '/telas/fone.js': { arquivo: 'telas/fone.js', tipo: 'text/javascript; charset=utf-8' } /* contato-nome */,
+  '/telas/prioridade.js': { arquivo: 'telas/prioridade.js', tipo: 'text/javascript; charset=utf-8' }, // fluidez2: ordem de chegada na abertura
   '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
@@ -197,6 +198,13 @@ export function voltaSegura(v: unknown): string | null {
   return v;
 }
 
+/** fluidez2: If-None-Match pode vir com várias etiquetas e com W/ (proxy que comprimiu). */
+export function mesmaEtag(pedido: string | string[] | undefined, etag: string): boolean {
+  if (!pedido) return false;
+  const limpa = (x: string) => x.trim().replace(/^W\//, '');
+  return String(pedido).split(',').some((x) => x.trim() === '*' || limpa(x) === limpa(etag));
+}
+
 export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void {
   const cache = new Map<string, Buffer>();
   const ler = (arquivo: string) => {
@@ -252,11 +260,19 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
       if (rota === '/sw.js') reply.header('cache-control', 'no-cache').header('service-worker-allowed', '/');
       // HTML: cada CSS/JS local ganha ?v=<versão>, para o celular nunca misturar página nova com estilo antigo guardado.
       if (tipo.startsWith('text/html')) return reply.send(comVersoes(arquivo));
-      // CSS e JS: o navegador confere a versão a cada uso (ETag) e só baixa de novo quando mudou.
+      /* fluidez2: pedido com a versão certa (?v=<hash>, posto pelo HTML) = arquivo que nunca muda nesse endereço:
+         fica guardado no aparelho por 1 ano, sem nem perguntar ao servidor. Antes, cada abertura do app conferia
+         ~75 arquivos um a um (75 idas e voltas no 4G antes da tela ficar pronta). Versão nova = endereço novo. */
+      const pediu = (req.query as Record<string, unknown> | undefined)?.v;
+      if (rota !== '/sw.js' && rota !== '/manifest.webmanifest' && typeof pediu === 'string' && pediu === versao(arquivo)) {
+        reply.header('cache-control', 'public, max-age=31536000, immutable').header('etag', `"${versao(arquivo)}"`);
+        return reply.send(ler(arquivo));
+      }
+      // CSS e JS sem versão no endereço: o navegador confere a versão a cada uso (ETag) e só baixa de novo quando mudou.
       if (/^(text\/css|text\/javascript|application\/javascript)/.test(tipo)) {
         const etag = `"${versao(arquivo)}"`;
         reply.header('cache-control', 'no-cache').header('etag', etag);
-        if (req.headers['if-none-match'] === etag) return reply.code(304).send();
+        if (mesmaEtag(req.headers['if-none-match'], etag)) return reply.code(304).send();
       }
       return reply.send(ler(arquivo));
     });
