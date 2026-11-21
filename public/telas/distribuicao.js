@@ -49,7 +49,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .dz-pill.off { color: var(--sub); background: var(--vidro-borda, rgba(13,34,64,.06)); }
   html[data-tema="escuro"] .dz-pill.on { color: #5ef0b8; background: rgba(15,252,190,.1); }
   .dz-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .dz-campo { display: grid; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--sub); min-width: 0; }
+  .dz-campo { display: grid; gap: 4px; align-content: end; font-size: 12.5px; font-weight: 600; color: var(--sub); min-width: 0; }
   .dz-campo div { display: flex; align-items: center; gap: 6px; color: var(--sub); font-weight: 500; }
   .dz-campo input { box-sizing: border-box; width: 100%; min-width: 0; height: 40px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--linha); background: var(--painel); color: var(--texto); font: inherit; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .dz-campo input:focus { outline: 2px solid var(--marca-azul, #106ebe); outline-offset: 0; border-color: transparent; }
@@ -176,7 +176,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         campo('Escalar para a gerência depois de mais', escalar)),
       r.ligado ? null : el('p', { class: 'dz-dica', text: 'Os alertas de espera desta unidade estão desligados (Configurações › Notificações).' }),
       el('div', { class: 'dz-cores', 'aria-label': 'Cores do tempo na lista de conversas' },
-        el('span', {}, el('i', { style: 'background:var(--linha,#cfd8e3)' }), document.createTextNode('dentro do prazo')),
+        el('span', {}, el('i', { style: 'background:var(--texto,#0d2240)' }), document.createTextNode('dentro do prazo')),
         el('span', {}, el('i', { style: 'background:#f5b700' }), document.createTextNode('prazo estourou')),
         el('span', {}, el('i', { style: 'background:#e53935' }), document.createTextNode('escalada para a gerência'))));
   }

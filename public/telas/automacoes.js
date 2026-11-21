@@ -666,7 +666,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('p', { class: 'au-info', style: 'grid-column:1/-1', text: '9 a 10 = promotores (bom para pedir avaliação no Google com {link_avaliacao}); 0 a 6 = detratores (bom para a gestão ligar).' }));
       } else if (g.tipo === 'sem_resposta') {
         /* automacao-vendas */
-        campos.append(rotulo('Quem não respondeu', selecao([['equipe', 'A equipe (a cliente está esperando)'], ['cliente', 'A cliente (a loja está esperando)']], g.quem || 'equipe', (v) => { g.quem = v; marcarSujo(); })),
+        campos.append(rotulo('Quem não respondeu', selecao([['equipe', 'A loja (equipe ou IA)'], ['cliente', 'A cliente']], g.quem || 'equipe', (v) => { g.quem = v; marcarSujo(); })),
           rotulo('Há quanto tempo', duracaoCampo(g.minutos || 30, (m) => { g.minutos = Math.max(5, m); marcarSujo(); }, { minimo: 5 })),
           el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Dispara uma vez por espera: a próxima mensagem da cliente recomeça a contagem. Vale para as esperas que começarem depois de criar a automação. A resposta da IA conta como resposta da loja.' }));
       } else if (g.tipo === 'agendou') {

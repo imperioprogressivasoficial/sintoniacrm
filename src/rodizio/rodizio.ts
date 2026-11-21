@@ -192,7 +192,7 @@ export interface OpcoesRodizio {
   armazem: ArmazemRodizio;
   contas: Pick<Contas, 'listarUsuarios'>;
   presencas: Presencas;
-  repo: Pick<Repositorio, 'buscarConversa' | 'salvarConversa' | 'adicionarMensagem'>;
+  repo: Pick<Repositorio, 'buscarConversa' | 'salvarConversa' | 'adicionarMensagem' | 'mensagens'>;
   empresaId: string;
   sintonia: () => SintoniaParaRodizio;
   /** A pessoa tem a permissão "Responder clientes"? Ausente = todas têm (padrão dos papéis). */
@@ -298,12 +298,15 @@ export class Rodizio {
       await this.o.sintonia().trocarDonaSobTrava(c, { id: alvo.id, nome: alvo.nome }, { nome: 'Rodízio automático' }, 'rodizio');
       await this.o.repo.salvarConversa(c);
       await this.o.armazem.registrar(this.o.empresaId, { conversaId: c.id, unidade: c.unidade, usuarioId: alvo.id, usuarioNome: alvo.nome, regra: cfg.regra, em: agora });
-      // Fica na conversa, para todo mundo ver de onde veio a dona.
+      // Fica na conversa, para todo mundo ver de onde veio a dona. Entra logo antes da última mensagem: a lista de
+      // conversas continua mostrando a mensagem da cliente (ou da IA), não o aviso.
+      // (Sem mensagem ainda — conversa criada pelo simulador antes da mensagem — fica no começo da conversa.)
+      const ultima = (await this.o.repo.mensagens(c.id, 1)).at(-1)?.em ?? c.criadaEm;
       await this.o.repo.adicionarMensagem({
         conversaId: c.id,
         autor: 'sistema',
-        texto: `Rodízio automático: conversa passada para ${alvo.nome} (${cfg.regra === 'carga' ? 'menor carga' : 'vez dela no rodízio'}).`,
-        em: agora,
+        texto: `Rodízio automático: conversa passada para ${alvo.nome} (${cfg.regra === 'carga' ? 'menor carga' : 'vez no rodízio'}).`,
+        em: new Date(ultima.getTime() - 1),
       });
       return { feito: true, usuarioId: alvo.id, usuarioNome: alvo.nome };
     });

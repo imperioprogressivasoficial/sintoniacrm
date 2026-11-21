@@ -124,7 +124,9 @@ describe.each(ambientes)('Rodízio automático de leads ($nome)', (amb) => {
     expect(avisosCarla[0]).toMatchObject({ titulo: 'Lead novo para você: Cliente 3', conversaId: c2.id });
     expect(m.pushes.some((p) => p.endpoint.endsWith(gente.carla.id) && p.carga.conversaId === c2.id)).toBe(true);
     const msgs = await m.repo.mensagens(c2.id);
-    expect(msgs.find((x) => x.autor === 'sistema')?.texto).toBe('Rodízio automático: conversa passada para Carla Lima (vez dela no rodízio).');
+    expect(msgs.find((x) => x.autor === 'sistema')?.texto).toBe('Rodízio automático: conversa passada para Carla Lima (vez no rodízio).');
+    // A lista de conversas continua mostrando a mensagem da cliente (o aviso entra logo antes dela).
+    expect((await m.repo.ultimasMensagens([c2.id])).get(c2.id)?.autor).toBe('cliente');
     const ev = (await m.repo.eventosEntre(quinta(0), quinta(23, 59))).filter((e) => e.tipo === 'transferencia' && e.conversaId === c2.id);
     expect(ev[0]?.dados).toMatchObject({ paraId: gente.carla.id, motivo: 'rodizio', porNome: 'Rodízio automático' });
 
