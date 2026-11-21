@@ -12,34 +12,36 @@ import type { Repositorio } from '../store/repositorio.js';
  * - POST /api/whatsapp/sincronizar     — todas as conversas recentes de todos os números (uma rodada por vez, por trás).
  * - GET  /api/whatsapp/sincronizar     — como está a rodada (a tela acompanha).
  * Entra como histórico: sem IA respondendo, sem avisos, sem automações (importarHistorico).
+ * atendimento-extra: fotos, áudios, vídeos, documentos e figurinhas vêm junto (baixados por trás, como os do webhook);
+ * mensagem que já estava só como texto ganha o arquivo, se a Evolution ainda tiver.
  */
 export interface OpcoesResgate {
   repo: Repositorio;
   admin: () => EvolutionAdmin | undefined;
   canais: () => string[];
-  importar: (m: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number }>;
+  importar: (m: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number; midias?: number }>;
   log?: (msg: string, extra?: string) => void;
 }
 
-interface Rodada { rodando: boolean; inicio: Date | null; fim: Date | null; conversas: number; mensagens: number; erro: string | null; numeros: number; feitos: number }
+interface Rodada { rodando: boolean; inicio: Date | null; fim: Date | null; conversas: number; mensagens: number; midias: number; erro: string | null; numeros: number; feitos: number }
 
 const erro = (msg: string, statusCode: number) => Object.assign(new Error(msg), { statusCode });
 
 export function registrarResgate(app: FastifyInstance, o: OpcoesResgate): { sincronizarTudo: () => Promise<void>; estado: () => Rodada } {
-  const rodada: Rodada = { rodando: false, inicio: null, fim: null, conversas: 0, mensagens: 0, erro: null, numeros: 0, feitos: 0 };
+  const rodada: Rodada = { rodando: false, inicio: null, fim: null, conversas: 0, mensagens: 0, midias: 0, erro: null, numeros: 0, feitos: 0 };
 
   async function sincronizarTudo(): Promise<void> {
     const adm = o.admin();
     if (!adm) throw erro('O WhatsApp não oficial não está configurado em Conexões.', 409);
     const canais = o.canais();
     if (!canais.length) throw erro('Nenhum WhatsApp conectado.', 409);
-    Object.assign(rodada, { rodando: true, inicio: new Date(), fim: null, conversas: 0, mensagens: 0, erro: null, numeros: canais.length, feitos: 0 });
+    Object.assign(rodada, { rodando: true, inicio: new Date(), fim: null, conversas: 0, mensagens: 0, midias: 0, erro: null, numeros: canais.length, feitos: 0 });
     try {
       for (const canal of canais) {
         try {
           const brutas = await adm.historico(canal, { conversas: 300, porConversa: 40 });
           const r = await o.importar(lerWebhookEvolution({ event: 'messages.upsert', instance: canal, data: brutas }));
-          rodada.mensagens += r.mensagens; rodada.conversas += r.conversas;
+          rodada.mensagens += r.mensagens; rodada.conversas += r.conversas; rodada.midias += r.midias ?? 0;
         } catch (e) {
           rodada.erro = 'Não deu para ler um dos números agora. Confira se o WhatsApp está conectado em Conexões.';
           o.log?.('Resgate: falha ao sincronizar um número', String(e));
@@ -67,7 +69,7 @@ export function registrarResgate(app: FastifyInstance, o: OpcoesResgate): { sinc
     catch (e) { o.log?.('Resgate: falha ao buscar uma conversa', String(e)); throw erro('Não deu para falar com o WhatsApp agora. Confira se ele está conectado em Conexões.', 502); }
     const lidas = lerWebhookEvolution({ event: 'messages.upsert', instance: c.canalId, data: brutas });
     const r = await o.importar(lidas);
-    return { encontradas: lidas.length, novas: r.mensagens };
+    return { encontradas: lidas.length, novas: r.mensagens, midias: r.midias ?? 0 };
   });
 
   app.post('/api/whatsapp/sincronizar', async () => {

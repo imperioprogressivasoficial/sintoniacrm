@@ -331,3 +331,13 @@ dialog.ag-folha { position: fixed; }
 .ag-origem { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-size: 11px; line-height: 16px; vertical-align: 1px; color: var(--ag-sub); border: 1px solid var(--ag-linha-forte); }
 .ag-faixa { flex: none; font-size: 12px; line-height: 1.4; color: var(--ag-sub); padding: 4px 16px; border-bottom: 1px solid var(--ag-linha); }
 .ag-faixa[hidden] { display: none; }
+
+/* atendimento-extra: reuniões marcadas pelo link de agendamento online (cor própria + etiqueta "Reunião online") */
+.ag, dialog.ag-dlg { --ag-creu: #0d2240; --ag-treu: #fff; --ag-freu: #0ffcbe; }
+html[data-tema="escuro"] .ag, html[data-tema="escuro"] dialog.ag-dlg { --ag-creu: #8fe9d6; --ag-treu: #04203a; --ag-freu: #3aa0ff; }
+.ag-creu { --c: var(--ag-creu); --t: var(--ag-treu); }
+.ag-ev.ag-creu, .ag-card.ag-creu, .ag-mchip.ag-creu { box-shadow: inset 3px 0 0 var(--ag-freu), 0 0 0 1px var(--ag-fundo); }
+.ag-ev .ag-etq { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .02em; opacity: .9; }
+.ag-ev.ag-curto .ag-etq { display: none; }
+.ag-card .ag-etq { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 17px; background: color-mix(in srgb, var(--ag-freu) 30%, transparent); color: inherit; }
+.ag-origem.ag-reu { border-color: var(--ag-freu); color: var(--ag-texto, inherit); font-weight: 600; }

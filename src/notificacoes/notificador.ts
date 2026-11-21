@@ -231,21 +231,22 @@ export class Notificador {
    * Aviso de sistema para a gestão (administração, direção e gerência): sino + push, tipo "falha".
    * A chave garante que o mesmo aviso sai uma vez só para cada pessoa (ex.: uma queda do WhatsApp).
    */
-  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string }): Promise<number> {
+  async avisarGestao(a: { titulo: string; texto: string; chave: string; vista?: string; tipo?: TipoNotificacao }): Promise<number> {
     let n = 0;
     for (const u of (await this.equipe()).filter((x) => ehGestor(x))) {
       if (await this.o.armazem.existeChave(u.id, a.chave)) continue;
-      if (await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
+      if (await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, chave: a.chave, ...(a.vista ? { vista: a.vista } : {}) })) n++;
     }
     return n;
   }
 
   /** msg-agendada: aviso direto para uma pessoa (ex.: a mensagem que ela agendou não saiu). Sino + push, tipo "falha". */
-  async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string }): Promise<boolean> {
+  /** atendimento-extra: `tipo` e `vista` opcionais (ex.: "reuniao" abrindo a Agenda). */
+  async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string; vista?: string; tipo?: TipoNotificacao }): Promise<boolean> {
     const u = (await this.equipe()).find((x) => x.id === usuarioId);
     if (!u) return false;
     if (a.chave && (await this.o.armazem.existeChave(u.id, a.chave))) return false;
-    return Boolean(await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, ...(a.conversaId ? { conversaId: a.conversaId } : {}), ...(a.chave ? { chave: a.chave } : {}) }));
+    return Boolean(await this.criar(u, { tipo: a.tipo ?? 'falha', titulo: a.titulo, texto: a.texto, ...(a.conversaId ? { conversaId: a.conversaId } : {}), ...(a.vista ? { vista: a.vista } : {}), ...(a.chave ? { chave: a.chave } : {}) }));
   }
 
   // ---------------------------------------------------------------- relógio

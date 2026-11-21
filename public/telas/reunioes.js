@@ -48,6 +48,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .rn-dias button { all: unset; cursor: pointer; width: 42px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .rn-dias button[aria-pressed="true"] { background: linear-gradient(135deg, #106ebe, #3aa0ff); color: #fff; box-shadow: none; }
   .rn-erro { color: var(--erro, #c43a3a); font-size: 13px; margin: 0; }
+  /* atendimento-extra: avisos do link (WhatsApp para o contato e lembrete) */
+  .rn-avisos { display: grid; gap: 10px; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .rn-avisos > b { font-size: 13.5px; color: var(--texto); }
+  .rn-form label.rn-chave { display: flex; align-items: center; gap: 10px; font-weight: 500; color: var(--texto); font-size: 14px; cursor: pointer; }
+  .rn-chave input { width: 20px; height: 20px; accent-color: #106ebe; flex: none; margin: 0; }
+  .rn-chave small { display: block; color: var(--sub); font-size: 12.5px; }
+  .rn-selo { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--sub); }
   `;
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const resumoDias = (ds) => { const s = [...ds].sort(); if (s.join() === '1,2,3,4,5') return 'seg a sex'; if (s.join() === '1,2,3,4,5,6') return 'seg a sáb'; if (s.length === 7) return 'todos os dias'; return s.map((d) => DIAS[d].toLowerCase()).join(', '); };
@@ -68,6 +75,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       return el('div', { class: 'rn-link' + (l.ativo ? '' : ' off') },
         el('div', { class: 'rn-link-cab' }, el('b', { text: l.titulo }), el('span', { class: 'rn-meta', text: l.ativo ? 'Ligado' : 'Desligado' })),
         el('span', { class: 'rn-meta', text: `${l.duracao_min} min · ${resumoDias(l.dias)} · ${l.inicio}–${l.fim}${l.local ? ' · ' + l.local : ''}` }),
+        el('span', { class: 'rn-selo', text: `${l.whatsapp_cliente === false ? 'Sem WhatsApp para o contato' : 'Confirma pelo WhatsApp'} · ${!l.lembrete_min ? 'sem lembrete' : l.lembrete_min >= 1440 ? 'lembrete 1 dia antes' : l.lembrete_min >= 60 ? `lembrete ${l.lembrete_min / 60} h antes` : `lembrete ${l.lembrete_min} min antes`}` }),
         el('a', { class: 'rn-url', href: urlDe(l.slug), target: '_blank', rel: 'noopener', text: urlDe(l.slug) }),
         el('div', { class: 'rn-acoes' }, copiar,
           el('button', { class: 'rn-bt', type: 'button', text: 'Editar', onclick: () => editar(l) }),
@@ -102,7 +110,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function editar(l) {
     const el = ui.el;
-    const v = l || { titulo: '', descricao: '', duracao_min: 30, dias: [1, 2, 3, 4, 5], inicio: '09:00', fim: '18:00', antecedencia_h: 2, janela_dias: 21, local: '', ativo: true };
+    const v = l || { titulo: '', descricao: '', duracao_min: 30, dias: [1, 2, 3, 4, 5], inicio: '09:00', fim: '18:00', antecedencia_h: 2, janela_dias: 21, local: '', ativo: true, whatsapp_cliente: true, lembrete_min: 60 };
     const dias = new Set(v.dias);
     const campo = (rot, input) => el('label', {}, document.createTextNode(rot), input);
     const titulo = el('input', { value: v.titulo, maxlength: '80', placeholder: 'Ex.: Reunião de 30 minutos' });
@@ -116,6 +124,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       b.addEventListener('click', () => { dias.has(i) ? dias.delete(i) : dias.add(i); b.setAttribute('aria-pressed', String(dias.has(i))); });
       return b;
     }));
+    /* atendimento-extra: confirmação pelo WhatsApp e lembrete antes da reunião */
+    const zap = el('input', { type: 'checkbox' }); zap.checked = v.whatsapp_cliente !== false;
+    const lembrete = el('select', {}, ...[[0, 'Sem lembrete'], [15, '15 minutos antes'], [30, '30 minutos antes'], [60, '1 hora antes'], [120, '2 horas antes'], [1440, '1 dia antes']].map(([m, t]) => { const o = el('option', { value: String(m), text: t }); if (m === (v.lembrete_min ?? 60)) o.selected = true; return o; }));
+    const avisos = el('div', { class: 'rn-avisos' }, el('b', { text: 'Avisos' }),
+      el('label', { class: 'rn-chave' }, zap, el('span', {}, document.createTextNode('Confirmar pelo WhatsApp'), el('small', { text: 'O contato recebe a confirmação (com o link para desmarcar), o lembrete e o aviso se a reunião for cancelada. Só para quem deixar o WhatsApp.' }))),
+      campo('Lembrete (para o contato e para você)', lembrete),
+      el('small', { class: 'rn-meta', text: 'Você e a gestão recebem um aviso no sino (e no celular) quando alguém marca ou desmarca.' }));
     const erro = el('p', { class: 'rn-erro', role: 'alert', hidden: '' });
     const d = el('dialog', { class: 'rn-d' });
     const salvar = el('button', { class: 'rn-bt forte', type: 'submit', text: l ? 'Salvar' : 'Criar link' });
@@ -124,11 +139,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       campo('Nome', titulo), el('div', { class: 'rn-dois' }, campo('Duração', dur), campo('Antecedência mínima', ant)),
       el('label', {}, document.createTextNode('Dias'), botoesDias),
       el('div', { class: 'rn-dois' }, campo('Das', ini), campo('Até', fim)),
-      campo('Local', local), campo('Descrição', desc), erro,
+      campo('Local', local), campo('Descrição', desc), avisos, erro,
       el('div', { class: 'rn-acoes', style: 'justify-content:flex-end' }, el('button', { class: 'rn-bt', type: 'button', text: 'Cancelar', onclick: () => d.close() }), salvar));
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); erro.hidden = true;
-      const corpo = { titulo: titulo.value, descricao: desc.value, duracao_min: Number(dur.value), dias: [...dias], inicio: ini.value, fim: fim.value, antecedencia_h: Number(ant.value), janela_dias: v.janela_dias, local: local.value, ativo: v.ativo };
+      const corpo = { titulo: titulo.value, descricao: desc.value, duracao_min: Number(dur.value), dias: [...dias], inicio: ini.value, fim: fim.value, antecedencia_h: Number(ant.value), janela_dias: v.janela_dias, local: local.value, ativo: v.ativo, whatsapp_cliente: zap.checked, lembrete_min: Number(lembrete.value) };
       try {
         if (l) await ui.api(`/api/reunioes/links/${l.id}`, { method: 'PUT', body: JSON.stringify(corpo) });
         else await ui.post('/api/reunioes/links', corpo);

@@ -39,8 +39,10 @@
     bt.setAttribute('aria-busy', 'true'); bt.lastChild.textContent = 'Buscando no WhatsApp…';
     try {
       const r = await post(`/api/conversas/${id}/resgatar`, {});
-      toast(r.novas ? `${r.novas} ${r.novas === 1 ? 'mensagem resgatada' : 'mensagens resgatadas'} ✓` : 'Tudo certo: nenhuma mensagem faltando nesta conversa.');
-      if (r.novas) { estado.assinatura = ''; await ui.atualizar?.(); }
+      // atendimento-extra: fotos e áudios vêm junto e são baixados por trás.
+      const arq = r.midias ? ` · ${r.midias} ${r.midias === 1 ? 'arquivo' : 'arquivos'} (fotos, áudios…) baixando` : '';
+      toast(r.novas ? `${r.novas} ${r.novas === 1 ? 'mensagem resgatada' : 'mensagens resgatadas'}${arq} ✓` : r.midias ? `${r.midias} ${r.midias === 1 ? 'arquivo recuperado' : 'arquivos recuperados'} (fotos, áudios…) ✓` : 'Tudo certo: nenhuma mensagem faltando nesta conversa.');
+      if (r.novas || r.midias) { estado.assinatura = ''; await ui.atualizar?.(); }
     } catch (e) { toast(e.message || 'Não deu para resgatar agora.'); }
     bt.removeAttribute('aria-busy'); bt.lastChild.textContent = 'Faltou alguma mensagem? Resgatar do WhatsApp';
   }
@@ -68,11 +70,11 @@
     const mostrar = (r) => {
       const pct = r.numeros ? Math.round((r.feitos / r.numeros) * 100) : 0;
       barra.style.width = (r.rodando ? Math.max(8, pct) : 100) + '%';
-      num.textContent = `${r.mensagens} ${r.mensagens === 1 ? 'mensagem nova' : 'mensagens novas'} em ${r.conversas} ${r.conversas === 1 ? 'conversa' : 'conversas'}`;
+      num.textContent = `${r.mensagens} ${r.mensagens === 1 ? 'mensagem nova' : 'mensagens novas'} em ${r.conversas} ${r.conversas === 1 ? 'conversa' : 'conversas'}${r.midias ? ` · ${r.midias} ${r.midias === 1 ? 'arquivo' : 'arquivos'} (fotos, áudios…)` : ''}`;
       if (!r.rodando) {
         clearInterval(t);
-        texto.textContent = r.erro ? r.erro : r.mensagens ? 'Pronto. As mensagens que faltavam já estão nas conversas.' : 'Pronto. Nada estava faltando.';
-        if (r.mensagens) { estado.assinatura = ''; ui.atualizar?.(); }
+        texto.textContent = r.erro ? r.erro : r.mensagens || r.midias ? `Pronto. As mensagens que faltavam já estão nas conversas.${r.midias ? ' As fotos e os áudios vão aparecendo enquanto baixam (só os dos últimos 30 dias; os mais antigos têm o botão “Baixar”).' : ''}` : 'Pronto. Nada estava faltando.';
+        if (r.mensagens || r.midias) { estado.assinatura = ''; ui.atualizar?.(); }
       }
     };
     try {

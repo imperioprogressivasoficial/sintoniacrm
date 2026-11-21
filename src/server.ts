@@ -91,6 +91,8 @@ export interface DependenciasServidor {
   poolReunioes?: import('pg').Pool;
   /* integracoes: reunião marcada/cancelada pelo link vira webhook "agendamento.*" (src/integracoes). */
   aoReuniao?: (tipo: 'criado' | 'cancelado', empresaId: string, reuniao: Record<string, unknown>) => void;
+  /* atendimento-extra: avisos do agendamento online (sino + push, WhatsApp para o contato, lembrete antes). */
+  avisosReuniao?: import('./reunioes/avisos.js').AvisosReuniao;
   /** Rotina do vendedor (tarefas e checklist do dia): src/rotina/rotina.ts. */
   poolRotina?: import('pg').Pool;
   /** Presença da equipe ("Disponível para atender"). */
@@ -610,7 +612,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   if (d.chamadas) registrarLigacoes(app, { repo: d.repo, chamadas: d.chamadas.armazem, empresaId: d.chamadas.empresaId, agora });
 
   if (d.layoutsPainel) registrarLayoutPainel(app, d.layoutsPainel);
-  if (d.poolReunioes) registrarReunioes(app, d.poolReunioes, { aoReuniao: d.aoReuniao });
+  if (d.poolReunioes) registrarReunioes(app, d.poolReunioes, {
+    aoReuniao: d.aoReuniao,
+    /* atendimento-extra */ avisos: d.avisosReuniao,
+    podeAbrir: async (req, id) => {
+      const c = await d.repo.buscarConversa(id);
+      return Boolean(c && (!req.usuario || (c.empresaId === req.usuario.empresaId && podeVer(req.usuario, c))));
+    },
+  });
   if (d.poolRotina) registrarRotina(app, { pool: d.poolRotina, contas: d.auth?.contas, repo: d.repo, visivelPara, agora });
   if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
 

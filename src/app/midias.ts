@@ -42,7 +42,10 @@ export class Midias {
       do {
         this.deNovo = false;
         try {
-          total += await this.rodada();
+          const n = await this.rodada();
+          total += n;
+          // atendimento-extra: rodada cheia (ex.: fotos do histórico) = ainda tem fila; segue, 5 de cada vez, por trás.
+          if (n >= 5) this.deNovo = true;
         } catch (e) {
           this.log('Falha ao ler mídias pendentes', String(e));
         }

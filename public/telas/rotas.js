@@ -49,6 +49,7 @@
     if (v === 'conversas') sub = conversaAberta() || '';
     else if (v === 'funil') { try { sub = limpo(T().funil?.atual?.()); } catch {} }
     else if (v === 'analises') { try { sub = limpo(T().analises?.aba?.()); } catch {} }
+    else if (v === 'automacoes') { try { sub = limpo(T().automacoes?.aba?.()); } catch {} } // atendimento-extra: /app/fluxos/follow-up
     return '/app/' + (CAMINHO[v] || encodeURIComponent(v)) + (sub ? '/' + encodeURIComponent(sub) : '');
   }
   const dec = (x) => { try { return decodeURIComponent(x); } catch { return ''; } };
@@ -116,7 +117,8 @@
       if (r.vista === 'funil' && r.sub) t.funil?.abrirFunil?.(r.sub);
       if (r.vista === 'analises' && r.sub && r.sub !== t.analises?.aba?.()) t.analises?.focar?.(r.sub);
       if (r.vista === 'clientes' && r.sub) t.clientes?.irAba?.(r.sub);
-      if (r.vista !== estado.vista || (r.sub && r.vista !== 'conversas')) ui.mostrar(r.vista);
+      if (r.vista === 'automacoes') t.automacoes?.irAba?.(r.sub || 'fluxos', false); // atendimento-extra
+      if (r.vista !== estado.vista || (r.sub && r.vista !== 'conversas') || r.vista === 'automacoes') ui.mostrar(r.vista);
       if (r.vista === 'conversas') {
         const aberta = conversaAberta();
         if (r.sub && r.sub !== aberta) ui.abrir(r.sub);
