@@ -36,7 +36,7 @@
    * Poppins nos textos (400 · 500 · 600 · 700), Sintony nos títulos e números de destaque (só 700),
    * e a monoespaçada do próprio aparelho para códigos, chaves e links (não baixa nada).
    * Pesos fora da lista (800, 650…) caem no 700/600 que foi carregado. Itálico: sem arquivo próprio. */
-  --fonte: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --fonte: "Poppins", "Noto Color Emoji", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; /* emojis: no Windows/Linux vem o Noto (o mesmo desenho do Android); no iPhone/Mac/Android fica o do próprio aparelho */
   --fonte-titulo: "Sintony", "Poppins", ui-sans-serif, system-ui, sans-serif;
   --fonte-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 

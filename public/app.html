@@ -26,6 +26,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- rotas-fontes: Poppins 400–700 (textos) + Sintony 700 (títulos); a monoespaçada é a do aparelho. Ver docs/FONTES.md -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
+<script>/* emojis (dono 21/11): iPhone, Mac e Android já têm os emojis bonitos do aparelho. No computador com Windows/Linux
+   baixa o Noto Color Emoji (Google, licença livre; o desenho do Android), só os pedaços dos emojis que aparecerem. */
+(() => { const ua = navigator.userAgent; if (/iPhone|iPad|iPod|Macintosh|Mac OS X|Android/i.test(ua)) return;
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap'; document.head.append(l); })();</script>
 <link rel="stylesheet" href="/ds.css">
 <link rel="stylesheet" href="/abertura.css">
 <style>
@@ -2661,6 +2665,13 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (!$('visor').hidden) fecharVisor(); else if (grav.rec) pararGravacao(true);
+    /* ESC fecha a conversa e volta para a tela da logo, como no WhatsApp Web (dono 21/11). Antes fecha o que estiver
+       por cima: menus, folhas, painéis e diálogos têm o próprio ESC. */
+    else if (estado.aberta && estado.vista === 'conversas' && !e.defaultPrevented && !document.querySelector('dialog[open]') && !window.SintoniaPainel?.elemento?.()?.open) {
+      const menu = [$('menu-mais'), $('menu-lista')].find((m) => m && !m.hidden);
+      if (menu) { menu.hidden = true; return; }
+      fecharConversa();
+    }
   });
 
   // menu +
