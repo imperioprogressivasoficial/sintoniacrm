@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 22:12 UTC (21/11, 19h12 na Bahia)
-commit: cdea070
-pacote sha256: 4acc1a283fcf3c91da0632bbac5bdaf8d3575bcd5f68e4e0ba68f70e10a6b148
+data: 2026-11-21 22:24 UTC (21/11, 19h24 na Bahia)
+commit: eea23f8
+pacote sha256: b05ce605a7c0a963b5939d9429cbe44f47146d204efbc1b014cabe7a81c005d4
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-cdea070.b64); pode apagar depois.
-observação: em cima do f5a4bb5. Entra: Sair (botão no menu lateral, janela com a chave de Disponível, animação de saída) e branch claude/foto-atende (foto de quem atende 18px abaixo do tempo, modelo 2).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-eea23f8.b64); pode apagar depois.
+observação: em cima do cdea070. Entra: Modo noturno ⇄ Modo claro no menu lateral (sol no escuro, lua no claro).

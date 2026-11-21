@@ -13,6 +13,7 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
 
+- **21/11 22:24 UTC — no ar o eea23f8:** menu lateral mostra "Modo claro" com sol quando está escuro (e "Modo noturno" com lua no claro).
 - **21/11 22:12 UTC — no ar o cdea070:** Sair (public/telas/sair.js, window.SintoniaSair e window.SintoniaPresencaEu) e foto de quem atende no modelo 2. Barra do topo: aguardando o dono escolher em https://claude.ai/artifact/R7Q9rzVpwDj6HxmHx1huxU
 - **21/11 21:57 UTC — no ar o f5a4bb5:** sugestão da IA como balão fantasma (public/telas/balao-fantasma.js). Falta: página de vendas (cena Copiloto) ainda fala da faixa antiga. Em andamento: claude/foto-atende.
 - **21/11 21:52 UTC — no ar o 12ac647:** Serena super (src/serena/ler.ts, mudar.ts, internet.ts; Pensar mais) e nome da Serena no meio do topo. Conferir com a chave real: uma pesquisa na internet e um Pensar mais.
