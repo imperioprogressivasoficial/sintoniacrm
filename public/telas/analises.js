@@ -5,7 +5,9 @@
  *   satisfacao  NPS (o mesmo painel do Relatório geral, de src/nps)
  *   horarios    picos de leads, mensagens e agendamentos (dia da semana × hora)
  *   funil       tempo parado em cada etapa, quem está parado agora e motivos de perda
+ *   perdas      perdas por motivo, pela etapa em que o lead estava, por quem atendia e pela origem (perdas-saude)
  *   tv          link do Painel na TV (copiar, abrir, gerar novo, revogar) e prévia
+ *   saude       saúde do sistema: filas, tempo até aparecer, IA, mídias, WhatsApp, processo e banco (telas/saude.js)
  * Dados: /api/analises/:tipo (src/analises). Mesmo visual do Relatório geral (classes .rl- de relatorios.js) e,
  * no computador, toda a largura com margem de 28px como o Dashboard. Texto do servidor sempre por textContent.
  */
@@ -17,7 +19,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['satisfacao', 'Satisfação'],
     ['horarios', 'Horários'],
     ['funil', 'Funil'],
+    ['perdas', 'Perdas'], // perdas-saude
     ['tv', 'Painel da TV'],
+    ['saude', 'Saúde do sistema'], // perdas-saude
   ];
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['30d', '30 dias'], ['personalizado', 'Período']];
   const TABELAS = {
@@ -25,6 +29,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     clientes: [['resumo', 'Resumo de clientes'], ['fieis', 'Clientes fiéis'], ['sumidas', 'Para chamar de volta']],
     horarios: [['leads', 'Leads por dia e hora'], ['mensagens', 'Mensagens por dia e hora'], ['agendamentos', 'Agendamentos por dia e hora']],
     funil: [['etapas', 'Tempo em cada etapa'], ['paradas', 'Paradas há mais tempo'], ['perdas', 'Motivos de perda']],
+    perdas: [['motivos', 'Perdas por motivo'], ['etapas', 'Por etapa em que perdeu'], ['atendentes', 'Por quem atendia'], ['origens', 'Por origem do lead'], ['lista', 'Todas as perdas do período']], // perdas-saude
   };
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const DIAS_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
@@ -447,6 +452,50 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ];
   }
 
+  // ---------------------------------------------------------------- perdas (perdas-saude)
+  function abaPerdas(r) {
+    const el = s.ui.el;
+    const t = r.totais;
+    const chipPerdas = t.variacaoPct == null ? { texto: 'sem comparação' } : { texto: `${t.variacaoPct > 0 ? '▲' : t.variacaoPct < 0 ? '▼' : ''} ${fmtPct(Math.abs(t.variacaoPct))} vs período anterior`.trim(), classe: t.variacaoPct > 0 ? 'desce' : t.variacaoPct < 0 ? 'sobe' : '' };
+    const top = r.motivos[0];
+    const kpis = el('div', { class: 'an-kpis', role: 'list', 'aria-label': 'Resumo das perdas' },
+      kpi('Perdas no período', fmtN(t.perdas), `antes: ${fmtN(t.anterior)}`, chipPerdas),
+      kpi('Motivo mais comum', top ? top.nome : '—', top ? `${fmtN(top.total)} · ${fmtPct(top.pct)} das perdas` : 'nenhuma perda no período'),
+      kpi('Perdas ÷ leads novos', t.taxaPct == null ? '—' : fmtPct(t.taxaPct), `${fmtN(t.leads)} leads chegaram no período`),
+      kpi('Marcadas pela equipe', fmtN(t.manuais), `${fmtN(t.automaticas)} automáticas (IA, follow-up, automação)`),
+      kpi('Sem motivo', fmtN(t.semMotivo), t.semMotivo ? 'vieram de integrações ou de antes da regra' : 'toda perda tem motivo'));
+    const cores = ['#ff7a59', '#f5b800', '#7cc4ff', '#9db8ff', '#19c3a6', '#c084fc', '#94a3b8'];
+    const grupo = (lista, vazioTxt, comPrincipal) => (lista.length
+      ? barras(lista.slice(0, 12).map((g, i) => ({ nome: g.nome, valor: g.total, cor: comPrincipal ? null : cores[i % cores.length], nota: [fmtPct(g.pct), comPrincipal && g.principal ? `mais: ${g.principal.nome}` : null, g.automaticas ? `${fmtN(g.automaticas)} autom.` : null].filter(Boolean).join(' · ') })))
+      : vazio(vazioTxt));
+    const editar = s.ui.ehGestor(s.ui.estado.eu || {}) && window.SintoniaPerda
+      ? el('button', { class: 'an-bt', type: 'button', text: 'Editar motivos', onclick: () => window.SintoniaPerda.editarMotivos(s.ui, () => carregar()) })
+      : null;
+    const motivos = el('div', { style: 'display:grid;gap:14px' }, grupo(r.motivos, 'Nenhum lead foi perdido neste período.'), editar ? el('div', { class: 'an-acoes' }, editar) : null);
+    const escritos = r.detalhes.length
+      ? el('div', { class: 'an-lista' }, ...r.detalhes.slice(0, 12).map((d) => el('div', { class: 'an-item' },
+        el('b', { text: d.cliente }),
+        el('small', { text: `${d.motivo} · ${dataCurta(d.em)}` }),
+        el('small', { style: 'white-space:normal;color:var(--texto)', text: `“${d.detalhe}”` }),
+        el('span', { class: 'an-tempo' }, abrirConversa(d.conversaId)))))
+      : vazio('Quando a equipe escrever um detalhe ao marcar a perda, ele aparece aqui.');
+    const ultimas = r.lista.length
+      ? tabela([['motivo', 'Motivo', (v) => v], ['etapa', 'Estava em', (v) => v], ['atendente', 'Quem atendia', (v) => v], ['origem', 'Origem', (v) => v], ['em', 'Quando', (v) => dataCurta(v)], ['abrir', '', () => '']],
+        r.lista.slice(0, 40).map((p) => ({ ...p, nome: p.cliente, nomeEl: p.cliente })), 'Cliente')
+      : vazio('Nenhuma perda no período.');
+    if (r.lista.length) ultimas.querySelectorAll('tbody tr').forEach((tr, i) => { const td = tr.lastElementChild; td.textContent = ''; td.append(abrirConversa(r.lista[i].conversaId)); });
+    return [
+      kpis,
+      el('div', { class: 'rl-grade' },
+        painel('motivos', 'Por motivo', 'o que a equipe escolheu ao mover para uma etapa de perda (e as automáticas)', 'rl-g6', csvDe('perdas', 'motivos'), motivos),
+        painel('etapas', 'Em que etapa perdeu', 'onde o lead estava antes de ir para a perda', 'rl-g6', csvDe('perdas', 'etapas'), grupo(r.etapas, 'Sem perdas no período.', true)),
+        painel('atendentes', 'Por quem atendia', 'responsável pelo lead na hora da perda · motivo mais comum', 'rl-g6', csvDe('perdas', 'atendentes'), grupo(r.atendentes, 'Sem perdas no período.', true)),
+        painel('origens', 'Por origem do lead', 'anúncio, link, indicação ou campo da ficha', 'rl-g6', csvDe('perdas', 'origens'), grupo(r.origens, 'Sem perdas no período.', true)),
+        painel('detalhes', 'O que a equipe escreveu', 'os detalhes mais recentes', 'rl-g12', null, escritos),
+        painel('lista', 'Últimas perdas', `${fmtN(r.listaTotal)} no período${r.listaTotal > 40 ? ' · as 40 mais recentes (o CSV traz todas)' : ''}`, 'rl-g12', csvDe('perdas', 'lista'), ultimas)),
+    ];
+  }
+
   // ---------------------------------------------------------------- Painel da TV
   function abaTv() {
     const el = s.ui.el;
@@ -499,7 +548,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const el = s.ui.el;
     const op = s.opcoes || { unidades: [], atendentes: [] };
     const linha = el('div', { class: 'rl-controles' });
-    if (s.aba === 'tv') return linha;
+    if (s.aba === 'tv' || s.aba === 'saude') return linha;
     linha.append(el('div', { class: 'rl-trilho rl-vidro', role: 'group', 'aria-label': 'Período' },
       ...PERIODOS.map(([k, t]) => el('button', { type: 'button', 'aria-pressed': String(k === s.f.periodo), text: t, onclick: () => mudar({ periodo: k, ...(k === 'personalizado' && !s.f.de ? { de: addDias(hojeBahia(), -29), ate: hojeBahia() } : {}) }) }))));
     if (s.f.periodo === 'personalizado') {
@@ -537,6 +586,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function subtitulo(r) {
     if (s.aba === 'tv') return 'Painel da sala comercial para deixar aberto na TV';
+    if (s.aba === 'saude') return 'Atualiza a cada 15 s enquanto esta tela está aberta';
     if (!r || !r.inicio) return 'Carregando…';
     const ultimo = new Date(new Date(r.fim).getTime() - 1);
     const dias = Math.round((new Date(r.fim) - new Date(r.inicio)) / 864e5) || 1;
@@ -556,13 +606,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const topo = el('div', { class: 'rl-topo' }, el('h1', { class: 'titulo-grande' }, 'Análises', el('span', { class: 'rl-quando', text: `${titulo} · ${subtitulo(s.aba === 'satisfacao' ? r && { inicio: r.inicio, fim: r.fim } : r)}` })));
     const raiz = el('div', { class: 'rl an' }, topo, abas(), controles());
     if (s.aba === 'tv') raiz.append(...abaTv());
+    else if (s.aba === 'saude') { /* perdas-saude: telas/saude.js desenha e atualiza sozinho (só com a tela aberta) */
+      const host = el('div', { class: 'an-saude' });
+      raiz.append(host);
+      if (window.SintoniaSaude) window.SintoniaSaude.montar(host, ui); else host.append(vazio('O painel de saúde não carregou. Recarregue a página.'));
+    }
     else if (s.erro && !r) raiz.append(el('div', { class: 'rl-erro rl-vidro', role: 'alert' }, el('b', { text: 'Não deu para carregar esta análise' }), el('span', { text: s.erro }), el('button', { class: 'rl-botao', type: 'button', text: 'Tentar de novo', onclick: carregar })));
     else if (!r) raiz.append(el('div', { class: 'an-kpis' }, ...[1, 2, 3, 4].map(() => el('div', { class: 'rl-esq', style: 'height:96px' }))), el('div', { class: 'rl-esq' }));
     else {
-      const montar = { vendas: abaVendas, clientes: abaClientes, satisfacao: abaSatisfacao, horarios: abaHorarios, funil: abaFunil }[s.aba];
+      const montar = { vendas: abaVendas, clientes: abaClientes, satisfacao: abaSatisfacao, horarios: abaHorarios, funil: abaFunil, perdas: abaPerdas }[s.aba];
       try { raiz.append(...montar(r).filter(Boolean)); } catch (x) { console.error(x); raiz.append(vazio('Não deu para montar esta análise.')); }
     }
     caixa.replaceChildren(raiz);
+    // perdas-saude: no celular as abas rolam de lado; a aba escolhida fica à vista.
+    const trilho = raiz.querySelector('[role="tablist"]');
+    const aba = trilho?.querySelector('[aria-selected="true"]');
+    if (trilho && aba && trilho.scrollWidth > trilho.clientWidth) trilho.scrollLeft = Math.max(0, aba.offsetLeft - (trilho.clientWidth - aba.offsetWidth) / 2);
   }
 
   function trocarAba(k) {
@@ -583,6 +642,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { ui } = s;
     const g = ++s.geracao;
     s.erro = null;
+    if (s.aba === 'saude') { desenharTudo(); return; } // perdas-saude: o painel pede os próprios dados
     if (s.aba !== 'tv' && s.f.periodo === 'personalizado' && (!s.f.de || !s.f.ate)) { desenharTudo(); return; }
     desenharTudo();
     try {

@@ -878,6 +878,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         l2.length ? el('div', { class: 'fn-l2' }, ...l2) : null,
         extras.length ? el('div', { class: 'fn-linha2' }, ...extras) : null,
         tem('tags') && (cartao.tags || []).length ? el('div', { class: 'fn-tags' }, ...cartao.tags.slice(0, 3).map(tagEl)) : null,
+        cartao.perda && window.SintoniaPerda ? el('div', { class: 'fn-tags' }, window.SintoniaPerda.selo(cartao.perda)) : null, /* perdas-saude: motivo da perda */
         pe.length > 1 || tem('situacao') ? el('div', { class: 'fn-pe' }, ...pe) : null),
       mais);
     // Clicar no cartão abre a conversa; a ficha (observações, etapa, tags) fica no ⋯.
@@ -1391,7 +1392,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('div', { class: 'fn-r0' }, desdeEl(cartao), el('span', { class: 'fn-etapa-selo' }, el('i'), el('span', { text: col.etapa.nome }))),
         el('h3', { text: nome }),
         el('div', { class: 'fn-r2', text: [UNIDADE[cartao.unidade] || cartao.unidade, cartao.telefone ? formatarTel(cartao.telefone) : '', cartao.desde ? `desde ${s.ui.quando(cartao.desde)}` : ''].filter(Boolean).join(' · ') }),
-        el('div', { class: 'fn-r3' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')));
+        el('div', { class: 'fn-r3' }, previaEl(cartao.ultima), bolinha(cartao.dona, cartao.dona ? `Dona: ${cartao.dona.nome}` : 'Sem dona')),
+        ...[cartao.perda && window.SintoniaPerda?.linha(cartao.perda)].filter(Boolean)); /* perdas-saude */
       const i = s.q.colunas.indexOf(col);
       trilha.replaceChildren(...s.q.colunas.map((c, j) => {
         const atual = c === col;

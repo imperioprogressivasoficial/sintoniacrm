@@ -112,6 +112,10 @@ export type LinhaQuadro = Omit<Cartao, 'tags'> & { tagId: string };
 
 export class ErroFunil extends ErroTag {}
 
+/** perdas-saude: etapa de perda (funil do sistema: "Perdida"; nos outros, etapas com "perd" no nome, como "Perdido"). */
+export const ehEtapaDePerda = (funil: Pick<Funil, 'sistema'>, e: Pick<Tag, 'nome' | 'chaveSistema'>) =>
+  funil.sistema ? e.chaveSistema === 'perdida' : /perd/i.test(e.nome);
+
 export interface ArmazemFunis {
   listar(empresaId: string): Promise<Funil[]>;
   buscar(id: string): Promise<Funil | undefined>;
@@ -912,7 +916,7 @@ export class Funis implements DelegadoEtapas {
     const avisos: string[] = [];
     let etapasOk: string[] | null = f.etapas.length ? f.etapas.filter((id) => etapas.some((e) => e.id === id)) : null;
     if (f.situacao) {
-      const perdida = (e: EtapaFunil) => (funil.sistema ? e.chaveSistema === 'perdida' : /perd/i.test(e.nome));
+      const perdida = (e: EtapaFunil) => ehEtapaDePerda(funil, e);
       const naoPerdidas = etapas.filter((e) => !perdida(e));
       const ganho = funil.sistema ? etapas.filter((e) => e.chaveSistema === 'compareceu') : naoPerdidas.length > 1 ? [naoPerdidas.at(-1)!] : [];
       const daSituacao = (f.situacao === 'ganhos' ? ganho : etapas.filter(perdida)).map((e) => e.id);

@@ -97,6 +97,14 @@ import { registrarDesempenho } from './desempenho/rotas.js';
 import { FonteAnalisesMemoria, FonteAnalisesPostgres } from './analises/fonte.js';
 import { OrigensConversa } from './analises/origens.js';
 import { registrarAnalises } from './analises/rotas.js';
+/* perdas-saude: motivo de perda obrigatório, relatório de perdas e painel de saúde da gestão */
+import { Perdas } from './perdas/perdas.js';
+import { ArmazemPerdasMemoria, ArmazemPerdasPostgres } from './perdas/armazem.js';
+import { registrarPerdas } from './perdas/rotas.js';
+import { FonteSaudeMemoria, FonteSaudePostgres, PainelSaude } from './saude/painel.js';
+import { registrarSaude } from './saude/rotas.js';
+import type { BloqueioConta } from './auth/limite-login.js';
+import type { Usuario } from './auth/contas.js';
 import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
 import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type PorteiroCliente } from './planos/medidor.js';
 import { PagamentoAsaas, PagamentoEscolhido, registrarAsaas } from './planos/asaas.js';
@@ -383,6 +391,8 @@ const funis = new Funis({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   log,
 });
+/* perdas-saude: cada ida para uma etapa de perda fica registrada (com o motivo pedido na tela) */
+const perdas = new Perdas({ armazem: pool ? new ArmazemPerdasPostgres(pool) : new ArmazemPerdasMemoria(repo), funis, empresaId: cfg.SINTONIA_EMPRESA_ID, log });
 // E-mail marketing (só com banco). EMAIL_TRANSPORTE=arquivo:/pasta grava os e-mails em arquivos em vez de enviar (desenvolvimento).
 const transporteEmail = process.env.EMAIL_TRANSPORTE?.startsWith('arquivo:') ? transporteArquivo(process.env.EMAIL_TRANSPORTE.slice('arquivo:'.length)) : transporteReal;
 const email = pool ? new EmailMarketing({ pool, cofre, empresaId: cfg.SINTONIA_EMPRESA_ID, transporte: transporteEmail, urlPublica: process.env.SINTONIA_URL_PUBLICA, log }) : undefined;
@@ -644,12 +654,23 @@ const avisosReuniao = pool
 const importadorHistorico = pool
   ? new ImportadorHistorico({ fila: new FilaHistoricoPostgres(pool), importar: (m) => sintonia.importarHistorico(m), log })
   : undefined;
+/* perdas-saude: conta bloqueada por muitas tentativas de senha errada: a dona fica sabendo pelo sino e pelo e-mail. */
+async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void> {
+  const hora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }).format(new Date(b.ate));
+  const texto = `Alguém errou a senha da sua conta ${b.erros} vezes seguidas. Por segurança, ela ficou bloqueada até ${hora}. Se não foi você, troque a senha (Minha conta ou "Esqueci minha senha").`;
+  await notificador.avisarPessoa(u.id, { titulo: 'Tentativas de entrar na sua conta', texto, chave: `login-bloqueado-${u.id}-${Math.floor(b.ate / 60_000)}` }).catch(() => false);
+  if (email && (await email.temContaAtiva().catch(() => false))) {
+    const html = `<!doctype html><html lang="pt-BR"><body style="font-family:Arial,sans-serif;color:#0b1f33;line-height:1.6"><p>Olá, ${escaparHtml(u.nome.split(/\s+/)[0] || u.nome)}!</p><p>${escaparHtml(texto)}</p><p style="color:#5b6b7c;font-size:13px">Sintonia</p></body></html>`;
+    await email.enviarSistema({ para: u.email, nome: u.nome, assunto: 'Tentativas de entrar na sua conta do Sintonia', html, texto }).catch((e) => log('Aviso de conta bloqueada: o e-mail não saiu', String(e)));
+  }
+}
+const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const app = criarServidor({
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   sintonia,
   repo,
   log,
-  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}) },
+  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}), avisarBloqueio: avisarContaBloqueada /* perdas-saude */ },
   fila: { fila, avisar: () => trabalhador.avisar(), ...(filaIa ? { ia: () => filaIa.situacao() } : {}), ...(reservaEntrada ? { reserva: () => reservaEntrada!.pendentesNaReserva() } : {}) },
   contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
@@ -785,7 +806,8 @@ const app = criarServidor({
 agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
-registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids) });
+registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids), perdas });
+registrarPerdas(app, { perdas }); /* perdas-saude */
 registrarBots(app, { repo, bots });
 // Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
 const extras = montarExtras({
@@ -897,9 +919,22 @@ registrarAnalises(app, {
   contas,
   /* produtos-lead: receita por produto/serviço vinculado */
   produtosVinculados: (empresaId, ids) => produtosLead.porProduto(empresaId, ids),
+  perdas, // perdas-saude
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });
+/* perdas-saude: painel de saúde da gestão (Análises › Saúde do sistema) */
+const painelSaude = new PainelSaude({
+  fonte: pool ? new FonteSaudePostgres(pool) : new FonteSaudeMemoria(repo),
+  filaEntrada: () => fila.situacao(),
+  ...(reservaEntrada ? { reservaEmDisco: () => reservaEntrada!.pendentesNaReserva() } : {}),
+  ...(filaIa ? { filaIa: () => filaIa.situacao() } : {}),
+  iaPausadaAte: () => sintonia.iaPausadaAte(),
+  iaLigada: () => iaLigada,
+  whatsapp: () => whatsappSaude.resumo(),
+  ...(pool ? { pool: () => ({ total: pool!.totalCount, livres: pool!.idleCount, esperando: pool!.waitingCount }) } : {}),
+});
+registrarSaude(app, { painel: painelSaude });
 // Plano e uso da IA (Configurações › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
 // Pagamento: Asaas quando a chave está salva em Conexões › Pagamentos; sem chave, só registra o pedido (manual).
 const asaas = new PagamentoAsaas({ conexoes, nomeEmpresa: async () => (await empresa.dados()).nome, log });

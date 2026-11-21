@@ -806,6 +806,11 @@ export class Sintonia {
     }
   }
 
+  /** perdas-saude: até quando a IA está pausada por chave recusada (painel de saúde); null = não está. */
+  iaPausadaAte(): Date | null {
+    return this.iaRecusadaAte > this.agora().getTime() ? new Date(this.iaRecusadaAte) : null;
+  }
+
   /** robustez: a chave da IA mudou em Conexões: tira a pausa (a próxima mensagem já tenta com a chave nova). */
   liberarIa(): void {
     this.iaRecusadaAte = 0;

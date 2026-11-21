@@ -40,6 +40,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Senhas e chaves nunca vão para o GitHub. A senha do banco que já está em uso pode ser lida da receita
   que está no ar (Hostinger › projeto `sintonia`) — **reaproveite a mesma**, nunca gere outra.
 - Depois de publicar, atualize `deploy/no-ar.txt`.
+- Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
 - **21/11 03h25 (Bahia):** no ar 1f47263 — robustez (550) juntada; pipeline 3 modos e correção de mídia (base64 no webhook) também. Sem agentes rodando. Pendências do dono em docs/PEDIDOS.md (revisão 21/11).

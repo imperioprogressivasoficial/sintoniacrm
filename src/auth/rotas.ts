@@ -6,6 +6,7 @@ import { registrarEquipe } from './equipe.js';
 import { comNivel, dentroDoHorario, permissaoDaRota, resolver, type Permissoes } from './permissoes.js';
 import { registrarUsuarios } from './usuarios-rotas.js';
 import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
+import { LimiteLogin, mensagemBloqueio, type BloqueioConta } from './limite-login.js';
 import { diasDemonstracao, horarioValido, janelaDemonstracao } from '../vendas/demonstracao.js';
 
 export const COOKIE = 'sintonia_sessao';
@@ -20,6 +21,8 @@ export interface OpcoesAuth {
   acessos?: Acessos;
   /** Como o link de "esqueci minha senha" chega à pessoa (e-mail do sistema e/ou WhatsApp). */
   recuperacao?: Recuperacao;
+  /** perdas-saude: avisa a dona da conta (sino e e-mail) quando a conta é bloqueada por muitas tentativas erradas. */
+  avisarBloqueio?: (u: Usuario, b: BloqueioConta) => Promise<void>;
 }
 
 /** Envio do link de redefinição. Sem nenhum canal, a tela orienta a pedir à administração. */
@@ -95,6 +98,16 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   const agora = o.agora ?? (() => new Date());
   const horas = o.duracaoHoras ?? 12;
   const errosLogin = new Limite(5, 15 * 60_000);
+  /* perdas-saude: limite por endereço, por endereço+e-mail e por conta (espera crescente) e aviso à dona da conta */
+  const limiteLogin = new LimiteLogin({
+    aoBloquearConta: (b) => {
+      if (!o.avisarBloqueio) return;
+      void (async () => {
+        const u = await o.contas.buscarPorEmail(b.email);
+        if (u && u.ativo) await o.avisarBloqueio!(u, b);
+      })().catch(() => undefined);
+    },
+  });
   const contatos = new Limite(5, 60 * 60_000);
   // Usado quando o e-mail não existe, para a resposta demorar o mesmo (não revela quem tem conta).
   const hashFicticio = gerarHash('senha-que-ninguem-usa-0');
@@ -148,18 +161,25 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   app.post('/api/auth/entrar', async (req, reply) => {
     const b = Entrar.safeParse(req.body);
     if (!b.success) return reply.code(400).send({ erro: 'Informe e-mail e senha.' });
-    const chave = `${req.ip}|${b.data.email.toLowerCase()}`;
     const t = agora().getTime();
-    if (errosLogin.excedeu(chave, t)) {
-      return reply.code(429).send({ erro: 'Muitas tentativas. Espere 15 minutos e tente de novo.' });
+    const bloqueado = limiteLogin.bloqueio(req.ip, b.data.email, t);
+    if (bloqueado) {
+      const esperaSeg = Math.max(1, Math.ceil((bloqueado.ate - t) / 1000));
+      return reply.code(429).header('retry-after', String(esperaSeg)).send({ erro: mensagemBloqueio(bloqueado, t), bloqueio: bloqueado.motivo, esperaSeg, ate: new Date(bloqueado.ate).toISOString() });
     }
     const u = await o.contas.buscarPorEmail(b.data.email);
     const ok = await conferirSenha(b.data.senha, u?.senhaHash ?? (await hashFicticio));
     if (!u || !ok || !u.ativo) {
-      errosLogin.registrar(chave, t);
-      return reply.code(401).send({ erro: 'E-mail ou senha incorretos.' });
+      const r = limiteLogin.errou(req.ip, b.data.email, t);
+      if (r.bloqueio) {
+        // Esta tentativa errou (401) e, com ela, o acesso ficou bloqueado: a tela já mostra até quando.
+        const esperaSeg = Math.max(1, Math.ceil((r.bloqueio.ate - t) / 1000));
+        return reply.code(401).send({ erro: `E-mail ou senha incorretos. ${mensagemBloqueio(r.bloqueio, t)}`, restantes: 0, bloqueio: r.bloqueio.motivo, esperaSeg, ate: new Date(r.bloqueio.ate).toISOString() });
+      }
+      const aviso = r.restantes <= 2 ? ` ${r.restantes === 1 ? 'Mais 1 tentativa errada' : `Mais ${r.restantes} tentativas erradas`} e o acesso fica bloqueado por um tempo.` : '';
+      return reply.code(401).send({ erro: `E-mail ou senha incorretos.${aviso}`, restantes: r.restantes });
     }
-    errosLogin.limpar(chave);
+    limiteLogin.acertou(req.ip, b.data.email);
     const extras = acessos ? await acessos.extras(u.id) : undefined;
     if (extras && !dentroDoHorario(extras.horario, agora())) {
       return reply.code(403).send({ erro: 'Seu acesso está liberado só no seu horário de trabalho.', foraDoHorario: true });
@@ -250,7 +270,7 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   });
 
   registrarEquipe(app, o.contas);
-  if (acessos) registrarUsuarios(app, { contas: o.contas, acessos, agora, invalidar, permissoesDe: async (u) => (await resolverDe(u)).perms });
+  if (acessos) registrarUsuarios(app, { contas: o.contas, acessos, agora, invalidar, permissoesDe: async (u) => (await resolverDe(u)).perms, aoDefinirSenha: (u) => limiteLogin.liberarConta(u.email) });
 
   const Contato = z.object({
     nome: z.string().trim().min(2).max(120),

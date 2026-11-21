@@ -365,6 +365,7 @@
         el('div', {}, el('b', { text: nome }), comQuem(ctx, 'small', cartao, [QUEM, UNIDADE[cartao.unidade] || ''])),
         valorEl(ctx, cartao)),
       passos(ctx, col),
+      cartao.perda && window.SintoniaPerda ? window.SintoniaPerda.linha(cartao.perda) : null, /* perdas-saude */
       balao,
       el('div', { class: 'fc-acoes' },
         el('button', { class: 'fc-ico', type: 'button', 'aria-label': `Abrir conversa com ${nome}`, title: 'Abrir conversa', html: IC.conversa, onclick: () => ctx.ui.abrir(cartao.conversaId) }),
@@ -390,7 +391,8 @@
       b.append(el('span', { class: 'fc-p0' }, el('b', { text: nome }), valorEl(ctx, cartao)));
     }
     b.append(passos(ctx, col),
-      el('span', { class: 'fc-p2' }, comChip ? el('span', { text: situacao(ctx, cartao) }) : comQuem(ctx, 'span', cartao, [QUEM]), el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto })));
+      el('span', { class: 'fc-p2' }, comChip ? el('span', { text: situacao(ctx, cartao) }) : comQuem(ctx, 'span', cartao, [QUEM]), el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto })),
+      ...(cartao.perda && window.SintoniaPerda ? [el('span', { style: 'display:flex;min-width:0' }, window.SintoniaPerda.selo(cartao.perda))] : [])); /* perdas-saude */
     return b;
   }
   function situacao(ctx, cartao) {

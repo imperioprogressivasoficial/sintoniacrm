@@ -5,10 +5,11 @@ import type { Repositorio } from '../store/repositorio.js';
 import { ehGestor, escopoDe, podeVer } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import { ehCanalTeste } from '../channels/teste.js';
-import { ACOES_PRINCIPAIS, type Funis } from '../funis/funis.js';
+import { ACOES_PRINCIPAIS, ehEtapaDePerda, type Funis } from '../funis/funis.js';
 import { lerFiltro } from '../funis/filtro-leads.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
 import { zUnidade } from '../unidades.js';
+import { ErroPerda, type Perdas } from '../perdas/perdas.js';
 
 /**
  * Rotas dos funis por tags e das automações. Registradas depois de criarServidor (src/index.ts),
@@ -24,6 +25,8 @@ export interface OpcoesRotasFunis {
   automacoes?: Automacoes;
   /** Origem do lead (ícone e selo) de cada cartão. */
   origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
+  /** perdas-saude: motivo de perda obrigatório ao mover para uma etapa de perda e o motivo no cartão. */
+  perdas?: Perdas;
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
@@ -139,7 +142,13 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
     const [em, id] = q.apos ? q.apos.split('|') : [];
     const apos = em && id && !Number.isNaN(Date.parse(em)) ? { em: new Date(em), id } : undefined;
     const av = await avancado(req, param(req, 'id'), filtro);
-    const r = { ...(await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario), avancado: av.avancado })), avisos: av.avisos };
+    let r = { ...(await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario), avancado: av.avancado })), avisos: av.avisos };
+    /* perdas-saude: motivo da perda nos cartões das etapas de perda */
+    if (o.perdas) {
+      const ids = r.colunas.filter((c) => ehEtapaDePerda(r.funil, c.etapa)).flatMap((c) => c.cartoes.map((x) => x.conversaId));
+      const mapa = await o.perdas.dosCartoes(r.funil.id, ids).catch(() => ({}) as Awaited<ReturnType<Perdas['dosCartoes']>>);
+      if (ids.length) r = { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => (mapa[x.conversaId] ? { ...x, perda: mapa[x.conversaId] } : x)) })) };
+    }
     if (!o.origens) return r;
     const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
     return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
@@ -194,11 +203,26 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
     return { valor: await funis.definirValor(c, valor, quem(req)) };
   });
 
-  const Mover = z.object({ etapaId: z.string().min(1).nullable() });
-  app.post('/api/conversas/:id/funis/:funilId', async (req) => {
-    const { etapaId } = Mover.parse(req.body);
+  /* perdas-saude: `perda` = { motivo, detalhe } quando a etapa nova é de perda (sem ele: 409 com a lista de motivos) */
+  const Mover = z.object({ etapaId: z.string().min(1).nullable(), perda: z.unknown().optional() });
+  app.post('/api/conversas/:id/funis/:funilId', async (req, reply) => {
+    const { etapaId, perda } = Mover.parse(req.body);
     const c = await conversaVisivel(req, param(req, 'id'));
-    const r = await funis.mover(c.id, param(req, 'funilId'), etapaId, { nome: quem(req), id: req.usuario?.id ?? null });
+    let limpar = () => {};
+    if (o.perdas) {
+      try {
+        limpar = await o.perdas.antesDeMover(c, param(req, 'funilId'), etapaId, perda);
+      } catch (e) {
+        if (e instanceof ErroPerda) return reply.code(e.statusCode).send({ erro: e.message, ...e.extra });
+        throw e;
+      }
+    }
+    let r: { mudou: boolean };
+    try {
+      r = await funis.mover(c.id, param(req, 'funilId'), etapaId, { nome: quem(req), id: req.usuario?.id ?? null });
+    } finally {
+      limpar();
+    }
     const depois = (await o.repo.buscarConversa(c.id)) ?? c;
     return { ok: true, mudou: r.mudou, etapa: depois.etapa, funis: await funis.daConversa(depois) };
   });

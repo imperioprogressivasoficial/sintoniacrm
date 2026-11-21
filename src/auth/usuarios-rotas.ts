@@ -32,6 +32,8 @@ export interface OpcoesUsuarios {
   agora: () => Date;
   invalidar: () => void;
   permissoesDe: (u: Usuario) => Promise<Permissoes>;
+  /** perdas-saude: senha nova pelo link (convite ou "Esqueci minha senha"): libera a conta bloqueada por tentativas. */
+  aoDefinirSenha?: (u: Usuario) => void;
 }
 
 const erro = (statusCode: number, mensagem: string) => Object.assign(new Error(mensagem), { statusCode });
@@ -334,6 +336,7 @@ export function registrarUsuarios(app: FastifyInstance, o: OpcoesUsuarios): void
     const v = await acessos.usarConvite(b.data.t, o.agora());
     if (!v) throw erro(404, 'Este link venceu ou já foi usado. Peça um novo para a gestão.');
     await contas.definirSenha(u.id, await gerarHash(b.data.senha));
+    o.aoDefinirSenha?.(u);
     await contas.encerrarSessoesDe(u.id);
     await acessos.salvarExtras(u.id, { trocarSenha: false });
     o.invalidar();
