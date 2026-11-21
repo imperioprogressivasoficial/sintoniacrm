@@ -4,10 +4,12 @@ import { z } from 'zod';
 import type { Sintonia } from '../app/sintonia.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { LIMITE_ENVIO, nomeParaCabecalho, semPrefixoDataUrl, tamanhoBase64, tipoPeloMimetype } from '../midia.js';
+import { ConversorFfmpeg, precisaConverter, type ConversorAudio } from './audio-compat.js';
 
 /**
  * Rotas de mídia das conversas (fotos, áudios, vídeos, documentos):
  * - GET  /api/conversas/:id/midias/:mensagemId          arquivo (aceita Range, para áudio e vídeo no iPhone)
+ *        ?formato=tocar: áudio OGG/WebM convertido para MP3 (o Safari do iPhone não toca OGG)
  * - POST /api/conversas/:id/midias/:mensagemId/baixar   tenta baixar de novo o que falhou
  * - POST /api/conversas/:id/enviar-midia                a atendente envia foto, vídeo, documento ou nota de voz
  * Ficam em /api: exigem login como todo o resto.
@@ -22,6 +24,8 @@ export interface DependenciasMidias {
   conversaVisivel?: (req: FastifyRequest) => Promise<unknown>;
   /** Quem está agindo (vez de responder, dona da conversa). */
   quemDe?: (req: FastifyRequest) => Quem | undefined;
+  /** Conversor de áudio para o formato que todo aparelho toca (padrão: ffmpeg). */
+  conversor?: ConversorAudio;
 }
 
 /** Tipos mostrados dentro da página. O resto vai como download (um HTML ou SVG mandado pela cliente nunca roda aqui). */
@@ -46,6 +50,7 @@ const EnvioMidia = z.object({
 
 export function registrarRotasMidia(app: FastifyInstance, d: DependenciasMidias): void {
   const agora = d.agora ?? (() => new Date());
+  const conversor = d.conversor ?? new ConversorFfmpeg({ log: (msg, extra) => app.log.warn({ extra }, msg) });
 
   async function midiaDaConversa(conversaId: string, mensagemId: string) {
     const m = z.string().uuid().safeParse(mensagemId).success ? await d.repo.midia(mensagemId) : undefined;
@@ -64,9 +69,18 @@ export function registrarRotasMidia(app: FastifyInstance, d: DependenciasMidias)
       return reply.code(m.anexo.situacao === 'pendente' ? 409 : 404).header('cache-control', 'no-store').send({ erro, situacao: m.anexo.situacao });
     }
 
-    const tipo = (m.anexo.mimetype ?? 'application/octet-stream').toLowerCase();
+    let tipo = (m.anexo.mimetype ?? 'application/octet-stream').toLowerCase();
+    let conteudo = m.conteudo;
+    const q = req.query as { baixar?: string; formato?: string };
+    // conversa-ux: ?formato=tocar entrega o áudio OGG/WebM em MP3, que o Safari do iPhone toca.
+    if (q.formato === 'tocar' && m.anexo.tipo === 'audio' && precisaConverter(tipo)) {
+      const c = await conversor.converter(mensagemId, m.conteudo);
+      if (!c) return reply.code(415).header('cache-control', 'no-store').send({ erro: 'Não foi possível preparar este áudio para tocar aqui. Baixe o arquivo.' });
+      conteudo = c.conteudo;
+      tipo = c.mimetype;
+    }
     const base = tipo.split(';')[0]!.trim();
-    const baixar = (req.query as { baixar?: string }).baixar === '1' || !EXIBIVEIS.test(base);
+    const baixar = q.baixar === '1' || !EXIBIVEIS.test(base);
     const nome = m.anexo.nomeArquivo ?? `${m.anexo.tipo}-${mensagemId.slice(0, 8)}${extensao(base)}`;
     reply
       .header('cache-control', 'private, max-age=86400')
@@ -77,7 +91,7 @@ export function registrarRotasMidia(app: FastifyInstance, d: DependenciasMidias)
       .type(EXIBIVEIS.test(base) ? tipo : 'application/octet-stream');
 
     // Pedaço do arquivo (o Safari só toca áudio e vídeo assim).
-    const total = m.conteudo.length;
+    const total = conteudo.length;
     const faixa = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ''));
     if (faixa && (faixa[1] || faixa[2])) {
       let inicio = faixa[1] ? Number(faixa[1]) : Math.max(0, total - Number(faixa[2]));
@@ -90,9 +104,9 @@ export function registrarRotasMidia(app: FastifyInstance, d: DependenciasMidias)
       return reply
         .code(206)
         .header('content-range', `bytes ${inicio}-${fim}/${total}`)
-        .send(m.conteudo.subarray(inicio, fim + 1));
+        .send(conteudo.subarray(inicio, fim + 1));
     }
-    return reply.send(m.conteudo);
+    return reply.send(conteudo);
   });
 
   app.post('/api/conversas/:id/midias/:mensagemId/baixar', async (req, reply) => {

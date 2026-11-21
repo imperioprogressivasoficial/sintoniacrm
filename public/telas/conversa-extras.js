@@ -380,9 +380,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { d, corpo } = folha('d-ia', 'Atendimento e IA');
 
     // ---- quem atende
-    const quem = c.modo === 'ia' ? 'Atendida pela IA' : minha ? 'Atendida por você' : c.responsavelId ? `Atendida por ${c.responsavelNome || 'outra pessoa'}` : 'Sem dona';
+    const quem = c.modo === 'ia' ? 'Atendida pela IA' : minha ? 'Atendida por você' : c.responsavelId ? `Atendida por ${c.responsavelNome || 'outra pessoa'}` : 'Sem responsável'; /* conversa-ux */
     const detalhe = c.modo === 'ia'
-      ? (c.responsavelId ? `A IA responde sozinha · dona: ${minha ? 'você' : c.responsavelNome || 'outra pessoa'}` : 'A IA responde e agenda sozinha')
+      ? (c.responsavelId ? `A IA responde sozinha · responsável: ${minha ? 'você' : c.responsavelNome || 'outra pessoa'}` : 'A IA responde e agenda sozinha')
       : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
     const status = el('div', { class: 'cx-status' + (c.modo === 'ia' ? ' ia' : ''), role: 'status' }, el('i'), el('span', {}, el('b', { text: quem }), el('small', { text: detalhe })));
     const fechar = () => d.close();
@@ -394,9 +394,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       (() => {
         const jaEu = minha && c.modo !== 'ia';
         const bloqueado = !minha && c.responsavelId && !perm.assumir;
-        return opcao('pessoa', SVG_ATENDE.eu, 'Eu assumo', jaEu ? 'Você já atende esta conversa' : bloqueado ? 'Já tem dona: peça para a gerente transferir para você' : 'Você responde; a IA para de enviar e só sugere', async () => {
+        return opcao('pessoa', SVG_ATENDE.eu, 'Eu assumo', jaEu ? 'Você já atende esta conversa' : bloqueado ? 'Já tem responsável: peça para a gerente transferir para você' : 'Você responde; a IA para de enviar e só sugere', async () => {
           if (jaEu) { fechar(); return; }
-          if (bloqueado) { toast('Esta conversa já tem dona. Peça para a gerente transferir para você.'); return; }
+          if (bloqueado) { toast('Esta conversa já tem responsável. Peça para a gerente transferir para você.'); return; }
           fechar();
           if (!minha && perm.assumir && !(await ui.assumirConversa())) return;
           if (c.modo === 'ia') await ui.mudarModo('copiloto');

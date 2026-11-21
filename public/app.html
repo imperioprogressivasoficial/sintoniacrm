@@ -1240,7 +1240,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
               <button class="modo" id="modo" title="Quem atende e ajuda da IA" aria-haspopup="dialog"><i></i><span id="modo-txt"></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
               <span class="espaco"></span>
               <button class="icone" id="mais" title="Mais" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
-              <button class="icone" id="figurinha" title="Figurinhas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 12.5V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5.5L20 12.5Z"/><path d="M12.5 20v-4.5a3 3 0 0 1 3-3H20"/></svg></button>
+              <button class="icone" id="figurinha" title="Respostas rápidas" aria-label="Respostas rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 12.5V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5.5L20 12.5Z"/><path d="M12.5 20v-4.5a3 3 0 0 1 3-3H20"/></svg></button>
               <button class="icone" id="camera" title="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
               <button class="icone falar" id="enviar" title="Gravar áudio"><svg id="ic-mic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg><svg id="ic-enviar" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
             </div>
@@ -1982,7 +1982,16 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     try {
       // as 30 últimas na hora (o quadro fica leve); a conversa inteira entra depois do deslize, com a resposta do servidor
       if (g) { estado.detalhe = g.d.mensagens.length > 30 ? { ...g.d, mensagens: g.d.mensagens.slice(-30) } : g.d; estado.assinatura = g.d.mensagens.length > 30 ? '' : g.ass; desenharConversa(); return; }
-      const c = estado.conversas.find((x) => x.id === id); if (!c) return;
+      const c = estado.conversas.find((x) => x.id === id);
+      /* conversa-ux: aberta de outra tela (nem guardada nem na lista): entra na hora, vazia, sem a logo e sem mostrar a anterior */
+      if (!c) {
+        estado.detalhe = { conversa: { id, nome: '', telefone: '', tags: [], modo: 'humano', etapa: '', unidade: '' }, mensagens: [], sugestao: null, digitando: [], permissoes: { assumir: false, transferir: false }, provisoria: true };
+        $('sem-conversa').hidden = true; $('chat-aberto').style.display = 'contents';
+        $('c-avatar').replaceWith(Object.assign(el('span', { class: 'avatar p foto', html: BONECO }), { id: 'c-avatar' }));
+        $('c-nome').textContent = ''; $('c-sub').textContent = ''; $('modo-txt').textContent = '';
+        $('msgs').replaceChildren(); $('sugestao').hidden = true;
+        return;
+      }
       estado.detalhe = { conversa: { ...c, tags: c.tags || [] }, mensagens: [], sugestao: null, digitando: [], permissoes: { assumir: false, transferir: false } };
       desenharConversa(); $('msgs').replaceChildren(); $('sugestao').hidden = true;
     } catch { estado.detalhe = null; estado.assinatura = ''; }
@@ -2192,7 +2201,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     try { await post('/api/campos-contato', { nome: $('cp-nome').value.trim(), tipo, opcoes }); $('cp-nome').value = ''; $('cp-opcoes').value = ''; desenharCampos(); }
     catch (x) { $('cp-erro').textContent = x.message; }
   });
-  $('figurinha').addEventListener('click', () => toast('Figurinhas chegam numa próxima versão.'));
+  /* conversa-ux: o botão ao lado do "+" abre as Respostas rápidas (figurinhas ainda não existem) */
+  $('figurinha').addEventListener('click', () => window.SintoniaConversa?.escolherResposta?.());
   // Ligar: abre a ligação no celular e, na volta, pede o resultado (aba Ligações do Funil).
   // A ligação é pelo WhatsApp (wa.me abre o app no celular e o WhatsApp Web/Desktop no computador; lá é só tocar em ligar).
   // Na volta, pede o resultado e registra o evento "ligacao" (aba Ligar hoje do CRM).
@@ -2226,9 +2236,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   /** Rótulo do chip: quem está atendendo esta conversa agora. */
   function rotuloAtende(c) {
     if (c.modo === 'ia') return 'IA atendendo';
-    if (c.responsavelId && c.responsavelId === estado.eu?.id) return 'Você atendendo';
-    if (c.responsavelId) return `${primeiroNome(c.responsavelNome) || 'Equipe'} atendendo`;
-    return 'Sem dona';
+    /* conversa-ux: "Sem dona" confundia: agora é "Sem responsável" / "Responsável: Fulano" */
+    if (c.responsavelId && c.responsavelId === estado.eu?.id) return 'Responsável: você';
+    if (c.responsavelId) return `Responsável: ${primeiroNome(c.responsavelNome) || 'equipe'}`;
+    return 'Sem responsável';
   }
 
   // escrever e enviar: o microfone vira o botão de enviar quando há texto, como no WhatsApp
@@ -2349,7 +2360,14 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   /** Áudio no padrão do WhatsApp: foto com selo de microfone, ▶, onda com cursor, duração; <audio> escondido. */
   function playerAudio(url, a, m, c) {
-    const audio = new Audio(); audio.preload = 'metadata'; audio.src = url;
+    const audio = new Audio(); audio.preload = 'metadata';
+    /* conversa-ux: OGG/Opus (nota de voz do WhatsApp) e WebM não tocam no Safari do iPhone: pede a cópia em MP3 ao servidor.
+       Se mesmo assim o aparelho recusar o arquivo, tenta a cópia uma vez antes de avisar. */
+    const tipoAud = String(a.mimetype || '').toLowerCase();
+    const urlTocar = url + '?formato=tocar';
+    const precisaCopia = /ogg|opus|webm|amr|3gpp/.test(tipoAud) && !audio.canPlayType(tipoAud.includes('codecs') ? tipoAud : tipoAud.split(';')[0] + (/webm|ogg/.test(tipoAud) ? '; codecs="opus"' : ''));
+    audio.src = precisaCopia ? urlTocar : url;
+    audio.addEventListener('error', () => { if (!audio.src.includes('formato=tocar')) { const ia = !audio.paused || audio._quer; audio.src = urlTocar; audio.load(); if (ia) audio.play().catch(() => {}); } });
     const N = 34;
     const barras = alturasOnda(m.id, N).map((v) => el('i', { style: `height:${Math.round(4 + v * 22)}px` }));
     const cursor = el('span', { class: 'cursor' });
@@ -2370,7 +2388,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     };
     pintar(0);
     botao.addEventListener('click', () => {
-      if (audio.paused) { if (tocando && tocando !== audio) tocando.pause(); audio.play().catch(() => toast('Não deu para tocar este áudio aqui.')); }
+      if (audio.paused) { if (tocando && tocando !== audio) tocando.pause(); audio._quer = true; audio.play().catch((x) => { if (x?.name !== 'AbortError') toast('Não deu para tocar este áudio aqui. Toque em Baixar para ouvir no aparelho.'); }); }
       else audio.pause();
     });
     audio.addEventListener('play', () => { tocando = audio; botao.innerHTML = PAUSA; botao.setAttribute('aria-label', 'Pausar áudio'); });
@@ -2861,7 +2879,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     sub.classList.toggle('digitando', dig.length > 0);
     sub.textContent = dig.length === 1 ? `${primeiroNome(dig[0].nome)} está respondendo…` : dig.length ? `${dig.map((x) => primeiroNome(x.nome)).join(' e ')} estão respondendo…` : `${UNIDADE[c.unidade] || c.unidade} · ver ficha`;
     $('modo').dataset.m = c.modo; $('modo-txt').textContent = rotuloAtende(c);
-    $('f-dono').textContent = c.responsavelId ? (c.responsavelId === eu.id ? 'Você' : c.responsavelNome) : 'Sem dona';
+    $('f-dono').textContent = c.responsavelId ? (c.responsavelId === eu.id ? 'Você' : c.responsavelNome) : 'Sem responsável';
+    window.SintoniaConversaUx?.chip?.(c); /* conversa-ux: foto de quem é responsável no chip */
   }
   async function assumirConversa() {
     try { await post(`/api/conversas/${estado.aberta}/assumir`); toast('A conversa agora é sua.'); estado.assinatura = ''; await atualizar(); return true; }
@@ -2877,7 +2896,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const c = estado.detalhe.conversa;
     const opcao = (valor, rotulo, sub, av) => el('label', {}, Object.assign(el('input', { type: 'radio', name: 'para', value: valor }), { checked: false }), av, el('span', { style: 'display:grid' }, el('span', { text: rotulo }), sub ? el('span', { class: 'info', text: sub }) : null));
     const lista = pessoas.filter((p) => !p.dona).map((p) => opcao(p.id, p.eu ? `${p.nome} (você)` : p.nome, PAPEL[p.papel], avatarPessoa(p.nome, 'p', p.id)));
-    if (c.responsavelId) lista.push(opcao('', 'Sem dona', 'Volta para todas da unidade', el('span', { class: 'avatar foto p', html: BONECO })));
+    if (c.responsavelId) lista.push(opcao('', 'Sem responsável', 'Volta para todas da unidade', el('span', { class: 'avatar foto p', html: BONECO })));
     $('tr-lista').replaceChildren(...(lista.length ? lista : [el('p', { class: 'info', text: 'Ninguém mais atende esta unidade.' })]));
     $('d-transferir').showModal();
   }
@@ -2890,7 +2909,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     try {
       const r = await post(`/api/conversas/${estado.aberta}/transferir`, { usuarioId });
       $('d-transferir').close();
-      toast(r.responsavelNome ? `Conversa passada para ${r.responsavelNome}.` : 'A conversa ficou sem dona.');
+      toast(r.responsavelNome ? `Conversa passada para ${r.responsavelNome}.` : 'A conversa ficou sem responsável.');
       if (!ehGestor(estado.eu) && usuarioId !== estado.eu.id && usuarioId !== null) fecharConversa();
       await atualizar();
     } catch (x) { $('tr-erro').textContent = x.message; }
@@ -3413,6 +3432,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/painel.js" defer></script>
 <script src="/telas/ia.js" defer></script>
 <script src="/telas/agentes-ia.js" defer></script>
+<script src="/telas/icones.js" defer></script><!-- conversa-ux: conjunto de ícones -->
 <script src="/telas/conversa-extras.js" defer></script>
 <script src="/telas/funil.js" defer></script>
 <!-- pipeline-celular: o CRM do celular (Foco, Lista, Colunas) -->
@@ -3551,6 +3571,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
 <script src="/telas/whatsapp-saude.js" defer></script>
 <script src="/telas/equipe.js" defer></script><!-- equipe: Conversas de equipe (chat interno) -->
+<script src="/telas/conversa-ux.js" defer></script><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)

@@ -434,12 +434,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       try {
         const r = await post(`/api/conversas/${c.id}/transferir`, { usuarioId });
         d.close();
-        toast(r.responsavelNome ? `Conversa passada para ${r.responsavelNome}.` : 'A conversa ficou sem dona.');
+        toast(r.responsavelNome ? `Conversa passada para ${r.responsavelNome}.` : 'A conversa ficou sem responsável.');
         ui.atualizar?.();
       } catch (x) { toast(x.message || 'Não deu agora.'); }
     };
     const linhas = pessoas.filter((p) => !p.dona).map((p) => opcao(SVG.atribuir, p.eu ? `${p.nome} (você)` : p.nome, null, () => passar(p.id)));
-    if (c.responsavelId) linhas.push(opcao(SVG.fechar, 'Sem dona', 'Volta para todas da unidade', () => passar(null)));
+    if (c.responsavelId) linhas.push(opcao(SVG.fechar, 'Sem responsável', 'Volta para todas da unidade', () => passar(null)));
     corpo.append(linhas.length ? el('div', { class: 'folha-lista' }, ...linhas) : el('div', { class: 'cg-carregando', text: 'Ninguém mais atende esta unidade.' }));
   }
 

@@ -665,12 +665,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       try {
         const h = await ui.api(`/api/email/historico?telefone=${encodeURIComponent(c.telefone)}`);
         const envios = h.envios || [];
-        bloco.replaceChildren(ui.el('h3', { html: IC.email.replace('<svg', '<svg width="16" height="16"') + ' E-mails' }),
+        bloco.replaceChildren(...[ui.el('h3', { html: IC.email.replace('<svg', '<svg width="16" height="16"') + ' E-mails' }),
           h.bloqueio ? ui.el('p', { class: 'em-erro', style: 'margin:0 0 6px', text: h.bloqueio.motivo === 'descadastro' ? 'Descadastrou dos e-mails.' : 'E-mail com erro permanente (bounce).' }) : null,
           ...(envios.length ? envios.slice(0, 8).map((e) => {
             const resp = (e.eventos || []).filter((x) => x.tipo === 'respondeu').pop();
             return ui.el('div', { class: 'em-h' }, ui.el('b', { text: e.assunto || e.origem || 'E-mail' }), ui.el('small', { text: `${rotuloEnvio(e)} · ${quando(e.enviado_em || e.criado_em)}` }), resp?.detalhe ? ui.el('em', { text: `Resposta: ${resp.detalhe}` }) : null);
-          }) : [ui.el('small', { style: 'color:var(--sub)', text: h.email ? 'Nenhum e-mail enviado ainda.' : 'Sem e-mail na ficha.' })]));
+          }) : [ui.el('small', { style: 'color:var(--sub)', text: h.email ? 'Nenhum e-mail enviado ainda.' : 'Sem e-mail na ficha.' })])].filter(Boolean)); /* conversa-ux: sem o "null" escrito na ficha */
       } catch { bloco.remove(); }
     };
     new MutationObserver(() => mostrar()).observe(ficha, { attributes: true, attributeFilter: ['hidden'] });
