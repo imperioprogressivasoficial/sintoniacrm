@@ -186,7 +186,9 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
 (() => {
   const token = location.pathname.split('/').filter(Boolean)[1] || '';
   const $ = (id) => document.getElementById(id);
-  const UNIDADE = { norte: 'Norte', sumare: 'Sumaré', feira: 'Feira' };
+  /* unidades: os nomes vêm com os dados da TV (Empresa › Unidades); sempre escapados (entram em innerHTML) */
+  let NOMES_UNIDADE = {};
+  const nomeUni = (k) => esc(NOMES_UNIDADE[k] || k);
   const ATUALIZA = 30000, ROTACAO = 20000;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const n = (v) => Number(v || 0).toLocaleString('pt-BR');
@@ -229,7 +231,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
     if (!lista.length) return '<div class="vazio">Os serviços aparecem aqui conforme os agendamentos entram.</div>';
     const topo = Math.max(...lista.map((s) => s.agendamentos), 1);
     return lista.slice(0, max).map((s) => {
-      const u = Object.entries(s.porUnidade || {}).map(([k, q]) => `${UNIDADE[k] || k} ${q}`).join(' · ');
+      const u = Object.entries(s.porUnidade || {}).map(([k, q]) => `${nomeUni(k)} ${q}`).join(' · ');
       return `<div class="serv"><div class="l"><span>${esc(s.servico)}</span><b>${n(s.agendamentos)}</b></div>
         <div class="barra"><i style="width:${(s.agendamentos / topo) * 100}%"></i></div><div class="v">${u}${s.valor ? ' · ' + brl(s.valor) : ''}</div></div>`;
     }).join('');
@@ -252,7 +254,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
       <div class="linha">${m.meta.agendamentos && m.agendamentos < m.meta.agendamentos ? `faltam <b>${n(m.meta.agendamentos - m.agendamentos)}</b> · ` : ''}${m.diasRestantes} dia${m.diasRestantes === 1 ? '' : 's'} no mês</div>`;
     const h = d.hoje;
     $('hoje').innerHTML = `<div class="n">${n(h.agendamentos)}</div><div class="r">agendamento${h.agendamentos === 1 ? '' : 's'} hoje</div>
-      <div class="u">${Object.entries(h.porUnidade).map(([k, q]) => `<span class="pilula">${UNIDADE[k] || k} <b>${n(q)}</b></span>`).join('')}<span class="pilula">IA <b>${n(h.ia)}</b></span></div>`;
+      <div class="u">${Object.entries(h.porUnidade).map(([k, q]) => `<span class="pilula">${nomeUni(k)} <b>${n(q)}</b></span>`).join('')}<span class="pilula">IA <b>${n(h.ia)}</b></span></div>`;
     const rk = d.ranking.length ? d.ranking : [];
     $('rank').innerHTML = rk.length ? rk.slice(0, 6).map(pessoa).join('') : '<div class="vazio">Cadastre a equipe para ver o ranking.</div>';
     $('rank2').innerHTML = rk.length ? rk.slice(0, 10).map(pessoa).join('') : '<div class="vazio">Cadastre a equipe para ver o ranking.</div>';
@@ -260,9 +262,9 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
     $('servs2').innerHTML = servicos(d.servicos, 6);
     const u = d.ultimos[0];
     $('ultimo').innerHTML = `<h2>Último agendamento</h2>` + (u
-      ? `<div class="quem">${textoQuem(u)}</div><div class="oq">${esc(u.servico || 'Agendamento')}</div><div class="det">${hm(u.em)} · ${UNIDADE[u.unidade] || u.unidade} · por ${esc(u.por)}</div>`
+      ? `<div class="quem">${textoQuem(u)}</div><div class="oq">${esc(u.servico || 'Agendamento')}</div><div class="det">${hm(u.em)} · ${nomeUni(u.unidade)} · por ${esc(u.por)}</div>`
       : '<div class="vazio">Nenhum agendamento ainda este mês.</div>');
-    $('ultimos').innerHTML = d.ultimos.length ? d.ultimos.map((x) => `<div class="it"><span class="hr">${hm(x.em)}</span><span><b>${textoQuem(x)}</b> · ${esc(x.servico || 'Agendamento')}</span><span class="por">${UNIDADE[x.unidade] || x.unidade} · ${esc(x.por)}</span></div>`).join('') : '<div class="vazio">Nenhum agendamento ainda este mês.</div>';
+    $('ultimos').innerHTML = d.ultimos.length ? d.ultimos.map((x) => `<div class="it"><span class="hr">${hm(x.em)}</span><span><b>${textoQuem(x)}</b> · ${esc(x.servico || 'Agendamento')}</span><span class="por">${nomeUni(x.unidade)} · ${esc(x.por)}</span></div>`).join('') : '<div class="vazio">Nenhum agendamento ainda este mês.</div>';
     const telas = d.rotacao ? 3 : 1;
     $('pontos').innerHTML = telas > 1 ? Array.from({ length: telas }, (_, i) => `<span class="${i === tela ? 'ativa' : ''}"></span>`).join('') : '';
   }
@@ -275,7 +277,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
 
   function celebrar(u) {
     $('festa-q').textContent = u.cliente || 'Nova cliente';
-    $('festa-o').textContent = `${u.servico || 'Agendamento'} · ${UNIDADE[u.unidade] || u.unidade} · por ${u.por}`;
+    $('festa-o').textContent = `${u.servico || 'Agendamento'} · ${NOMES_UNIDADE[u.unidade] || u.unidade} · por ${u.por}`;
     mostrarTela(0);
     $('festa').classList.add('ver');
     $('ultimo').classList.add('novo');
@@ -303,6 +305,7 @@ canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer
       if (r.status === 404) { $('aviso').hidden = false; $('aviso').textContent = 'Este link do Painel na TV não vale mais. Peça um novo para a gestão (Dashboard › Painel na TV).'; return; }
       if (!r.ok) throw new Error(String(r.status));
       dados = await r.json();
+      NOMES_UNIDADE = dados.nomesUnidades || {}; /* unidades */
       $('aviso').hidden = true; $('offline').hidden = true;
       desenhar();
       const chave = dados.ultimos[0]?.chave ?? null;

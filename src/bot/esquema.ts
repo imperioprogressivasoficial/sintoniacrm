@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizar } from '../automacoes/esquema.js';
+import { existeUnidade, zIdUnidade } from '../unidades.js';
 
 /**
  * Fluxos de bot (estilo Salesbot): um GRAFO de blocos (nós) ligados por linhas (ligações).
@@ -8,7 +9,8 @@ import { normalizar } from '../automacoes/esquema.js';
  * da edição); publicar confere tudo (ver `problemasDoGrafo`).
  */
 
-export const UNIDADES_BOT = ['norte', 'sumare', 'feira'] as const;
+/** Unidade num nó do bot: id do cadastro (Empresa › Unidades); aqui só o formato, o fluxo fica guardado. */
+const UnidadeBot = zIdUnidade();
 export const MODOS_BOT = ['ia', 'copiloto', 'humano'] as const;
 export const VALIDACOES = ['texto', 'numero', 'telefone', 'email', 'data'] as const;
 export const LIMITE_NOS = 120;
@@ -28,14 +30,14 @@ const variavel = z
   .or(z.literal('').transform(() => undefined));
 
 export const GatilhoBot = z.discriminatedUnion('tipo', [
-  z.object({ tipo: z.literal('nova_conversa'), unidade: z.enum(UNIDADES_BOT).optional() }),
+  z.object({ tipo: z.literal('nova_conversa'), unidade: UnidadeBot.optional() }),
   z.object({ tipo: z.literal('palavra_chave'), palavras: z.array(z.string().trim().max(80)).max(30).default([]), modo: z.enum(['contem', 'exata']).default('contem') }),
   z.object({ tipo: z.literal('entrou_na_etapa'), etapaId: z.string().max(100).default('') }),
   z.object({ tipo: z.literal('tag_marcada'), tagId: z.string().max(100).default('') }),
   /** Só pelo botão "Iniciar bot" na conversa (ou pela API). */
   z.object({ tipo: z.literal('manual') }),
   /** Mensagem da cliente com a loja fechada (uma vez por período fechado). */
-  z.object({ tipo: z.literal('fora_do_horario'), unidade: z.enum(UNIDADES_BOT).optional() }),
+  z.object({ tipo: z.literal('fora_do_horario'), unidade: UnidadeBot.optional() }),
 ]);
 export type GatilhoBot = z.infer<typeof GatilhoBot>;
 
@@ -102,7 +104,7 @@ export const No = z.discriminatedUnion('tipo', [
   z.object({ ...base, tipo: z.literal('mover_etapa'), funilId: z.string().max(100).default(''), etapaId: z.string().max(100).default('') }),
   z.object({ ...base, tipo: z.literal('marcar_tag'), tagId: z.string().max(100).default('') }),
   z.object({ ...base, tipo: z.literal('desmarcar_tag'), tagId: z.string().max(100).default('') }),
-  z.object({ ...base, tipo: z.literal('atribuir'), usuarioId: z.string().max(100).nullable().default(null), unidade: z.enum(UNIDADES_BOT).optional() }),
+  z.object({ ...base, tipo: z.literal('atribuir'), usuarioId: z.string().max(100).nullable().default(null), unidade: UnidadeBot.optional() }),
   z.object({ ...base, tipo: z.literal('mudar_modo'), modo: z.enum(MODOS_BOT).default('humano') }),
   z.object({ ...base, tipo: z.literal('lembrete'), em_minutos: z.number().int().min(0).max(6 * 24 * 60).default(0), texto: z.string().max(200).optional() }),
   z.object({ ...base, tipo: z.literal('webhook'), url: z.string().max(1000).default('') }),
@@ -304,7 +306,7 @@ export function problemasDoGrafo(g: Grafo): Problema[] {
         if (['tag', 'etapa', 'unidade', 'modo', 'resposta_contem'].includes(c.se) && !c.valor.trim()) erro(`${nome}: complete a condição.`, n.id);
         if (c.se === 'campo' && !c.campo) erro(`${nome}: escolha o campo.`, n.id);
         if (c.se === 'campo' && c.operador !== 'preenchido' && !c.valor.trim()) erro(`${nome}: escreva o valor para comparar.`, n.id);
-        if (c.se === 'unidade' && c.valor && !(UNIDADES_BOT as readonly string[]).includes(c.valor)) erro(`${nome}: unidade inválida.`, n.id);
+        if (c.se === 'unidade' && c.valor && !existeUnidade(c.valor)) erro(`${nome}: unidade inválida.`, n.id);
         if (c.se === 'modo' && c.valor && !(MODOS_BOT as readonly string[]).includes(c.valor)) erro(`${nome}: modo inválido.`, n.id);
         break;
       }

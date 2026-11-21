@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ErroMeta, GraphMeta } from '../channels/meta.js';
+import { zUnidade } from '../unidades.js';
 
 /**
  * Modelos de mensagem da API oficial: criar e mandar para aprovação, consultar status (pendente, aprovado,
@@ -15,7 +16,7 @@ const Botao = z.discriminatedUnion('tipo', [
 
 /** O que a tela manda para criar um modelo. */
 export const ModeloNovo = z.object({
-  unidade: z.enum(['norte', 'sumare']),
+  unidade: zUnidade({ ativa: true }),
   /** Só minúsculas, números e "_" (regra da Meta). */
   nome: z
     .string()

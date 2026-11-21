@@ -452,7 +452,7 @@ describe('Serena (botão do meio)', () => {
     const b = r.json();
     expect(b.ligada).toBe(true);
     expect(b.podeLigar).toBe(true);
-    expect(b.unidades).toEqual([expect.objectContaining({ unidade: 'norte', ligada: true }), expect.objectContaining({ unidade: 'sumare', ligada: false })]);
+    expect(b.unidades).toEqual([expect.objectContaining({ unidade: 'norte', ligada: true }), expect.objectContaining({ unidade: 'sumare', ligada: false }), expect.objectContaining({ unidade: 'feira', ligada: false })]); // unidades: as 3 do cadastro
     expect(b.precisa.total).toBe(2);
     // A passagem da Serena vem primeiro, com o motivo dela.
     expect(b.precisa.lista[0]).toMatchObject({ conversaId: sumare.id, tipo: 'passou', motivo: 'Quer desconto na progressiva.' });

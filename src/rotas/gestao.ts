@@ -10,6 +10,7 @@ import type { BaseConhecimento } from '../ai/base.js';
 import type { PedidoSimulacao, RespostaSimulacao } from '../ai/simulacao.js';
 import { mesDe, montarPainel, montarPessoa, PERIODOS, type FontePainel } from '../painel/painel.js';
 import { iaHoje } from '../painel/ia-hoje.js';
+import { zUnidade } from '../unidades.js';
 
 /**
  * Rotas de gestão: tags, aba IA (o que fez, configuração, treinamento, testar), painel completo e empresa.
@@ -231,7 +232,7 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
   const Testar = z.object({
     mensagem: z.string().trim().min(1).max(2000),
     historico: z.array(z.object({ autor: z.enum(['cliente', 'ia']), texto: z.string().trim().min(1).max(2000) })).max(30).optional(),
-    unidade: z.enum(['norte', 'sumare', 'feira']).optional(),
+    unidade: zUnidade().optional(),
     nome: z.string().trim().min(1).max(60).optional(),
   });
   app.post('/api/ia/testar', async (req, reply) => {

@@ -6,6 +6,7 @@ import { importarLink, LIMITE_TEXTO, textoDoPdf } from './importar.js';
 import { notaDoAgente } from './nota.js';
 import { ConfigAgente, ConfigControle, MODELOS, publico, type AgenteIa, type AgenteNovo, type Conhecimento } from './tipos.js';
 import type { Repositorio } from '../store/repositorio.js';
+import { existeUnidade, idsUnidades } from '../unidades.js';
 
 const erro = (msg: string, statusCode: number) => Object.assign(new Error(msg), { statusCode });
 
@@ -45,7 +46,7 @@ export class ServicoAgentesIa {
       empresaId: this.d.empresaId,
       nome: b.nome,
       avatar: b.avatar?.trim() || '✦',
-      unidades: b.unidades ?? ['norte', 'sumare'],
+      unidades: b.unidades ?? idsUnidades(this.d.empresaId),
       provedor,
       modelo: b.modelo ?? MODELOS[provedor][0]!.id,
       chaveCifrada: b.chave ? this.d.cofre.cifrar(b.chave) : null,
@@ -83,8 +84,8 @@ export class ServicoAgentesIa {
   async apagar(id: string) {
     await this.exigir(id);
     const ctrl = await this.d.armazem.controle(this.d.empresaId);
-    for (const u of ['norte', 'sumare'] as const) {
-      if (ctrl[u].agenteId === id) throw erro('Este agente está no "IA atende primeiro" de uma unidade. Troque o agente lá antes de apagar.', 409);
+    for (const u of Object.keys(ctrl)) {
+      if (ctrl[u]?.agenteId === id) throw erro('Este agente está no "IA atende primeiro" de uma unidade. Troque o agente lá antes de apagar.', 409);
     }
     await this.d.armazem.apagar(id);
   }
@@ -176,8 +177,8 @@ export class ServicoAgentesIa {
   async gravarControle(bruto: unknown, por: string) {
     const atual = await this.controle();
     const novo = ConfigControle.parse({ ...atual, ...(bruto as object) });
-    for (const u of ['norte', 'sumare'] as const) {
-      const c = novo[u];
+    for (const [u, c] of Object.entries(novo)) {
+      if (c.ligado && !existeUnidade(u, this.d.empresaId)) throw erro('Essa unidade não está cadastrada (Empresa › Unidades).', 400);
       if (c.ligado && !c.agenteId) throw erro('Escolha o agente que atende primeiro.', 400);
       if (c.agenteId) {
         const a = await this.exigir(c.agenteId);

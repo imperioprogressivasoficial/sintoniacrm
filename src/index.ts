@@ -4,7 +4,7 @@ import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
-import { AgendasDasUnidades, UNIDADES_AGENDA } from './agenda/unidades-agenda.js';
+import { AgendasDasUnidades, unidadesAgenda } from './agenda/unidades-agenda.js';
 import { AgendaExterna } from './agenda/agenda-externa.js';
 import { Agente } from './ai/agente.js';
 import { randomUUID } from 'node:crypto';
@@ -16,7 +16,7 @@ import { Midias } from './app/midias.js';
 import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
-import { carregarBase } from './ai/prompt.js';
+import { carregarBaseDa } from './ai/prompt.js';
 import { Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { EvolutionAdmin } from './channels/evolution-admin.js';
@@ -40,7 +40,8 @@ import { Trabalhador } from './fila/trabalhador.js';
 import { TravaMemoria, TravaPostgres, type Trava } from './fila/trava.js';
 import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
-import { UNIDADES } from './unidades.js';
+import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe } from './unidades.js';
+import { definirEmpresaPadraoIdentidade, IDENTIDADE_IMPERIO } from './empresa/identidade.js';
 import { dataISO, partesBahia } from './util/tempo.js';
 import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from './empresa/empresa.js';
 import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, TagsDaIa } from './tags/tags.js';
@@ -116,7 +117,6 @@ import { ArmazemCadastroMemoria, ArmazemCadastroPostgres, horarioDeFaixas } from
 import { registrarCadastro } from './empresa/cadastro-rotas.js';
 import { precosDoCadastro } from './empresa/precos-comercial.js';
 import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
-import { UNIDADES_EQUIPE } from './auth/acesso.js';
 /* integracoes: área de desenvolvedores (chaves de API, API v1, webhooks de saída e MCP) */
 import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integracoes/armazem.js';
 import { montarIntegracoes } from './integracoes/rotas.js';
@@ -158,6 +158,10 @@ if (cfg.DATABASE_URL) {
   contas = new ContasMemoria();
 }
 
+// Empresa atendida por este servidor: as unidades e a identidade (nome, segmento, cidade) vêm do cadastro dela.
+definirEmpresaPadrao(cfg.SINTONIA_EMPRESA_ID);
+definirEmpresaPadraoIdentidade(cfg.SINTONIA_EMPRESA_ID);
+
 // Plano da IA: medição de uso e porteiro. A conta original (SINTONIA_PLANO_FUNDADOR, padrão "imperio") fica no Fundador.
 const planos = new Planos({
   armazem: pool ? new ArmazemPlanosPostgres(pool) : new ArmazemPlanosMemoria(),
@@ -168,12 +172,12 @@ anotarUso = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
 porteiroIa = porteiroDe(planos, cfg.SINTONIA_EMPRESA_ID);
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
-const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, 'Império Progressivas');
+const empresa = new Empresa(pool ? new ArmazemEmpresaPostgres(pool) : new ArmazemEmpresaMemoria(), cfg.SINTONIA_EMPRESA_ID, cfg.SINTONIA_EMPRESA_ID === EMPRESA_IMPERIO ? IDENTIDADE_IMPERIO.nome : 'Minha empresa');
 const armazemTags = pool ? new ArmazemTagsPostgres(pool) : new ArmazemTagsMemoria(() => repo.listarConversas());
 const tags = new Tags(armazemTags, cfg.SINTONIA_EMPRESA_ID);
 const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
-const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
+const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBaseDa(cfg.SINTONIA_EMPRESA_ID));
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
 const agente = new Agente(claude, agendas, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
 
@@ -223,17 +227,17 @@ const ehReal = (n: NumeroConectado) => !ehCanalTeste(n.canalId) && !ehCanalSocia
 const canaisSociais = new Map<string, { chave: string; canal: CanalWhatsApp }>();
 let iaLigada = false;
 let agendaLigada = false;
-const ESTABELECIMENTO_PADRAO = { norte: UNIDADES.norte.trinksEstabelecimentoId, sumare: UNIDADES.sumare.trinksEstabelecimentoId };
+// Estabelecimento do Trinks e se a unidade agenda: lido de Conexões › Agenda (vale o que está na tela agora).
+definirAgendaDasUnidades((id) => {
+  const a = agendas.config(id);
+  return { trinksEstabelecimentoId: a.escolha === 'trinks' ? a.local : null, agendaAberta: a.escolha !== 'nenhum' };
+});
 
 function aplicarConexoes() {
   const chaveIA = conexoes.get('anthropicApiKey');
   claudeAtual = new Anthropic({ apiKey: chaveIA || 'sem-chave' });
   iaLigada = Boolean(chaveIA);
   trinks.definirChave(conexoes.get('trinksApiKey') ?? '');
-  // ID do estabelecimento de cada unidade: o da tela de Conexões vale por cima do padrão.
-  for (const [u, campo] of [['norte', 'trinksEstabelecimentoNorte'], ['sumare', 'trinksEstabelecimentoSumare']] as const) {
-    UNIDADES[u].trinksEstabelecimentoId = conexoes.get(campo) || ESTABELECIMENTO_PADRAO[u];
-  }
   // Cada unidade usa o sistema escolhido em Conexões › Agenda (Trinks, Avec, AppBarber ou nenhum).
   agendaLigada = agendas.algumaPronta();
   evolution = new CanalEvolution(conexoes.get('evolutionUrl') ?? '', conexoes.get('evolutionApiKey') ?? '');
@@ -248,7 +252,7 @@ function aplicarConexoes() {
     log,
   });
   // WhatsApp de teste por unidade: deixa ver a plataforma funcionando sem número real.
-  for (const unidade of ['norte', 'sumare'] as const) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
+  for (const unidade of idsUnidades()) lista.push({ canalId: canalTesteDa(unidade), unidade, canal: canalTeste });
   // Facebook Messenger e Instagram Direct: entram depois (o número de WhatsApp de cada unidade continua sendo o primeiro).
   const sociais = numerosSociais(conexoes, canaisSociais);
   lista.push(...sociais);
@@ -564,11 +568,11 @@ const app = criarServidor({
       const t = new ClienteTrinks({ apiKey: chave });
       const partes: string[] = [];
       let falhas = 0;
-      for (const u of ['norte', 'sumare'] as const) {
-        const est = UNIDADES[u].trinksEstabelecimentoId;
-        if (!est) { partes.push(`${UNIDADES[u].nome}: sem ID do estabelecimento`); continue; }
-        try { partes.push(`${UNIDADES[u].nome}: ${(await t.listarProfissionais(est)).length} profissionais`); }
-        catch (e) { falhas++; partes.push(`${UNIDADES[u].nome}: ${String((e as Error).message).slice(0, 80)}`); }
+      for (const u of unidadesAgenda().filter((x) => agendas.config(x).escolha === 'trinks')) {
+        const est = unidadeDe(u).trinksEstabelecimentoId;
+        if (!est) { partes.push(`${unidadeDe(u).nome}: sem ID do estabelecimento`); continue; }
+        try { partes.push(`${unidadeDe(u).nome}: ${(await t.listarProfissionais(est)).length} profissionais`); }
+        catch (e) { falhas++; partes.push(`${unidadeDe(u).nome}: ${String((e as Error).message).slice(0, 80)}`); }
       }
       if (falhas && falhas === partes.length) throw new Error(partes.join(' · '));
       return { resumo: partes.join(' · ') };
@@ -610,7 +614,7 @@ const app = criarServidor({
     },
     agenda: {
       chave: Boolean(conexoes.get('trinksApiKey')),
-      unidades: UNIDADES_AGENDA.map((u) => {
+      unidades: unidadesAgenda().map((u) => {
         const a = agendas.config(u);
         return { id: u, nome: a.nome, estabelecimento: Boolean(a.local), sistema: a.escolha, sistemaNome: a.sistemaNome, falta: a.aviso && !a.falta.length ? [a.aviso] : a.falta, pronta: a.pronta };
       }),
@@ -697,20 +701,46 @@ registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: ext
 const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
 const armazemComercialBase = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
 const armazemComercial = precosDoCadastro(armazemComercialBase, armazemCadastro);
-registrarCadastro(app, {
+const cadastroEmpresa = registrarCadastro(app, {
   armazem: armazemCadastro,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   empresa,
-  // Os nomes que o app já mostrava (public/app.html, UNIDADE): a partir daqui, mudam em Empresa › Unidades.
-  unidadesPadrao: [
-    { id: 'norte', nome: 'Salvador Norte', horario: horarioDeFaixas(UNIDADES.norte.horario) },
-    { id: 'sumare', nome: 'Sumaré', horario: horarioDeFaixas(UNIDADES.sumare.horario) },
-    { id: 'feira', nome: 'Feira de Santana', horario: null, ativa: true },
-  ],
-  idsFixos: UNIDADES_EQUIPE,
+  // Empresa sem unidades no cadastro: a Império recebe as que o app já mostrava (com o nome para clientes e o
+  // horário de shopping de antes); qualquer outra empresa começa com uma "Unidade principal" e cadastra as dela.
+  unidadesPadrao: (empresaId) =>
+    empresaId === EMPRESA_IMPERIO
+      ? UNIDADES_IMPERIO.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.nomeCliente, horario: u.horario && Object.keys(u.horario).length ? horarioDeFaixas(u.horario) : null, ativa: u.ativa }))
+      : [{ id: UNIDADE_INICIAL.id, nome: UNIDADE_INICIAL.nome, horario: null }],
+  // Não deixa apagar unidade com conversas, pessoas ou números ligados (só desativar).
+  emUso: async (empresaId, id) => {
+    if (numeros.some((n) => n.unidade === id && !ehCanalTeste(n.canalId)) || conexoes.numeros().some((n) => n.unidade === id)) return true;
+    if (pool) {
+      const { rows } = await pool.query<{ usada: boolean }>(
+        `select exists(select 1 from sintonia.conversas where empresa_id = $1 and unidade = $2)
+             or exists(select 1 from sintonia.usuarios where empresa_id = $1 and $2 = any(unidades)) as usada`,
+        [empresaId, id],
+      );
+      return Boolean(rows[0]?.usada);
+    }
+    return (await repo.listarConversas()).some((c) => c.empresaId === empresaId && c.unidade === id) || (await contas.listarUsuarios(empresaId)).some((u) => u.unidades.includes(id));
+  },
+  // Unidade nova (ou desativada): canais de teste, agenda e números refeitos na hora.
+  aoMudarUnidades: () => {
+    aplicarConexoes();
+    conexoes.garantirTokensDasUnidades().catch((e) => log('Falha ao gerar o Verify Token da unidade nova', String(e)));
+  },
   // A tabela antiga, sem a mistura com os produtos (é ela que é copiada).
   precosComercial: async (id) => (await armazemComercialBase.ler(id)).cfg.precos,
 });
+// Cache das unidades e da identidade da empresa (src/unidades.ts, src/empresa/identidade.ts) a partir do cadastro,
+// antes de atender qualquer mensagem; depois as conexões são refeitas com as unidades certas.
+try {
+  await cadastroEmpresa.carregar(cfg.SINTONIA_EMPRESA_ID);
+  await conexoes.garantirTokensDasUnidades();
+  aplicarConexoes();
+} catch (e) {
+  log('Falha ao carregar as unidades do cadastro (seguem as conhecidas)', String(e));
+}
 registrarConta(app, {
   contas,
   perfis: pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria(),
@@ -722,7 +752,10 @@ registrarComercial(app, {
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
-  unidades: ['norte', 'sumare'],
+  // Unidades ativas do cadastro, lidas na hora (unidade nova entra nas metas e na TV sem reiniciar).
+  get unidades() {
+    return idsUnidades();
+  },
   metaMesAntiga: async () => (await empresa.meta()).agendamentosMes ?? null,
   nomeEmpresa: async () => (await empresa.dados()).nome,
 });
@@ -732,7 +765,9 @@ registrarDesempenho(app, {
   armazem: armazemComercial,
   contas,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
-  unidades: ['norte', 'sumare'],
+  get unidades() {
+    return idsUnidades();
+  },
   agora: () => new Date(),
 });
 // Análises (menu Análises): vendas e receita, horários de pico, tempo parado no funil e clientes que voltaram.

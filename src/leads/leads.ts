@@ -4,7 +4,7 @@ import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { contatoVazio, validarCampos, type ArmazemContatos, type CampoContato, type Contato } from '../contatos/contatos.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Tags } from '../tags/tags.js';
-import { UNIDADES } from '../unidades.js';
+import { idsUnidades, unidadeDe, unidadePorNome, zUnidade } from '../unidades.js';
 import { gerarCsv } from '../util/csv.js';
 import { dataISO, horaHHmm } from '../util/tempo.js';
 import type { ArmazemLeads } from './armazem.js';
@@ -33,7 +33,8 @@ export interface OpcoesLeads {
   agora: () => Date;
 }
 
-export const UNIDADES_LEADS = ['norte', 'sumare'] as const;
+/** Unidades que recebem leads: as ativas do cadastro (Empresa › Unidades). */
+export const unidadesLeads = (empresaId?: string) => idsUnidades(empresaId);
 
 export interface FiltroLeads {
   unidade?: UnidadeId;
@@ -104,7 +105,7 @@ export type LinhaImportacao = z.infer<typeof LinhaImportacao>;
 
 export const PedidoImportacao = z.object({
   linhas: z.array(LinhaImportacao).min(1).max(5000),
-  unidade: z.enum(UNIDADES_LEADS),
+  unidade: zUnidade({ ativa: true }),
   etapa: z.enum(ETAPAS).default('novo_lead'),
   tagId: z.string().min(1).optional(),
   /** Cria também a conversa (sem mensagem) para o lead aparecer no CRM e no funil. */
@@ -138,12 +139,10 @@ export interface RelatorioImportacao {
 
 const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-function unidadeDe(v: string | null | undefined): UnidadeId | null | undefined {
+/** Unidade escrita na planilha (nome ou id do cadastro); null = não reconhecida. */
+function unidadeDoTexto(v: string | null | undefined): UnidadeId | null | undefined {
   if (!v || !v.trim()) return undefined;
-  const s = semAcento(v);
-  if (s.includes('norte')) return 'norte';
-  if (s.includes('sumare')) return 'sumare';
-  return null;
+  return unidadePorNome(semAcento(v))?.id ?? null;
 }
 
 function etapaDe(v: string | null | undefined): Etapa | null | undefined {
@@ -284,7 +283,7 @@ export class Leads {
         l.nome,
         l.telefone,
         l.email,
-        l.unidade ? UNIDADES[l.unidade].nome : '',
+        l.unidade ? unidadeDe(l.unidade).nome : '',
         l.etapa ? NOME_ETAPA[l.etapa] : '',
         l.tags.join(', '),
         l.dona,
@@ -397,7 +396,7 @@ export class Leads {
         if (e.success) email = e.data;
         else avisos.push('E-mail inválido (ficou de fora)');
       }
-      const unidadeLinha = unidadeDe(l.unidade);
+      const unidadeLinha = unidadeDoTexto(l.unidade);
       if (unidadeLinha === null) avisos.push(`Unidade "${l.unidade}" não reconhecida (usada a padrão)`);
       const unidade = unidadeLinha || p.unidade;
       const etapaLinha = etapaDe(l.etapa);
@@ -452,7 +451,7 @@ export class Leads {
       let conversa = b.conversas.find((c) => c.telefone === telefone && c.unidade === unidade);
       const criarConversa = p.criarConversa && !conversa;
       const canalId = criarConversa ? this.o.canalDa(unidade) : undefined;
-      if (criarConversa && !canalId) avisos.push(`Sem número de WhatsApp na unidade ${UNIDADES[unidade].nome}: conversa não criada`);
+      if (criarConversa && !canalId) avisos.push(`Sem número de WhatsApp na unidade ${unidadeDe(unidade).nome}: conversa não criada`);
       let mudouTags = false;
 
       if (!p.simular) {

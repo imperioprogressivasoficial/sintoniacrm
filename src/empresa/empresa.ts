@@ -2,6 +2,7 @@ import type pg from 'pg';
 import { z } from 'zod';
 import type { ModoAtendimento } from '../domain.js';
 import { REGRAS_PADRAO, type RegrasAtendimento } from '../engine/atendimento.js';
+import { definirIdentidade, identidade } from './identidade.js';
 
 /**
  * A empresa (a conta): nome de exibição e a configuração da IA.
@@ -206,6 +207,8 @@ export class Empresa {
   async renomear(nome: string, por: string) {
     await this.armazem.gravarNome(this.id, nome, por, this.agora());
     this.esquecer();
+    // O nome novo vale na hora nos textos da IA, da Serena e dos e-mails (src/empresa/identidade.ts).
+    definirIdentidade(this.id, { ...identidade(this.id), nome: nome.trim() });
     return this.dados();
   }
 

@@ -109,6 +109,8 @@ export const DadosUnidade = z.object({
   /** null = segue o horário da empresa. */
   horario: Horario.nullable().default(null),
   observacao: T(500).default(''),
+  /** Nome que vai nas mensagens para os clientes (vazio = o nome da unidade). Ex.: "Salvador Norte Shopping". */
+  nomeCliente: T(80).default(''),
 });
 export type DadosUnidade = z.infer<typeof DadosUnidade>;
 export const lerDadosUnidade = (b: unknown): DadosUnidade => {

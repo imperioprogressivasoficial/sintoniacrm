@@ -4,7 +4,7 @@ import type { Agenda } from '../src/ai/ferramentas.js';
 import { casaPalavra, preencher } from '../src/automacoes/esquema.js';
 import { proximaAbertura } from '../src/engine/horario.js';
 import type { Conversa } from '../src/domain.js';
-import { UNIDADES } from '../src/unidades.js';
+import { unidadeDe } from '../src/unidades.js';
 import { bahia } from '../src/util/tempo.js';
 import { AgenteFalso, ambientes, montarFunis, quinta } from './funis-ambiente.js';
 
@@ -306,7 +306,7 @@ describe.each(ambientes)('Automações: proteções ($nome)', (amb) => {
     avancar(1);
     await tick();
     expect(textos().slice(inicio)).toEqual(['Agora', 'Bom dia!']);
-    expect(proximaAbertura(UNIDADES.norte, bahia(2026, 11, 8, 9))!.toISOString()).toBe(bahia(2026, 11, 8, 14).toISOString()); // domingo abre 14h
+    expect(proximaAbertura(unidadeDe('norte'), bahia(2026, 11, 8, 9))!.toISOString()).toBe(bahia(2026, 11, 8, 14).toISOString()); // domingo abre 14h
   });
 
   it('limite de mensagens automáticas por conversa por dia', async () => {

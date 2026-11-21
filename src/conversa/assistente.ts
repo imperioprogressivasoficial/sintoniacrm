@@ -2,6 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { Conversa, Mensagem } from '../domain.js';
 import { contextoDaConversa } from '../ai/prompt.js';
 import type { ClienteClaude } from '../ai/agente.js';
+import { apresentacao } from '../empresa/identidade.js';
 
 /**
  * Botão "IA" no topo da conversa: ajuda a atendente sem enviar nada para a cliente.
@@ -37,7 +38,7 @@ export class ErroAssistente extends Error {
   }
 }
 
-const INSTRUCOES = `Você ajuda as atendentes da Império Progressivas (salões de alisamento e progressiva em Salvador) dentro do CRM. Você NÃO fala com a cliente: quem lê o que você escreve é a atendente.
+const INSTRUCOES = () => `Você ajuda as atendentes da ${apresentacao()} dentro do CRM. Você NÃO fala com a cliente: quem lê o que você escreve é a atendente.
 Regras:
 - Português do Brasil, jeito de WhatsApp: curto, caloroso, direto. Sem markdown, sem asteriscos, sem títulos.
 - Use só o que está na conversa e na base de conhecimento. Nunca invente preço, horário, endereço ou regra; se faltar a informação, diga para a atendente conferir.
@@ -105,7 +106,7 @@ export async function ajudarComIa(
   const resp = await claude.beta.messages.create({
     model: opcoes.modelo,
     max_tokens: 16000,
-    system: [{ type: 'text', text: `${INSTRUCOES}\n\n<base_de_conhecimento>\n${opcoes.baseConhecimento}\n</base_de_conhecimento>`, cache_control: { type: 'ephemeral' } }],
+    system: [{ type: 'text', text: `${INSTRUCOES()}\n\n<base_de_conhecimento>\n${opcoes.baseConhecimento}\n</base_de_conhecimento>`, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: partes.join('\n\n') }],
     output_config: { effort: 'low' },
     // Se o modelo principal recusar, a API tenta o modelo de reserva recomendado.

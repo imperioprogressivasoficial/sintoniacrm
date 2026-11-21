@@ -13,7 +13,7 @@ import { casaPalavra, normalizar, preencher } from '../automacoes/esquema.js';
 import { contatoVazio, validarCampos, type ArmazemContatos } from '../contatos/contatos.js';
 import { tipoPeloMimetype } from '../midia.js';
 import { estaAberta, proximaAbertura } from '../engine/horario.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, horaHHmm, MIN, partesBahia, dataISO } from '../util/tempo.js';
 import {
   casarOpcao,
@@ -32,7 +32,7 @@ import {
   type OpcoesBot,
   type Problema,
 } from './esquema.js';
-import { MODELOS } from './modelos.js';
+import { modelosBot } from './modelos.js';
 
 /**
  * Motor dos bots (fluxos em grafo). Segue o mesmo jeito das automações (src/automacoes):
@@ -469,7 +469,7 @@ export class Bots {
   // ---------- cadastro ----------
 
   modelos() {
-    return MODELOS.map((m) => ({ id: m.id, nome: m.nome, descricao: m.descricao, grafo: copia(m.grafo) }));
+    return modelosBot().map((m) => ({ id: m.id, nome: m.nome, descricao: m.descricao, grafo: copia(m.grafo) }));
   }
 
   async listar(): Promise<Fluxo[]> {
@@ -486,7 +486,7 @@ export class Bots {
     const d = FluxoNovo.parse(bruto);
     let rascunho: Grafo = d.rascunho ?? { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'manual' } }], ligacoes: [] };
     if (d.modelo) {
-      const m = MODELOS.find((x) => x.id === d.modelo);
+      const m = modelosBot().find((x) => x.id === d.modelo);
       if (!m) throw new ErroBot('Modelo não encontrado.', 404);
       rascunho = Grafo.parse(copia(m.grafo));
     }
@@ -712,8 +712,8 @@ export class Bots {
       }
       return; // um bot por vez: com um ativo, nenhum outro começa
     }
-    const aberta = estaAberta(UNIDADES[c.unidade], agora);
-    const fora = aberta ? undefined : proximaAbertura(UNIDADES[c.unidade], agora);
+    const aberta = estaAberta(unidadeDe(c.unidade), agora);
+    const fora = aberta ? undefined : proximaAbertura(unidadeDe(c.unidade), agora);
     await this.disparar(c, (g) => {
       if (g.tipo === 'nova_conversa') return m.primeira && (!g.unidade || g.unidade === c.unidade) ? 'nova_conversa' : undefined;
       if (g.tipo === 'palavra_chave') return casaPalavra(m.texto, g.palavras, g.modo) ? `msg:${m.idExterno || randomUUID()}` : undefined;
@@ -948,7 +948,7 @@ export class Bots {
   }
 
   private vars(e: ExecucaoBot, c: Conversa) {
-    const u = UNIDADES[c.unidade];
+    const u = unidadeDe(c.unidade);
     return (t: string) => preencherVariaveis(preencher(t, { nome: c.nome, unidade: u.nome, atendente: c.responsavelNome }), e.estado.vars);
   }
 
@@ -1007,7 +1007,7 @@ export class Bots {
     const st = e.estado;
     const v = this.vars(e, c);
     const por = { nome: `Bot: ${f.nome}`, id: null };
-    const unidade = UNIDADES[c.unidade];
+    const unidade = unidadeDe(c.unidade);
     const entrada = retomando ? st.entrada : null;
     const tentativas = st.espera?.tentativas ?? 0;
 
@@ -1149,7 +1149,7 @@ export class Bots {
       }
       case 'atribuir': {
         if (no.unidade && no.unidade !== c.unidade) {
-          this.anotar(e, no, true, `Pulado: a conversa não é da unidade ${UNIDADES[no.unidade].nome}.`);
+          this.anotar(e, no, true, `Pulado: a conversa não é da unidade ${unidadeDe(no.unidade).nome}.`);
           return { ir: 'proximo' };
         }
         if (!no.usuarioId) {
@@ -1280,7 +1280,7 @@ export class Bots {
       case 'etapa':
         return Boolean(cond.valor) && (await this.o.tags.temTag(c.id, cond.valor));
       case 'horario_loja':
-        return estaAberta(UNIDADES[c.unidade], this.agora());
+        return estaAberta(unidadeDe(c.unidade), this.agora());
       case 'unidade':
         return c.unidade === cond.valor;
       case 'modo':

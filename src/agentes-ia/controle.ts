@@ -3,7 +3,7 @@ import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
 import type { Conversa, ModoAtendimento } from '../domain.js';
 import { estaAberta } from '../engine/horario.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { minutosDoDia, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemAgentesIa } from './armazem.js';
 import type { ExecutorAgentes } from './executor.js';
@@ -35,7 +35,7 @@ export interface DependenciasControle {
 export function valeAgora(cfg: ConfigUnidadeControle, unidade: Conversa['unidade'], agora: Date): boolean {
   if (!cfg.ligado || !cfg.agenteId) return false;
   if (cfg.quando === 'sempre') return true;
-  if (cfg.quando === 'fora_do_horario') return !estaAberta(UNIDADES[unidade], agora);
+  if (cfg.quando === 'fora_do_horario') return !estaAberta(unidadeDe(unidade), agora);
   const p = partesBahia(agora);
   const m = p.hora * 60 + p.minuto;
   const ini = minutosDoDia(cfg.inicio);
@@ -63,7 +63,7 @@ export class ControleIa {
 
   private async configDa(unidade: Conversa['unidade']): Promise<ConfigUnidadeControle | undefined> {
     const c = await this.d.armazem.controle(this.d.empresaId);
-    return unidade === 'norte' || unidade === 'sumare' ? c[unidade] : undefined;
+    return c[unidade];
   }
 
   /** Modo inicial da conversa nova (gancho da Sintonia). undefined = o de sempre. */
@@ -142,7 +142,7 @@ export class ControleIa {
     for (const dono of await this.d.armazem.conversasComAgente()) {
       const c = await this.d.repo.buscarConversa(dono.conversaId).catch(() => undefined);
       if (!c || c.modo === 'ia' || c.empresaId !== this.d.empresaId) continue;
-      const cfg = c.unidade === 'norte' || c.unidade === 'sumare' ? ctrl[c.unidade] : undefined;
+      const cfg = ctrl[c.unidade];
       if (!cfg?.ligado || cfg.voltarAposMin == null) continue;
       if (c.etiquetas.includes('precisa da equipe')) continue;
       const cli = c.ultimaMensagemCliente?.getTime() ?? 0;

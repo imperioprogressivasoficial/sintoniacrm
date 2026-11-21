@@ -10,7 +10,7 @@ import type { Funis, MovimentoEtapa } from '../funis/funis.js';
 import type { GanchosSintonia } from '../app/sintonia.js';
 import type { CanalWhatsApp } from '../channels/tipos.js';
 import { estaAberta, proximaAbertura } from '../engine/horario.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, horaHHmm, MIN, partesBahia, dataISO } from '../util/tempo.js';
 import {
   AutomacaoAlteracao,
@@ -920,7 +920,7 @@ export class Automacoes {
     const por = { nome: `Automação: ${a.nome}`, id: null };
     const evento = (acao: string, dados: Record<string, unknown> = {}) =>
       this.o.repo.registrarEvento({ tipo: 'automacao', conversaId: c.id, unidade: c.unidade, em: agora, dados: { automacaoId: a.id, execucaoId: e.id, acao, teste: e.teste, ...dados } });
-    const unidade = UNIDADES[c.unidade];
+    const unidade = unidadeDe(c.unidade);
 
     switch (p.tipo) {
       case 'enviar_mensagem': {
@@ -1001,7 +1001,7 @@ export class Automacoes {
       }
       case 'atribuir': {
         if (p.unidade && p.unidade !== c.unidade) {
-          this.anotar(e, p.tipo, true, `Pulado: a conversa não é da unidade ${UNIDADES[p.unidade].nome}.`);
+          this.anotar(e, p.tipo, true, `Pulado: a conversa não é da unidade ${unidadeDe(p.unidade).nome}.`);
           return { seguir: true };
         }
         if (!p.usuarioId) {

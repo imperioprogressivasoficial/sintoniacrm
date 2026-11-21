@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { MOTIVOS_FINALIZACAO } from '../nps/tipos.js';
+import { zIdUnidade } from '../unidades.js';
 
 /**
  * Formato das automações: um gatilho e uma lista de passos. Tudo em JSON simples, para a tela montar
  * (e para gravar como está no banco). Os nomes dos campos seguem o que a tela usa.
  */
 
-export const UNIDADES_AUTOMACAO = ['norte', 'sumare', 'feira'] as const;
+/** Unidade de um gatilho/ação: id do cadastro (Empresa › Unidades); aqui só o formato, o fluxo fica guardado. */
+const UnidadeAuto = zIdUnidade();
 export const MODOS = ['ia', 'copiloto', 'humano'] as const;
 
 const id = z.string().trim().min(1).max(100);
@@ -17,7 +19,7 @@ export const Gatilho = z.discriminatedUnion('tipo', [
   /** A conversa está parada nesta etapa há `horas` (uma vez por estadia na etapa). */
   z.object({ tipo: z.literal('parada_na_etapa'), etapaId: id, horas: z.number().min(1).max(24 * 60) }),
   /** Primeira mensagem de uma cliente (opcional: só de uma unidade). */
-  z.object({ tipo: z.literal('nova_conversa'), unidade: z.enum(UNIDADES_AUTOMACAO).optional() }),
+  z.object({ tipo: z.literal('nova_conversa'), unidade: UnidadeAuto.optional() }),
   /** O "bot": mensagem da cliente que contém (ou é exatamente) uma das palavras. Só mensagens de cliente. */
   z.object({
     tipo: z.literal('palavra_chave'),
@@ -50,7 +52,7 @@ export type Passo =
   | { tipo: 'mover_etapa'; funilId: string; etapaId: string }
   | { tipo: 'marcar_tag'; tagId: string }
   | { tipo: 'desmarcar_tag'; tagId: string }
-  | { tipo: 'atribuir'; usuarioId: string | null; unidade?: (typeof UNIDADES_AUTOMACAO)[number] }
+  | { tipo: 'atribuir'; usuarioId: string | null; unidade?: string }
   | { tipo: 'lembrete_ligacao'; em_minutos: number; texto?: string }
   | { tipo: 'enviar_transmissao'; transmissaoId: string }
   | { tipo: 'enviar_email'; modeloId: string }
@@ -74,7 +76,7 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('marcar_tag'), tagId: id }),
     z.object({ tipo: z.literal('desmarcar_tag'), tagId: id }),
     /** usuarioId null = deixa sem dona. Com `unidade`, só vale para conversas dessa unidade (nas outras o passo é pulado). */
-    z.object({ tipo: z.literal('atribuir'), usuarioId: id.nullable(), unidade: z.enum(UNIDADES_AUTOMACAO).optional() }),
+    z.object({ tipo: z.literal('atribuir'), usuarioId: id.nullable(), unidade: UnidadeAuto.optional() }),
     /** Aparece em "Ligar hoje" a partir do dia em que vence (até 6 dias à frente). */
     z.object({ tipo: z.literal('lembrete_ligacao'), em_minutos: z.number().int().min(0).max(6 * 24 * 60), texto: z.string().trim().min(1).max(200).optional() }),
     /** Põe a conversa numa transmissão automática ligada (src/transmissoes): sai pela fila, com ritmo, modelo e opt-out. */

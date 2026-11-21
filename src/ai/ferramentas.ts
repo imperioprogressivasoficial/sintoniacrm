@@ -4,6 +4,7 @@ import type { Agendamento, Conversa, Etapa } from '../domain.js';
 import { agendar, agendaDaUnidade, horariosLivres } from '../agenda/agendar.js';
 import type { FonteAgenda } from '../agenda/sistema.js';
 import { dataISO, DIA } from '../util/tempo.js';
+import { idsUnidades, primeiraUnidade, unidadeDe, unidadesComAgenda, zUnidade } from '../unidades.js';
 
 /**
  * O que o agente precisa da agenda (src/agenda/sistema.ts): o roteador que escolhe o sistema de cada unidade
@@ -19,7 +20,11 @@ export type AcaoAgente =
   /** Marcar uma tag que JÁ EXISTE na empresa (a IA nunca cria tag). */
   | { tipo: 'marcar_tag'; nome: string };
 
-const UNIDADES_COM_AGENDA = ['norte', 'sumare'] as const;
+/** Unidades que a IA pode consultar e agendar: as que têm agenda; sem nenhuma, as ativas (a ferramenta explica o que falta). */
+const unidadesParaIa = (): string[] => {
+  const l = unidadesComAgenda();
+  return l.length ? l : idsUnidades().length ? idsUnidades() : [primeiraUnidade()];
+};
 
 type Ferramenta = Anthropic.Beta.Messages.BetaTool;
 
@@ -30,10 +35,18 @@ const def = (name: string, description: string, properties: Record<string, unkno
   input_schema: { type: 'object', properties, required: Object.keys(properties), additionalProperties: false },
 });
 
+// As unidades vêm do cadastro (Empresa › Unidades): lidas na hora em que a ferramenta vai para a IA
+// (os getters entram no JSON enviado), então unidade nova vale sem reiniciar.
 const unidadeProp = {
   type: 'string',
-  enum: UNIDADES_COM_AGENDA,
-  description: 'norte = Salvador Norte Shopping, sumare = Shopping Sumaré',
+  get enum() {
+    return unidadesParaIa();
+  },
+  get description() {
+    return unidadesParaIa()
+      .map((u) => `${u} = ${unidadeDe(u).nome}`)
+      .join(', ');
+  },
 };
 
 export const FERRAMENTAS_LEITURA: Ferramenta[] = [
@@ -89,7 +102,7 @@ export const FERRAMENTAS_ESCRITA: Ferramenta[] = [
   }),
 ];
 
-const Unidade = z.enum(UNIDADES_COM_AGENDA);
+const Unidade = zUnidade();
 const Data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const Hora = z.string().regex(/^\d{1,2}:\d{2}$/);
 

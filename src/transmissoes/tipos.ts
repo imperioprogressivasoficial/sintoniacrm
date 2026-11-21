@@ -1,13 +1,16 @@
 import { z } from 'zod';
 import { ETAPAS } from '../domain.js';
+import { zUnidade } from '../unidades.js';
+import type { UnidadeId } from '../domain.js';
 
 /**
  * Formato das transmissões (disparo em massa). Tudo em JSON simples: a tela monta, o banco guarda como está.
  * Nomes dos campos seguem a tela.
  */
 
-export const UNIDADES_TRANSMISSAO = ['norte', 'sumare'] as const;
-export type UnidadeTransmissao = (typeof UNIDADES_TRANSMISSAO)[number];
+/** Unidade que envia a transmissão: uma unidade ativa do cadastro (Empresa › Unidades), pelo número dela. */
+export const zUnidadeTransmissao = () => zUnidade({ ativa: true });
+export type UnidadeTransmissao = UnidadeId;
 export const CANAIS = ['oficial', 'nao_oficial'] as const;
 export type CanalTransmissao = (typeof CANAIS)[number];
 
@@ -96,7 +99,7 @@ export type Envio = z.infer<typeof Envio>;
 
 export const CampanhaNova = z.object({
   nome: z.string().trim().min(1).max(80),
-  unidade: z.enum(UNIDADES_TRANSMISSAO),
+  unidade: zUnidadeTransmissao(),
   canal: z.enum(CANAIS),
   modo: z.enum(['manual', 'automatico']).default('manual'),
   publico: Publico.default(Publico.parse({})),

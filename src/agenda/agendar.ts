@@ -1,6 +1,6 @@
 import type { Agendamento, Conversa, UnidadeId } from '../domain.js';
 import { ehRoteador, ErroAgenda, NOMES_SISTEMA, type AgendaDaUnidade, type FonteAgenda } from './sistema.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { deDataEHora, dataISO, DIA, horaHHmm } from '../util/tempo.js';
 
 /**
@@ -37,7 +37,7 @@ export class ErroAgendamento extends Error {
 }
 
 export function estabelecimentoDa(unidade: UnidadeId): string {
-  const u = UNIDADES[unidade];
+  const u = unidadeDe(unidade);
   if (!u.agendaAberta || !u.trinksEstabelecimentoId) {
     throw new ErroAgendamento('sem_agenda', `A unidade ${u.nome} ainda não tem agenda no Trinks.`);
   }
@@ -141,5 +141,5 @@ export function textoConfirmacao(nome: string | undefined, r: ResultadoAgendamen
   const hora = horaHHmm(a.inicio);
   const com = a.profissional ? ` com ${a.profissional}` : '';
   const primeiro = nome?.split(' ')[0];
-  return `${primeiro ? `Prontinho, ${primeiro}! ` : 'Prontinho! '}Seu horário está confirmado: ${a.servico}, dia ${dia} às ${hora}${com}, no ${UNIDADES[a.unidade].nome}. Te mando um lembrete na véspera.`;
+  return `${primeiro ? `Prontinho, ${primeiro}! ` : 'Prontinho! '}Seu horário está confirmado: ${a.servico}, dia ${dia} às ${hora}${com}, no ${unidadeDe(a.unidade).nome}. Te mando um lembrete na véspera.`;
 }

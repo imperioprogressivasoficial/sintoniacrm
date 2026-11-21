@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import type { Conversa, Mensagem } from '../domain.js';
 import { NOME_ETAPA } from '../domain.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { dataISO, horaHHmm, nomeDiaSemana } from '../util/tempo.js';
+import { descricaoCurta, identidade, type Identidade } from '../empresa/identidade.js';
 
 /**
  * O system prompt é fixo (persona + regras + base de conhecimento) para aproveitar o cache
@@ -13,13 +14,47 @@ export function carregarBase(caminho = new URL('../../knowledge/imperio.md', imp
   return readFileSync(caminho, 'utf8');
 }
 
-export function systemPrompt(base: string): string {
-  return `Você é a assistente de atendimento da Império Progressivas no WhatsApp. Você conversa com clientes e potenciais clientes, tira dúvidas e marca horários no Trinks, a agenda do salão.
+/**
+ * Semente da base de conhecimento de uma empresa: knowledge/<empresa>.md quando existe (a Império tem o dela);
+ * senão um esqueleto em branco para a empresa preencher em IA › Base (nada da Império vai para outra empresa).
+ */
+export function carregarBaseDa(empresaId: string): string {
+  if (/^[a-z0-9-]{1,60}$/.test(empresaId)) {
+    try {
+      return carregarBase(new URL(`../../knowledge/${empresaId}.md`, import.meta.url));
+    } catch {
+      /* sem arquivo: esqueleto abaixo */
+    }
+  }
+  return BASE_EM_BRANCO;
+}
+const BASE_EM_BRANCO = `# Base de conhecimento da IA
+
+## Quem somos
+- (Escreva aqui o que a empresa faz, para quem e onde.)
+
+## Jeito de falar
+- Simples, gentil e direto, como no WhatsApp.
+
+## Serviços (descrição para explicar; preço e duração vêm da agenda)
+- (Um item por serviço ou produto.)
+
+## Regras comerciais
+- (Formas de pagamento, cancelamento, atrasos, o que a IA não deve prometer.)
+
+## Quando passar para uma pessoa da equipe
+- Reclamação, pedido de desconto fora das regras ou quando a cliente pedir.
+
+## Perguntas frequentes
+`;
+
+export function systemPrompt(base: string, empresa: Identidade = identidade()): string {
+  return `Você é a assistente de atendimento da ${empresa.nome} no WhatsApp${descricaoCurta(empresa) ? ` (${descricaoCurta(empresa)})` : ''}. Você conversa com clientes e potenciais clientes, tira dúvidas e marca horários na agenda (Trinks ou o sistema que a unidade usa).${empresa.sobre ? `\nSobre a empresa (escrito por ela): ${empresa.sobre}` : ''}
 
 Como responder:
 - Escreva como uma pessoa da equipe escreveria no WhatsApp: curto (1 a 3 frases), caloroso e direto. Sem listas longas, sem markdown, sem asteriscos.
 - Responda primeiro o que a cliente perguntou e depois conduza para o próximo passo, normalmente propor um horário.
-- Preço, duração e horários livres vêm SEMPRE das ferramentas do Trinks. Nunca invente valor, horário, endereço ou regra. Se a informação não estiver na base abaixo nem no Trinks, diga que vai confirmar com a equipe e use passar_para_humano.
+- Preço, duração e horários livres vêm SEMPRE das ferramentas da agenda. Nunca invente valor, horário, endereço ou regra. Se a informação não estiver na base abaixo nem na agenda, diga que vai confirmar com a equipe e use passar_para_humano.
 - Antes de marcar, confirme com a cliente: serviço, unidade, dia, hora e profissional. Só chame agendar depois de ela dizer que sim.
 - Se ela pedir para falar com uma pessoa, reclamar, relatar reação alérgica ou pedir desconto fora das regras, use passar_para_humano e avise com gentileza que alguém da equipe vai continuar.
 - Use registrar_etapa quando ficar claro o momento da cliente: em_conversa (tirando dúvidas), interessada (perguntou preço/horário, quer fazer) ou perdida (disse que não quer ou desistiu).
@@ -34,7 +69,7 @@ ${base}
 
 /** Contexto que muda por conversa. Vai junto da última mensagem, fora do system prompt. */
 export function contextoDaConversa(c: Conversa, agora: Date): string {
-  const u = UNIDADES[c.unidade];
+  const u = unidadeDe(c.unidade);
   return [
     '<contexto>',
     `Agora: ${nomeDiaSemana(agora)}, ${dataISO(agora)} às ${horaHHmm(agora)} (horário da Bahia).`,

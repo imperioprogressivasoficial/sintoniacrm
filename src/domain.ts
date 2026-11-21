@@ -3,7 +3,11 @@
  * Empresa → Unidades → Números de WhatsApp → Conversas.
  */
 
-export type UnidadeId = 'norte' | 'sumare' | 'feira';
+/**
+ * Id da unidade (loja, filial): vem do cadastro da empresa (Empresa › Unidades, src/unidades.ts).
+ * Texto curto e fixo ('norte', 'loja-centro'...); a validação é contra o cadastro (zUnidade).
+ */
+export type UnidadeId = string;
 
 /** Quem conduz a conversa agora. */
 export type ModoAtendimento =

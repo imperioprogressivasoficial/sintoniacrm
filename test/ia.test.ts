@@ -5,7 +5,7 @@ import type { Agenda } from '../src/ai/ferramentas.js';
 import { carregarBase } from '../src/ai/prompt.js';
 import { simularResposta } from '../src/ai/simulacao.js';
 import { decidirQuemResponde } from '../src/engine/atendimento.js';
-import { UNIDADES } from '../src/unidades.js';
+import { unidadeDe } from '../src/unidades.js';
 import { bahia, MIN } from '../src/util/tempo.js';
 import { AgenteFalso, ambientes, montarGestao, quinta } from './gestao-ambiente.js';
 
@@ -89,10 +89,10 @@ describe.each(ambientes)('Configuração da IA ($nome)', (amb) => {
       id: 'c', empresaId: 'imperio', unidade: 'norte' as const, canalId: 'x', telefone: '1', modo: 'copiloto' as const, etapa: 'novo_lead' as const,
       etiquetas: [], criadaEm: quinta(9), atualizadaEm: quinta(9), ultimaMensagemCliente: quinta(10),
     };
-    const d = decidirQuemResponde(c, UNIDADES.norte, new Date(quinta(10).getTime() + 300 * MIN), { assumirAposMin: 15, pausaAposEquipeMin: 10, assumirLigado: false });
+    const d = decidirQuemResponde(c, unidadeDe('norte'), new Date(quinta(10).getTime() + 300 * MIN), { assumirAposMin: 15, pausaAposEquipeMin: 10, assumirLigado: false });
     expect(d.acao).toBe('sugerir');
     // De madrugada a IA continua respondendo.
-    expect(decidirQuemResponde({ ...c, ultimaMensagemCliente: bahia(2026, 11, 6, 2) }, UNIDADES.norte, bahia(2026, 11, 6, 2, 1), { assumirAposMin: 15, pausaAposEquipeMin: 10, assumirLigado: false }).acao).toBe('ia_responde');
+    expect(decidirQuemResponde({ ...c, ultimaMensagemCliente: bahia(2026, 11, 6, 2) }, unidadeDe('norte'), bahia(2026, 11, 6, 2, 1), { assumirAposMin: 15, pausaAposEquipeMin: 10, assumirLigado: false }).acao).toBe('ia_responde');
   });
 });
 

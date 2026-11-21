@@ -12,7 +12,7 @@ import type { TipoNotificacao } from '../notificacoes/tipos.js';
 import type { ArmazemTags, Tags } from '../tags/tags.js';
 import { mesDe } from '../painel/painel.js';
 import { DIA, HORA, MIN } from '../util/tempo.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import type { ArmazemDemo, Registros } from './armazem.js';
 import { ATENDENTES_DEMO, ehEmailDemo, materialDo, POR_DEMO, SENHA_INUTILIZAVEL, type Segmento } from './dados.js';
 import { contarPlano, gerarPlano, ligacoesDeHoje, type CampoRef, type ContextoGerador } from './gerador.js';
@@ -239,7 +239,7 @@ export class Demo {
     const esperando = plano.conversas.filter((c) => c.etapa === 'em_conversa' || c.etapa === 'novo_lead').slice(0, 3);
     esperando.forEach((c, i) => notas.push({ tipo: 'espera', titulo: `${c.nome} está esperando`, texto: `Sem resposta há ${6 + i * 4} minutos.`, conversaId: c.id, ha: (6 + i * 4) * MIN, lida: false }));
     const ag = conv('agendada');
-    if (ag) notas.push({ tipo: 'agenda_mudou', titulo: `${ag.nome} quer remarcar`, texto: `${M.servicos.progressiva.nome} · ${(M.unidades[ag.unidade as "norte" | "sumare"] ?? UNIDADES[ag.unidade].nome)}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
+    if (ag) notas.push({ tipo: 'agenda_mudou', titulo: `${ag.nome} quer remarcar`, texto: `${M.servicos.progressiva.nome} · ${(M.unidades[ag.unidade as "norte" | "sumare"] ?? unidadeDe(ag.unidade).nome)}`, conversaId: ag.id, ha: 2 * HORA, lida: false });
     const gest = plano.eventos.find((e) => e.tipo === 'passou_para_humano');
     const cg = gest && plano.conversas.find((c) => c.id === gest.conversaId);
     if (cg) notas.push({ tipo: 'ia_equipe', titulo: `A IA passou ${cg.nome} para a equipe`, texto: 'Motivo: cliente gestante, precisa da orientação da equipe', conversaId: cg.id, ha: 5 * HORA, lida: false });

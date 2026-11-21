@@ -10,7 +10,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const CHAVE = 'sintonia.email.aba';
   const ESTADOS = { rascunho: ['Rascunho', 'neutro'], agendada: ['Agendada', 'azul'], enviando: ['Enviando', 'menta'], pausada: ['Pausada', 'ambar'], concluida: ['Concluída', 'ok'], cancelada: ['Cancelada', 'coral'] };
   const ETAPAS_NOME = { novo_lead: 'Novo lead', em_conversa: 'Em conversa', interessada: 'Interessada', agendada: 'Agendada', compareceu: 'Compareceu', manutencao: 'Manutenção', perdida: 'Perdida' };
-  const UNIDADES = [['norte', 'Norte Shopping'], ['sumare', 'Sumaré']];
+  /* unidades: as ativas do cadastro (Empresa › Unidades), lidas na hora */
+  const UNIDADES = () => (window.Sintonia?.ui?.unidadesAtivas?.() || []).map((u) => [u.id, u.nome]);
   const BLOCOS = [
     ['titulo', 'Título', 'T'], ['texto', 'Texto', '¶'], ['imagem', 'Imagem', '▣'], ['botao', 'Botão', '⬭'], ['colunas', '2 colunas', '◫'], ['divisor', 'Divisor', '—'], ['espaco', 'Espaço', '↕'],
   ];
@@ -417,11 +418,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const resultado = el('div', { class: 'em-bloco' }, el('h2', {}, 'Quem vai receber'),
       ct?.erro ? el('p', { class: 'em-erro', text: ct.erro }) : el('div', { class: 'em-total' }, el('b', { text: ct ? fmtN(ct.total) : '…' }), el('span', { text: ct ? `${ct.total === 1 ? 'pessoa' : 'pessoas'} com e-mail válido${ct.disponiveis > ct.total ? ` (de ${fmtN(ct.disponiveis)} disponíveis)` : ''}` : 'contando…' })),
       el('p', { class: 'em-nota', text: 'Ficam de fora automaticamente: quem se descadastrou, e-mails que deram erro permanente (bounce) e fichas sem e-mail válido.' }),
-      ct?.amostra?.length ? el('div', { class: 'em-pessoas' }, ...ct.amostra.map((a) => el('div', { class: 'em-pessoa' }, el('b', { text: a.nome || a.email }), el('span', { text: (UNIDADES.find(([u]) => u === a.unidade) || [, ''])[1] }), el('span', { text: a.email })))) : null);
+      ct?.amostra?.length ? el('div', { class: 'em-pessoas' }, ...ct.amostra.map((a) => el('div', { class: 'em-pessoa' }, el('b', { text: a.nome || a.email }), el('span', { text: (window.Sintonia?.ui?.UNIDADE?.[a.unidade] || '') }), el('span', { text: a.email })))) : null);
     const filtros = el('div', { class: 'em-bloco' }, el('h2', {}, 'Filtros', el('small', { text: 'Sem filtro = todas as clientes com e-mail.' })),
       el('div', { class: 'em-campo' }, 'Com qualquer destas tags', tags.length ? chips(p.tags, tags) : el('span', { class: 'em-nota', text: 'Nenhuma tag criada ainda.' })),
       el('div', { class: 'em-campo' }, 'Etapa do atendimento', chips(p.etapas, Object.entries(ETAPAS_NOME))),
-      el('div', { class: 'em-campo' }, 'Unidade', chips(p.unidades, UNIDADES)),
+      el('div', { class: 'em-campo' }, 'Unidade', chips(p.unidades, UNIDADES())),
       tags.length ? el('div', { class: 'em-campo' }, 'Tirar quem tem estas tags', chips(p.tagsExcluir, tags)) : null,
       el('label', { class: 'em-marcar' }, (() => { const i = el('input', { type: 'checkbox' }); i.checked = p.aniversariantesDoMes; i.addEventListener('change', () => { p.aniversariantesDoMes = i.checked; salvar(); contarPublico(); }); return i; })(), el('span', {}, 'Só aniversariantes do mês', el('small', { class: 'em-nota', style: 'display:block', text: 'Usa a data de nascimento da ficha.' }))),
       el('div', { class: 'em-campos' },
@@ -445,8 +446,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const iNome = idx(/^(nome|name|cliente)/), iEmail = idx(/^(e ?-?mail|email|correio)/), iTel = idx(/^(telefone|tel|fone|celular|whats|phone|numero)/);
     if (iEmail < 0 || iTel < 0) return s.ui.toast('Não achei as colunas de e-mail e telefone.');
     const dados = linhas.slice(1).slice(0, 5000).map((l) => ({ nome: iNome >= 0 ? l[iNome] : null, email: l[iEmail] || null, telefone: l[iTel] || '' }));
-    const unidade = s.doc.publico.unidades[0] || (s.ui.estado.eu?.unidades?.[0] === 'sumare' ? 'sumare' : 'norte');
-    if (!confirm(`Importar ${fmtN(dados.length)} pessoa(s) para ${unidade === 'sumare' ? 'o Sumaré' : 'o Norte Shopping'} com uma tag nova? Ninguém recebe mensagem no WhatsApp.`)) return;
+    const unidade = s.doc.publico.unidades[0] || s.ui.estado.eu?.unidades?.[0] || s.ui.unidadesAtivas?.()[0]?.id || ''; /* unidades */
+    if (!confirm(`Importar ${fmtN(dados.length)} pessoa(s) para ${s.ui.nomeUnidade ? s.ui.nomeUnidade(unidade) : unidade} com uma tag nova? Ninguém recebe mensagem no WhatsApp.`)) return;
     try {
       const nomeTag = `Lista ${arquivo.name.replace(/\.[^.]+$/, '')}`.slice(0, 30);
       let tag = s.tags.find((t) => !t.funilId && t.nome.toLowerCase() === nomeTag.toLowerCase());

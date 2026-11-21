@@ -7,6 +7,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import { bahia, DIA, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemAgentesIa } from './armazem.js';
 import type { RegistroComando } from './tipos.js';
+import { unidadeDe, unidadePorNome, zIdUnidade } from '../unidades.js';
 
 /**
  * "Peça para a IA": a gestão escreve em português o que quer ("mova para Interessada quem pediu preço hoje
@@ -17,7 +18,7 @@ import type { RegistroComando } from './tipos.js';
 export const LIMITE_ITENS = 200;
 
 export const Filtro = z.object({
-  unidade: z.enum(['norte', 'sumare']).nullable().default(null),
+  unidade: zIdUnidade().nullable().default(null),
   etapas: z.array(z.enum(ETAPAS)).default([]),
   comTag: z.string().max(60).nullable().default(null),
   semTag: z.string().max(60).nullable().default(null),
@@ -110,8 +111,9 @@ export function interpretarPorRegras(texto: string, tags: string[]): Interpretac
   } else return undefined;
 
   // filtros
-  if (/\bnorte\b/.test(t)) filtro.unidade = 'norte';
-  if (/\bsumare\b/.test(t)) filtro.unidade = 'sumare';
+  // Unidade citada pelo nome do cadastro ("na Norte", "no Centro").
+  const citada = unidadePorNome(t);
+  if (citada) filtro.unidade = citada.id;
   if (/\b(pre[cç]o|precos|quanto custa|valor|valores)\b/.test(t)) {
     filtro.pediuPrecoDias = /\bontem\b/.test(t) ? 1 : (() => {
       const m = t.match(/(\d+)\s*dias?/);
@@ -153,7 +155,7 @@ export function explicar(f: Filtro, a: Acao): string {
   if (f.etapas.length) partes.push(`estão em ${f.etapas.map((e) => NOME_ETAPA[e]).join(' ou ')}`);
   if (f.comTag) partes.push(`têm a tag ${f.comTag}`);
   if (f.semTag) partes.push(`ainda não têm a tag ${f.semTag}`);
-  if (f.unidade) partes.push(f.unidade === 'norte' ? 'da unidade Norte' : 'da unidade Sumaré');
+  if (f.unidade) partes.push(`da unidade ${unidadeDe(f.unidade).nomeApp}`);
   if (f.modo) partes.push(`no modo ${f.modo}`);
   const quem = partes.length ? `as conversas que ${partes.join(', ')}` : 'todas as conversas';
   switch (a.tipo) {

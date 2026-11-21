@@ -3,7 +3,7 @@ import type pg from 'pg';
 import { z } from 'zod';
 import type { Conversa } from '../domain.js';
 import type { MidiaEnvio } from '../channels/tipos.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { normalizarAtalho } from './respostas.js';
 
 /**
@@ -160,7 +160,7 @@ const primeiro = (n?: string | null) => (n ?? '').trim().split(/\s+/)[0] ?? '';
 export function preencherTexto(texto: string, c: Pick<Conversa, 'nome' | 'unidade'>, atendente: string): string {
   const valores: Record<string, string> = {
     nome: primeiro(c.nome),
-    unidade: UNIDADES[c.unidade]?.nome ?? String(c.unidade ?? ''),
+    unidade: unidadeDe(c.unidade)?.nome ?? String(c.unidade ?? ''),
     atendente: primeiro(atendente),
   };
   let vazio = false;

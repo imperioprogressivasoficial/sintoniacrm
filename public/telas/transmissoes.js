@@ -200,7 +200,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const s = {
     caixa: null, ui: null, vista: 'lista', carregado: false, erro: '',
     lista: [], numeros: [], limites: null, descadastrados: 0, tags: [], funis: [], campos: [],
-    rasc: null, passo: 0, previa: null, previaErro: '', imp: null, modelos: [], modelosUnidade: 'norte', modelosErro: '',
+    rasc: null, passo: 0, previa: null, previaErro: '', imp: null, modelos: [], modelosUnidade: '', modelosErro: '',
     atual: null, dest: null, destFiltro: '', destBusca: '', semente: 1, novoModelo: null, timer: null, timerPrevia: null, ocupado: false,
   };
 
@@ -211,7 +211,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const quando = (d) => (d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }) : '');
   const hm = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-  const nomeUnidade = (u) => s.numeros.find((n) => n.unidade === u)?.nome || (u === 'sumare' ? 'Shopping Sumaré' : 'Salvador Norte Shopping');
+  const nomeUnidade = (u) => s.numeros.find((n) => n.unidade === u)?.nome || s.ui.UNIDADE?.[u] || u; /* unidades: nome do cadastro */
   const el = (...a) => s.ui.el(...a);
   const botao = (texto, acao, classe = '', icone = '', attrs = {}) => { const b = el('button', { type: 'button', class: `tx-botao ${classe}`, onclick: acao, ...attrs }); if (icone) b.insertAdjacentHTML('beforeend', icone); b.append(el('span', { text: texto })); return b; };
   const pilula = (mapa, k) => { const [t, c] = mapa[k] || [k, 'cinza']; return el('span', { class: `tx-pilula ${c}`, text: t }); };
@@ -336,7 +336,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------- assistente ----------
   function rascunhoNovo() {
     const n = s.numeros[0];
-    const unidade = s.ui.estado.eu?.unidades?.[0] && s.numeros.some((x) => x.unidade === s.ui.estado.eu.unidades[0]) ? s.ui.estado.eu.unidades[0] : n?.unidade || 'norte';
+    const unidade = s.ui.estado.eu?.unidades?.[0] && s.numeros.some((x) => x.unidade === s.ui.estado.eu.unidades[0]) ? s.ui.estado.eu.unidades[0] : n?.unidade || s.ui.unidadesAtivas?.()[0]?.id || '';
     const num = s.numeros.find((x) => x.unidade === unidade);
     const canal = num?.tipo === 'meta' ? 'oficial' : 'nao_oficial';
     return {
@@ -826,7 +826,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const voltarPara = s.vista === 'assistente' ? 'assistente' : 'lista';
     pararTimer();
     s.vista = 'modelos'; s.modelosVolta = voltarPara;
-    s.modelosUnidade = s.rasc?.unidade || s.numeros[0]?.unidade || 'norte';
+    s.modelosUnidade = s.rasc?.unidade || s.numeros[0]?.unidade || s.ui.unidadesAtivas?.()[0]?.id || '';
     if (criar === true) s.novoModelo = modeloVazio();
     desenhar();
     await carregarModelos(s.modelosUnidade, true);

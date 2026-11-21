@@ -11,7 +11,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     remarcar: ['Remarcar', 'fu-remarcar'],
     sem_resposta: ['Sem resposta', 'fu-semresp'],
   };
-  const UNIDADES = { norte: 'Salvador Norte', sumare: 'Sumaré' };
+  /* unidades: as ativas do cadastro (Empresa › Unidades), lidas na hora */
+  const UNIDADES = new Proxy({}, { ownKeys: () => (window.Sintonia?.ui?.unidadesAtivas?.() || []).map((u) => u.id), getOwnPropertyDescriptor: (_, k) => ({ enumerable: true, configurable: true, value: window.Sintonia?.ui?.UNIDADE?.[k] || k }), get: (_, k) => window.Sintonia?.ui?.UNIDADE?.[k] || k });
   const VARIAVEIS = ['{primeiro_nome}', '{nome}', '{servico}', '{unidade}', '{data}', '{hora}'];
 
   const CSS = `
