@@ -192,6 +192,15 @@ export const comNivel = (u: Usuario, p: Permissoes): Usuario => ({ ...u, verConv
  */
 export const ROTAS_PERMISSAO: ReadonlyArray<{ metodo?: string; padrao: RegExp; p: Chave }> = [
   { metodo: 'POST', padrao: /^\/api\/conversas\/[^/]+\/(enviar|modelo|revisar)$/, p: 'responder' },
+  /* robustez: "Responder" vale para tudo o que manda mensagem à cliente, não só texto (auditoria de 20/11):
+     foto/áudio/arquivo, fluxo de mensagens, bot, nova conversa, mensagem agendada (criar, editar, enviar agora)
+     e grupos do WhatsApp. Parar fluxo/bot e cancelar agendada continuam liberados (não mandam nada).
+     Agendar com confirmação é conferido na própria rota (sem confirmação não manda nada). */
+  { metodo: 'POST', padrao: /^\/api\/conversas\/[^/]+\/(enviar-midia|fluxos|bot)$/, p: 'responder' },
+  { metodo: 'POST', padrao: /^\/api\/conversas\/nova$/, p: 'responder' },
+  { metodo: 'POST', padrao: /^\/api\/conversas\/[^/]+\/agendadas(\/[^/]+\/enviar)?$/, p: 'responder' },
+  { metodo: 'PATCH', padrao: /^\/api\/conversas\/[^/]+\/agendadas\/[^/]+$/, p: 'responder' },
+  { metodo: 'POST', padrao: /^\/api\/grupos\/[^/]+\/(enviar|enviar-midia)$/, p: 'responder' },
   { metodo: 'POST', padrao: /^\/api\/conversas\/[^/]+\/(assumir|transferir)$/, p: 'assumir_transferir' },
   { metodo: 'DELETE', padrao: /^\/api\/conversas\/[^/]+$/, p: 'apagar_conversas' },
   { metodo: 'POST', padrao: /^\/api\/conversas\/[^/]+\/funis\//, p: 'crm_mover' },

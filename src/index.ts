@@ -41,6 +41,8 @@ import { TravaMemoria, TravaPostgres, type Trava } from './fila/trava.js';
 import { FilaComReserva } from './fila/reserva.js';
 import { umaPorVez } from './util/relogio.js';
 import { FilaIa } from './app/fila-ia.js';
+import { acessosPara } from './auth/acessos.js';
+import { resolver as resolverPermissoes } from './auth/permissoes.js';
 import { criarPool, esperarBanco, ehErroDeConexao } from './store/banco.js';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -543,6 +545,7 @@ const canalDaUnidade = (unidade: import('./domain.js').UnidadeId): { canalId: st
   return { erro: 'Esta unidade ainda não tem WhatsApp conectado. Conecte o número em Conexões.' };
 };
 
+const acessosApi = acessosPara(contas);
 /* integracoes: chaves de API, API pública (/api/v1), webhooks de saída e MCP (/mcp). Só lê os eventos: não muda ninguém. */
 const producao = process.env.NODE_ENV === 'production';
 const integracoes = montarIntegracoes({
@@ -565,6 +568,15 @@ const integracoes = montarIntegracoes({
   // Só em desenvolvimento: deixa testar webhook em http://localhost.
   permitirLocal: !producao && process.env.WEBHOOKS_PERMITIR_LOCAL === '1',
   avisar: (a) => notificador.avisarGestao(a),
+  /* robustez: mensagem pela API v1 exige que quem criou a chave ainda tenha "Responder". */
+  podeResponder: async (usuarioId) => {
+    const u = await contas.buscarPorId(usuarioId);
+    if (!u || !u.ativo) return false;
+    const ac = acessosApi;
+    if (!ac) return resolverPermissoes(u.papel).responder;
+    const [perfis, extras] = await Promise.all([ac.perfis(u.empresaId), ac.extras(u.id)]);
+    return resolverPermissoes(u.papel, perfis[u.papel], extras.ajustes).responder;
+  },
   log,
 });
 observarEventos(repo, (e) => integracoes.aoEvento(e));

@@ -17,6 +17,7 @@ import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida, StatusRecebido } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
+import { exigir } from './auth/permissoes.js';
 import { podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
 import type { Conversa } from './domain.js';
 import { registrarPaginas } from './web/paginas.js';
@@ -126,8 +127,20 @@ export interface OpcoesWebhookMeta {
 /** Identifica este início do servidor (muda a cada publicação/reinício). */
 const VERSAO_SERVIDOR = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+/**
+ * robustez: em quem confiar o cabeçalho X-Forwarded-For (o endereço real do visitante).
+ * Atrás do Traefik, sem isto, todo visitante parecia o mesmo (o endereço do Traefik) e os limites por visitante
+ * (formulário de vendas, "esqueci a senha", contato, demonstração) valiam para o mundo todo.
+ * Só os proxies da rede interna do Docker (e o próprio servidor) são confiáveis: quem chega direto da internet
+ * não consegue fingir outro endereço. SINTONIA_PROXY_CONFIAVEL="0" desliga; aceita lista de IPs/CIDR.
+ */
+export function proxyConfiavel(valor = process.env.SINTONIA_PROXY_CONFIAVEL): string | false {
+  if (valor === '0' || valor === 'nao') return false;
+  return valor?.trim() || 'loopback,uniquelocal';
+}
+
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: false, trustProxy: proxyConfiavel() });
   const log = d.log ?? (() => {});
 
   // Corpo bruto guardado para conferir a assinatura da Meta.
@@ -681,6 +694,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.post('/api/conversas/:id/agendar', async (req, reply) => {
     const b = Agendar.parse(req.body);
     const conversa = await conversaVisivel(req);
+    // robustez: a confirmação vai para a cliente pelo WhatsApp: precisa da permissão "Responder".
+    if (b.enviarConfirmacao) exigir(req, 'responder', 'Você não tem permissão para responder clientes. Agende sem enviar a confirmação ou fale com a gestão.');
     const atendente = nomeDe(req, b.atendente);
     // Anti-duplicidade antes de gravar no Trinks: se outra pessoa já está respondendo, nada é marcado.
     if (req.usuario) await d.sintonia.conferirVez(conversa.id, req.usuario);

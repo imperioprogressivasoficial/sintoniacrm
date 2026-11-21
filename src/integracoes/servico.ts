@@ -57,6 +57,11 @@ export interface OpcoesServicoApi {
   contas?: Pick<Contas, 'listarUsuarios'>;
   /** Avisado quando a API marca ou cancela uma reunião (webhook "agendamento.*"). */
   aoReuniao?: (tipo: 'criado' | 'cancelado', empresaId: string, reuniao: Record<string, unknown>) => void;
+  /**
+   * robustez: quem criou a chave ainda pode "Responder" clientes? Mandar mensagem pela API vale como responder pela
+   * tela: se a pessoa perdeu a permissão (ou foi desativada), a chave dela não manda mensagem. Ausente = não confere.
+   */
+  podeResponder?: (usuarioId: string) => Promise<boolean>;
   agora?: () => Date;
 }
 
@@ -356,6 +361,9 @@ export class ServicoApi {
   /** Envia pelo mesmo caminho da tela (WhatsApp oficial ou Evolution, janela de 24 h, follow-ups, eventos). */
   async enviarNaConversa(ctx: Contexto, id: string, textoBruto: string) {
     const texto = Texto.parse(textoBruto);
+    if (ctx.criadaPor && this.o.podeResponder && !(await this.o.podeResponder(ctx.criadaPor))) {
+      throw new ErroApi(403, 'sem_permissao', 'Quem criou esta chave não tem a permissão "Responder" (ou não está mais ativo). Peça para a gestão liberar ou criar outra chave.');
+    }
     const c = await this.conversa(ctx, id);
     await this.o.sintonia.equipeEnviou(c.id, texto, this.autor(ctx));
     const m = [...(await this.o.repo.mensagens(c.id, 5))].reverse().find((x) => x.autor === 'equipe' && x.texto === texto);

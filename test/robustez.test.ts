@@ -9,7 +9,13 @@ import { esperaFalhaIa, MAX_FALHAS_IA, Sintonia } from '../src/app/sintonia.js';
 import type { CanalWhatsApp, MensagemRecebida } from '../src/channels/tipos.js';
 import { FilaMemoria, type FilaEntrada } from '../src/fila/entrada.js';
 import { FilaComReserva } from '../src/fila/reserva.js';
-import { criarServidor } from '../src/server.js';
+import { criarServidor, proxyConfiavel } from '../src/server.js';
+import { ContasMemoria } from '../src/auth/contas.js';
+import { AcessosMemoria } from '../src/auth/acessos.js';
+import { permissaoDaRota } from '../src/auth/permissoes.js';
+import { gerarHash } from '../src/auth/senha.js';
+import { ServicoApi } from '../src/integracoes/servico.js';
+import { LIMITE_FORMULARIO, SEM_GRAVAR } from '../src/auth/rotas.js';
 import { criarPool, ehErroDeConexao, esperarBanco } from '../src/store/banco.js';
 import { RepositorioMemoria } from '../src/store/repositorio.js';
 import { umaPorVez } from '../src/util/relogio.js';
@@ -239,7 +245,8 @@ describe.each(fabricas)('Fila da IA: a mensagem aparece na hora, a IA pensa por 
     let soltar!: () => void;
     const segura = new Promise<void>((r) => (soltar = r));
     let pensando = 0;
-    const agente = { executar: async () => { pensando++; await segura; return { texto: 'Temos sim!', acoes: [], recusou: false }; } };
+    let viu: string[] = [];
+    const agente = { executar: async (p: PedidoAgente) => { pensando++; await segura; viu = p.mensagens.map((m) => m.texto); return { texto: 'Temos sim!', acoes: [], recusou: false }; } };
     let sintonia!: Sintonia;
     const filaIa = new FilaIa({ pensar: (id) => sintonia.pensar(id), paralelo: 4 });
     const relogio = { t: madrugada() };
@@ -259,8 +266,9 @@ describe.each(fabricas)('Fila da IA: a mensagem aparece na hora, a IA pensa por 
     relogio.t = madrugada(2);
     soltar();
     await filaIa.ocioso();
-    // Pensou de novo com as duas mensagens e respondeu uma vez só.
-    expect(pensando).toBe(2);
+    // A resposta que saiu foi pensada com as duas mensagens, e saiu uma vez só.
+    expect(pensando).toBeGreaterThanOrEqual(1);
+    expect(viu).toEqual(['tem horário amanhã?', 'de manhã de preferência']);
     expect(canal.enviados.map((e) => e.texto)).toEqual(['Temos sim!']);
     // Respondeu: a rede de segurança foi cancelada.
     expect((await repo.tarefasPendentes(c!.id)).some((t) => t.tipo === 'reavaliar')).toBe(false);
@@ -341,5 +349,135 @@ describe('Relógios não começam uma rodada por cima da outra', () => {
     expect(await r()).toBe(true);
     expect(await r()).toBe(true);
     expect(avisos[0]).toContain('Falha no relógio');
+  });
+});
+
+// ---------------------------------------------------------------- 3. endereço real do visitante (Traefik)
+
+describe('Formulários atrás do Traefik: cada visitante conta por si, e nunca "recebemos" sem gravar', () => {
+  const lead = (i: number) => ({ nome: `Pessoa ${i}`, whatsapp: `7199999${String(i).padStart(4, '0')}`, email: `p${i}@exemplo.com`, faturamento: 'até R$ 50 mil', plano: 'Essencial' });
+  async function montarApp(contas = new ContasMemoria()) {
+    const repo = new RepositorioMemoria();
+    const { s } = sintoniaCom(repo, { t: madrugada() });
+    return { app: criarServidor({ sintonia: s, repo, auth: { contas } }), contas };
+  }
+
+  it('7 visitantes diferentes pelo Traefik: os 7 gravados (antes: 5 gravados e 2 "recebemos" sem gravar)', async () => {
+    const { app, contas } = await montarApp();
+    for (let i = 0; i < 7; i++) {
+      // O Traefik (rede interna do Docker, 172.18.0.2) repassa o endereço real no X-Forwarded-For.
+      const r = await app.inject({ method: 'POST', url: '/api/leads-site', remoteAddress: '172.18.0.2', headers: { 'x-forwarded-for': `200.10.0.${i + 1}` }, payload: lead(i) });
+      expect(r.statusCode).toBe(200);
+    }
+    expect((contas as unknown as { leadsSite: unknown[] }).leadsSite).toHaveLength(7);
+  });
+
+  it('o mesmo visitante passando do limite recebe mensagem honesta (nada gravado, tente em alguns minutos)', async () => {
+    const { app, contas } = await montarApp();
+    const pedir = (i: number) => app.inject({ method: 'POST', url: '/api/leads-site', remoteAddress: '172.18.0.2', headers: { 'x-forwarded-for': '200.10.0.9' }, payload: lead(i) });
+    for (let i = 0; i < 5; i++) expect((await pedir(i)).statusCode).toBe(200);
+    const r = await pedir(5);
+    expect(r.statusCode).toBe(429);
+    expect(r.json().erro).toBe(LIMITE_FORMULARIO);
+    expect(r.json().erro).not.toMatch(/recebemos seus dados/i);
+    expect((contas as unknown as { leadsSite: unknown[] }).leadsSite).toHaveLength(5);
+  });
+
+  it('quem chega direto da internet não consegue fingir outro endereço', async () => {
+    const { app } = await montarApp();
+    for (let i = 0; i < 5; i++) {
+      await app.inject({ method: 'POST', url: '/api/leads-site', remoteAddress: '8.8.8.8', headers: { 'x-forwarded-for': `1.1.1.${i}` }, payload: lead(i) });
+    }
+    const r = await app.inject({ method: 'POST', url: '/api/leads-site', remoteAddress: '8.8.8.8', headers: { 'x-forwarded-for': '1.1.1.99' }, payload: lead(9) });
+    expect(r.statusCode).toBe(429);
+  });
+
+  it('banco fora ao gravar: 503 com "tente de novo" (e não conta no limite)', async () => {
+    const contas = new ContasMemoria();
+    contas.registrarLeadSite = async () => { throw new Error('Connection terminated'); };
+    contas.registrarInteressado = async () => { throw new Error('Connection terminated'); };
+    const { app } = await montarApp(contas);
+    const r = await app.inject({ method: 'POST', url: '/api/leads-site', payload: lead(1) });
+    expect(r.statusCode).toBe(503);
+    expect(r.json().erro).toBe(SEM_GRAVAR);
+    const c = await app.inject({ method: 'POST', url: '/api/contato', payload: { nome: 'Ana', whatsapp: '71999990000' } });
+    expect(c.statusCode).toBe(503);
+  });
+
+  it('"esqueci a senha" conta por visitante real (não 5 por hora para a empresa toda)', async () => {
+    const { app } = await montarApp();
+    for (let i = 0; i < 8; i++) {
+      const r = await app.inject({ method: 'POST', url: '/api/auth/esqueci', remoteAddress: '172.18.0.2', headers: { 'x-forwarded-for': `200.20.0.${i}` }, payload: { email: `pessoa${i}@exemplo.com` } });
+      expect(r.statusCode).toBe(200);
+    }
+  });
+
+  it('SINTONIA_PROXY_CONFIAVEL: padrão só a rede interna; "0" desliga', () => {
+    expect(proxyConfiavel(undefined)).toBe('loopback,uniquelocal');
+    expect(proxyConfiavel('0')).toBe(false);
+    expect(proxyConfiavel('172.18.0.0/16')).toBe('172.18.0.0/16');
+  });
+});
+
+// ---------------------------------------------------------------- 7. permissão "Responder"
+
+describe('Permissão "Responder" vale para tudo o que manda mensagem à cliente', () => {
+  it('rotas que mandam mensagem pedem "responder"; parar/cancelar não', () => {
+    const id = '5b8e2a3c-0000-4000-8000-000000000001';
+    for (const [metodo, caminho] of [
+      ['POST', `/api/conversas/${id}/enviar`],
+      ['POST', `/api/conversas/${id}/enviar-midia`],
+      ['POST', `/api/conversas/${id}/fluxos`],
+      ['POST', `/api/conversas/${id}/bot`],
+      ['POST', '/api/conversas/nova'],
+      ['POST', `/api/conversas/${id}/agendadas`],
+      ['PATCH', `/api/conversas/${id}/agendadas/ag1`],
+      ['POST', `/api/conversas/${id}/agendadas/ag1/enviar`],
+      ['POST', `/api/grupos/${id}/enviar`],
+      ['POST', `/api/grupos/${id}/enviar-midia`],
+    ] as const) expect(permissaoDaRota(metodo, caminho), `${metodo} ${caminho}`).toBe('responder');
+    for (const [metodo, caminho] of [
+      ['POST', `/api/conversas/${id}/fluxos/env1/parar`],
+      ['POST', `/api/conversas/${id}/bot/parar`],
+      ['POST', `/api/conversas/${id}/agendadas/ag1/cancelar`],
+      ['DELETE', `/api/conversas/${id}/agendadas/ag1`],
+      ['POST', '/api/conversas/contato'],
+      ['GET', `/api/conversas/${id}/agendadas`],
+    ] as const) expect(permissaoDaRota(metodo, caminho), `${metodo} ${caminho}`).toBeUndefined();
+  });
+
+  it('sem "Responder": foto/arquivo e agendar com confirmação dão 403 (antes passavam)', async () => {
+    const contas = new ContasMemoria();
+    const acessos = new AcessosMemoria(contas);
+    const senhaHash = await gerarHash('Imperio2026xyz');
+    const carla = await contas.criarUsuario({ empresaId: 'imperio', nome: 'Carla', email: 'carla@imperio.com', papel: 'atendente', unidades: ['norte'], senhaHash });
+    await acessos.salvarExtras(carla.id, { ajustes: { responder: false } });
+    const repo = new RepositorioMemoria();
+    const { s } = sintoniaCom(repo, { t: tarde() });
+    const { conversa } = await repo.buscarOuCriarConversa({ empresaId: 'imperio', unidade: 'norte', canalId: 'imperio-norte', telefone: '5571988120000', nome: 'Cliente', agora: tarde() });
+    const app = criarServidor({ sintonia: s, repo, auth: { contas, acessos } });
+    const cookie = String((await app.inject({ method: 'POST', url: '/api/auth/entrar', payload: { email: 'carla@imperio.com', senha: 'Imperio2026xyz' } })).headers['set-cookie']).split(';')[0]!;
+    const foto = { base64: Buffer.from([0xff, 0xd8, 0xff, 1]).toString('base64'), mimetype: 'image/jpeg' };
+    expect((await app.inject({ method: 'POST', url: `/api/conversas/${conversa.id}/enviar`, headers: { cookie }, payload: { texto: 'oi' } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'POST', url: `/api/conversas/${conversa.id}/enviar-midia`, headers: { cookie }, payload: foto })).statusCode).toBe(403);
+    const ag = { unidade: 'norte', servicoId: 1, profissionalId: 1, data: '2026-11-06', hora: '10:00', nomeCliente: 'Cliente Teste' };
+    expect((await app.inject({ method: 'POST', url: `/api/conversas/${conversa.id}/agendar`, headers: { cookie }, payload: ag })).statusCode).toBe(403);
+    // Sem confirmação não manda nada para a cliente: passa da permissão (aqui para em "agenda não ligada").
+    expect((await app.inject({ method: 'POST', url: `/api/conversas/${conversa.id}/agendar`, headers: { cookie }, payload: { ...ag, enviarConfirmacao: false } })).statusCode).not.toBe(403);
+    expect(await repo.mensagens(conversa.id)).toHaveLength(0);
+  });
+
+  it('API v1: a chave de quem perdeu "Responder" não manda mensagem', async () => {
+    const repo = new RepositorioMemoria();
+    const { s, canal } = sintoniaCom(repo, { t: tarde() });
+    const { conversa } = await repo.buscarOuCriarConversa({ empresaId: 'imperio', unidade: 'norte', canalId: 'imperio-norte', telefone: '5571988120001', nome: 'Cliente', agora: tarde() });
+    let pode = false;
+    const servico = new ServicoApi({ repo, sintonia: s, podeResponder: async () => pode });
+    const ctx = { empresaId: 'imperio', chaveId: 'k1', nomeChave: 'n8n', criadaPor: 'u1' };
+    await expect(servico.enviarNaConversa(ctx, conversa.id, 'Oi!')).rejects.toMatchObject({ statusCode: 403, codigo: 'sem_permissao' });
+    expect(canal.enviados).toHaveLength(0);
+    pode = true;
+    await servico.enviarNaConversa(ctx, conversa.id, 'Oi!');
+    expect(canal.enviados).toHaveLength(1);
   });
 });
