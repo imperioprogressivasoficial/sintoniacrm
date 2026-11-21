@@ -184,11 +184,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     sinc.addEventListener('click', sincronizar);
     const voltaArq = el('button', { class: 'gp-volta-arq', type: 'button', title: 'Voltar aos grupos', 'aria-label': 'Voltar aos grupos', html: ICONE_VOLTAR, hidden: '' });
     voltaArq.addEventListener('click', () => trocarArquivo(false));
-    const topo = el('div', { class: 'lista-topo' },
+    /* topo-lista: no celular, a mesma barra de cima de Conversas (⋯ com as opções, lua e sino) */
+    const barraCima = window.SintoniaTopoLista?.({ menu: [
+      { id: 'sinc', nome: 'Buscar grupos do WhatsApp', ic: ICONE_SINC, acao: sincronizar },
+      { id: 'arq', nome: 'Grupos arquivados', ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg>', acao: () => trocarArquivo(true) },
+    ] });
+    const topo = el('div', { class: 'lista-topo' }, barraCima || null,
       el('div', { class: 'titulo-linha' }, voltaArq, el('h1', { class: 'titulo-grande gp-titulo', text: 'Grupos' }), sinc),
       el('div', { class: 'linha-busca' }, el('label', { class: 'busca' }, Object.assign(el('span'), { innerHTML: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' }).firstChild, busca)));
     const abas = window.SintoniaAbasConversas?.barra?.('grupos');
-    if (abas) topo.insertBefore(abas, topo.children[1]);
+    if (abas) topo.querySelector(':scope > .titulo-linha').after(abas);
     const lista = el('div', { class: 'lista gp-lista' }, topo,
       el('div', { class: 'gp-arq-aviso', hidden: '', text: 'Grupos arquivados ficam aqui, mesmo quando chega mensagem nova. Eles não contam no número do menu.' }),
       el('div', { class: 'gp-buscando', hidden: '', role: 'status', text: 'Buscando todos os grupos do WhatsApp…' }),
@@ -218,6 +223,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const caixa = $('.gp-itens'); if (!caixa) return;
     if (s.arquivo && !s.arquivadas.total) s.arquivo = false;
     const sinc = $('.gp-sinc'); if (sinc) sinc.hidden = !s.podeSincronizar || s.arquivo;
+    const itSinc = $('.tl-menu [data-id="sinc"]'); if (itSinc) itSinc.hidden = !s.podeSincronizar;
+    const itArq = $('.tl-menu [data-id="arq"]'); if (itArq) itArq.hidden = s.arquivo || !s.arquivadas?.total;
     const volta = $('.gp-volta-arq'); if (volta) volta.hidden = !s.arquivo;
     const titulo = $('.gp-titulo'); const t = s.arquivo ? 'Arquivadas' : 'Grupos'; if (titulo && titulo.textContent !== t) titulo.textContent = t;
     const abas = $('.cv-abas'); if (abas) abas.style.display = s.arquivo ? 'none' : '';

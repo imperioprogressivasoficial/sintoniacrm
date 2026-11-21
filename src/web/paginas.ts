@@ -139,6 +139,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/distribuicao.js': { arquivo: 'telas/distribuicao.js', tipo: 'text/javascript; charset=utf-8' }, // automacao-vendas
   // grupos: Conversas de grupo (grupos do WhatsApp) e a troca Conversas · Grupos · Equipe no celular.
   '/telas/grupos.js': { arquivo: 'telas/grupos.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/topo-lista.js': { arquivo: 'telas/topo-lista.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/conversas-abas.js': { arquivo: 'telas/conversas-abas.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/empresa.js': { arquivo: 'telas/empresa.js', tipo: 'text/javascript; charset=utf-8' }, // layout-telas: Empresa em seções

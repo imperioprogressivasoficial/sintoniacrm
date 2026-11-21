@@ -174,11 +174,16 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const btGrupo = el('button', { class: 'ceq-bt', type: 'button', html: IC.grupo, onclick: () => novoGrupo() }); btGrupo.append(' Novo grupo');
     const busca = el('input', { type: 'search', placeholder: 'Pesquisar', 'aria-label': 'Pesquisar conversas da equipe' });
     busca.addEventListener('input', () => { st.busca = busca.value.toLowerCase(); desenharLista(); });
-    const titulo = el('div', { class: 'titulo' }, el('span', { class: 'espaco' }), window.SintoniaTopoGrupo ? el('span', { class: 'so-cel' }, window.SintoniaTopoGrupo()) : null);
+    /* topo-lista: no celular, a mesma barra de cima de Conversas (⋯ com Novo grupo; + abre Nova conversa) */
+    const titulo = window.SintoniaTopoLista
+      ? window.SintoniaTopoLista({ menu: [{ nome: 'Novo grupo', ic: IC.grupo, acao: () => novoGrupo() }], acao: { titulo: 'Nova conversa', ic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>', onclick: novaConversa } })
+      : el('div', { class: 'titulo' }, el('span', { class: 'espaco' }), window.SintoniaTopoGrupo ? el('span', { class: 'so-cel' }, window.SintoniaTopoGrupo()) : null);
+    const abasEq = window.SintoniaAbasConversas?.barra?.('chat-equipe');
     const lista = el('div', { class: 'lista' },
       el('div', { class: 'lista-topo' },
         titulo,
         el('div', { class: 'titulo-linha' }, el('h1', { class: 'titulo-grande', text: 'Equipe' })),
+        abasEq || null,
         el('div', { class: 'ceq-acoes' }, btNova, btGrupo),
         el('label', { class: 'busca', html: IC.busca }, busca)),
       el('div', { class: 'itens', id: 'ceq-itens', role: 'list' }));
