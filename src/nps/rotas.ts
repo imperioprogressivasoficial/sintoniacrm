@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { escopoDe, podeVer } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
-import { MODELOS_AUTOMACAO, montarPosVenda, ParamsPosVenda } from '../automacoes/modelos.js';
 import type { Conversa } from '../domain.js';
 import { janela, PERIODOS } from '../painel/painel.js';
 import { periodoRelatorio } from '../relatorios/relatorios.js';
@@ -11,13 +10,15 @@ import type { Repositorio } from '../store/repositorio.js';
 import { gerarCsv, nomeArquivo } from '../util/csv.js';
 import { dataISO } from '../util/tempo.js';
 import { ErroNps, type Nps } from './nps.js';
-import { MOTIVOS_FINALIZACAO, NOME_MOTIVO, TEXTOS_NPS } from './tipos.js';
+import { MOTIVOS_FINALIZACAO, NOME_MOTIVO } from './tipos.js';
 
 /**
- * Rotas do finalizar atendimento, da pesquisa de satisfação (NPS) e dos modelos prontos de automação.
+ * Rotas do finalizar atendimento e da pesquisa de satisfação (NPS).
+ * sem-exemplos: saíram as rotas dos modelos prontos de automação (GET /api/automacoes/modelos e
+ * POST /api/automacoes/modelos/pos-venda); o gerador do pós-venda fica em src/automacoes/modelos.ts para a futura Ajuda.
  * Registradas depois de criarServidor: valem o login e o tratamento de erros de lá.
  * - Finalizar: quem vê a conversa.
- * - Configurar a pesquisa e usar modelos: quem mexe nas automações.
+ * - Configurar a pesquisa: quem mexe nas automações.
  * - Resultado (Dashboard e Relatórios): quem vê relatórios, só das unidades que a pessoa vê.
  */
 export interface OpcoesRotasNps {
@@ -81,7 +82,7 @@ export function registrarNps(app: FastifyInstance, o: OpcoesRotasNps): void {
   const MSG_CFG = 'Só a gestão muda a pesquisa de satisfação.';
   app.get('/api/nps/config', async (req) => {
     exigir(req, 'automacoes', MSG_CFG);
-    return { config: await nps.config(), motivos: motivos(), textos: TEXTOS_NPS };
+    return { config: await nps.config(), motivos: motivos() }; // sem-exemplos: sem os textos de exemplo
   });
   app.put('/api/nps/config', async (req) => {
     exigir(req, 'automacoes', MSG_CFG);
@@ -124,35 +125,5 @@ export function registrarNps(app: FastifyInstance, o: OpcoesRotasNps): void {
       .header('content-disposition', `attachment; filename="${nomeArquivo(`nps-${dataISO(f.inicio)}-a-${dataISO(new Date(f.fim.getTime() - 1))}.csv`)}"`)
       .header('cache-control', 'no-store')
       .send(csv);
-  });
-
-  // ------------------------------------------------------------ modelos prontos de automação
-  const MSG_AUT = 'Só a gerência, a direção e a administração mexem nas automações.';
-  app.get('/api/automacoes/modelos', async (req) => {
-    exigir(req, 'automacoes', MSG_AUT);
-    const existentes = o.automacoes ? await o.automacoes.listar() : [];
-    const cfg = await nps.config();
-    return {
-      modelos: MODELOS_AUTOMACAO.map((m) => ({
-        ...m,
-        criadas: existentes.filter((a) => m.nomes.includes(a.nome)).map((a) => ({ id: a.id, nome: a.nome, ligada: a.ligada })),
-      })),
-      linkAvaliacao: cfg.linkAvaliacao,
-      pesquisaLigada: cfg.ligada,
-    };
-  });
-  app.post('/api/automacoes/modelos/pos-venda', async (req, reply) => {
-    exigir(req, 'automacoes', MSG_AUT);
-    if (!o.automacoes) throw erro('As automações não estão configuradas neste servidor.', 501);
-    try {
-      const p = ParamsPosVenda.parse(req.body ?? {});
-      if (p.linkAvaliacao !== undefined && p.linkAvaliacao !== (await nps.config()).linkAvaliacao) await nps.salvarConfig({ linkAvaliacao: p.linkAvaliacao }, quem(req).nome);
-      if (p.pedirAvaliacao && !(await nps.config()).linkAvaliacao) throw erro('Coloque o link de avaliação do Google (ou desmarque o pedido de avaliação).', 400);
-      const criadas = [];
-      for (const a of montarPosVenda(p)) criadas.push(await o.automacoes.criar(a, quem(req).nome));
-      return reply.code(201).send({ criadas });
-    } catch (e) {
-      throw validacao(e);
-    }
   });
 }

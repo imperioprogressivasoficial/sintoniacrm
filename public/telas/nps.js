@@ -1,8 +1,8 @@
-/* Tela "nps" da Sintonia: finalizar atendimento, pesquisa de satisfação (NPS) e modelos prontos.
+/* Tela "nps" da Sintonia: finalizar atendimento e pesquisa de satisfação (NPS).
+ * sem-exemplos (21/11): saíram o bloco "Prontos para usar" e o "Pós-venda pronto"; os textos da pesquisa nascem vazios.
  * Registra window.SintoniaTelas.nps = {
  *   finalizarNaConversa(conversaId, ui, aoFinalizar)  — a folha "Finalizar atendimento" (motivo + pesquisa),
  *   configurar(ui, aoSalvar)                         — a folha de configuração da pesquisa,
- *   prontos(ui, { aoMudar, abrirFollowup })          — o bloco "Prontos para usar" da tela Automações,
  *   corpoPainel(ui, dados, ctx)                      — o corpo do bloco "Satisfação (NPS)" do Dashboard,
  *   painelRelatorio(ui, dados, csv)                  — o painel de NPS nos Relatórios }.
  * Todo texto que vem do servidor entra por textContent (el(..., { text })), nunca como HTML. */
@@ -115,7 +115,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return { d, corpo };
   }
   const campo = (ui, rotulo, entrada) => ui.el('label', { class: 'np-campo' }, ui.el('span', { text: rotulo }), entrada);
-  function area(ui, valor, max = 800) { const t = ui.el('textarea', { maxlength: String(max) }); t.value = valor || ''; return t; }
+  function area(ui, valor, max = 800, dica = '') { const t = ui.el('textarea', { maxlength: String(max), placeholder: dica }); t.value = valor || ''; return t; }
   function marca(ui, titulo, sub, marcado) {
     const c = ui.el('input', { type: 'checkbox' });
     c.checked = !!marcado;
@@ -162,7 +162,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('p', { class: 'np-sub', text: 'Encerra este atendimento e registra o motivo. Os resultados aparecem no Dashboard e nos Relatórios.' }),
       el('div', { class: 'np-campo' }, el('span', { text: 'Motivo' }), pills),
       campo(ui, 'Observação', obs),
-      info.pesquisa.ligada ? enviar.linha : el('p', { class: 'np-sub', text: 'A pesquisa de satisfação está desligada. A gestão liga em Automações › Prontos para usar.' }),
+      info.pesquisa.ligada ? enviar.linha : el('p', { class: 'np-sub', text: 'A pesquisa de satisfação está desligada. A gestão liga em Automações › Pesquisa de satisfação.' }),
       ...(hist ? [hist] : []), erro,
       el('div', { class: 'np-acoes' }, el('button', { class: 'np-botao leve', type: 'button', text: 'Cancelar', onclick: () => d.close() }), ok));
     pills.querySelector('button')?.focus();
@@ -182,10 +182,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       b.onclick = () => { if (motivos.has(m.id)) motivos.delete(m.id); else motivos.add(m.id); b.setAttribute('aria-pressed', String(motivos.has(m.id))); };
       return b;
     }));
-    const pergunta = area(ui, cfg.pergunta);
+    /* sem-exemplos: os campos começam vazios (só a dica curta no placeholder) */
+    const pergunta = area(ui, cfg.pergunta, 800, 'Escreva a pergunta. Ex.: De 0 a 10, quanto você nos recomendaria?');
     const pedir = marca(ui, 'Depois da nota, pedir um comentário', 'Opcional para a cliente. Se ela já escrever junto com a nota, não perguntamos de novo.', cfg.pedirComentario);
-    const coment = area(ui, cfg.textoComentario);
-    const obrigado = area(ui, cfg.agradecimento);
+    const coment = area(ui, cfg.textoComentario, 800, 'O que mandar depois da nota, pedindo um comentário');
+    const obrigado = area(ui, cfg.agradecimento, 800, 'Agradecimento no fim (opcional)');
     const horas = el('input', { type: 'number', min: '1', max: '336', inputmode: 'numeric', value: String(cfg.validadeHoras) });
     const link = el('input', { type: 'url', maxlength: '500', placeholder: 'https://g.page/r/…/review', value: cfg.linkAvaliacao || '' });
     const erro = el('p', { class: 'np-erro', role: 'alert' });
@@ -211,77 +212,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       erro, el('div', { class: 'np-acoes' }, el('button', { class: 'np-botao leve', type: 'button', text: 'Cancelar', onclick: () => d.close() }), salvar));
   }
 
-  // ---------------------------------------------------------------- pós-venda pronto
-  function usarPosVenda(ui, modelo, linkAtual, aoMudar) {
-    const el = ui.el, p = modelo.padrao;
-    const { d, corpo } = folha(ui, 'Pós-venda pronto');
-    const comeca = el('select', {}, el('option', { value: 'finalizado', text: 'Quando finalizar o atendimento com "Venda feita"' }), el('option', { value: 'compareceu', text: 'Quando a cliente entrar em "Compareceu"' }));
-    const cuidados = area(ui, p.textoCuidados, 1000);
-    const dias = el('input', { type: 'number', min: '2', max: '365', inputmode: 'numeric', value: String(p.diasRetorno) });
-    const retorno = area(ui, p.textoRetorno, 1000);
-    const pedir = marca(ui, 'Pedir avaliação para quem deu nota 9 ou 10', 'Sai 30 minutos depois da nota da pesquisa de satisfação.', p.pedirAvaliacao);
-    const avaliacao = area(ui, p.textoAvaliacao, 1000);
-    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'https://g.page/r/…/review', value: linkAtual || '' });
-    const blocoAval = el('div', { class: 'np-corpo' }, campo(ui, 'Mensagem de avaliação', avaliacao), campo(ui, 'Link de avaliação no Google', link));
-    pedir.c.onchange = () => { blocoAval.hidden = !pedir.c.checked; };
-    const ligar = marca(ui, 'Já deixar ligado', 'Você pode desligar ou mudar os textos depois na lista de automações.', true);
-    const erro = el('p', { class: 'np-erro', role: 'alert' });
-    const criar = el('button', { class: 'np-botao', type: 'button', text: 'Criar automações' });
-    criar.onclick = async () => {
-      if (pedir.c.checked && !link.value.trim()) { erro.textContent = 'Coloque o link de avaliação do Google (ou desmarque o pedido de avaliação).'; return; }
-      criar.disabled = true; erro.textContent = '';
-      try {
-        await ui.post('/api/automacoes/modelos/pos-venda', {
-          comeca: comeca.value, textoCuidados: cuidados.value, diasRetorno: Math.round(Number(dias.value) || 30), textoRetorno: retorno.value,
-          pedirAvaliacao: pedir.c.checked, textoAvaliacao: avaliacao.value, ...(link.value.trim() ? { linkAvaliacao: link.value.trim() } : {}), ligar: ligar.c.checked,
-        });
-        d.close();
-        ui.toast(ligar.c.checked ? 'Pós-venda criado e ligado ⚡' : 'Pós-venda criado (desligado)');
-        aoMudar?.();
-      } catch (x) { erro.textContent = x.message; criar.disabled = false; }
-    };
-    corpo.append(el('p', { class: 'np-sub', text: modelo.descricao }), campo(ui, 'Começa', comeca),
-      campo(ui, 'No dia seguinte: mensagem de cuidados', cuidados), campo(ui, 'Lembrete de retorno: quantos dias depois do atendimento', dias), campo(ui, 'Mensagem de retorno', retorno),
-      pedir.linha, blocoAval, el('div', { class: 'np-vars' }, 'Variáveis: ', ...['{primeiro_nome}', '{nome}', '{atendente}', '{link_avaliacao}'].flatMap((v) => [el('code', { text: v }), ' '])),
-      ligar.linha, erro, el('div', { class: 'np-acoes' }, el('button', { class: 'np-botao leve', type: 'button', text: 'Cancelar', onclick: () => d.close() }), criar));
-  }
-
-  /** Bloco "Prontos para usar" da tela Automações. */
-  function prontos(uiDado, { aoMudar, abrirFollowup } = {}) {
-    const ui = UI(uiDado); estilo();
-    const el = ui.el;
-    const cards = el('div', { class: 'np-cards' });
-    const caixa = el('section', { class: 'np-prontos', 'aria-label': 'Prontos para usar' }, el('h2', { text: 'Prontos para usar' }), cards);
-    const card = (icone, titulo, selo, texto, ...botoes) => el('div', { class: 'np-card' },
-      el('div', { class: 'np-card-cab' }, el('span', { class: 'np-ic', html: icone }), el('b', { text: titulo })),
-      selo, el('p', { text: texto }), el('div', { class: 'np-acoes' }, ...botoes));
-    const selo = (on, texto) => el('span', { class: 'np-selo' + (on ? ' on' : ''), text: texto });
-    const desenhar = async () => {
-      let m = null, fu = null, cfg = null;
-      try { [m, fu, cfg] = await Promise.all([ui.api('/api/automacoes/modelos'), ui.api('/api/followup/config').catch(() => null), ui.api('/api/nps/config').catch(() => null)]); }
-      catch { caixa.remove(); return; }
-      const pos = m.modelos.find((x) => x.id === 'pos-venda');
-      const regua = fu?.config?.cadencias?.find((c) => c.id === 'sem_resposta');
-      const horas = (regua?.passos || []).map((p) => p.esperaHoras);
-      const ehRegua = horas.length === 3 && horas[0] === 24 && horas[1] === 48 && horas[2] === 96;
-      cards.replaceChildren(
-        card(IC.estrela, 'Pesquisa de satisfação (NPS)', selo(cfg?.config?.ligada, cfg?.config?.ligada ? 'Ligada' : 'Desligada'),
-          'Ao finalizar o atendimento, a cliente dá uma nota de 0 a 10 e um comentário. Resultado no Dashboard e nos Relatórios; nota baixa avisa a gestão.',
-          el('button', { class: 'np-botao', type: 'button', text: 'Configurar', onclick: () => configurar(ui, desenhar) })),
-        pos ? card(IC.presente, pos.nome, selo(pos.criadas.some((a) => a.ligada), pos.criadas.length ? `${pos.criadas.length} automação(ões) criada(s)` : 'Ainda não usado'), pos.descricao,
-          el('button', { class: 'np-botao', type: 'button', text: pos.criadas.length ? 'Criar de novo' : 'Usar modelo', onclick: () => usarPosVenda(ui, pos, m.linkAvaliacao, () => { desenhar(); aoMudar?.(); }) })) : null,
-        card(IC.regua, 'Régua sem resposta: 1, 3 e 7 dias', selo(regua?.ligada && ehRegua, regua?.ligada ? (ehRegua ? 'Ligada' : 'Ligada (outros tempos)') : 'Desligada'),
-          'Lembretes para quem parou de responder: no 1º, no 3º e no 7º dia. Para sozinha quando a cliente responde. Textos editáveis no Follow-up.',
-          el('button', { class: 'np-botao', type: 'button', text: regua?.ligada && ehRegua ? 'Aplicar textos padrão' : 'Usar e ligar', onclick: async (e) => {
-            e.currentTarget.disabled = true;
-            try { await ui.post('/api/followup/modelo/sem_resposta', { ligar: true }); ui.toast('Régua 1, 3 e 7 dias ligada ✓'); } catch (x) { ui.toast(x.message); }
-            desenhar();
-          } }),
-          abrirFollowup ? el('button', { class: 'np-botao leve', type: 'button', text: 'Editar textos', onclick: abrirFollowup }) : null));
-    };
-    desenhar();
-    return caixa;
-  }
+  /* sem-exemplos: saíram usarPosVenda (o "Pós-venda pronto") e prontos (o bloco "Prontos para usar" da tela Automações).
+   * O gerador do pós-venda fica no servidor (src/automacoes/modelos.ts) para a futura Ajuda. */
 
   // ---------------------------------------------------------------- resultado
   function resultado(ui, r, { compacto = false } = {}) {
@@ -289,7 +221,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const el = ui.el;
     if (!r.total) {
       return [el('div', { class: 'np-vazio', text: r.ligada === false
-        ? 'A pesquisa de satisfação está desligada. Ligue em Automações › Prontos para usar: ao finalizar o atendimento, a cliente dá uma nota de 0 a 10.'
+        ? 'A pesquisa de satisfação está desligada. Ligue em Automações › Pesquisa de satisfação: ao finalizar o atendimento, a cliente dá uma nota de 0 a 10.'
         : `Nenhuma nota no período ainda${r.enviadas ? ` (${r.enviadas} pesquisa(s) enviada(s))` : ''}. As notas chegam quando a cliente responde a pesquisa.` })];
     }
     const pct = (n) => (r.total ? (n / r.total) * 100 : 0);
@@ -332,5 +264,5 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'np-res' }, ...corpo));
   }
 
-  window.SintoniaTelas.nps = { finalizarNaConversa, configurar, prontos, corpoPainel, painelRelatorio };
+  window.SintoniaTelas.nps = { finalizarNaConversa, configurar, corpoPainel, painelRelatorio };
 })();

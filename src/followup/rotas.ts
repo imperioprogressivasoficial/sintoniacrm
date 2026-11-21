@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ehGestor, podeVer } from '../auth/acesso.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Followup } from './followup.js';
-import { GATILHO_SITUACAO, MODELOS_CADENCIA, NOME_SITUACAO, SITUACOES, TEXTOS_CONFIRMACAO } from './tipos.js';
+import { GATILHO_SITUACAO, NOME_SITUACAO, SITUACOES, TEXTOS_CONFIRMACAO } from './tipos.js';
 
 /**
  * Rotas /api/followup/... (registradas depois de criarServidor: valem o login e o tratamento de erros de lá).
@@ -30,7 +30,8 @@ export function registrarFollowup(app: FastifyInstance, o: OpcoesRotasFollowup):
 
   app.get('/api/followup/config', async () => ({
     config: await f.config(),
-    situacoes: SITUACOES.map((id) => ({ id, nome: NOME_SITUACAO[id], gatilho: GATILHO_SITUACAO[id], modelo: MODELOS_CADENCIA[id] })),
+    // sem-exemplos: sem o modelo pronto de cada cadência (o dono monta as suas).
+    situacoes: SITUACOES.map((id) => ({ id, nome: NOME_SITUACAO[id], gatilho: GATILHO_SITUACAO[id] })),
     textosConfirmacao: TEXTOS_CONFIRMACAO,
   }));
 
@@ -44,13 +45,8 @@ export function registrarFollowup(app: FastifyInstance, o: OpcoesRotasFollowup):
     }
   });
 
-  /** Usa o modelo pronto de uma cadência (ex.: régua "sem resposta: 1, 3 e 7 dias") e liga, se pedido. */
-  app.post('/api/followup/modelo/:situacao', async (req) => {
-    exigeGestao(req);
-    const situacao = z.enum(SITUACOES).parse((req.params as { situacao: string }).situacao);
-    const { ligar } = z.object({ ligar: z.boolean().default(true) }).parse(req.body ?? {});
-    return { config: await f.aplicarModelo(situacao, ligar, req.usuario?.nome ?? 'teste') };
-  });
+  // sem-exemplos: saiu a rota POST /api/followup/modelo/:situacao (usar o modelo pronto de uma cadência).
+  // Followup.aplicarModelo continua no código para a futura Ajuda.
 
   app.get('/api/followup/conversa/:id', async (req) => f.seloDaConversa((await conversa(req)).id));
 

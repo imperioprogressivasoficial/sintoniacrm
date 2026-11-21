@@ -20,6 +20,11 @@ export const NOME_MOTIVO: Record<MotivoFinalizacao, string> = {
   outro: 'Outro motivo',
 };
 
+/**
+ * Textos de exemplo da pesquisa. sem-exemplos (pedido do dono, 21/11): a pesquisa NÃO nasce mais com eles
+ * (os campos começam vazios e a pessoa escreve os seus). Ficam aqui para a futura Ajuda
+ * ("Ajuda: um exemplo e o passo a passo").
+ */
 export const TEXTOS_NPS = {
   pergunta:
     'Oi, {primeiro_nome}! Obrigado por falar com a gente. De 0 a 10, quanto você recomendaria o nosso atendimento para um amigo ou familiar? Responda só com o número 😊',
@@ -27,18 +32,19 @@ export const TEXTOS_NPS = {
   agradecimento: 'Muito obrigado, {primeiro_nome}! Sua opinião é muito importante para nós 💙',
 };
 
-const Texto = (max: number) => z.string().trim().min(1).max(max);
+/* sem-exemplos: texto vazio vale (campo ainda não escrito); para ligar, a pergunta é obrigatória (Nps.salvarConfig). */
+const Texto = (max: number) => z.string().trim().max(max);
 
 export const ConfigNps = z.object({
   /** Manda a pesquisa ao finalizar o atendimento. */
   ligada: z.boolean().default(false),
   /** Só para estes motivos de finalização (a atendente ainda pode desmarcar na hora). */
   motivos: z.array(z.enum(MOTIVOS_FINALIZACAO)).max(MOTIVOS_FINALIZACAO.length).default(['resolvido', 'venda_feita', 'agendado', 'outro']),
-  pergunta: Texto(800).default(TEXTOS_NPS.pergunta),
+  pergunta: Texto(800).default(''),
   /** Depois da nota, pede um comentário (opcional para a cliente). */
   pedirComentario: z.boolean().default(true),
-  textoComentario: Texto(800).default(TEXTOS_NPS.textoComentario),
-  agradecimento: Texto(800).default(TEXTOS_NPS.agradecimento),
+  textoComentario: Texto(800).default(''),
+  agradecimento: Texto(800).default(''),
   /** Por quanto tempo a resposta da cliente ainda conta como nota. */
   validadeHoras: z.number().int().min(1).max(24 * 14).default(72),
   /** Link de avaliação (Google, por exemplo): vira a variável {link_avaliacao} nas automações. */

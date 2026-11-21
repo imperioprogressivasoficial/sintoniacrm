@@ -71,6 +71,7 @@ describe('Bots: funções puras', () => {
     const dupla = grafo([{ id: 'a', tipo: 'inicio' }, { id: 'b', tipo: 'fim' }, { id: 'c', tipo: 'fim' }], [['a', 'proximo', 'b'], ['a', 'proximo', 'c']]);
     expect(problemasDoGrafo(dupla).some((x) => x.mensagem.includes('uma saída só pode ter uma linha'))).toBe(true);
     expect(problemasDoGrafo(MENU).filter((x) => x.nivel === 'erro')).toEqual([]);
+    // sem-exemplos: os modelos saíram da tela, mas ficam válidos no código para a futura Ajuda.
     for (const m of modelosBot()) expect(problemasDoGrafo(Grafo.parse(m.grafo)).filter((x) => x.nivel === 'erro'), m.id).toEqual([]);
   });
 
@@ -97,16 +98,18 @@ describe('Bots: funções puras', () => {
 });
 
 describe.each(ambientes)('Bots ($nome)', (amb) => {
-  it('cadastro: modelos, rascunho × publicado, publicar recusa com problemas, ligar só publicado, permissões', async () => {
+  it('cadastro: sem modelos prontos, rascunho × publicado, publicar recusa com problemas, ligar só publicado, permissões', async () => {
     const { como, gente } = await preparar(amb);
-    const modelos = (await como(gente.admin, 'GET', '/api/bots/modelos')).json() as Array<{ id: string }>;
-    expect(modelos.map((x) => x.id)).toEqual(['boas_vindas_menu', 'fora_do_horario', 'qualificacao']);
+    // sem-exemplos: nenhum modelo pronto oferecido, e não dá para criar a partir de um.
+    expect((await como(gente.admin, 'GET', '/api/bots/modelos')).json()).toEqual([]);
+    expect((await como(gente.admin, 'GET', '/api/bots')).json()).toEqual([]); // nenhum bot nasce sozinho
+    expect((await como(gente.admin, 'POST', '/api/bots', { nome: 'Boas-vindas', modelo: 'boas_vindas_menu' })).statusCode).toBe(400);
     expect((await como(gente.carla, 'GET', '/api/bots')).statusCode).toBe(403);
-    const r = await como(gente.admin, 'POST', '/api/bots', { nome: 'Boas-vindas', modelo: 'boas_vindas_menu' });
+    const r = await como(gente.admin, 'POST', '/api/bots', { nome: 'Boas-vindas' });
     expect(r.statusCode).toBe(201);
-    const f = r.json() as { id: string; ligado: boolean; versao: number; publicado: unknown; rascunho: { nos: unknown[] } };
+    const f = r.json() as { id: string; ligado: boolean; versao: number; publicado: unknown; rascunho: { nos: Array<{ tipo: string }> } };
     expect(f).toMatchObject({ ligado: false, versao: 0, publicado: null });
-    expect(f.rascunho.nos.length).toBeGreaterThan(5);
+    expect(f.rascunho.nos.map((n) => n.tipo)).toEqual(['inicio']); // em branco: só o Início
     // Ligar sem publicar: 409.
     expect((await como(gente.admin, 'POST', `/api/bots/${f.id}/ligar`)).statusCode).toBe(409);
     // Rascunho com problema: salva, mas não publica.

@@ -129,7 +129,7 @@ import { contatoDoAmbiente, registrarPublico } from './publico/publico.js'; /* s
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
-/* nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS) e modelos prontos de automação */
+/* nps-posvenda: finalizar atendimento e pesquisa de satisfação (NPS). sem-exemplos: sem os modelos prontos de automação */
 import { Nps } from './nps/nps.js';
 import { ArmazemNpsMemoria, ArmazemNpsPostgres } from './nps/armazem.js';
 import { registrarNps } from './nps/rotas.js';

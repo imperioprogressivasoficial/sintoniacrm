@@ -1142,14 +1142,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       <div class="lt-grupo" data-grupo="automacoes">
         <button class="lt-cab" type="button" aria-expanded="false" title="Automações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg><span class="lt-rot">Automações</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <!-- automacoes-ordem: Chatbot, Fluxos, Follow-up, Agente de IA, Pesquisa de satisfação (+ atendimento-extra: Modelos prontos, Mensagens agendadas) -->
+          <!-- automacoes-ordem: Chatbot, Fluxos, Follow-up, Agente de IA, Pesquisa de satisfação (+ atendimento-extra: Mensagens agendadas) -->
           <button class="so-gestao nav lt-item" data-vista="bot" title="Chatbot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/></svg><span class="lt-rot">Chatbot</span></button>
           <button class="so-gestao nav lt-item" data-vista="automacoes" title="Fluxos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 3 3v6.5M6 8.5V15a3 3 0 0 0 3 3h6.5"/></svg><span class="lt-rot">Fluxos</span></button>
           <button class="so-gestao lt-item" id="lt-followup" type="button" title="Follow-up: lembretes para quem parou de responder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2.5h6"/></svg><span class="lt-rot">Follow-up</span></button>
           <button class="so-gestao nav lt-item" data-vista="ia" id="lt-ia-config" title="Agente de IA: agentes, treinamento e memória"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg><span class="lt-rot">Agente de IA</span></button>
           <button class="so-gestao lt-item" id="lt-nps" type="button" title="Pesquisa de satisfação: nota de 0 a 10 ao finalizar o atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z"/></svg><span class="lt-rot">Pesquisa de satisfação</span></button>
           <!-- atendimento-extra: o que mais é automático e tinha ficado fora do grupo (levam às telas que já existem) -->
-          <button class="so-gestao lt-item" id="lt-auto-modelos" type="button" title="Modelos prontos: pós-venda, aniversário, régua de mensagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M17 13.5v7M13.5 17h7"/></svg><span class="lt-rot">Modelos prontos</span></button>
+          <!-- sem-exemplos: saiu o item "Modelos prontos" (o dono monta os fluxos, bots e follow-ups dele) -->
           <button class="so-gestao lt-item" id="lt-auto-agendadas" type="button" title="Mensagens agendadas: o que vai sair sozinho, de toda a equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/></svg><span class="lt-rot">Mensagens agendadas</span></button>
         </div></div>
       </div>
@@ -3175,8 +3175,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         pode('automacoes') && { nome: 'Follow-up', sub: 'Quem parou de responder e confirmação de agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => { window.SintoniaTelas?.automacoes?.irAba?.('followup', false); mostrar('automacoes'); } },
         /* nps-posvenda: configuração da pesquisa de satisfação */
         pode('automacoes') && window.SintoniaTelas?.nps && { nome: 'Pesquisa de satisfação', sub: 'Nota de 0 a 10 ao finalizar o atendimento', ic: IC.relatorio, cor: '#d97706', acao: () => window.SintoniaTelas.nps.configurar(window.Sintonia.ui) },
-        /* atendimento-extra: modelos prontos (pós-venda, aniversário, régua) e as mensagens agendadas de toda a equipe */
-        pode('automacoes') && { nome: 'Modelos prontos', sub: 'Pós-venda, aniversário e régua de mensagens', ic: I('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><path d="M17 13.5v7M13.5 17h7"/>'), cor: '#8b5cf6', acao: () => { window.SintoniaTelas?.automacoes?.irAba?.('modelos', false); mostrar('automacoes'); } },
+        /* atendimento-extra: as mensagens agendadas de toda a equipe. sem-exemplos: saiu "Modelos prontos". */
         { nome: 'Mensagens agendadas', sub: 'O que vai sair sozinho, de toda a equipe', ic: I('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/>'), cor: '#106ebe', acao: () => { window.SintoniaTelas?.agendadas?.verTodas?.(); mostrar('agendadas'); } },
       ] },
       gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
@@ -3444,7 +3443,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     /* atendimento-extra: Follow-up abre a aba Follow-up (antes caía em Fluxos); Fluxos volta para a aba Fluxos. */
     const irAutomacoes = (aba) => { const A = window.SintoniaTelas?.automacoes; if (A?.irAba) A.irAba(aba); else mostrar('automacoes'); };
     $('lt-followup')?.addEventListener('click', () => irAutomacoes('followup'));
-    $('lt-auto-modelos')?.addEventListener('click', () => irAutomacoes('modelos'));
     $('lt-auto-agendadas')?.addEventListener('click', () => { window.SintoniaTelas?.agendadas?.verTodas?.(); mostrar('agendadas'); });
     document.querySelector('.lt-item[data-vista="automacoes"]')?.addEventListener('click', () => window.SintoniaTelas?.automacoes?.irAba?.('fluxos', false), true);
     // Com a aba Follow-up aberta, o item Follow-up fica marcado no menu (e na trilha do topo) no lugar de Fluxos.

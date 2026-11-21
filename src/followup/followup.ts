@@ -97,12 +97,24 @@ export class Followup {
 
   async salvarConfig(bruto: unknown, por: string): Promise<ConfigFollowup> {
     const cfg = normalizarConfig(ConfigFollowup.parse(bruto));
+    // sem-exemplos: as cadências nascem vazias; ligada, precisa de mensagem em cada passo (texto, ou a IA com um objetivo).
+    for (const c of cfg.cadencias) {
+      if (!c.ligada) continue;
+      const nome = NOME_SITUACAO[c.id];
+      if (!c.passos.length) throw Object.assign(new Error(`Para ligar “${nome}”, escreva pelo menos uma mensagem.`), { statusCode: 400 });
+      const vazio = c.passos.findIndex((p) => !p.texto.trim() && !(p.ia && p.objetivo.trim()));
+      if (vazio >= 0) throw Object.assign(new Error(`“${nome}”: a mensagem ${vazio + 1} está vazia.`), { statusCode: 400 });
+    }
     await this.o.armazem.gravarConfig(this.o.empresaId, cfg, por);
     this.cache = undefined;
     return cfg;
   }
 
-  /** Aplica o modelo pronto de uma cadência (textos e esperas do modelo) e, se pedido, liga. */
+  /**
+   * Aplica o modelo de uma cadência (textos e esperas do modelo) e, se pedido, liga.
+   * sem-exemplos: a tela e a API não oferecem mais (o dono monta as suas); fica para a futura Ajuda
+   * ("Ajuda: um exemplo e o passo a passo").
+   */
   async aplicarModelo(situacao: Situacao, ligar: boolean, por: string): Promise<ConfigFollowup> {
     const cfg = structuredClone(await this.config());
     const modelo = MODELOS_CADENCIA[situacao];
@@ -200,8 +212,10 @@ export class Followup {
     if (!c || c.empresaId !== this.o.empresaId) return false;
     if (DE_VENDA.includes(situacao) && situacao !== 'faltou' && (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida')) return false;
     if (situacao !== 'pos_atendimento' && c.modo === 'humano' && cfg.pararQuandoEquipeAssume) return false;
+    // sem-exemplos: cadência sem mensagens (nasce vazia) não começa.
+    const primeiro = cad.passos[0];
+    if (!primeiro) return false;
     await this.o.armazem.cancelar(conversaId, { tipo: 'cadencia', situacoes: situacao === 'sem_resposta' ? ['sem_resposta'] : [situacao, 'sem_resposta'] }, 'recomeçou');
-    const primeiro = cad.passos[0]!;
     return this.o.armazem.programar(
       this.o.empresaId,
       {

@@ -46,7 +46,8 @@ const Cadencia = z.object({
   ligada: z.boolean().default(false),
   /** A cliente respondeu: para a cadência (no pós-atendimento costuma ficar desligado). */
   pararSeResponder: z.boolean().default(true),
-  passos: z.array(Passo).min(1).max(6),
+  /* sem-exemplos: a cadência nasce vazia (a pessoa escreve as mensagens); para ligar, precisa de pelo menos uma (Followup.salvarConfig). */
+  passos: z.array(Passo).max(6).default([]),
 });
 export type Cadencia = z.infer<typeof Cadencia>;
 
@@ -85,7 +86,12 @@ export type ConfigFollowup = z.infer<typeof ConfigFollowup>;
 
 const h = (dias: number) => dias * 24;
 
-/** Modelos prontos (a tela oferece; a configuração inicial nasce deles, tudo desligado). */
+/**
+ * Modelos de cadência. sem-exemplos (pedido do dono, 21/11): a tela não oferece mais e a configuração inicial
+ * NÃO nasce deles (cada cadência começa vazia). Ficam aqui, sem uso na tela, para a futura Ajuda
+ * ("Ajuda: um exemplo e o passo a passo"). A migração 670 usa estes textos para reconhecer cadências de exemplo
+ * nunca mexidas (test/sem-exemplos.test.ts confere que os dois continuam iguais).
+ */
 export const MODELOS_CADENCIA: Record<Situacao, Omit<Cadencia, 'ligada'>> = {
   // Régua "sem resposta: 1 dia, 3 dias, 7 dias" (as esperas somam: 1 + 2 + 4 dias). Para quando a cliente responde.
   sem_resposta: {
@@ -144,7 +150,8 @@ export const TEXTOS_CONFIRMACAO = {
 
 export function configPadrao(): ConfigFollowup {
   return ConfigFollowup.parse({
-    cadencias: SITUACOES.map((id) => ({ ...MODELOS_CADENCIA[id], ligada: false })),
+    // sem-exemplos: cada cadência começa desligada e sem mensagens; a pessoa monta a sua.
+    cadencias: SITUACOES.map((id) => ({ id, ligada: false, pararSeResponder: MODELOS_CADENCIA[id].pararSeResponder, passos: [] })),
     confirmacao: {
       ligada: true,
       // Uma por unidade ativa do cadastro (unidade nova sem linha aqui também recebe 24 h e 2 h antes).
@@ -157,7 +164,7 @@ export function configPadrao(): ConfigFollowup {
   });
 }
 
-/** Junta o que está gravado com o padrão (cadência que faltar volta desligada, com o modelo pronto). */
+/** Junta o que está gravado com o padrão (cadência que faltar volta desligada e vazia). */
 export function normalizarConfig(bruto: unknown): ConfigFollowup {
   const padrao = configPadrao();
   const b = (bruto && typeof bruto === 'object' ? bruto : {}) as Partial<ConfigFollowup>;

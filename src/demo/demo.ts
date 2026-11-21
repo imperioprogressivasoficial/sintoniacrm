@@ -199,37 +199,9 @@ export class Demo {
       respostas++;
     }
 
-    // Automações de exemplo, todas DESLIGADAS.
-    const autos = [
-      {
-        nome: 'Exemplo: Interessada há 1 dia → mensagem',
-        funilId: sistema.id,
-        ligada: false,
-        gatilho: { tipo: 'entrou_na_etapa', etapaId: etapasSistema.interessada },
-        passos: [
-          { tipo: 'esperar', minutos: 24 * 60 },
-          { tipo: 'enviar_mensagem', texto: 'Oi, {primeiro_nome}! Ficou alguma dúvida sobre os valores? Tenho horários essa semana 💛', so_no_horario: true },
-        ],
-      },
-      {
-        nome: 'Exemplo: Compareceu → Pós-venda',
-        funilId: sistema.id,
-        ligada: false,
-        gatilho: { tipo: 'entrou_na_etapa', etapaId: etapasSistema.compareceu },
-        passos: [{ tipo: 'mover_etapa', funilId: pv.id, etapaId: pid('Retorno 30 dias') }],
-      },
-      {
-        nome: 'Exemplo: palavra "endereço" → resposta',
-        funilId: null,
-        ligada: false,
-        gatilho: { tipo: 'palavra_chave', palavras: ['endereço', 'onde fica', 'localização'], modo: 'contem' },
-        passos: [{ tipo: 'enviar_mensagem', texto: 'Estamos na unidade {unidade} 📍 Te esperamos!', so_no_horario: false }],
-      },
-    ];
-    for (const a of autos) {
-      const criada = await o.automacoes.criar(a, POR_DEMO);
-      await reg('automacao', [criada.id]);
-    }
+    // sem-exemplos (pedido do dono, 21/11): a demonstração não cria mais automações de exemplo em Fluxos
+    // (o dono monta as dele). Apagar a demonstração ainda remove as que demonstrações antigas criaram.
+    const autos: string[] = [];
 
     // Notificações para quem preencheu (já "entregues": nenhum push sai).
     const conv = (etapa: Etapa, i = 0) => plano.conversas.filter((c) => c.etapa === etapa)[i];

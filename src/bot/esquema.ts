@@ -143,7 +143,7 @@ export type OpcoesBot = z.infer<typeof OpcoesBot>;
 export const FluxoNovo = z.object({
   nome: z.string().trim().min(1).max(80),
   descricao: z.string().trim().max(300).optional(),
-  /** Começar de um modelo pronto (GET /api/bots/modelos). */
+  /** Começar de um modelo pronto. sem-exemplos: a API recusa (Bots.criar); os modelos ficam para a futura Ajuda. */
   modelo: z.string().max(60).optional(),
   rascunho: Grafo.optional(),
   opcoes: OpcoesBot,
