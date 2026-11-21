@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 18:44 UTC (21/11, 15h44 na Bahia)
-commit: ed46144
-pacote sha256: af518fa35b0e5d2ce116eb77f1c0924b815ae66cddaf858d90106980cbbb381a
+data: 2026-11-21 19:18 UTC (21/11, 16h18 na Bahia)
+commit: 9faf68c
+pacote sha256: 41c62fd0c66de3a73e09f0254191e0c13583c51b8538f3f8d74d4d6a3123a609
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ed46144.b64); pode apagar depois.
-observação: em cima do f82f122. Entra: assinatura nas respostas da IA (configIa.assinatura; aplicada em Sintonia.enviarPartes).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-9faf68c.b64); pode apagar depois.
+observação: em cima do ed46144. Entra: Configurações no celular nova (capa + busca + atalhos + áreas no painel; .cfg-nova em app.html).
