@@ -497,28 +497,52 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     abrirFolha(d);
   }
 
-  /** "Respostas rápidas" do +: escolher uma e pôr no campo (onde estiver o cursor). */
+  /** Botão ao lado da câmera (e "Respostas rápidas" do +): abas Respostas | Fluxos (dono 21/11: os fluxos sempre à vista,
+   *  mesmo sem nenhum criado, com "Criar fluxo"). Resposta vai para o campo; fluxo é enviado pelo servidor, passo a passo. */
+  let abaEscolha = (() => { try { return localStorage.getItem('sintonia.escolher.aba') === 'fluxos' ? 'fluxos' : 'respostas'; } catch { return 'respostas'; } })();
+  function irParaFluxos(d) {
+    d.close();
+    try { localStorage.setItem('sintonia.respostas.aba', 'fluxos'); } catch {}
+    window.Sintonia?.mostrar?.('respostas');
+  }
   async function escolherResposta() {
-    const { d, corpo } = folha('d-escolher-resposta', 'Respostas rápidas', 'rr-gestao');
+    const { d, corpo } = folha('d-escolher-resposta', 'Respostas e fluxos', 'rr-gestao');
     corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Carregando…' }));
     abrirFolha(d);
-    const lista = await carregarRespostas(true);
-    const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => abrirGestao({ empurrar: true }) });
-    /* respostas-fluxos: os fluxos aparecem acima das respostas; tocar dispara o envio pelo servidor */
-    const fluxos = window.SintoniaFluxos ? await window.SintoniaFluxos.carregar(true) : [];
-    const blocoFluxos = fluxos.length ? [el('div', { class: 'cx-secao', text: 'Fluxos (saem sozinhos)' }), el('div', { class: 'folha-lista' }, ...fluxos.map((f) => el('button', { type: 'button', onclick: () => {
-      d.close(); const c = conversa(); if (c) window.SintoniaFluxos.iniciar(c.id, f);
-    } }, el('span', {}, el('b', { class: 'rr-at', text: `/${f.atalho} · ${f.nome}` }), el('small', { text: window.SintoniaFluxos.resumo(f) }))))), el('div', { class: 'cx-secao', text: 'Respostas' })] : [];
-    if (!lista.length && blocoFluxos.length) { corpo.replaceChildren(...blocoFluxos, el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
-    if (!lista.length) { corpo.replaceChildren(el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
-    corpo.replaceChildren(...blocoFluxos, el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
-      d.close();
-      const t = preencher(r.texto);
-      const i = campo.selectionStart ?? campo.value.length, f = campo.selectionEnd ?? i;
-      campo.value = campo.value.slice(0, i) + t + campo.value.slice(f);
-      campo.dispatchEvent(new Event('input', { bubbles: true }));
-      campo.focus(); campo.setSelectionRange(i + t.length, i + t.length);
-    } }, el('span', {}, el('b', { class: 'rr-at', text: '/' + r.atalho }), el('small', { text: preencher(r.texto) }))))), el('p', { class: 'cx-sub', style: 'margin:10px 4px 0', text: 'Dica: digite / no campo para achar uma resposta pelo atalho.' }), gerenciar);
+    const F = window.SintoniaFluxos;
+    const [lista, fluxos] = await Promise.all([carregarRespostas(true), F ? F.carregar(true).catch(() => []) : Promise.resolve([])]);
+    const desenharAba = () => {
+      const trocar = (a) => { if (a === abaEscolha) return; abaEscolha = a; try { localStorage.setItem('sintonia.escolher.aba', a); } catch {} desenharAba(); };
+      const topo = F ? el('div', { style: 'display:flex;justify-content:center;margin:0 0 12px' }, F.abas(abaEscolha, trocar)) : null;
+      if (abaEscolha === 'fluxos' && F) {
+        const criar = el('button', { type: 'button', class: 'nc-teste', text: fluxos.length ? 'Criar e editar fluxos' : 'Criar fluxo', onclick: () => irParaFluxos(d) });
+        if (!fluxos.length) {
+          corpo.replaceChildren(topo,
+            el('p', { class: 'cx-sub', style: 'padding:6px 4px;line-height:1.5', text: 'Nenhum fluxo ainda. Um fluxo manda várias mensagens em sequência, como uma conversa: por exemplo, aparece "digitando…", sai um texto, aparece "gravando áudio…", sai um áudio. Você monta os passos do seu jeito.' }),
+            criar);
+          return;
+        }
+        corpo.replaceChildren(topo,
+          el('div', { class: 'folha-lista' }, ...fluxos.map((f) => el('button', { type: 'button', onclick: () => {
+            d.close(); const c = conversa(); if (c) F.iniciar(c.id, f);
+          } }, el('span', {}, el('b', { class: 'rr-at', text: `/${f.atalho} · ${f.nome}` }), el('small', { text: F.resumo(f) }))))),
+          el('p', { class: 'cx-sub', style: 'margin:10px 4px 0', text: 'Tocou, saiu: a Sintonia manda um passo de cada vez, mesmo se você fechar a tela. Para parar, use "Parar" na faixa da conversa.' }),
+          criar);
+        return;
+      }
+      const gerenciar = el('button', { type: 'button', class: 'nc-teste', text: 'Criar e editar respostas', onclick: () => abrirGestao({ empurrar: true }) });
+      if (!lista.length) { corpo.replaceChildren(topo, el('p', { class: 'cx-sub', style: 'padding:6px 4px', text: 'Nenhuma resposta rápida ainda.' }), gerenciar); return; }
+      corpo.replaceChildren(topo, el('div', { class: 'folha-lista' }, ...lista.map((r) => el('button', { type: 'button', onclick: () => {
+        d.close();
+        const t = preencher(r.texto);
+        const i = campo.selectionStart ?? campo.value.length, f = campo.selectionEnd ?? i;
+        campo.value = campo.value.slice(0, i) + t + campo.value.slice(f);
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+        campo.focus(); campo.setSelectionRange(i + t.length, i + t.length);
+      } }, el('span', {}, el('b', { class: 'rr-at', text: '/' + r.atalho }), el('small', { text: preencher(r.texto) }))))),
+      el('p', { class: 'cx-sub', style: 'margin:10px 4px 0', text: 'Dica: digite / no campo para achar uma resposta ou um fluxo pelo atalho.' }), gerenciar);
+    };
+    desenharAba();
   }
 
   let pedidoIa = 0;
