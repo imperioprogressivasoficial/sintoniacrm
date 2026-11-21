@@ -34,7 +34,7 @@ describe.each(ambientes)('Configuração da IA ($nome)', (amb) => {
     // A atendente não configura a IA: nem lê a configuração.
     expect((await como(gente.carla, 'GET', '/api/ia/config')).statusCode).toBe(403);
     const padrao = (await como(gente.gerenteNorte, 'GET', '/api/ia/config')).json();
-    expect(padrao).toEqual({ modoPadrao: 'copiloto', assumirSemResposta: { ligado: true, minutos: 15 }, marcarTags: false, iaLigada: true });
+    expect(padrao).toEqual({ modoPadrao: 'copiloto', assumirSemResposta: { ligado: true, minutos: 15 }, marcarTags: false, assinatura: { ligada: false, texto: 'Serena', posicao: 'inicio' }, iaLigada: true });
     expect((await como(gente.carla, 'PATCH', '/api/ia/config', { modoPadrao: 'ia' })).statusCode).toBe(403);
     expect((await como(gente.rita, 'PATCH', '/api/ia/config', { modoPadrao: 'ia' })).statusCode).toBe(403);
     expect((await como(gente.gerenteNorte, 'PATCH', '/api/ia/config', { assumirSemResposta: { minutos: 0 } })).statusCode).toBe(400);

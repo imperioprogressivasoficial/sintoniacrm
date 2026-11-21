@@ -16,12 +16,15 @@ export interface ConfigIA {
   assumirSemResposta: { ligado: boolean; minutos: number };
   /** A IA pode marcar sozinha as tags que já existem. */
   marcarTags: boolean;
+  /** Assinatura nas respostas da IA para a cliente (dono 21/11): ex. "*Serena:*" no começo ou "_Serena_" no fim. */
+  assinatura: { ligada: boolean; texto: string; posicao: 'inicio' | 'fim' };
 }
 
 export const CONFIG_IA_PADRAO: ConfigIA = {
   modoPadrao: 'copiloto',
   assumirSemResposta: { ligado: true, minutos: REGRAS_PADRAO.assumirAposMin },
   marcarTags: false,
+  assinatura: { ligada: false, texto: 'Serena', posicao: 'inicio' },
 };
 
 /** O que a tela pode mudar (tudo opcional: só muda o que vier). */
@@ -31,6 +34,9 @@ export const AlteracaoConfigIA = z.object({
     .object({ ligado: z.boolean().optional(), minutos: z.number().int().min(1).max(240).optional() })
     .optional(),
   marcarTags: z.boolean().optional(),
+  assinatura: z
+    .object({ ligada: z.boolean().optional(), texto: z.string().trim().max(40).optional(), posicao: z.enum(['inicio', 'fim']).optional() })
+    .optional(),
 });
 export type AlteracaoConfigIA = z.infer<typeof AlteracaoConfigIA>;
 
@@ -45,6 +51,11 @@ export function normalizarConfig(bruto: unknown): ConfigIA {
       minutos: v.assumirSemResposta?.minutos ?? CONFIG_IA_PADRAO.assumirSemResposta.minutos,
     },
     marcarTags: v.marcarTags ?? CONFIG_IA_PADRAO.marcarTags,
+    assinatura: {
+      ligada: v.assinatura?.ligada ?? CONFIG_IA_PADRAO.assinatura.ligada,
+      texto: v.assinatura?.texto || CONFIG_IA_PADRAO.assinatura.texto,
+      posicao: v.assinatura?.posicao ?? CONFIG_IA_PADRAO.assinatura.posicao,
+    },
   };
 }
 
@@ -232,7 +243,9 @@ export class Empresa {
       modoPadrao: alteracao.modoPadrao ?? atual.modoPadrao,
       assumirSemResposta: { ...atual.assumirSemResposta, ...dropUndef(alteracao.assumirSemResposta ?? {}) },
       marcarTags: alteracao.marcarTags ?? atual.marcarTags,
+      assinatura: { ...atual.assinatura, ...dropUndef(alteracao.assinatura ?? {}) },
     };
+    if (!nova.assinatura.texto.trim()) nova.assinatura.texto = CONFIG_IA_PADRAO.assinatura.texto;
     await this.armazem.gravarConfigIa(this.id, nova, por, this.agora());
     this.esquecer();
     return this.configIa();

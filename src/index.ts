@@ -623,6 +623,7 @@ const sintonia = new Sintonia({
   trava,
   midias,
   configIa: async () => regrasDaConfig(await empresa.configIa()),
+  assinaturaIa: async () => (await empresa.configIa()).assinatura, /* assinatura da IA */
   tagsIa: tagsDaIa,
   motor: (c) => followup.motor(c),
   avisarEquipe: async (texto) => {

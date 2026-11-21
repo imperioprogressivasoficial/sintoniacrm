@@ -44,6 +44,8 @@ export interface DependenciasSintonia {
    * Sobrepõe `regras`; `modoPadrao` é o modo em que a conversa nova nasce.
    */
   configIa?: () => Promise<Partial<RegrasAtendimento> & { modoPadrao?: ModoAtendimento }>;
+  /** Assinatura das respostas da IA para a cliente (Agente de IA › Assinatura). Sem: sem assinatura. */
+  assinaturaIa?: () => Promise<{ ligada: boolean; texto: string; posicao: 'inicio' | 'fim' }>;
   /** A IA marcando tags existentes (vazio/ausente = não marca). */
   tagsIa?: {
     nomes(): Promise<string[]>;
@@ -1065,11 +1067,25 @@ export class Sintonia {
     }
   }
 
+  /** Assinatura da IA (dono 21/11): "*Serena:*" antes da 1ª parte ou "_Serena_" depois da última. Desligada: igual. */
+  private async assinarPartes(partes: string[]): Promise<string[]> {
+    if (!partes.length || !this.d.assinaturaIa) return partes;
+    let a: { ligada: boolean; texto: string; posicao: 'inicio' | 'fim' };
+    try { a = await this.d.assinaturaIa(); } catch { return partes; }
+    const quem = (a?.texto || '').replace(/[*_~]/g, '').trim();
+    if (!a?.ligada || !quem) return partes;
+    const saida = [...partes];
+    if (a.posicao === 'fim') saida[saida.length - 1] = `${saida[saida.length - 1]}\n\n_${quem}_`;
+    else if (!saida[0]!.startsWith(`*${quem}:*`)) saida[0] = `*${quem}:*\n${saida[0]}`;
+    return saida;
+  }
+
   /**
    * ia-completa: envia as partes da resposta em ordem. Para na primeira que falhar e devolve quantas saíram e o erro
    * (as que saíram ficam gravadas na conversa).
    */
   private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown }> {
+    partes = await this.assinarPartes(partes);
     let n = 0;
     for (const texto of partes) {
       try {

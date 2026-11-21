@@ -497,6 +497,44 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           salvar({ marcarTags: v }, () => { desfazer(); atual.marcarTags = !v; });
         });
 
+        /* assinatura da IA (dono 21/11): liga/desliga, nome e onde fica; prévia como chega no WhatsApp */
+        if (!document.getElementById('iax-ass-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'iax-ass-css', textContent: `
+          .iax-ass-linha { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 0 4px; }
+          .iax-ass-linha input { flex: 1 1 160px; min-width: 0; height: 40px; border-radius: 12px; border: 1px solid var(--linha); background: var(--fundo); color: var(--texto); padding: 0 12px; font: inherit; }
+          .iax-ass-pos { display: inline-flex; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--texto) 7%, transparent); }
+          .iax-ass-pos button { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--sub); }
+          .iax-ass-pos button[aria-pressed="true"] { background: var(--fundo); color: var(--texto); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+          .iax-ass-previa { margin-top: 8px; align-self: flex-end; max-width: 80%; padding: 8px 12px; border-radius: 14px 14px 4px 14px; background: color-mix(in srgb, #3aa0ff 16%, var(--fundo)); font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+          .iax-ass-corpo { display: flex; flex-direction: column; padding: 0 14px 14px; }
+          .iax-ass-corpo[hidden] { display: none; }` }));
+        const ass = { ligada: false, texto: 'Serena', posicao: 'inicio', ...(atual.assinatura || {}) };
+        const previa = el('div', { class: 'iax-ass-previa', 'aria-label': 'Como a cliente vê' });
+        const pintarPrevia = () => {
+          const q = (ass.texto || 'Serena').replace(/[*_~]/g, '').trim() || 'Serena';
+          const msg = 'Oi! Tenho horário amanhã às 14h. Posso confirmar?';
+          previa.replaceChildren(...(ass.posicao === 'fim'
+            ? [document.createTextNode(msg + '\n\n'), el('i', { text: q })]
+            : [el('b', { text: q + ':' }), document.createTextNode('\n' + msg)]));
+        };
+        const campoAss = el('input', { type: 'text', maxlength: '40', value: ass.texto, 'aria-label': 'Nome na assinatura', placeholder: 'Serena', disabled: travado ? '' : null });
+        campoAss.addEventListener('input', () => { ass.texto = campoAss.value; pintarPrevia(); });
+        campoAss.addEventListener('change', () => { const v = campoAss.value.trim() || 'Serena'; campoAss.value = v; ass.texto = v; pintarPrevia(); salvar({ assinatura: { texto: v } }, () => {}); });
+        const botaoPos = (v, rot) => { const b = el('button', { type: 'button', 'aria-pressed': String(ass.posicao === v), text: rot, disabled: travado ? '' : null }); b.addEventListener('click', () => { if (travado || ass.posicao === v) return; const antes = ass.posicao; ass.posicao = v; posCaixa.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); pintarPrevia(); salvar({ assinatura: { posicao: v } }, () => { ass.posicao = antes; posCaixa.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.textContent === (antes === 'fim' ? 'No fim' : 'No começo')))); pintarPrevia(); }); }); return b; };
+        const posCaixa = el('div', { class: 'iax-ass-pos', role: 'group', 'aria-label': 'Onde fica a assinatura' });
+        posCaixa.append(botaoPos('inicio', 'No começo'), botaoPos('fim', 'No fim'));
+        const corpoAss = el('div', { class: 'iax-ass-corpo', hidden: ass.ligada ? null : '' }, el('div', { class: 'iax-ass-linha' }, campoAss, posCaixa), previa);
+        const intAss = interruptor(ass.ligada, 'Assinar as respostas da IA', (v, desfazer) => {
+          ass.ligada = v; corpoAss.hidden = !v;
+          salvar({ assinatura: { ligada: v } }, () => { desfazer(); ass.ligada = !v; corpoAss.hidden = v; });
+        });
+        pintarPrevia();
+        const cartaoAss = el('div', { class: 'iax-cartao' },
+          el('div', { class: 'iax-opcao', style: 'border-bottom:0' },
+            el('span', { class: 'iax-txt' }, el('b', { text: 'Assinatura nas respostas da IA' }),
+              el('span', { text: 'A cliente vê o nome de quem respondeu, como as atendentes. Desligada, a mensagem sai sem nome.' })),
+            intAss),
+          corpoAss);
+
         blocoComp.append(...[
           el('p', { class: 'iax-sub', text: 'Modo das conversas novas' }),
           el('div', { class: 'iax-cartao', role: 'radiogroup', 'aria-label': 'Modo padrão das conversas novas' }, ...modos),
@@ -510,6 +548,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
                 el('span', { text: 'Ex.: “Instagram” quando a cliente cita o anúncio. Ela só usa as tags que já existem:' })),
               intTags),
             tagsCaixa),
+          cartaoAss,
           travado ? el('div', { class: 'iax-nota' }, icone('cadeado'), el('span', { text: 'Só a gerência, a direção e a administração mudam essas opções.' })) : null,
           !ligada ? el('div', { class: 'iax-nota' }, el('span', { text: 'Enquanto a IA estiver sem chave, as conversas novas entram em Minha resposta.' })) : null].filter(Boolean));
       }
