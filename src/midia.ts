@@ -8,6 +8,14 @@ export const LIMITE_ENVIO = 16 * 1024 * 1024;
  * para não encher a fila de entrada; acima disso é baixado à parte. */
 export const LIMITE_INLINE = 5 * 1024 * 1024;
 
+/**
+ * atendimento-extra: mídias do histórico e do "Resgatar mensagens" (baixadas por trás, depois das que acabaram de chegar).
+ * - dias: só as dos últimos 30 dias são baixadas sozinhas; as mais antigas ficam com o botão "Baixar" na conversa.
+ * - maxBytes: arquivo maior que isso (quando o WhatsApp informa o tamanho) também fica para baixar com o botão.
+ * - maxPorVez: no máximo tantas mídias entram na fila de uma importação (as demais ficam com o botão).
+ */
+export const HISTORICO_MIDIA = { dias: 30, maxBytes: 10 * 1024 * 1024, maxPorVez: 400 };
+
 /** Marcador que vai no texto da mensagem: é o que a IA lê (ela não vê a mídia). */
 export function textoDoAnexo(tipo: TipoAnexo, legenda?: string, nomeArquivo?: string): string {
   const marcador =

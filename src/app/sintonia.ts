@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Etapa, ModoAtendimento, UnidadeId } from '../domain.js';
 import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio, ModeloAprovado, ModeloEnvio, StatusRecebido } from '../channels/tipos.js';
 import { FORA_DA_JANELA, textoDoModelo } from '../channels/meta.js';
-import { LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
+import { HISTORICO_MIDIA, LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
 import { bloqueioPorDigitacao, viraDonaAoResponder, type Quem } from '../auth/acesso.js';
 import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
@@ -225,9 +225,29 @@ export class Sintonia {
    * Conversas antigas puxadas do WhatsApp logo depois de conectar: grava as mensagens e as datas,
    * sem acionar a IA, follow-ups, avisos ou funil (é histórico, não mensagem nova).
    */
-  async importarHistorico(mensagens: MensagemRecebida[]): Promise<{ conversas: number; mensagens: number }> {
+  async importarHistorico(mensagens: MensagemRecebida[]): Promise<{ conversas: number; mensagens: number; midias: number }> {
     const ids = new Set<string>();
     let n = 0;
+    // atendimento-extra: fotos, áudios, vídeos, documentos e figurinhas também entram. A mensagem é gravada na hora
+    // (com o anexo "pendente") e o arquivo é baixado depois, por trás, pelo mesmo baixador do webhook — sem travar
+    // a importação. Limites: só os últimos dias de HISTORICO_MIDIA e até um tamanho; o resto fica "não baixado",
+    // com o botão para baixar na conversa. Mensagem que já estava só como texto ganha o anexo agora.
+    const agora = this.agora();
+    // Depois das mídias que acabaram de chegar pelo webhook (essas são "-infinito" na fila).
+    const proximaMidia = agora;
+    let midias = 0;
+    let naFila = 0;
+    let baixar = false;
+    const anexoDoHistorico = (msg: MensagemRecebida, canal: CanalWhatsApp): Anexo | undefined => {
+      if (!msg.anexo) return undefined;
+      const a = anexoInicial(msg.anexo, canal);
+      if (a.situacao !== 'pendente' || msg.anexo.base64) return a;
+      const antiga = agora.getTime() - msg.em.getTime() > HISTORICO_MIDIA.dias * DIA;
+      const pesada = (msg.anexo.tamanho ?? 0) > HISTORICO_MIDIA.maxBytes;
+      if (antiga || pesada || naFila >= HISTORICO_MIDIA.maxPorVez) return { ...a, situacao: 'falhou' };
+      naFila++;
+      return a;
+    };
     for (const msg of [...mensagens].sort((a, b) => a.em.getTime() - b.em.getTime())) {
       const numero = this.d.numeros.find((x) => x.canalId === msg.canalId);
       if (!numero) continue;
@@ -236,11 +256,30 @@ export class Sintonia {
         nome: msg.deMim ? undefined : msg.nome, agora: this.agora(),
       });
       await this.mutar(criada.conversa.id, async (conversa) => {
+        const mensagemId = randomUUID();
+        const anexo = anexoDoHistorico(msg, numero.canal);
         const gravou = await this.d.repo.adicionarMensagem({
+          id: mensagemId,
           conversaId: conversa.id, autor: msg.deMim ? 'equipe' : 'cliente', autorNome: msg.deMim ? 'celular da loja' : undefined,
           texto: msg.texto, em: msg.em, idExterno: msg.idExterno,
+          ...(anexo ? { anexo, proximaMidia } : {}),
+          ...(msg.anexo?.ref ? { refMidia: msg.anexo.ref } : {}),
         });
-        if (!gravou) return false;
+        if (!gravou) {
+          // Já estava gravada: se entrou só como texto, sem a mídia, completa agora (resgate).
+          if (anexo && msg.anexo) {
+            const completada = await this.d.repo.completarMidia(conversa.id, msg.idExterno, anexo, { ref: msg.anexo.ref, proxima: proximaMidia });
+            if (completada) {
+              if (anexo.situacao === 'pendente') midias++;
+              if (await this.guardarAnexoRecebido(completada, msg.anexo, anexo)) baixar = true;
+            } else if (anexo.situacao === 'pendente' && !msg.anexo.base64) naFila--; // já tinha mídia: não ocupa a cota
+          }
+          return false;
+        }
+        if (anexo && msg.anexo) {
+          if (anexo.situacao === 'pendente') midias++;
+          if (await this.guardarAnexoRecebido(mensagemId, msg.anexo, anexo)) baixar = true;
+        }
         n++;
         ids.add(conversa.id);
         const campo = msg.deMim ? 'ultimaMensagemEquipe' : 'ultimaMensagemCliente';
@@ -251,7 +290,8 @@ export class Sintonia {
         return false;
       });
     }
-    return { conversas: ids.size, mensagens: n };
+    if (baixar) this.d.midias?.avisar();
+    return { conversas: ids.size, mensagens: n, midias };
   }
 
   /** Arquivo que já veio no webhook é guardado na hora. Retorna true se ainda falta baixar. */

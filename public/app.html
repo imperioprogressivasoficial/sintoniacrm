@@ -2346,11 +2346,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
     if (a.situacao === 'grande') return linhaDoc(a, `Arquivo grande demais para guardar${a.tamanho ? ' (' + tamanhoTxt(a.tamanho) + ')' : ''}. Veja no celular da loja.`);
     if (a.situacao === 'falhou') {
-      const tentar = el('button', { type: 'button', text: 'Tentar de novo', onclick: async (e) => {
+      /* atendimento-extra: também vale para fotos e áudios antigos do histórico, que ficam para baixar com o botão. */
+      const tentar = el('button', { type: 'button', text: 'Baixar', onclick: async (e) => {
         e.currentTarget.disabled = true;
         try { await post(`${url}/baixar`); await atualizar(); } catch (x) { toast(x.message); }
       } });
-      return linhaDoc(a, 'Não foi possível baixar', tentar);
+      return linhaDoc(a, 'Arquivo não baixado', tentar);
     }
     if (a.tipo === 'imagem' || a.tipo === 'figurinha') {
       const img = el('img', { src: url, alt: a.tipo === 'imagem' ? (a.legenda || 'Foto') : 'Figurinha', loading: 'lazy', decoding: 'async' });
