@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
-import type { InscricaoPush, Notificacao, NovaNotificacao, Preferencias } from './tipos.js';
+import { pedeAcao, type InscricaoPush, type Notificacao, type NovaNotificacao, type Preferencias } from './tipos.js';
 
 /** Cursor da rolagem infinita: a última notificação já mostrada. */
 export interface Cursor {
@@ -28,6 +28,12 @@ export interface ArmazemNotificacoes {
    * para todo mundo da lista `usuarioIds`. `ativas` são as esperas que continuam ("espera:<conversa>:<desde>").
    */
   fecharEsperas(usuarioIds: string[], ativas: string[], em: Date, conversaId?: string): Promise<number>;
+  /** notificacoes2: não lidas que pedem ação (tipos.ts: pedeAcao), sem as chaves de `excluirChaves`. */
+  contarAcoes(usuarioId: string, agora: Date, excluirChaves?: readonly string[]): Promise<number>;
+  /** notificacoes2: "Lembrar em 1 h": some da lista até `ate`, volta não lida e o push sai de novo nessa hora. */
+  adiar(usuarioId: string, id: string, ate: Date): Promise<boolean>;
+  /** notificacoes2: tira do histórico (só as da própria pessoa). */
+  limpar(usuarioId: string, ids: string[]): Promise<number>;
   /** Mais nova primeiro; só as que já valem (criada_em <= agora). `excluirChaves` esconde avisos (ex.: o mesmo problema fixo no topo). */
   listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]): Promise<Notificacao[]>;
   /** Não lidas e "versão" (última mudança, em ms) para o app saber quando buscar de novo. */
@@ -108,6 +114,22 @@ export class ArmazemNotificacoesMemoria implements ArmazemNotificacoes {
       k++;
     }
     return k;
+  }
+  async contarAcoes(usuarioId: string, agora: Date, excluirChaves?: readonly string[]) {
+    return this.itens.filter((x) => x.usuarioId === usuarioId && !x.lidaEm && x.criadaEm.getTime() <= agora.getTime() && pedeAcao(x) && !(x.chave && excluirChaves?.includes(x.chave))).length;
+  }
+  async adiar(usuarioId: string, id: string, ate: Date) {
+    const n = this.itens.find((x) => x.id === id && x.usuarioId === usuarioId);
+    if (!n) return false;
+    Object.assign(n, { criadaEm: ate, atualizadaEm: ate });
+    delete n.lidaEm;
+    delete n.entregueEm;
+    return true;
+  }
+  async limpar(usuarioId: string, ids: string[]) {
+    const antes = this.itens.length;
+    this.itens = this.itens.filter((x) => !(x.usuarioId === usuarioId && ids.includes(x.id)));
+    return antes - this.itens.length;
   }
   async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]) {
     return this.itens
@@ -267,6 +289,30 @@ export class ArmazemNotificacoesPostgres implements ArmazemNotificacoes {
           and (chave is null or regexp_replace(chave, ':[0-9]+$', '') <> all($2::text[]))`,
       [usuarioIds, ativas, em, conversaId ?? null],
     );
+    return rowCount ?? 0;
+  }
+  async contarAcoes(usuarioId: string, agora: Date, excluirChaves?: readonly string[]) {
+    const { rows } = await this.pool.query<{ n: string }>(
+      `select count(*) as n from ${T}
+        where usuario_id = $1 and lida_em is null and criada_em <= $2
+          and (tipo in ('transferida', 'falha') or (tipo = 'ia_equipe' and conversa_id is not null))
+          and (chave is null or $3::text[] is null or chave <> all($3))`,
+      [usuarioId, agora, excluirChaves?.length ? [...excluirChaves] : null],
+    );
+    return Number(rows[0]?.n ?? 0);
+  }
+  async adiar(usuarioId: string, id: string, ate: Date) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+    const { rowCount } = await this.pool.query(
+      `update ${T} set criada_em = $3, atualizada_em = $3, lida_em = null, entregue_em = null where id = $1 and usuario_id = $2`,
+      [id, usuarioId, ate],
+    );
+    return Boolean(rowCount);
+  }
+  async limpar(usuarioId: string, ids: string[]) {
+    const validos = ids.filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+    if (!validos.length) return 0;
+    const { rowCount } = await this.pool.query(`delete from ${T} where usuario_id = $1 and id = any($2::uuid[])`, [usuarioId, validos]);
     return rowCount ?? 0;
   }
   async listar(usuarioId: string, agora: Date, limite: number, antes?: Cursor, tipos?: readonly string[], excluirChaves?: readonly string[]) {

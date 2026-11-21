@@ -123,7 +123,7 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     for (const u of [gente.carla, gente.bia, gente.rita, gente.gerente, gente.admin]) expect(await de(u)).toHaveLength(0);
   });
 
-  it('clientes esperando contam como um item só no sino; tipos antigos não aparecem nem contam', async () => {
+  it('cada cliente esperando conta no sino ("Precisa de você"); tipos antigos não aparecem nem contam', async () => {
     const { gente, cliente, notificador, armazem, relogio, como } = await montar(amb);
     await cliente('norte', '5571988000011', 'Oi', 'Ana');
     await cliente('norte', '5571988000012', 'Oi', 'Rosana');
@@ -138,7 +138,7 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     // notificacoes2: a espera vem da lista de verdade (campo "esperando"), não como três notificações.
     expect(j.itens).toEqual([]);
     expect(j.esperando.map((x: { nome: string }) => x.nome).sort()).toEqual(['Ana', 'Bia', 'Rosana']);
-    expect(j.naoLidas).toBe(1); // três esperando = um item no sino
+    expect(j.naoLidas).toBe(3); // notificacoes2 (modelo C): cada uma pede uma resposta
   });
 
   it('troca de dona avisa quem recebeu; "quer remarcar" vai para dona e gestão; "agendou" não avisa', async () => {
@@ -290,11 +290,11 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     expect(j.itens).toHaveLength(20);
     expect(j.itens.some((n: { tipo: string }) => n.tipo === 'espera')).toBe(false);
     expect(j.esperando.map((x: { nome: string }) => x.nome).sort()).toEqual(['Ana', 'Lia', 'Rosa']);
-    // O número do sino é o que a lista mostra: 25 avisos + "clientes esperando" como um item.
-    expect(j.naoLidas).toBe(26);
-    expect(JSON.parse(String(r.headers['x-notificacoes'])).n).toBe(26);
+    // O número do sino é o que está em "Precisa de você" (3 esperando); os 25 avisos da equipe são "para saber".
+    expect(j).toMatchObject({ naoLidas: 3, novas: 25 });
+    expect(JSON.parse(String(r.headers['x-notificacoes'])).n).toBe(3);
     // Outra unidade não vê; quem desligou o aviso de espera também não.
-    expect((await como(gente.rita, 'GET', '/api/notificacoes')).json()).toMatchObject({ esperando: [], naoLidas: 25 });
+    expect((await como(gente.rita, 'GET', '/api/notificacoes')).json()).toMatchObject({ esperando: [], naoLidas: 0, novas: 25 });
     await como(gente.bia, 'PUT', '/api/notificacoes/preferencias', { tipos: { espera: false } });
     expect((await como(gente.bia, 'GET', '/api/notificacoes')).json().esperando).toEqual([]);
   });
@@ -310,6 +310,8 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     expect(j.itens).toEqual([]);
     expect(j.naoLidas).toBe(1);
     expect(JSON.parse(String(r.headers['x-notificacoes'])).n).toBe(1);
+    // O sino das outras respostas do app (lista de conversas) mostra o mesmo número.
+    expect(JSON.parse(String((await como(gente.admin, 'GET', '/api/conversas')).headers['x-notificacoes'])).n).toBe(1);
     // Atendente não vê os problemas fixos (nem conta).
     expect((await como(gente.carla, 'GET', '/api/notificacoes')).json()).toMatchObject({ problemas: [], naoLidas: 0 });
     // Resolvido: o problema sai do topo e o aviso volta a ser uma linha normal do histórico.
@@ -317,6 +319,41 @@ describe.each(ambientes)('Notificações ($nome)', (amb) => {
     const j2 = (await como(gente.admin, 'GET', '/api/notificacoes')).json();
     expect(j2.itens.map((n: { titulo: string }) => n.titulo)).toEqual(['A chave da IA foi recusada']);
     expect(j2.naoLidas).toBe(1);
+  });
+
+  it('"Lembrar em 1 h" tira o aviso e o problema fixo até lá; limpar tira do histórico (só os próprios)', async () => {
+    const { gente, repo, notificador, relogio, como, situacao, pushes } = await montar(amb);
+    await como(gente.admin, 'POST', '/api/push/inscrever', { endpoint: 'https://push.exemplo.test/admin', keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } });
+    await repo.registrarEvento({ tipo: 'falha', em: relogio.t, dados: { erro: 'Evolution recusou o envio (500): Connection Closed' } });
+    await notificador.ocioso();
+    const lista = async () => (await como(gente.admin, 'GET', '/api/notificacoes')).json();
+    const [aviso] = (await lista()).itens;
+    expect(aviso).toMatchObject({ tipo: 'falha', titulo: 'O WhatsApp parou de enviar', lida: false });
+    expect((await lista()).naoLidas).toBe(1);
+    expect(pushes).toHaveLength(1);
+    // Lembrar em 1 h: some agora, volta não lido (e com push) depois de uma hora.
+    expect((await como(gente.carla, 'POST', `/api/notificacoes/${aviso.id}/adiar`, { minutos: 60 })).statusCode).toBe(404); // não é dela
+    expect((await como(gente.admin, 'POST', `/api/notificacoes/${aviso.id}/adiar`, { minutos: 60 })).json().ok).toBe(true);
+    expect(await lista()).toMatchObject({ itens: [], naoLidas: 0 });
+    relogio.t = new Date(relogio.t.getTime() + 61 * MIN);
+    await notificador.tick();
+    expect((await lista()).itens.map((n: { id: string; lida: boolean }) => [n.id, n.lida])).toEqual([[aviso.id, false]]);
+    expect((await lista()).naoLidas).toBe(1);
+    expect(pushes).toHaveLength(2);
+    // Problema fixo: "Lembrar em 1 h" vale só para quem pediu e só até lá.
+    situacao.problemas = [{ chave: 'whatsapp', titulo: 'WhatsApp desconectado', texto: 'x', vista: 'conexoes' }];
+    expect((await lista()).problemas).toHaveLength(1);
+    expect((await como(gente.carla, 'POST', '/api/notificacoes/problemas/adiar', { chave: 'whatsapp' })).statusCode).toBe(403);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/problemas/adiar', { chave: 'whatsapp', minutos: 60 })).json().ok).toBe(true);
+    expect(await lista()).toMatchObject({ problemas: [], naoLidas: 1 }); // o aviso de falha volta a aparecer enquanto o fixo está adiado
+    relogio.t = new Date(relogio.t.getTime() + 61 * MIN);
+    expect((await lista()).problemas.map((p: { chave: string }) => p.chave)).toEqual(['whatsapp']);
+    // Limpar: só os próprios avisos saem.
+    expect((await como(gente.carla, 'POST', '/api/notificacoes/limpar', { ids: [aviso.id] })).json().limpas).toBe(0);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/limpar', { ids: [] })).statusCode).toBe(400);
+    expect((await como(gente.admin, 'POST', '/api/notificacoes/limpar', { ids: [aviso.id] })).json().limpas).toBe(1);
+    situacao.problemas = [];
+    expect(await lista()).toMatchObject({ itens: [], naoLidas: 0 });
   });
 
   it('lembrete de ligação aparece na hora marcada; cliente esperando avisa uma vez', async () => {

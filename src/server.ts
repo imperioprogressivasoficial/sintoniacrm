@@ -153,6 +153,10 @@ export function proxyConfiavel(valor = process.env.SINTONIA_PROXY_CONFIAVEL): st
 }
 
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
+  /* notificacoes2: as mesmas opções (com os problemas fixos) no sino de todas as respostas e nas rotas, para o número bater. */
+  const opNotif: OpcoesNotificacoes | undefined = d.notificacoes
+    ? { agora: d.agora ?? (() => new Date()), problemas: d.situacao ? () => problemasDaSituacao(d.situacao!()) : undefined, ...d.notificacoes }
+    : undefined;
   const app = Fastify({ logger: false, trustProxy: proxyConfiavel() });
   const log = d.log ?? (() => {});
 
@@ -390,7 +394,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     }
   };
   app.get('/api/conversas', async (req, reply) => {
-    const sino = await cabecalhoNotificacoes(d.notificacoes, req, reply);
+    const sino = await cabecalhoNotificacoes(opNotif, req, reply);
     const q = ListaQ.parse(req.query);
     const tagUuid = q.tag && /^[0-9a-f-]{36}$/i.test(q.tag) ? q.tag : undefined;
     const pagina = await d.repo.paginaConversas({
@@ -649,7 +653,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const gestao = !req.usuario || veTudo(req.usuario);
     const [lista, resumo] = await Promise.all([
       atualizacoesDeHoje(d.repo, agora(), (c, tipo) => (c ? ve(c) : gestao) && (tipo !== 'falha' || gestao)),
-      cabecalhoNotificacoes(d.notificacoes, req, reply),
+      cabecalhoNotificacoes(opNotif, req, reply),
     ]);
     if ((req.query as { notificacoes?: string }).notificacoes === '1') {
       return { atualizacoes: lista, notificacoes: resumo ?? { naoLidas: 0, versao: 0, silencio: false } };
@@ -789,7 +793,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     }
   });
 
-  if (d.notificacoes) registrarNotificacoes(app, { agora, problemas: d.situacao ? () => problemasDaSituacao(d.situacao!()) : undefined, ...d.notificacoes });
+  if (opNotif) registrarNotificacoes(app, opNotif);
 
   app.setErrorHandler((erro, _req, reply) => {
     if (erro instanceof z.ZodError) return reply.code(400).send({ erro: 'Dados inválidos', detalhes: erro.issues });

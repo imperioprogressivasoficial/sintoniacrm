@@ -557,12 +557,17 @@ export class Notificador {
     return this.o.armazem.listar(usuarioId, this.agora(), limite, antes, TIPOS_DA_LISTA, excluirChaves);
   }
   /**
-   * O número do sino é o que a lista mostra: avisos não lidos + cada problema fixo uma vez + "clientes esperando"
-   * como um item só, enquanto houver alguém esperando por esta pessoa.
+   * notificacoes2 (modelo "Precisa de você"): o número do sino é o que está em "Precisa de você": cada cliente esperando,
+   * cada problema fixo (uma vez) e cada aviso não lido que pede ação. `novas` = não lidas "para saber" (não entram no número).
    */
   async resumo(u: Usuario, extra: { problemas?: number; excluirChaves?: readonly string[] } = {}) {
-    const [r, esperas] = await Promise.all([this.o.armazem.resumo(u.id, this.agora(), TIPOS_DA_LISTA, extra.excluirChaves), this.esperasDoSino(u)]);
-    return { naoLidas: r.naoLidas + (extra.problemas ?? 0) + (esperas.length ? 1 : 0), versao: Math.max(r.versao, this.versaoEsperas), esperando: esperas.length };
+    const agora = this.agora();
+    const [r, acoes, esperas] = await Promise.all([
+      this.o.armazem.resumo(u.id, agora, TIPOS_DA_LISTA, extra.excluirChaves),
+      this.o.armazem.contarAcoes(u.id, agora, extra.excluirChaves),
+      this.esperasDoSino(u),
+    ]);
+    return { naoLidas: esperas.length + (extra.problemas ?? 0) + acoes, novas: Math.max(0, r.naoLidas - acoes), versao: Math.max(r.versao, this.versaoEsperas), esperando: esperas.length };
   }
   async preferencias(usuarioId: string) {
     return this.prefsDe(usuarioId);
