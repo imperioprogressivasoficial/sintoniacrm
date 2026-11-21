@@ -114,8 +114,18 @@
       if (r.ok) { abrirApp(); return; }
       aviso.className = 'aviso erro';
       aviso.textContent = j.erro || 'Não foi possível entrar agora.';
+      /* perdas-saude: bloqueio por tentativas: o botão espera até a hora dita pelo servidor (sem contagem rodando) */
+      if ((r.status === 429 || j.bloqueio) && j.esperaSeg > 0) {
+        const ate = new Date(Date.now() + Math.min(j.esperaSeg, 86400) * 1000);
+        const hora = ate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        aviso.textContent = `${j.erro} Você pode tentar de novo às ${hora}.`;
+        clearTimeout(form.espera);
+        botao.disabled = true;
+        form.espera = setTimeout(() => { form.espera = null; botao.disabled = false; aviso.className = 'aviso ok'; aviso.textContent = 'Pode tentar de novo.'; }, Math.min(j.esperaSeg, 86400) * 1000);
+        return;
+      }
     } catch { aviso.className = 'aviso erro'; aviso.textContent = 'Sem conexão. Tente de novo.'; }
-    finally { botao.disabled = false; }
+    finally { if (!form.espera) botao.disabled = false; }
   });
 })();
 </script>

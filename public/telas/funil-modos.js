@@ -470,7 +470,8 @@
       dt(IC.pessoa, 'Responsável'), responsavel,
       dt(IC.caixa, 'Produtos'), produtos,
       dt(IC.etiqueta, 'Etiquetas'), tags,
-      dt(IC.origem, 'Origem'), el('dd', {}, ctx.origemEl(cartao)));
+      dt(IC.origem, 'Origem'), el('dd', {}, ctx.origemEl(cartao)),
+      ...(cartao.perda && window.SintoniaPerda ? [dt(IC.alvo, 'Motivo da perda'), el('dd', {}, window.SintoniaPerda.selo(cartao.perda))] : [])); /* perdas-saude */
     const c2 = el('div', { class: 'fm-c2' }, balao, dados);
 
     // ações: Abrir conversa · ação principal da etapa · Avançar etapa · Agendar

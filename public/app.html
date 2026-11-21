@@ -1140,6 +1140,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           <button class="so-gestao lt-item lt-an" data-an="horarios" type="button" title="Horários e funil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="lt-rot">Horários e funil</span></button>
           <button class="so-gestao nav lt-item" data-vista="comercial" title="Comercial: metas, ranking, comissão e TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 6h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4"/></svg><span class="lt-rot">Comercial</span></button>
           <button class="so-gestao lt-item lt-rel" data-rel="ia-equipe" type="button" title="IA × equipe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7.5 6.5 4 5 7.5 1.5 9 5 10.5 6.5 14 8 10.5 11.5 9Z"/><circle cx="17.5" cy="8" r="2.5"/><path d="M14 16a3.5 3.5 0 0 1 7 0"/></svg><span class="lt-rot">IA × equipe</span></button>
+          <!-- perdas-saude: Perdas e Saúde do sistema (abas da tela Análises) -->
+          <button class="so-gestao lt-item lt-an" data-an="perdas" type="button" title="Perdas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M6 9l4 4 3-3 5 6"/><path d="M15 16h3v-3"/></svg><span class="lt-rot">Perdas</span></button>
+          <button class="so-gestao lt-item lt-an" data-an="saude" type="button" title="Saúde do sistema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><span class="lt-rot">Saúde do sistema</span></button>
           <button class="so-gestao lt-item lt-an" data-an="tv" type="button" title="Painel da TV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="12.5" rx="2.5"/><path d="M8 20.5h8M12 17v3.5"/></svg><span class="lt-rot">Painel da TV</span></button>
         </div></div>
       </div>
@@ -1602,6 +1605,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const sino = r.headers.get('x-notificacoes');
     if (sino) { try { dispatchEvent(new CustomEvent('sintonia:notificacoes', { detail: JSON.parse(sino) })); } catch {} }
     const j = await r.json().catch(() => ({}));
+    /* perdas-saude: mover para uma etapa de perda pede o motivo (public/telas/perdas.js) e manda de novo com ele */
+    if ((r.status === 409 || r.status === 400) && j.codigo === 'motivo_perda' && opcoes.body && window.SintoniaPerda) {
+      const perda = await window.SintoniaPerda.pedir({ ...j, status: r.status });
+      if (perda) { let corpo = {}; try { corpo = JSON.parse(opcoes.body); } catch {} return api(url, { ...opcoes, body: JSON.stringify({ ...corpo, perda }) }); }
+      throw Object.assign(new Error('sem o motivo da perda, o lead ficou onde estava'), { status: r.status, cancelado: true });
+    }
     if (!r.ok) throw Object.assign(new Error(j.erro || 'Algo deu errado'), { status: r.status });
     return j;
   };
@@ -3128,6 +3137,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { nome: 'Clientes e satisfação', sub: 'Quem voltou, quem sumiu e NPS', ic: IC.relatorio, cor: '#9333ea', acao: () => { window.SintoniaTelas?.analises?.focar?.('clientes'); mostrar('analises'); } },
         { nome: 'Horários e funil', sub: 'Picos e tempo parado por etapa', ic: IC.relatorio, cor: '#6d28d9', acao: () => { window.SintoniaTelas?.analises?.focar?.('horarios'); mostrar('analises'); } },
         { nome: 'Painel da TV', sub: 'Link para a TV da sala', ic: IC.relatorio, cor: '#5b21b6', acao: () => { window.SintoniaTelas?.analises?.focar?.('tv'); mostrar('analises'); } },
+        /* perdas-saude: relatório de perdas e saúde do sistema */
+        { nome: 'Perdas', sub: 'Por motivo, etapa, atendente e origem', ic: IC.relatorio, cor: '#c2410c', acao: () => { window.SintoniaTelas?.analises?.focar?.('perdas'); mostrar('analises'); } },
+        { nome: 'Saúde do sistema', sub: 'Filas, IA, WhatsApp, memória e banco', ic: IC.relatorio, cor: '#0f766e', acao: () => { window.SintoniaTelas?.analises?.focar?.('saude'); mostrar('analises'); } },
       ] },
       /* empresa-conta: "Empresa" (dados, unidades, produtos, preços, documentos); a Conta abre pela foto no topo */
       { id: 'empresa', titulo: 'Empresa', ic: IC.empresa, cor: '#475569', itens: [
@@ -3410,7 +3422,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }));
     document.querySelector('#lt-grupos [data-vista="relatorios"]')?.addEventListener('click', () => window.SintoniaTelas?.relatorios?.focar?.(''));
     /* analises: itens que abrem a tela Análises numa aba; o item aceso segue a aba (Satisfação acende "Clientes e satisfação"; Funil, "Horários e funil") */
-    const ITEM_DA_ABA = { vendas: 'vendas', clientes: 'clientes', satisfacao: 'clientes', horarios: 'horarios', funil: 'horarios', tv: 'tv' };
+    const ITEM_DA_ABA = { vendas: 'vendas', clientes: 'clientes', satisfacao: 'clientes', horarios: 'horarios', funil: 'horarios', tv: 'tv', perdas: 'perdas', saude: 'saude' /* perdas-saude */ };
     function marcarAnalises(aba) {
       document.querySelectorAll('#lt-grupos .lt-an').forEach((x) => (estado.vista === 'analises' && x.dataset.an === ITEM_DA_ABA[aba] ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
       trilha();
@@ -3525,6 +3537,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/relatorios.js" defer></script>
 <script src="/telas/desempenho.js" defer></script>
 <script src="/telas/analises.js" defer></script><!-- analises -->
+<script src="/telas/perdas.js" defer></script><!-- perdas-saude: motivo de perda obrigatório -->
+<script src="/telas/saude.js" defer></script><!-- perdas-saude: painel de saúde da gestão -->
 <script src="/telas/planos.js" defer></script>
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/transmissoes.js" defer></script>

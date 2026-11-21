@@ -786,7 +786,7 @@
       if (k === 'origem') return ctx.origemEl(cartao);
       if (k === 'telefone') return el('span', { text: s.ui.formatarTel(cartao.telefone) });
       if (k === 'tags') return el('span', { style: 'display:inline-flex;gap:4px' }, ...(cartao.tags || []).slice(0, 3).map(ctx.tagEl));
-      if (k === 'situacao') return ctx.situacaoEl(cartao, col.etapa.id);
+      if (k === 'situacao') return (cartao.perda && window.SintoniaPerda?.selo(cartao.perda)) || ctx.situacaoEl(cartao, col.etapa.id); /* perdas-saude: motivo no lugar de "Finalizado" */
       if (k === 'desde') return el('span', { text: cartao.desde ? ctx.haTexto(cartao.desde) : '—' });
       if (k === 'criado') return el('span', { text: quando(cartao.criadaEm) });
       if (k === 'atualizado') return el('span', { text: quando(cartao.atualizadaEm) });

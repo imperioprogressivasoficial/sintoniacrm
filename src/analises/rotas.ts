@@ -14,6 +14,8 @@ import { dataISO, DIA } from '../util/tempo.js';
 import { analisarFunil, analisarHorarios, analisarRecorrencia, analisarVendas, NOMES_DIA } from './calculo.js';
 import { HISTORICO_FUNIL_MS, type FonteAnalises } from './fonte.js';
 import type { OrigensConversa } from './origens.js';
+import type { Perdas } from '../perdas/perdas.js';
+import { analisarPerdas } from '../perdas/calculo.js';
 
 /**
  * Análises da gestão (menu Análises): GET /api/analises/:tipo e GET /api/analises/:tipo/csv?tabela=…
@@ -30,18 +32,21 @@ export interface OpcoesAnalises {
   contas?: Contas;
   /** produtos-lead: receita por produto/serviço vinculado aos leads que compraram no período. */
   produtosVinculados?: (empresaId: string, conversaIds: string[]) => Promise<Array<{ nome: string; tipo: string; categoria: string | null; leads: number; quantidade: number; receita: number }>>;
+  /** perdas-saude: relatório de perdas (Análises › Perdas). */
+  perdas?: Perdas;
   /** Empresa quando não há login (uso local / testes). */
   empresaId: string;
   agora: () => Date;
 }
 
-export const TIPOS_ANALISE = ['vendas', 'horarios', 'funil', 'clientes'] as const;
+export const TIPOS_ANALISE = ['vendas', 'horarios', 'funil', 'clientes', 'perdas'] as const;
 export type TipoAnalise = (typeof TIPOS_ANALISE)[number];
 export const TABELAS: Record<TipoAnalise, readonly string[]> = {
   vendas: ['dias', 'atendentes', 'servicos', 'produtos', 'origens', 'unidades'],
   horarios: ['leads', 'mensagens', 'agendamentos'],
   funil: ['etapas', 'paradas', 'perdas'],
   clientes: ['resumo', 'fieis', 'sumidas'],
+  perdas: ['motivos', 'etapas', 'atendentes', 'origens', 'lista'],
 };
 
 const erro = (status: number, msg: string) => Object.assign(new Error(msg), { statusCode: status });
@@ -70,7 +75,7 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
   };
   const equipeDe = async (req: FastifyRequest) => (o.contas ? await o.contas.listarUsuarios(empresaDe(req)).catch(() => []) : []);
 
-  async function gerar(req: FastifyRequest, tipo: TipoAnalise, f: FiltroAnalise) {
+  async function gerar(req: FastifyRequest, tipo: TipoAnalise, f: FiltroAnalise, opc: { completo?: boolean } = {}) {
     const agora = o.agora();
     const { inicio, fim, dias } = periodoRelatorio(f, agora);
     const escopo = escopoDaReq(req, f);
@@ -114,6 +119,20 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
       const d = await o.fonte.funil(new Date(inicio.getTime() - HISTORICO_FUNIL_MS), agora, escopo, at);
       return { ...base, ...analisarFunil({ ...d, inicio, fim, agora }) };
     }
+    if (tipo === 'perdas') {
+      const desloca = dias * DIA;
+      const [lista, anteriores, leads] = await Promise.all([
+        o.perdas ? o.perdas.doPeriodo(inicio, fim, escopo, at) : Promise.resolve([]),
+        o.perdas ? o.perdas.doPeriodo(new Date(inicio.getTime() - desloca), new Date(fim.getTime() - desloca), escopo, at) : Promise.resolve([]),
+        o.fonte.leads(inicio, fim, escopo, at),
+      ]);
+      const importadas = new Set(leads.filter((l) => l.importado).map((l) => l.conversaId));
+      const origens = o.origens ? await o.origens.de(empresaId, lista.map((p) => p.conversaId), importadas) : new Map<string, string>();
+      return {
+        ...base,
+        ...analisarPerdas({ perdas: lista, origens, nomes: new Map(equipe.map((p) => [p.id, p.nome])), leads: leads.length, anterior: anteriores.length, unidades: (id) => unidadeDe(id)?.nome ?? id, limiteLista: opc.completo ? 50_000 : 300 }),
+      };
+    }
     const [ags, reg] = await Promise.all([o.fonte.agendamentos(new Date(fim.getTime() - 365 * DIA), agora, escopo, at), o.armazemComercial.ler(empresaId)]);
     return { ...base, ...analisarRecorrencia({ agendamentos: ags, precos: reg.cfg.precos, inicio, fim, agora }) };
   }
@@ -150,7 +169,7 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
     const tabela = z.string().parse(q.tabela ?? TABELAS[tipo][0]);
     if (!TABELAS[tipo].includes(tabela)) throw erro(400, 'Tabela desconhecida.');
     const f = FiltroAnalise.parse(q);
-    const r = await gerar(req, tipo, f);
+    const r = await gerar(req, tipo, f, { completo: tipo === 'perdas' && tabela === 'lista' });
     const { cab, linhas } = tabelaCsv(tipo, tabela, r as Record<string, unknown>);
     const sufixo = `${dataISO(r.inicio)}_a_${dataISO(new Date(r.fim.getTime() - 1))}${r.unidade ? '_' + r.unidade : ''}`;
     return reply
@@ -201,6 +220,18 @@ export function tabelaCsv(tipo: TipoAnalise, tabela: string, r: Record<string, u
       };
     if (tabela === 'paradas') return { cab: ['Cliente', 'Unidade', 'Etapa', 'Desde', 'Parada há (h)'], linhas: x.paradas.map((p: any) => [p.cliente, p.unidade, p.nomeEtapa, dataBr(new Date(p.desde)), horas(p.paradoMs)]) };
     return { cab: ['Motivo da perda', 'Conversas', '%'], linhas: x.perdas.motivos.map((m: any) => [m.nome, m.total, m.pct]) };
+  }
+  if (tipo === 'perdas') {
+    const grupo = (rot: string, lista: any[]) => ({ cab: [rot, 'Perdas', '%', 'Automáticas', 'Motivo mais comum'], linhas: lista.map((g: any) => [g.nome, g.total, g.pct, g.automaticas, g.principal?.nome ?? '']) });
+    if (tabela === 'motivos') return { cab: ['Motivo', 'Perdas', '%', 'Automáticas'], linhas: x.motivos.map((g: any) => [g.nome, g.total, g.pct, g.automaticas]) };
+    if (tabela === 'etapas') return grupo('Etapa em que estava', x.etapas);
+    if (tabela === 'atendentes') return grupo('Quem atendia', x.atendentes);
+    if (tabela === 'origens') return grupo('Origem do lead', x.origens);
+    const quando = (d: Date) => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Bahia' }).format(new Date(d));
+    return {
+      cab: ['Quando', 'Cliente', 'Motivo', 'Detalhe', 'Etapa em que estava', 'Quem atendia', 'Quem marcou', 'Origem', 'Unidade', 'Automática'],
+      linhas: x.lista.map((p: any) => [quando(p.em), p.cliente, p.motivo, p.detalhe ?? '', p.etapa, p.atendente, p.por, p.origem, p.unidade, p.automatico ? 'Sim' : 'Não']),
+    };
   }
   if (tabela === 'fieis') return { cab: ['Cliente', 'Visitas (12 meses)', 'Valor (R$)', 'Primeira', 'Última'], linhas: x.fieis.map((c: any) => [c.cliente, c.visitas, c.valor, dataBr(new Date(c.primeira)), dataBr(new Date(c.ultima))]) };
   if (tabela === 'sumidas') return { cab: ['Cliente', 'Visitas', 'Última visita', 'Dias sem agendar', 'Último serviço'], linhas: x.sumidas.lista.map((c: any) => [c.cliente, c.visitas, dataBr(new Date(c.ultima)), c.diasSem, c.ultimoServico]) };
