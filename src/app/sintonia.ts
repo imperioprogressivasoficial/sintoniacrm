@@ -197,6 +197,22 @@ export class Sintonia {
     this.trava = d.trava ?? new TravaMemoria();
   }
 
+  /**
+   * Quem mandou pelo WhatsApp do celular (fora da Sintonia: o WhatsApp não diz quem digitou). Dono 21/11: nunca
+   * "celular da loja", sempre o nome de uma pessoa: a dona da conversa; senão, quem da equipe respondeu por último
+   * pela Sintonia nas últimas 12 h; senão "Equipe".
+   */
+  private async quemPeloCelular(c: Conversa): Promise<string> {
+    if (c.responsavelNome?.trim()) return c.responsavelNome.trim();
+    try {
+      const desde = this.agora().getTime() - 12 * 3600_000;
+      const ms = await this.d.repo.mensagens(c.id, 40);
+      const ultima = [...ms].reverse().find((m) => m.autor === 'equipe' && m.autorNome && !/^(celular da loja|equipe)$/i.test(m.autorNome) && m.em.getTime() >= desde);
+      if (ultima?.autorNome) return ultima.autorNome;
+    } catch { /* sem histórico: fica "Equipe" */ }
+    return 'Equipe';
+  }
+
   // ---------- entrada pelo WhatsApp ----------
 
   async receber(msg: MensagemRecebida): Promise<void> {
@@ -247,7 +263,7 @@ export class Sintonia {
         id: mensagemId,
         conversaId: conversa.id,
         autor: msg.deMim ? 'equipe' : 'cliente',
-        autorNome: msg.deMim ? 'celular da loja' : undefined,
+        autorNome: msg.deMim ? await this.quemPeloCelular(conversa) : undefined,
         texto: this.d.rastreio ? this.d.rastreio.textoParaGuardar(msg) : msg.texto,
         em: msg.em,
         idExterno: msg.idExterno,
@@ -354,7 +370,7 @@ export class Sintonia {
         const anexo = anexoDoHistorico(msg, numero.canal);
         const gravou = await this.d.repo.adicionarMensagem({
           id: mensagemId,
-          conversaId: conversa.id, autor: msg.deMim ? 'equipe' : 'cliente', autorNome: msg.deMim ? 'celular da loja' : undefined,
+          conversaId: conversa.id, autor: msg.deMim ? 'equipe' : 'cliente', autorNome: msg.deMim ? await this.quemPeloCelular(conversa) : undefined,
           texto: msg.texto, em: msg.em, idExterno: msg.idExterno,
           ...(anexo ? { anexo, proximaMidia } : {}),
           ...(msg.anexo?.ref ? { refMidia: msg.anexo.ref } : {}),

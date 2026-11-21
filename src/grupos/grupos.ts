@@ -137,7 +137,7 @@ export class Grupos {
         participante: m.participante,
         participanteJid: m.participanteJid,
         participanteNome: m.participanteNome ?? null,
-        autorNome: m.deMim ? 'celular da loja' : null,
+        autorNome: m.deMim ? 'Equipe' : null, /* dono 21/11: nunca "celular da loja" */
         usuarioId: null,
         texto: m.texto,
         anexo,
