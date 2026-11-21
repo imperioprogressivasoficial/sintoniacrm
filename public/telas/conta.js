@@ -223,6 +223,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         opcao('Tela inicial', 'A primeira tela quando você abre o app.', tela),
         opcao('Idioma', 'Outros idiomas chegam numa próxima versão.', idioma)),
       window.SintoniaPapelParede ? window.SintoniaPapelParede.cartao(EC) : null, /* conversa-extra: papel de parede das conversas */
+      /* Personalizar Dashboard (pedido do dono 21/11: saiu do topo do Dashboard no celular e veio para cá) */
+      window.SintoniaTelas?.painel?.personalizar ? cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>', 'Dashboard',
+        el('p', { class: 'ec-sub', text: 'Escolha os blocos, tire o que não usa e arrume na ordem que preferir.' }),
+        el('div', { class: 'ec-acoes' }, botao('Personalizar Dashboard', () => window.SintoniaTelas.painel.personalizar(), 'mini'))) : null,
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="4"/></svg>', 'Acesso rápido',
         opcao('Mostrar a bolinha de atalhos', 'Fica na borda da tela (some com uma conversa aberta no celular). Vale só neste aparelho.', chave(bolinha, (v) => window.Sintonia?.acessoRapido?.definir?.(v), 'Mostrar a bolinha')),
         el('div', { class: 'ec-acoes' }, botao('Escolher e ordenar os atalhos', () => window.Sintonia?.acessoRapido?.editar?.(), 'mini'))),

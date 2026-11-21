@@ -791,10 +791,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const linha = el('div', { class: 'pn-estado', role: 'status' });
     if (nomeEscopo) linha.append(el('b', { text: nomeEscopo }));
     linha.append(el('span', { class: 'pn-atualizado' + (s.carregando ? ' pn-carregando' : ''), text: d?._em ? `${nomeEscopo ? '· ' : ''}atualizado às ${ui.hm(d._em)}` : 'Carregando os números…' }));
-    linha.append(botaoRedondo(ui, IC.recarregar, 'Atualizar agora', () => carregar(true), { class: 'pn-redondo pn-mini' }));
+    // No celular (pedido do dono 21/11): sem os botões de atualizar, modo escuro e personalizar nessa linha.
+    // Atualizar = puxar a tela para baixo; Personalizar e modo escuro ficam em Configurações › sua conta.
+    if (s.largo) linha.append(botaoRedondo(ui, IC.recarregar, 'Atualizar agora', () => carregar(true), { class: 'pn-redondo pn-mini' }));
     const podePersonalizar = Boolean(d);
-    if (!s.largo && window.SintoniaBotaoTema) linha.append(window.SintoniaBotaoTema('pn-redondo pn-mini'));
-    if (!s.largo && podePersonalizar && !s.editando) linha.append(botaoRedondo(ui, IC.grade, 'Personalizar o Dashboard', () => entrarEdicao(), { class: 'pn-redondo pn-mini', id: 'pn-personalizar' }));
 
     if (s.largo) {
       const titulo = el('div', { class: 'pn-titulo' }, el('h1', { text: s.editando ? 'Personalizando o Dashboard' : 'Dashboard' }),
@@ -1918,6 +1918,46 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   });
   addEventListener('resize', () => { if (s.pop) fecharPop(); });
 
+  /* Puxar para atualizar (celular): no topo da tela, arrastar para baixo mais de 70 px e soltar recarrega os números.
+   * Um círculo pequeno desce junto com o dedo; sem animação em loop (o giro só acontece enquanto carrega de verdade). */
+  function puxarParaAtualizar(caixa) {
+    if (!document.getElementById('pn-puxar-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'pn-puxar-css', textContent: `
+      .pn-puxar { position: absolute; left: 50%; top: 6px; z-index: 5; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; display: grid; place-items: center;
+        background: var(--pn-cartao, #fff); color: #106ebe; box-shadow: 0 4px 14px rgba(13,34,64,.18); opacity: 0; transform: translateY(-40px); pointer-events: none; }
+      html[data-tema="escuro"] .pn-puxar { color: #7cc4ff; }
+      .pn-puxar svg { width: 18px; height: 18px; transition: transform .15s ease; }
+      .pn-puxar.pronto svg { transform: rotate(180deg); }
+      .pn-puxar.girando svg { animation: pnGira .8s linear infinite; }
+      @keyframes pnGira { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .pn-puxar.girando svg { animation: none; } }` }));
+    const ind = Object.assign(document.createElement('div'), { className: 'pn-puxar', innerHTML: IC.recarregar });
+    ind.setAttribute('aria-hidden', 'true');
+    if (getComputedStyle(caixa).position === 'static') caixa.style.position = 'relative';
+    caixa.prepend(ind);
+    let y0 = null, dist = 0;
+    const LIMITE = 70;
+    caixa.addEventListener('touchstart', (e) => { if (s.largo || s.editando || caixa.scrollTop > 0 || e.touches.length !== 1) { y0 = null; return; } y0 = e.touches[0].clientY; dist = 0; }, { passive: true });
+    caixa.addEventListener('touchmove', (e) => {
+      if (y0 === null) return;
+      dist = Math.max(0, e.touches[0].clientY - y0);
+      if (caixa.scrollTop > 0) { y0 = null; return; }
+      const d = Math.min(dist * 0.5, 60);
+      ind.style.opacity = String(Math.min(1, dist / LIMITE));
+      ind.style.transform = `translateY(${d - 30}px)`;
+      ind.classList.toggle('pronto', dist >= LIMITE);
+    }, { passive: true });
+    caixa.addEventListener('touchend', async () => {
+      if (y0 === null) return;
+      y0 = null;
+      if (dist >= LIMITE) {
+        ind.classList.remove('pronto'); ind.classList.add('girando'); ind.style.transform = 'translateY(14px)'; ind.style.opacity = '1';
+        try { await carregar(true); } finally { ind.classList.remove('girando'); }
+      }
+      ind.style.transition = 'transform .25s ease, opacity .2s ease'; ind.style.opacity = '0'; ind.style.transform = 'translateY(-40px)';
+      setTimeout(() => { ind.style.transition = ''; }, 260);
+    }, { passive: true });
+  }
+
   window.SintoniaTelas.painel = {
     async desenhar(caixa, ui) {
       estilo();
@@ -1929,6 +1969,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!caixa.dataset.pnRolagem) {
         caixa.dataset.pnRolagem = '1';
         caixa.addEventListener('scroll', () => { if (s.pop) fecharPop(); }, { passive: true });
+        puxarParaAtualizar(caixa);
       }
       // Duas colunas quando a tela do Dashboard fica larga (e uma só quando estreita): redesenha ao cruzar.
       s.tamanhoObs?.disconnect();
@@ -1941,6 +1982,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!jaNaTela) desenharTudo();
       ligarRelogio();
       await carregar(false);
+    },
+    /** Configurações › sua conta › "Personalizar Dashboard": abre o Dashboard já no modo de arrumar os blocos. */
+    personalizar() {
+      (s.ui || window.Sintonia?.ui)?.mostrar?.('painel');
+      // espera o Dashboard montar (primeira visita) e então entra no modo de arrumar os blocos
+      let n = 0; const ir = () => { if (s.raiz?.isConnected && !s.carregando) entrarEdicao(); else if (n++ < 40) setTimeout(ir, 150); }; setTimeout(ir, 150);
     },
   };
 })();
