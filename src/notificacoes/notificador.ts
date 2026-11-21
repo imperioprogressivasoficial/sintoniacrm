@@ -7,7 +7,7 @@ import { unidadeDe } from '../unidades.js';
 import { MIN } from '../util/tempo.js';
 import type { ArmazemNotificacoes, Cursor } from './armazem.js';
 import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
-import { avaliarEspera, EsquemaRegraEspera, regraDa, type RegraEspera, type RegrasEspera } from './espera.js';
+import { avaliarEspera, EsquemaRegraEspera, regraDa, type PrazoEspera, type RegraEspera, type RegrasEspera } from './espera.js';
 import { completarPreferencias, emNaoPerturbe, esperaSilenciada, TIPOS_VISIVEIS, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
 import type { UnidadeId } from '../domain.js';
 
@@ -42,6 +42,10 @@ export interface EsperaParaTela {
   minutos: number;
   dona: string | null;
   repetirSeg: number;
+  /** automacao-vendas: prazo de resposta que vale (minutos) e de onde veio (primeira resposta, etapa ou padrão). */
+  prazoMin: number;
+  escalaMin: number;
+  prazo: string;
 }
 
 /** Falhas que valem notificação (só para a administração e a direção, no máximo uma por hora de cada). */
@@ -157,6 +161,11 @@ export class Notificador {
         if (!para || (d.porId && String(d.porId) === para)) return; // assumiu ou primeira resposta: foi a própria pessoa
         const alvo = us.find((u) => u.id === para && podeVer(u, { ...c, responsavelId: para }));
         if (!alvo) return;
+        // automacao-vendas: lead que chegou pelo rodízio automático (quem estava "Disponível para atender").
+        if (d.motivo === 'rodizio') {
+          await this.criar(alvo, { tipo: 'transferida', titulo: `Lead novo para você: ${nome}`, texto: `${nome} (${unidade}) chegou pelo rodízio automático. Responda logo!`, conversaId: c.id });
+          return;
+        }
         const por = d.motivo === 'automacao' ? 'Uma automação' : String(d.porNome ?? 'A gerência');
         await this.criar(alvo, { tipo: 'transferida', titulo: 'Conversa passada para você', texto: `${por} passou a conversa com ${nome} (${unidade}) para você.`, conversaId: c.id });
         return;
@@ -292,7 +301,7 @@ export class Notificador {
   }
 
   /** Conversas esperando além do limite (com o nível de cada uma). */
-  private async esperas(agora: Date): Promise<Array<{ c: Conversa; nivel: 1 | 2; desde: Date; minutos: number; regra: RegraEspera }>> {
+  private async esperas(agora: Date): Promise<Array<{ c: Conversa; nivel: 1 | 2; desde: Date; minutos: number; regra: RegraEspera; prazo?: PrazoEspera }>> {
     const regras = await this.regrasEspera();
     const saida = [];
     for (const c of await this.o.repo.listarConversas()) {
@@ -302,7 +311,7 @@ export class Notificador {
       if (!s.nivel || !s.desde) continue;
       // Bot ou follow-up conduzindo a conversa: ninguém precisa correr.
       if (this.o.automacaoAtiva && (await this.o.automacaoAtiva(c.id).catch(() => false))) continue;
-      saida.push({ c, nivel: s.nivel, desde: s.desde, minutos: s.minutos, regra });
+      saida.push({ c, nivel: s.nivel, desde: s.desde, minutos: s.minutos, regra, prazo: s.prazo });
     }
     return saida;
   }
@@ -312,7 +321,7 @@ export class Notificador {
     const lista = await this.esperas(agora);
     if (!lista.length) return;
     const us = await this.equipe();
-    for (const { c, nivel, desde, minutos } of lista) {
+    for (const { c, nivel, desde, minutos, prazo } of lista) {
       const alvos = new Map(this.donaOuUnidade(us, c).map((u) => [u.id, u]));
       if (nivel === 2) for (const u of this.gestao(us, c)) alvos.set(u.id, u);
       const base = `espera:${c.id}:${desde.getTime()}`;
@@ -321,10 +330,12 @@ export class Notificador {
         if (await this.o.armazem.existeChave(u.id, `${base}:${nivel}`)) continue;
         if (nivel === 1 && (await this.o.armazem.existeChave(u.id, `${base}:2`))) continue;
         const forte = nivel === 2;
+        // automacao-vendas: com prazo próprio (primeira resposta ou da etapa), o aviso diz qual prazo estourou.
+        const qual = prazo?.rotulo ? ` (prazo da ${prazo.rotulo}: ${prazo.avisoMin} min)` : '';
         await this.criar(u, {
           tipo: 'espera',
-          titulo: forte ? `Urgente: ${nomeDa(c)} espera há ${minutos} min` : `${nomeDa(c)} está esperando`,
-          texto: forte ? 'Ninguém respondeu ainda. Responda agora ou passe para alguém.' : `Sem resposta há ${minutos} minutos.`,
+          titulo: forte ? `Urgente: ${nomeDa(c)} espera há ${minutos} min` : prazo?.rotulo ? `Prazo estourou: ${nomeDa(c)}` : `${nomeDa(c)} está esperando`,
+          texto: forte ? `Ninguém respondeu ainda${qual}. Responda agora ou passe para alguém.` : `Sem resposta há ${minutos} minutos${qual}.`,
           conversaId: c.id,
           chave: `${base}:${nivel}`,
           espera: true,
@@ -339,7 +350,7 @@ export class Notificador {
     return lista
       .filter(({ c }) => podeVer(u, c))
       .sort((a, b) => b.minutos - a.minutos)
-      .map(({ c, nivel, desde, minutos, regra }) => ({
+      .map(({ c, nivel, desde, minutos, regra, prazo }) => ({
         conversaId: c.id,
         nome: nomeDa(c),
         unidade: c.unidade,
@@ -348,6 +359,9 @@ export class Notificador {
         minutos,
         dona: c.responsavelNome ?? null,
         repetirSeg: regra.repetirSeg,
+        prazoMin: prazo?.avisoMin ?? regra.avisoMin,
+        escalaMin: prazo?.forteMin ?? regra.forteMin,
+        prazo: prazo?.rotulo ?? '',
       }));
   }
 

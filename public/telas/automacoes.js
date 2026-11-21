@@ -31,7 +31,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['dias_apos_compareceu', 'Depois de comparecer', 'X dias depois de entrar em “Compareceu”'],
     ['atendimento_finalizado', 'Atendimento finalizado', 'Alguém finalizou o atendimento (com o motivo)'],
     ['nota_nps', 'Nota da pesquisa', 'A cliente deu uma nota de 0 a 10 na pesquisa de satisfação'],
+    /* automacao-vendas: gatilhos novos */
+    ['sem_resposta', 'Sem resposta', 'Passou um tempo sem resposta (da equipe ou da cliente)'],
+    ['agendou', 'Agendou', 'Agendamento feito (IA, equipe ou link online) ou confirmado'],
+    ['mensagem_recebida', 'Qualquer mensagem', 'Toda mensagem que a cliente mandar'],
   ];
+  const QUANDO_AGENDOU = { qualquer: 'Agendamento feito (de qualquer jeito)', ia: 'Agendamento feito pela IA', equipe: 'Agendamento feito pela equipe', online: 'Marcou pelo link de agendamento online', confirmou: 'A cliente confirmou o horário' };
   const MOTIVOS_FINAL = { resolvido: 'Resolvido', venda_feita: 'Venda feita ou serviço realizado', agendado: 'Agendou', sem_interesse: 'Sem interesse', sem_resposta: 'A cliente não respondeu', outro: 'Outro motivo' };
   const PASSOS = [
     ['enviar_mensagem', '💬', 'Enviar mensagem', 'Manda uma mensagem no WhatsApp'],
@@ -278,6 +283,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'dias_apos_compareceu': return `${g.dias || 0} dia(s) depois de a cliente comparecer`;
       case 'atendimento_finalizado': return (g.motivos || []).length ? `Quando finalizarem o atendimento como ${(g.motivos || []).map((m) => aspas(MOTIVOS_FINAL[m] || m)).join(' ou ')}` : 'Quando finalizarem o atendimento';
       case 'nota_nps': return g.min === g.max ? `Quando a cliente der nota ${g.min} na pesquisa` : `Quando a cliente der nota de ${g.min ?? 0} a ${g.max ?? 10} na pesquisa`;
+      case 'sem_resposta': return g.quem === 'cliente' ? `Quando a cliente não responder há ${duracao(g.minutos)}` : `Quando a cliente estiver sem resposta da equipe há ${duracao(g.minutos)}`;
+      case 'agendou': return g.quando === 'confirmou' ? 'Quando a cliente confirmar o horário' : `Quando ${({ qualquer: 'a cliente agendar', ia: 'a IA agendar', equipe: 'a equipe agendar', online: 'a cliente marcar pelo link online' })[g.quando] || 'a cliente agendar'}`;
+      case 'mensagem_recebida': return `Quando a cliente mandar qualquer mensagem${g.unidade ? ` (${UNIDADES[g.unidade] || g.unidade})` : ''}`;
       default: return 'Quando…';
     }
   }
@@ -512,6 +520,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     dias_apos_compareceu: () => ({ tipo: 'dias_apos_compareceu', dias: 30 }),
     atendimento_finalizado: () => ({ tipo: 'atendimento_finalizado', motivos: [] }),
     nota_nps: () => ({ tipo: 'nota_nps', min: 9, max: 10 }),
+    sem_resposta: () => ({ tipo: 'sem_resposta', quem: 'equipe', minutos: 30 }),
+    agendou: () => ({ tipo: 'agendou', quando: 'qualquer' }),
+    mensagem_recebida: () => ({ tipo: 'mensagem_recebida' }),
   };
 
   /** Deixa o passo no formato exato da API (sem campos vazios). */
@@ -540,6 +551,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'dias_apos_compareceu': return { tipo: g.tipo, dias: Math.min(365, Math.max(0, Math.round(Number(g.dias) || 0))) };
       case 'atendimento_finalizado': return { tipo: g.tipo, motivos: (g.motivos || []).filter((m) => MOTIVOS_FINAL[m]) };
       case 'nota_nps': { const n = (v, p) => Math.min(10, Math.max(0, Math.round(Number.isFinite(Number(v)) ? Number(v) : p))); return { tipo: g.tipo, min: n(g.min, 0), max: n(g.max, 10) }; }
+      case 'sem_resposta': return { tipo: g.tipo, quem: g.quem === 'cliente' ? 'cliente' : 'equipe', minutos: Math.min(43200, Math.max(5, Math.round(Number(g.minutos) || 30))) };
+      case 'agendou': return { tipo: g.tipo, quando: QUANDO_AGENDOU[g.quando] ? g.quando : 'qualquer' };
+      case 'mensagem_recebida': return g.unidade ? { tipo: g.tipo, unidade: g.unidade } : { tipo: g.tipo };
       default: return g;
     }
   }
@@ -650,6 +664,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         campos.append(rotulo('Nota de', selecao(notas, String(g.min ?? 0), (v) => { g.min = Number(v); marcarSujo(); }, { 'aria-label': 'Nota mínima' })),
           rotulo('até', selecao(notas, String(g.max ?? 10), (v) => { g.max = Number(v); marcarSujo(); }, { 'aria-label': 'Nota máxima' })),
           el('p', { class: 'au-info', style: 'grid-column:1/-1', text: '9 a 10 = promotores (bom para pedir avaliação no Google com {link_avaliacao}); 0 a 6 = detratores (bom para a gestão ligar).' }));
+      } else if (g.tipo === 'sem_resposta') {
+        /* automacao-vendas */
+        campos.append(rotulo('Quem não respondeu', selecao([['equipe', 'A loja (equipe ou IA)'], ['cliente', 'A cliente']], g.quem || 'equipe', (v) => { g.quem = v; marcarSujo(); })),
+          rotulo('Há quanto tempo', duracaoCampo(g.minutos || 30, (m) => { g.minutos = Math.max(5, m); marcarSujo(); }, { minimo: 5 })),
+          el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Dispara uma vez por espera: a próxima mensagem da cliente recomeça a contagem. Vale para as esperas que começarem depois de criar a automação. A resposta da IA conta como resposta da loja.' }));
+      } else if (g.tipo === 'agendou') {
+        campos.append(rotulo('Quando', selecao(Object.entries(QUANDO_AGENDOU), g.quando || 'qualquer', (v) => { g.quando = v; marcarSujo(); })),
+          el('p', { class: 'au-info', style: 'grid-column:1/-1', text: '“Confirmou” é quando a cliente responde que vai na confirmação automática de agenda (Follow-up).' }));
+      } else if (g.tipo === 'mensagem_recebida') {
+        campos.append(rotulo('Unidade', selecao([['', 'Qualquer unidade'], ...Object.entries(UNIDADES)], g.unidade || '', (v) => { if (v) g.unidade = v; else delete g.unidade; marcarSujo(); })),
+          el('p', { class: 'au-info', style: 'grid-column:1/-1', text: 'Dispara a cada mensagem da cliente (se uma execução desta automação ainda estiver rodando na conversa, espera ela terminar). Cuidado com mensagens automáticas: o limite diário por conversa continua valendo.' }));
       }
       gatilhoCaixa.replaceChildren(ops, campos);
     }

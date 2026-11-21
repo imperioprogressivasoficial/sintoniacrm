@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Conversa } from '../domain.js';
-import type { Repositorio } from '../store/repositorio.js';
+import type { Evento, Repositorio } from '../store/repositorio.js';
 import type { Contas } from '../auth/contas.js';
 import { podeReceber } from '../auth/acesso.js';
 import type { ArmazemTags, Tag, Tags } from '../tags/tags.js';
@@ -24,6 +24,7 @@ import {
   type Gatilho,
   type Opcoes,
   type Passo,
+  type QuandoAgendou,
 } from './esquema.js';
 
 /**
@@ -125,6 +126,12 @@ export interface ArmazemAutomacoes {
   /** Conversas na etapa desde antes de `ate` que esta automação ainda não pegou nesta estadia. */
   paradas(automacaoId: string, funilId: string, tagId: string, ate: Date, limite: number): Promise<Array<{ conversaId: string; desde: Date }>>;
 
+  /**
+   * automacao-vendas: conversas em silêncio para o gatilho "sem resposta" (que esta automação ainda não pegou nesta espera).
+   * Opcional: sem ele (memória), o motor procura nas conversas do repositório.
+   */
+  semResposta?(q: ConsultaSemResposta): Promise<Array<{ conversaId: string; chave: string }>>;
+
   registrarEnvio(conversaId: string, em: Date): Promise<void>;
   contarEnvios(conversaId: string, desde: Date): Promise<number>;
 
@@ -133,6 +140,30 @@ export interface ArmazemAutomacoes {
 
   config(empresaId: string): Promise<ConfigAutomacoes>;
   salvarConfig(empresaId: string, c: ConfigAutomacoes, por: string): Promise<void>;
+}
+
+/** automacao-vendas: pedido do gatilho "sem resposta". */
+export interface ConsultaSemResposta {
+  automacaoId: string;
+  empresaId: string;
+  quem: 'equipe' | 'cliente';
+  /** A espera começou antes disto (agora − minutos). */
+  ate: Date;
+  /** …e depois disto (a automação foi criada): nunca pega conversas largadas de antes. */
+  desde: Date;
+  limite: number;
+}
+
+/**
+ * automacao-vendas: a conversa está em silêncio para o gatilho "sem resposta"? Devolve a chave da espera
+ * (uma por silêncio da cliente: a próxima mensagem dela recomeça) ou undefined.
+ */
+export function chaveSemResposta(c: Pick<Conversa, 'ultimaMensagemCliente' | 'ultimaMensagemEquipe' | 'ultimaMensagemIa'>, quem: 'equipe' | 'cliente', ate: Date, desde: Date): string | undefined {
+  const cl = c.ultimaMensagemCliente?.getTime() ?? 0;
+  const loja = Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
+  const marco = quem === 'equipe' ? (cl && loja < cl ? cl : 0) : loja && cl < loja ? loja : 0;
+  if (!marco || marco > ate.getTime() || marco < desde.getTime()) return undefined;
+  return `semresp:${quem}:${cl ? new Date(cl).toISOString() : 'nunca'}`;
 }
 
 const ATIVOS: StatusExecucao[] = ['pendente', 'rodando'];
@@ -408,6 +439,29 @@ export class ArmazemAutomacoesPostgres implements ArmazemAutomacoes {
     );
     return rows.map((r) => ({ conversaId: r.conversa_id, desde: r.marcada_em }));
   }
+  async semResposta(q: ConsultaSemResposta) {
+    // marco = início da espera: a mensagem da cliente sem resposta (equipe) ou a última da loja sem retorno (cliente).
+    const { rows } = await this.pool.query<{ id: string; chave: string }>(
+      `with x as (
+         select c.id, c.ultima_mensagem_cliente as cl, greatest(c.ultima_mensagem_equipe, c.ultima_mensagem_ia) as loja
+           from sintonia.conversas c
+          where c.empresa_id = $2
+            and (case when $3 = 'equipe' then c.ultima_mensagem_cliente between $5 and $4
+                      else greatest(c.ultima_mensagem_equipe, c.ultima_mensagem_ia) between $5 and $4 end)
+       ), y as (
+         select id, 'semresp:' || $3 || ':' || coalesce(to_char(cl at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'nunca') as chave
+           from x
+          where case when $3 = 'equipe' then loja is null or loja < cl else cl is null or cl < loja end
+       )
+       select y.id::text, y.chave from y
+        where not exists (select 1 from sintonia.demo_registros d where d.tipo = 'conversa' and d.chave = y.id::text)
+          and not exists (select 1 from sintonia.automacao_execucoes e
+                           where e.automacao_id = $1 and e.conversa_id = y.id and (e.chave = y.chave or (e.status in ('pendente', 'rodando') and not e.teste)))
+        limit $6`,
+      [q.automacaoId, q.empresaId, q.quem, q.ate, q.desde, q.limite],
+    );
+    return rows.map((r) => ({ conversaId: r.id, chave: r.chave }));
+  }
   async registrarEnvio(conversaId: string, em: Date) {
     await this.pool.query('insert into sintonia.automacao_envios (conversa_id, em) values ($1, $2)', [conversaId, em]);
   }
@@ -674,6 +728,53 @@ export class Automacoes {
     if (c.empresaId !== this.empresaId) return;
     if (m.primeira) await this.disparar(c, (g) => g.tipo === 'nova_conversa' && (!g.unidade || g.unidade === c.unidade), 'nova_conversa');
     await this.disparar(c, (g) => g.tipo === 'palavra_chave' && casaPalavra(m.texto, g.palavras, g.modo), `msg:${m.idExterno || randomUUID()}`);
+    // automacao-vendas: qualquer mensagem da cliente.
+    await this.disparar(c, (g) => g.tipo === 'mensagem_recebida' && (!g.unidade || g.unidade === c.unidade), `recebida:${m.idExterno || randomUUID()}`);
+  }
+
+  /**
+   * automacao-vendas: eventos registrados (observarEventos no index): agendamento feito pela IA ou pela equipe e a
+   * confirmação da cliente viram o gatilho "agendou". Quem registra está com a trava da conversa: aqui só se registra
+   * a execução (ela roda quando a trava ficar livre, como os outros gatilhos).
+   */
+  aoEvento(e: Evento): Promise<void> {
+    const p = this.agendouPorEvento(e);
+    // Conta como "em andamento" (ocioso() espera), porque quem registra o evento não espera este gatilho.
+    this.emAndamento.add(p);
+    void p.finally(() => this.emAndamento.delete(p));
+    return p;
+  }
+
+  private async agendouPorEvento(e: Evento): Promise<void> {
+    if (!e.conversaId) return;
+    let quando: Exclude<QuandoAgendou, 'qualquer'> | undefined;
+    let chave = '';
+    const d = e.dados ?? {};
+    if (e.tipo === 'agendamento_ia' || e.tipo === 'agendamento_equipe') {
+      quando = e.tipo === 'agendamento_ia' ? 'ia' : 'equipe';
+      chave = `agendou:${String(d.trinksId ?? d.inicio ?? e.em.toISOString())}`;
+    } else if (e.tipo === 'confirmacao' && d.status === 'confirmado') {
+      quando = 'confirmou';
+      chave = `confirmou:${String(d.agendamento ?? e.em.toISOString())}`;
+    }
+    if (!quando) return;
+    try {
+      const c = await this.o.repo.buscarConversa(e.conversaId);
+      if (c) await this.agendou(c, quando, chave);
+    } catch (x) {
+      this.log('Falha no gatilho "agendou"', String(x));
+    }
+  }
+
+  /** automacao-vendas: reunião marcada pelo link de agendamento online (src/reunioes), já ligada a uma conversa. */
+  async aoAgendouOnline(conversaId: string, reuniaoId: string): Promise<void> {
+    const c = await this.o.repo.buscarConversa(conversaId);
+    if (c) await this.agendou(c, 'online', `reuniao:${reuniaoId}`);
+  }
+
+  private async agendou(c: Conversa, quando: Exclude<QuandoAgendou, 'qualquer'>, chave: string): Promise<void> {
+    if (c.empresaId !== this.empresaId) return;
+    await this.disparar(c, (g) => g.tipo === 'agendou' && (g.quando === quando || (g.quando === 'qualquer' && quando !== 'confirmou')), chave);
   }
 
   /** Atendimento finalizado (src/nps): gatilho atendimento_finalizado (com o filtro de motivos). */
@@ -800,6 +901,17 @@ export class Automacoes {
         }
         continue;
       }
+      if (a.ligada && a.gatilho.tipo === 'sem_resposta') {
+        try {
+          const g = a.gatilho;
+          for (const x of await this.semResposta(a, g.quem, new Date(agora.getTime() - g.minutos * MIN))) {
+            if (await this.novaExecucao(a, x.conversaId, x.chave, 0, false)) this.rodarLogo(x.conversaId);
+          }
+        } catch (e) {
+          this.log('Falha ao procurar conversas sem resposta', { automacao: a.id, erro: String(e) });
+        }
+        continue;
+      }
       if (!a.ligada || a.gatilho.tipo !== 'parada_na_etapa') continue;
       const g = a.gatilho;
       try {
@@ -825,6 +937,19 @@ export class Automacoes {
       }
       await this.ocioso();
     }
+  }
+
+  /** automacao-vendas: quem está em silêncio para o gatilho "sem resposta" (banco ou, na memória, o repositório). */
+  private async semResposta(a: Automacao, quem: 'equipe' | 'cliente', ate: Date): Promise<Array<{ conversaId: string; chave: string }>> {
+    const q: ConsultaSemResposta = { automacaoId: a.id, empresaId: this.empresaId, quem, ate, desde: a.criadaEm, limite: 100 };
+    if (this.o.armazem.semResposta) return this.o.armazem.semResposta(q);
+    const r: Array<{ conversaId: string; chave: string }> = [];
+    for (const c of await this.o.repo.listarConversas({ empresaId: this.empresaId })) {
+      const chave = chaveSemResposta(c, quem, ate, a.criadaEm);
+      if (chave) r.push({ conversaId: c.id, chave });
+      if (r.length >= q.limite) break;
+    }
+    return r;
   }
 
   // ---------- testar ----------

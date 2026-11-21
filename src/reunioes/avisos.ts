@@ -40,6 +40,8 @@ export interface DependenciasAvisosReuniao {
   avisarGestao?: (a: AvisoSino) => Promise<unknown>;
   /** Manda um texto para o telefone (conversa existente do número, ou uma nova). Retorna a conversa. */
   whatsapp?: (telefone: string, nome: string, texto: string) => Promise<{ conversaId: string } | undefined>;
+  /** automacao-vendas: reunião marcada pelo link e já ligada a uma conversa (gatilho "agendou" das automações). */
+  aoAgendou?: (reuniaoId: string, conversaId: string) => Promise<void>;
 }
 
 const fData = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Bahia', weekday: 'long', day: '2-digit', month: '2-digit' });
@@ -135,6 +137,10 @@ export class AvisosReuniao {
       const contato = [r.telefone, r.email].filter(Boolean).join(' · ');
       await this.sino(r, { titulo: `Reunião marcada: ${r.nome}`, texto: `${r.titulo} · ${quandoTexto(ini)}${contato ? ` · ${contato}` : ''}`, chave: `reuniao-marcada-${r.id}` }, true);
       await this.mandarWhatsapp(r, textoConfirmacao(r, r.codigo_cancelar ? this.link(`/r/${r.slug}?cancelar=${r.codigo_cancelar}`) : undefined));
+      if (this.d.aoAgendou) {
+        const { rows } = await this.d.pool.query<{ conversa_id: string | null }>('select conversa_id::text from sintonia.reunioes where id = $1', [r.id]);
+        if (rows[0]?.conversa_id) await this.d.aoAgendou(String(r.id), rows[0].conversa_id).catch((e) => this.log('Falha no gatilho "agendou" do link online', String(e)));
+      }
     });
   }
 

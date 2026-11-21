@@ -50,7 +50,28 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (h) return `${h}:${dois(m)}:${dois(s)}`;
     return `${m}:${dois(s)}`;
   }
-  const cor = (seg) => (seg >= 3600 ? 'vermelho' : seg >= 600 ? 'amarelo' : 'neutro');
+  const cor = (seg, lim) => (seg >= (lim ? lim.vermelho : 3600) ? 'vermelho' : seg >= (lim ? lim.amarelo : 600) ? 'amarelo' : 'neutro');
+
+  /* automacao-vendas: prazo de resposta (SLA) da unidade/etapa (Atendimento › Distribuição e prazos). Com prazo próprio
+   * (primeira resposta ou da etapa): branco dentro do prazo, amarelo quando estourou, vermelho quando escalou para a
+   * gerência. Sem prazo próprio: as cores de sempre (até 10 min branco, até 1 h amarelo, depois vermelho). */
+  let regras = null, regrasEm = 0, pedindo = null;
+  function carregarRegras() {
+    if (pedindo || Date.now() - regrasEm < 5 * 60_000) return;
+    const api = window.Sintonia?.ui?.api; if (!api || !window.Sintonia?.ui?.estado?.eu) return;
+    regrasEm = Date.now();
+    pedindo = api('/api/espera/regras').then((r) => { regras = new Map((r.unidades || []).map((u) => [u.id, u.regra])); }).catch(() => {}).finally(() => { pedindo = null; });
+  }
+  function limites(c) {
+    carregarRegras();
+    const r = regras && regras.get(c.unidade);
+    if (!r || !r.ligado) return null;
+    const semResposta = !c.ultimaMensagemEquipe && !c.ultimaMensagemIa;
+    const prazo = (semResposta && r.primeiraMin) || (r.etapas && r.etapas[c.etapa]) || null;
+    if (!prazo) return null;
+    const escalar = Math.max(1, (r.forteMin || 15) - (r.avisoMin || 5));
+    return { amarelo: prazo * 60, vermelho: (prazo + escalar) * 60, prazo };
+  }
   const esperando = (c) => { const cl = ms(c.ultimaMensagemCliente); return Boolean(cl) && cl > Math.max(ms(c.ultimaMensagemEquipe), ms(c.ultimaMensagemIa)); };
   const finalizada = (c) => Boolean(c.finalizadaEm) && ms(c.finalizadaEm) >= ms(c.ultimaMensagemCliente);
 
@@ -67,8 +88,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (finalizada(c)) return selo('verde', CHECK, textoHora, 'Atendimento finalizado');
     if (esperando(c)) {
       const seg = (Date.now() - ms(c.ultimaMensagemCliente)) / 1000;
-      const s = selo('espera ' + cor(seg), RELOGIO, cronometro(seg), `Esperando resposta. Chegou às ${hm(c.ultimaMensagemCliente)}`);
+      const lim = limites(c);
+      const s = selo('espera ' + cor(seg, lim), RELOGIO, cronometro(seg), `Esperando resposta. Chegou às ${hm(c.ultimaMensagemCliente)}${lim ? ` · prazo de ${lim.prazo} min` : ''}`);
       s.dataset.desde = String(ms(c.ultimaMensagemCliente));
+      if (lim) { s.dataset.amarelo = String(lim.amarelo); s.dataset.vermelho = String(lim.vermelho); }
       ligar();
       return s;
     }
@@ -95,7 +118,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const seg = (agora - Number(s.dataset.desde)) / 1000;
       const t = cronometro(seg); const alvo = s.lastChild;
       if (alvo.textContent !== t) alvo.textContent = t;
-      const c = cor(seg);
+      const c = cor(seg, s.dataset.amarelo ? { amarelo: Number(s.dataset.amarelo), vermelho: Number(s.dataset.vermelho) } : null);
       if (!s.classList.contains(c)) { s.classList.remove('neutro', 'amarelo', 'vermelho'); s.classList.add(c); }
     }
   }
