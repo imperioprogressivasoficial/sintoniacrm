@@ -24,11 +24,12 @@
     relatorios: 'relatorios', desempenho: 'desempenho', analises: 'analises', comercial: 'comercial',
     transmissoes: 'transmissoes', email: 'email-marketing', links: 'rastreamento', criativos: 'criativos',
     acessos: 'acessos', empresa: 'empresa', planos: 'plano', equipe: 'equipe', configuracoes: 'configuracoes',
+    conta: 'conta', agendadas: 'mensagens-agendadas', integracoes: 'integracoes', // telas que chegaram junto (empresa-conta, msg-agendada, integracoes)
   };
   const VISTA = {};
   for (const [v, c] of Object.entries(CAMINHO)) { VISTA[c] = v; if (!VISTA[v]) VISTA[v] = v; }
   Object.assign(VISTA, { inicio: 'painel', crm: 'funil', funil: 'funil', vendas: 'funil', pipeline: 'funil', 'agente-de-ia': 'ia',
-    respostas: 'respostas', relatorio: 'relatorios', atendimento: 'desempenho', conta: 'configuracoes', mais: 'configuracoes',
+    respostas: 'respostas', relatorio: 'relatorios', atendimento: 'desempenho', mais: 'configuracoes',
     'email': 'email', importar: 'leads', leads: 'leads' });
   const ABAS_CLIENTES = new Set(['clientes', 'empresas', 'importar', 'exportar']);
 
