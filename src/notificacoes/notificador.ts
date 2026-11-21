@@ -238,6 +238,14 @@ export class Notificador {
     return n;
   }
 
+  /** msg-agendada: aviso direto para uma pessoa (ex.: a mensagem que ela agendou não saiu). Sino + push, tipo "falha". */
+  async avisarPessoa(usuarioId: string, a: { titulo: string; texto: string; conversaId?: string; chave?: string }): Promise<boolean> {
+    const u = (await this.equipe()).find((x) => x.id === usuarioId);
+    if (!u) return false;
+    if (a.chave && (await this.o.armazem.existeChave(u.id, a.chave))) return false;
+    return Boolean(await this.criar(u, { tipo: 'falha', titulo: a.titulo, texto: a.texto, ...(a.conversaId ? { conversaId: a.conversaId } : {}), ...(a.chave ? { chave: a.chave } : {}) }));
+  }
+
   // ---------------------------------------------------------------- relógio
 
   /** A cada volta do relógio: push dos lembretes que venceram e "cliente esperando". */

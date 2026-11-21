@@ -107,6 +107,9 @@ import { registrarRadar } from './radar/rotas.js';
 import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
 import { ChatEquipe } from './equipe/chat.js';
 import { avisoPorPush, registrarChatEquipe } from './equipe/rotas.js';
+/* msg-agendada: mensagens agendadas na conversa (src/agendadas) */
+import { AgendadasMemoria, AgendadasPostgres, MotorAgendadas } from './agendadas/agendadas.js';
+import { registrarAgendadas } from './agendadas/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -781,6 +784,26 @@ const motorFluxos = new MotorFluxos({
 });
 registrarFluxos(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: armazemFluxos, motor: motorFluxos, conferirVez: (id, quem) => sintonia.conferirVez(id, quem) });
 
+/* msg-agendada: "Agendar envio" na conversa. O relógio envia na hora pelo mesmo caminho da equipe (com o nome de quem agendou). */
+const armazemAgendadas = pool ? new AgendadasPostgres(pool) : new AgendadasMemoria();
+const motorAgendadas = new MotorAgendadas({
+  armazem: armazemAgendadas,
+  log,
+  enviador: {
+    conversa: (id) => repo.buscarConversa(id),
+    texto: (id, texto, atendente) => sintonia.equipeEnviou(id, texto, atendente),
+    midia: async (id, m, atendente) => {
+      await sintonia.equipeEnviouMidia(id, m, atendente);
+    },
+  },
+  avisar: async (m, c) => {
+    if (!m.criadoPorId) return;
+    const para = c?.nome || 'a cliente';
+    await notificador.avisarPessoa(m.criadoPorId, { titulo: `Mensagem agendada não enviada (${para})`, texto: m.erro || 'Não deu para enviar.', conversaId: m.conversaId, chave: `agendada-falhou-${m.id}-${m.tentativas}` });
+  },
+});
+registrarAgendadas(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, armazem: armazemAgendadas, motor: motorAgendadas, conferirVez: (id, quem) => sintonia.conferirVez(id, quem) });
+
 // Dados de demonstração: só administração e direção (src/demo/rotas.ts).
 const demo = new Demo({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -839,6 +862,11 @@ const relogioTransmissoes = setInterval(() => {
   transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
 }, 2_000);
 
+// msg-agendada: mensagens agendadas, a cada 15 s (sai no máximo 15 s depois da hora marcada).
+const relogioAgendadas = setInterval(() => {
+  motorAgendadas.tick().catch((e) => log('Falha no relógio das mensagens agendadas', String(e)));
+}, 15_000);
+
 // respostas-fluxos: passos dos fluxos de mensagens (esperas de segundos), a cada 1 s.
 const relogioFluxos = setInterval(() => {
   motorFluxos.tick().catch((e) => log('Falha no relógio dos fluxos de mensagens', String(e)));
@@ -856,6 +884,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     clearInterval(relogio);
     clearInterval(relogioTransmissoes);
     clearInterval(relogioFluxos);
+    clearInterval(relogioAgendadas);
     whatsappSaude.parar();
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
