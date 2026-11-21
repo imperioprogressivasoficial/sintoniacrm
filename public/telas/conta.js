@@ -77,6 +77,38 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return conta;
   };
 
+  /* usuarios: aparelhos conectados à própria conta: sair de um ou de todos os outros */
+  function aparelhos() {
+    const lista = el('div', { class: 'ec-linhas' }, el('p', { class: 'ec-sub', text: 'Carregando…' }));
+    const erro = el('p', { class: 'ec-erro', role: 'alert' });
+    const quando = (iso) => {
+      if (!iso) return 'agora';
+      const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (min < 2) return 'agora há pouco'; if (min < 60) return `há ${min} min`; if (min < 1440) return `há ${Math.round(min / 60)} h`;
+      return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    };
+    const sairOutras = EC.botao('Sair de todos os outros', async () => {
+      erro.textContent = ''; sairOutras.disabled = true;
+      try { const r = await ui.api('/api/auth/sessoes/sair-das-outras', { method: 'POST', body: '{}' }); ui.toast(r.encerradas ? `Pronto: ${r.encerradas} ${r.encerradas === 1 ? 'aparelho saiu' : 'aparelhos saíram'}.` : 'Só este aparelho está conectado.'); carregar(); }
+      catch (x) { erro.textContent = x.message; }
+      sairOutras.disabled = false;
+    }, 'mini');
+    async function carregar() {
+      let r; try { r = await ui.api('/api/auth/sessoes'); } catch (x) { encher(lista, el('p', { class: 'ec-erro', text: x.message || 'Não deu para ver os aparelhos agora.' })); return; }
+      const outras = r.sessoes.filter((s) => !s.atual).length;
+      sairOutras.hidden = outras === 0;
+      encher(lista, r.sessoes.map((s) => el('div', { class: 'ec-linha' },
+        el('span', { style: 'display:grid;gap:2px;min-width:0' }, el('b', { text: s.aparelho, style: 'font-weight:600' }), el('small', { class: 'ec-sub', text: s.atual ? 'Este aparelho' : `Usado ${quando(s.usadaEm || s.criadaEm)}${s.ip ? ` · ${s.ip}` : ''}` })),
+        s.atual ? el('span', { class: 'ec-sub', text: 'Você está aqui' }) : EC.botao('Sair', async (e) => {
+          const b = e.currentTarget; b.disabled = true;
+          try { await ui.api(`/api/auth/sessoes/${s.id}`, { method: 'DELETE' }); ui.toast(`${s.aparelho} desconectado.`); carregar(); }
+          catch (x) { erro.textContent = x.message; b.disabled = false; }
+        }, 'mini'))));
+    }
+    carregar();
+    return el('div', { style: 'display:grid;gap:8px;min-width:0;margin-top:6px' }, el('b', { text: 'Aparelhos conectados', style: 'font-size:14px' }), lista, erro, el('div', { class: 'ec-acoes' }, sairOutras));
+  }
+
   // ------------------------------------------------------------ perfil
   function telaPerfil(corpo) {
     const { cartao, entrada, campo, chave, opcao, seg, botao } = EC;
@@ -121,7 +153,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const secAcesso = cartao('acesso', 'Login e segurança',
       el('div', { class: 'ec-campo' }, document.createTextNode('E-mail de login'), email),
       el('p', { class: 'ec-sub', text: 'Trocar a senha encerra a sua sessão nos outros aparelhos (este continua).' }),
-      el('div', { class: 'ec-acoes' }, senha));
+      el('div', { class: 'ec-acoes' }, senha),
+      aparelhos());
 
     // assinatura
     const a = { ...conta.assinatura };

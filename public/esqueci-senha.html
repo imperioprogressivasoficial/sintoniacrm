@@ -59,9 +59,9 @@
       <div class="feito" id="feito" hidden>
         <span class="icone-ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8 6 8-6"/><rect x="3" y="5" width="18" height="14" rx="3"/></svg></span>
         <p class="miudo" id="feito-txt" style="font-size:14px;color:inherit"></p>
-        <p class="miudo">Não chegou? Confira o spam ou a caixa de promoções. Se ainda assim não aparecer, peça para a administração redefinir sua senha.</p>
+        <p class="miudo">Não chegou? Confira o spam ou a caixa de promoções. Se ainda assim não aparecer, peça para a gestão gerar um link para você.</p>
       </div>
-      <p class="miudo" id="sem-envio" hidden><b>Peça para a administração redefinir sua senha.</b> Ainda não há envio de e-mail configurado nesta empresa: a administração gera um link em Equipe › Atendentes e acessos.</p>
+      <p class="miudo" id="sem-envio" hidden style="font-size:14px;line-height:1.55"><b>Peça para a gestão gerar um link para você.</b> Esta empresa ainda não ligou o envio de e-mail, então não conseguimos mandar nada por aqui. Quem cuida da equipe abre <b>Atendentes e acessos</b>, toca no seu nome e em “Link para criar senha nova”: o link chega pelo WhatsApp e você cria a senha na hora.</p>
     </form>
   </section>
 </div>
@@ -71,7 +71,7 @@
   const email = $('email');
   const q = new URLSearchParams(location.search).get('email'); if (q) email.value = q;
   const aviso = (m, tipo = 'erro') => { $('aviso').className = 'aviso ' + tipo; $('aviso').textContent = m; };
-  const semEnvio = () => { $('sem-envio').hidden = false; $('ok').hidden = true; $('bloco-email').hidden = true; $('sub').textContent = 'Não conseguimos mandar o link por aqui.'; };
+  const semEnvio = () => { $('sem-envio').hidden = false; $('ok').hidden = true; $('bloco-email').hidden = true; $('sub').textContent = 'Por aqui não dá para mandar o link.'; const lp = document.querySelector('.lado-azul p'); if (lp) lp.textContent = 'Quem cuida da sua equipe gera um link seguro para você criar a senha nova.'; };
   fetch('/api/auth/esqueci/canais').then((r) => r.json()).then((c) => { if (!c.disponivel) semEnvio(); }).catch(() => {});
   $('form-esqueci').addEventListener('submit', async (e) => {
     e.preventDefault();

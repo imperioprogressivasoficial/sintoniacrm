@@ -54,6 +54,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-ev { display: grid; gap: 2px; padding: 10px 2px; border-top: 1px solid var(--vidro-borda); font-size: 13.5px; } .ac-ev:first-child { border-top: 0; } .ac-ev small { color: var(--sub); }
   .ac-pills { display: flex; gap: 6px; flex-wrap: wrap; }
   @media (prefers-reduced-motion: reduce) { .ac-chave i, .ac-chave i::after { transition: none; } }
+  /* usuarios: foto na lista, avisos de envio e o resultado do convite (link para copiar ou mandar pelo WhatsApp) */
+  .ac-ini { overflow: hidden; } .ac-ini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ac-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; font-size: 13.5px; line-height: 1.45; background: color-mix(in srgb, #106ebe 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, #106ebe 30%, transparent); }
+  .ac-aviso.ok { background: color-mix(in srgb, #0ffcbe 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, #19c3a6 55%, transparent); }
+  .ac-aviso.atencao { background: color-mix(in srgb, #ffb020 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffb020 50%, transparent); }
+  .ac-aviso svg { flex: none; width: 20px; height: 20px; margin-top: 1px; } .ac-aviso b { font-weight: 700; } .ac-aviso p { margin: 0; }
+  .ac-link { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  .ac-zap { background: #25d366 !important; color: #06301a !important; box-shadow: 0 6px 20px rgba(37,211,102,.25) !important; }
+  .ac-zap svg, .ac-botao svg { width: 18px; height: 18px; flex: none; }
+  .ac-foto-linha { display: flex; align-items: center; gap: 12px; } .ac-foto-linha .ac-ini { width: 56px; height: 56px; font-size: 18px; }
+  .ac-acoes.ac-separa { border-top: 1px solid var(--vidro-borda); padding-top: 12px; }
+  .ac-dica-campo { font-weight: 500; font-size: 12px; color: var(--sub); }
+  .ac-dlg p.info, .ac-dlg .ac-erro { margin: 0; } .ac-dlg .ac-erro:empty { display: none; }
+  .ac-dlg .ac-grupo { margin: 4px 0 0; }
+  /* usuarios: a janela fica opaca (no escuro o vidro deixava ler a lista por trás) */
+  .ac-dlg { background: #f7fafd; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  html[data-tema="escuro"] .ac-dlg { background: #0c2340; }
+  .ac-dlg::backdrop { background: rgba(4,23,43,.6); }
+  html[data-tema="escuro"] .ac-aviso.atencao { background: color-mix(in srgb, #ffb020 12%, transparent); }
   /* layout-telas: "Atendentes e acessos" dentro do painel (vista), na largura toda, com tabela de pessoas
      e a grade "quem vê o quê" (permissões × papéis). */
   .ac-vista { max-width: none; width: 100%; }
@@ -74,7 +93,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-ini { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
   .ac-quem div { min-width: 0; display: grid; } .ac-quem b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-quem small, .ac-tab td small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ac-tab .ac-botao { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+  .ac-tab .ac-botao { min-height: 36px; padding: 0 14px; font-size: 13.5px; white-space: nowrap; }
   @media (max-width: 899px) {
     .ac-tab thead { display: none; }
     .ac-tab, .ac-tab tbody { display: grid; gap: 10px; }
@@ -97,7 +116,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const MENU = { painel: 'dashboard', funil: 'crm_ver', automacoes: 'automacoes', transmissoes: 'transmissoes', relatorios: 'relatorios', email: 'email_marketing', equipe: 'equipe', acessos: 'equipe' };
   const PAPEL = { atendente: 'Atendente', recepcionista: 'Recepcionista', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
   /* unidades: nomes do cadastro (Empresa › Unidades) */
-  const UNID = new Proxy({}, { get: (_, u) => window.Sintonia?.ui?.UNIDADE?.[u] || u });
+  const UNID = new Proxy({}, { get: (_, u) => dados?.nomesUnidades?.[u] || window.Sintonia?.ui?.UNIDADE?.[u] || u });
   const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const h = (tag, props = {}, ...filhos) => {
@@ -125,6 +144,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
   const chave = (marcada, aoMudar, desativada) => h('span', { class: 'ac-chave' }, h('input', { type: 'checkbox', role: 'switch', checked: !!marcada, disabled: !!desativada, onchange: (e) => aoMudar(e.target.checked) }), h('i'));
+  const IC = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const SVG_EMAIL = IC('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/>');
+  const SVG_OK = IC('<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>');
+  const SVG_INFO = IC('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>');
+  const SVG_COPIAR = IC('<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>');
+  const SVG_ZAP = IC('<path d="M4 20l1.3-4A8 8 0 1 1 8 18.7Z"/><path d="M9.5 9.5c.3 1.6 1.5 3.6 4 4.6l1.2-1.1 1.8.8-.4 1.7c-3.6.2-7.2-3.4-7.3-7l1.7-.4.8 1.8Z"/>');
   const SVG_VOLTAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
 
   let eu = null, cat = null, dados = null, aba = 'pessoas', raiz = null, perfilSel = 'atendente', naVista = false;
@@ -194,6 +219,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     raiz.replaceChildren(h('div', { class: 'ac-tela' + (naVista ? ' ac-vista' : '') }, cabecalho(), abas, corpo));
   }
 
+  const siglaDe = (nome) => { const ini = String(nome || '').split(/\s+/).filter(Boolean); return ((ini[0] || '?')[0] + (ini.length > 1 ? ini[ini.length - 1][0] : '')).toUpperCase(); };
+  /** Rosto da pessoa (foto, se houver; senão as iniciais). */
+  const rosto = (id, sigla) => {
+    const c = h('span', { class: 'ac-ini', 'aria-hidden': 'true', text: sigla });
+    const url = window.SintoniaFotos?.url?.(id);
+    if (url) { const img = h('img', { src: url, alt: '', loading: 'lazy' }); img.addEventListener('error', () => { img.remove(); c.textContent = sigla; }); c.textContent = ''; c.append(img); }
+    return c;
+  };
   const nomesUnidades = (p) => p.unidades.map((u) => UNID[u]).join(', ') || (['admin', 'direcao'].includes(p.papel) ? 'Todas as unidades' : 'Sem unidade');
   const nivelNome = (id) => cat?.niveis?.find((n) => n.id === id)?.nome || id;
   function resumoPapeis() {
@@ -207,21 +240,21 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   function tabelaPessoas() {
     const linhas = dados.pessoas.map((p) => {
-      const ini = p.nome.split(/\s+/).filter(Boolean); const sigla = ((ini[0] || '?')[0] + (ini.length > 1 ? ini[ini.length - 1][0] : '')).toUpperCase();
+      const sigla = siglaDe(p.nome);
       const conv = { ...(cat.perfis[p.papel] || {}), ...(p.ajustes || {}) }.conversas;
       const selos = h('div', { class: 'ac-selos' },
-        p.ativo ? h('span', { class: 'ac-selo menta', text: 'Ativa' }) : h('span', { class: 'ac-selo coral', text: 'Desativada' }),
+        !p.ativo ? h('span', { class: 'ac-selo coral', text: 'Desativada' }) : p.nuncaEntrou ? h('span', { class: 'ac-selo', text: p.convite?.tipo === 'convite' ? 'Convite enviado' : 'Ainda não entrou' }) : h('span', { class: 'ac-selo menta', text: 'Ativa' }),
         p.trocarSenha ? h('span', { class: 'ac-selo', text: 'Troca de senha pendente' }) : null,
         p.horario ? h('span', { class: 'ac-selo', text: `${p.horario.inicio}–${p.horario.fim}` }) : null,
         Object.keys(p.ajustes || {}).length ? h('span', { class: 'ac-selo', text: 'Permissões próprias' }) : null);
       return h('tr', { class: p.ativo ? '' : 'inativa', tabindex: '0', onclick: () => abrirPessoa(p), onkeydown: (e) => { if (e.key === 'Enter') abrirPessoa(p); } },
-        h('td', {}, h('div', { class: 'ac-quem' }, h('span', { class: 'ac-ini', 'aria-hidden': 'true', text: sigla }), h('div', {}, h('b', { text: p.eu ? `${p.nome} (você)` : p.nome }), h('small', { text: p.email })))),
+        h('td', {}, h('div', { class: 'ac-quem' }, rosto(p.id, sigla), h('div', {}, h('b', { text: p.eu ? `${p.nome} (você)` : p.nome }), h('small', { text: p.email })))),
         h('td', { 'data-r': 'Papel', text: PAPEL[p.papel] || p.papel }),
         h('td', { 'data-r': 'Unidades', text: nomesUnidades(p) }),
         h('td', { 'data-r': 'Vê conversas', text: nivelNome(conv) }),
         h('td', { 'data-r': 'Último acesso' }, document.createTextNode(quando(p.ultimoAcesso)), p.sessoesAtivas ? h('small', { style: 'display:block', text: `${p.sessoesAtivas} aparelho${p.sessoesAtivas > 1 ? 's' : ''} conectado${p.sessoesAtivas > 1 ? 's' : ''}` }) : null),
         h('td', {}, selos),
-        h('td', { class: 'ac-fim' }, p.podeGerenciar ? h('button', { class: 'ac-botao leve', type: 'button', text: 'Editar acesso', onclick: (e) => { e.stopPropagation(); abrirPessoa(p); } }) : null));
+        h('td', { class: 'ac-fim' }, p.podeGerenciar ? h('button', { class: 'ac-botao leve', type: 'button', text: 'Editar', onclick: (e) => { e.stopPropagation(); abrirPessoa(p); } }) : null));
     });
     return h('table', { class: 'ac-tab' },
       h('thead', {}, h('tr', {}, ...['Pessoa', 'Papel', 'Unidades', 'Vê conversas', 'Último acesso', 'Situação', ''].map((t) => h('th', { text: t })))),
@@ -231,6 +264,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (naVista) {
       const ativas = dados.pessoas.filter((p) => p.ativo).length;
       return h('div', { style: 'display:grid;gap:16px;min-width:0' },
+        dados.envio && !dados.envio.email && eu?.papel && ['admin', 'direcao'].includes(eu.papel)
+          ? avisoEnvio('atencao', 'Convites e senhas novas saem por link: você copia ou manda pelo WhatsApp. Para irem também por e-mail, ligue o e-mail do sistema em Conexões › E-mail.')
+          : null,
         h('section', { class: 'ac-painel' }, h('h2', {}, 'Como funciona o acesso', h('small', { text: 'Convide por link (a pessoa cria a própria senha). O papel diz o que ela pode fazer; as unidades dizem de onde ela vê as conversas. Toque numa pessoa para mudar.' })), resumoPapeis()),
         h('section', { class: 'ac-painel' }, h('h2', {}, `${dados.pessoas.length} pessoas · ${ativas} ativas`, h('small', { text: eu?.papel === 'gerente' ? 'Quem trabalha nas suas unidades. Você cadastra atendentes e recepcionistas.' : 'Quem entra no Sintonia, o que cada pessoa vê e quando.' })), tabelaPessoas()));
     }
@@ -315,10 +351,32 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     document.body.append(d); d.showModal();
     return d;
   }
-  function mostrarLink(titulo, r, texto) {
-    janela(titulo, h('p', { class: 'info', text: texto }), h('div', { class: 'ac-link', text: r.link }), h('p', { class: 'info', text: `Vale até ${new Date(r.expiraEm).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}. Funciona uma vez só.` }),
-      h('div', { class: 'ac-acoes' }, h('button', { class: 'ac-botao', text: 'Copiar link', onclick: async () => { try { await navigator.clipboard.writeText(r.link); toast('Link copiado.'); } catch { toast('Selecione o link e copie.'); } } }),
-        h('a', { class: 'ac-botao leve', href: `https://wa.me/?text=${encodeURIComponent(`Seu acesso ao Sintonia: ${r.link}`)}`, target: '_blank', rel: 'noopener', text: 'Mandar no WhatsApp' })));
+  /* usuarios: aviso de como o link chega à pessoa (e-mail do sistema ligado ou não) */
+  function avisoEnvio(tipo, texto, ...extra) {
+    return h('div', { class: 'ac-aviso' + (tipo ? ' ' + tipo : ''), role: 'note', html: tipo === 'ok' ? SVG_OK : tipo === 'atencao' ? SVG_INFO : SVG_EMAIL }, h('div', { style: 'display:grid;gap:4px;min-width:0' }, h('p', { text: texto }), ...extra));
+  }
+  const ateQuando = (iso) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  /** Resultado de um convite/link: diz se saiu por e-mail e oferece copiar ou mandar pelo WhatsApp. */
+  function mostrarLink(titulo, r, nome) {
+    const primeiro = String(nome || '').split(' ')[0] || 'a pessoa';
+    const e = r.email || {};
+    const status = e.enviado
+      ? avisoEnvio('ok', `Enviamos o ${r.tipo === 'convite' ? 'convite' : 'link'} para ${e.para}. Se ${primeiro} não achar, confira o spam ou mande o link abaixo pelo WhatsApp.`)
+      : e.configurado
+        ? avisoEnvio('atencao', `O e-mail para ${e.para} não saiu agora. Mande o link abaixo pelo WhatsApp ou copie e envie como preferir.`)
+        : avisoEnvio('atencao', 'O e-mail do sistema ainda não está ligado, então nada foi enviado sozinho. Copie o link ou mande pelo WhatsApp.', h('small', { class: 'ac-dica-campo', text: 'Para os próximos irem por e-mail: Conexões › E-mail (só a direção e a administração).' }));
+    const copiar = h('button', { class: 'ac-botao', type: 'button', html: SVG_COPIAR, onclick: async () => {
+      try { await navigator.clipboard.writeText(r.link); copiar.lastChild.textContent = 'Copiado ✓'; toast('Link copiado.'); }
+      catch { const sel = getSelection(); const rg = document.createRange(); rg.selectNodeContents(caixaLink); sel.removeAllRanges(); sel.addRange(rg); toast('Link selecionado: copie com o menu do aparelho.'); }
+    } }, h('span', { text: 'Copiar link' }));
+    const zap = h('a', { class: 'ac-botao ac-zap', href: r.whatsapp || `https://wa.me/?text=${encodeURIComponent(r.texto || r.link)}`, target: '_blank', rel: 'noopener', html: SVG_ZAP }, h('span', { text: r.telefone ? `Mandar no WhatsApp de ${primeiro}` : 'Mandar no WhatsApp' }));
+    const caixaLink = h('div', { class: 'ac-link', text: r.link });
+    const d = janela(titulo, status,
+      h('p', { class: 'info', text: r.tipo === 'convite' ? `${primeiro} abre o link, cria a própria senha e já entra.` : `${primeiro} abre o link, cria uma senha nova e já entra. A senha antiga para de valer.` }),
+      caixaLink,
+      h('p', { class: 'info', text: `Vale até ${ateQuando(r.expiraEm)} e funciona uma vez só.${r.telefone ? '' : ' Sem telefone cadastrado, o WhatsApp abre para você escolher a conversa.'}` }),
+      h('div', { class: 'ac-acoes' }, copiar, zap, h('button', { class: 'ac-botao leve', type: 'button', text: 'Pronto', onclick: () => d.close() })));
+    return d;
   }
   const camposUnidades = (marcadas) => h('div', { class: 'ac-checks' }, ...dados.unidades.map((u) => h('label', {}, h('input', { type: 'checkbox', name: 'unidades', value: u, checked: marcadas.includes(u) }), UNID[u] || u)));
   const unidadesDe = (f) => [...f.querySelectorAll('input[name="unidades"]:checked')].map((i) => i.value);
@@ -334,77 +392,122 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   const horarioDe = (f) => (f.temHorario.checked ? { dias: [...f.querySelectorAll('input[name="dias"]:checked')].map((i) => Number(i.value)), inicio: f.inicio.value, fim: f.fim.value } : null);
 
+  /** Foto escolhida pela gestão: reduz para 256 px (como em Conta › Perfil) e salva. */
+  async function enviarFoto(id, aoTerminar) {
+    const i = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp' });
+    i.addEventListener('change', async () => {
+      const arq = i.files?.[0]; if (!arq) return;
+      try {
+        const bmp = await createImageBitmap(arq); const lado = Math.min(bmp.width, bmp.height), t = 256;
+        const tela = Object.assign(document.createElement('canvas'), { width: t, height: t });
+        tela.getContext('2d').drawImage(bmp, (bmp.width - lado) / 2, (bmp.height - lado) / 2, lado, lado, 0, 0, t, t);
+        await enviar(`/api/equipe/${id}/foto`, 'PUT', { base64: tela.toDataURL('image/jpeg', 0.85).split(',')[1], mimetype: 'image/jpeg' });
+        await window.SintoniaFotos?.carregar?.(); toast('Foto salva.'); aoTerminar?.();
+      } catch (x) { toast(x.message || 'Não deu para usar essa imagem.'); }
+    });
+    i.click();
+  }
+
   function abrirPessoa(p) {
     if (!p) return novaPessoa();
-    if (!p.podeGerenciar) return toast(p.eu ? 'Seus dados ficam em Conta.' : 'Você não pode mudar o acesso desta pessoa.');
+    if (!p.podeGerenciar) return toast(p.eu ? 'Seus dados ficam em Conta (toque na sua foto).' : 'Você não pode mudar o acesso desta pessoa.');
     const erro = h('p', { class: 'ac-erro', role: 'alert' });
-    const perfil = cat.perfis[p.papel];
     const ajustes = { ...(p.ajustes || {}) };
     const efetiva = () => ({ ...cat.perfis[f.papel.value], ...ajustes });
     const permsCaixa = h('div');
     const desenharPerms = () => permsCaixa.replaceChildren(...listaPermissoes(efetiva(), (k, v) => { if (cat.perfis[f.papel.value][k] === v) delete ajustes[k]; else ajustes[k] = v; desenharPerms(); }, (k) => eu.papel === 'admin' || (dados.minhas[k] === true || (k === 'conversas'))));
+    const fotoCaixa = h('span');
+    const pintarFoto = () => fotoCaixa.replaceChildren(rosto(p.id, siglaDe(p.nome)));
+    pintarFoto();
+    const temFoto = () => !!window.SintoniaFotos?.url?.(p.id);
+    const btFoto = h('button', { class: 'ac-botao leve', type: 'button', text: temFoto() ? 'Trocar foto' : 'Pôr foto', onclick: () => enviarFoto(p.id, () => { pintarFoto(); btFoto.textContent = 'Trocar foto'; btTirar.hidden = false; carregar(); }) });
+    const btTirar = h('button', { class: 'ac-botao leve', type: 'button', text: 'Tirar foto', hidden: !temFoto(), onclick: async () => { try { await api(`/api/equipe/${p.id}/foto`, { method: 'DELETE' }); await window.SintoniaFotos?.carregar?.(); pintarFoto(); btTirar.hidden = true; btFoto.textContent = 'Pôr foto'; carregar(); } catch (x) { toast(x.message); } } });
     const f = h('form', { class: 'ac-form', onsubmit: async (e) => {
-      e.preventDefault();
+      e.preventDefault(); erro.textContent = '';
+      const bt = f.querySelector('button[type=submit]'); bt.disabled = true;
       try {
-        await enviar(`/api/acessos/usuarios/${p.id}`, 'PATCH', { papel: f.papel.value, unidades: unidadesDe(f), ajustes, horario: horarioDe(f), trocarSenha: f.trocar.checked });
-        d.close(); toast('Acesso atualizado.'); carregar();
-      } catch (x) { erro.textContent = x.message; }
+        await enviar(`/api/acessos/usuarios/${p.id}`, 'PATCH', { nome: f.nome.value.trim(), email: f.email.value.trim(), telefone: f.telefone.value.trim(), papel: f.papel.value, unidades: unidadesDe(f), ajustes, horario: horarioDe(f), trocarSenha: f.trocar.checked });
+        d.close(); toast('Pessoa atualizada.'); carregar();
+      } catch (x) { erro.textContent = x.message; bt.disabled = false; }
     } },
+      h('div', { class: 'ac-largo ac-foto-linha' }, fotoCaixa, h('div', { class: 'ac-acoes' }, btFoto, btTirar)),
+      h('label', { class: 'ac-largo' }, 'Nome', h('input', { name: 'nome', value: p.nome, required: true, minLength: 2, maxLength: 120, autocomplete: 'off' })),
+      h('label', {}, 'E-mail de login', h('input', { name: 'email', type: 'email', value: p.email, required: true, autocomplete: 'off' })),
+      h('label', {}, h('span', {}, 'WhatsApp ', h('span', { class: 'ac-dica-campo', text: '(opcional)' })), h('input', { name: 'telefone', type: 'tel', inputmode: 'tel', value: p.telefone || '', placeholder: '(71) 99999-0000', autocomplete: 'off', maxLength: 30 })),
       h('label', {}, 'Papel', h('select', { name: 'papel', onchange: desenharPerms }, ...dados.papeis.map((x) => h('option', { value: x, text: PAPEL[x], selected: x === p.papel })))),
       h('label', { class: 'ac-largo' }, 'Unidades', camposUnidades(p.unidades)),
       camposHorario(p.horario),
       h('label', { class: 'ac-largo', style: 'display:flex;align-items:center;gap:8px;font-size:14px;color:var(--texto)' }, h('input', { type: 'checkbox', name: 'trocar', checked: p.trocarSenha }), 'Trocar a senha no próximo login'),
-      h('details', { class: 'ac-largo' }, h('summary', { style: 'cursor:pointer;font-weight:700;color:var(--texto);min-height:32px' }, 'Permissões desta pessoa'), h('p', { class: 'info', text: 'Partem do perfil do papel. O que você mudar aqui vale só para ela.' }), permsCaixa),
+      h('details', { class: 'ac-largo' }, h('summary', { style: 'cursor:pointer;font-weight:700;color:var(--texto);min-height:32px' }, 'Permissões desta pessoa'), h('p', { class: 'info', text: 'Partem do perfil do papel (a grade "Quem vê o quê"). O que você mudar aqui vale só para ela.' }), permsCaixa),
       erro, h('div', { class: 'ac-acoes ac-largo' }, h('button', { class: 'ac-botao', type: 'submit', text: 'Salvar' }), h('button', { class: 'ac-botao leve', type: 'button', text: 'Fechar', onclick: () => d.close() })));
-    void perfil; desenharPerms();
+    desenharPerms();
     const sessoes = h('div', {}, h('p', { class: 'info', text: 'Carregando aparelhos…' }));
     const carregarSessoes = async () => {
       try {
         const r = await api(`/api/acessos/usuarios/${p.id}/sessoes`);
-        sessoes.replaceChildren(...(r.sessoes.length ? r.sessoes.map((s) => h('div', { class: 'ac-linha' }, h('span', {}, (s.aparelho || 'Aparelho').replace(/\s*\(.*$/, '').slice(0, 40) || 'Aparelho', h('small', { text: `Usado ${quando(s.usadaEm || s.criadaEm)}${s.ip ? ` · ${s.ip}` : ''}` })),
+        sessoes.replaceChildren(...(r.sessoes.length ? r.sessoes.map((s) => h('div', { class: 'ac-linha' }, h('span', {}, s.aparelho || 'Aparelho', h('small', { text: `Usado ${quando(s.usadaEm || s.criadaEm)}${s.ip ? ` · ${s.ip}` : ''}` })),
           h('button', { class: 'ac-botao leve', type: 'button', text: 'Desconectar', onclick: async () => { try { await api(`/api/acessos/usuarios/${p.id}/sessoes/${s.id}`, { method: 'DELETE' }); toast('Aparelho desconectado.'); carregarSessoes(); } catch (x) { toast(x.message); } } })))
-          : [h('p', { class: 'info', text: 'Nenhum aparelho conectado agora.' })]));
+          : [h('p', { class: 'info', text: p.ativo ? 'Nenhum aparelho conectado agora.' : 'Desativada: não entra em nenhum aparelho.' })]));
       } catch (x) { sessoes.replaceChildren(h('p', { class: 'ac-erro', text: x.message })); }
     };
-    let confirmar = false;
-    const bAtivar = h('button', { class: 'ac-botao ' + (p.ativo ? 'perigo' : 'leve'), type: 'button', text: p.ativo ? 'Desativar acesso' : 'Reativar acesso', onclick: async () => {
-      if (p.ativo && !confirmar) { confirmar = true; bAtivar.textContent = `Confirmar: desativar ${p.nome.split(' ')[0]}`; return; }
-      try { await enviar(`/api/acessos/usuarios/${p.id}/${p.ativo ? 'desativar' : 'reativar'}`, 'POST'); d.close(); toast(p.ativo ? 'Acesso desativado. O histórico continua guardado.' : 'Acesso reativado.'); carregar(); } catch (x) { erro.textContent = x.message; }
-    } });
-    const d = janela(p.nome, h('p', { class: 'info', text: `${p.email} · último acesso ${quando(p.ultimoAcesso)}` }), f,
-      h('h3', { class: 'ac-grupo', text: 'Aparelhos conectados' }), sessoes,
-      h('div', { class: 'ac-acoes' },
-        h('button', { class: 'ac-botao leve', type: 'button', text: 'Link para redefinir senha', onclick: async () => { try { const r = await enviar(`/api/acessos/usuarios/${p.id}/redefinir`, 'POST', {}); d.close(); mostrarLink('Link para redefinir a senha', r, `Mande este link para ${p.nome.split(' ')[0]} criar uma senha nova.`); } catch (x) { erro.textContent = x.message; } } }),
-        h('button', { class: 'ac-botao leve', type: 'button', text: 'Desconectar de tudo', onclick: async () => { try { await enviar(`/api/acessos/usuarios/${p.id}/desconectar`, 'POST'); toast('Desconectada de todos os aparelhos.'); carregarSessoes(); } catch (x) { erro.textContent = x.message; } } }),
-        bAtivar));
+    const primeiro = p.nome.split(' ')[0];
+    const confirmar = (bt, texto, acao) => { let armado = false; bt.addEventListener('click', async () => { if (!armado) { armado = true; bt.textContent = texto; return; } bt.disabled = true; try { await acao(); } catch (x) { erro.textContent = x.message; bt.disabled = false; } }); return bt; };
+    const bAtivar = p.ativo
+      ? confirmar(h('button', { class: 'ac-botao perigo', type: 'button', text: 'Desativar acesso' }), `Confirmar: tirar o acesso de ${primeiro}`, async () => { await enviar(`/api/acessos/usuarios/${p.id}/desativar`, 'POST'); d.close(); toast(`${primeiro} saiu de todos os aparelhos e não entra mais. O histórico continua guardado.`); carregar(); })
+      : h('button', { class: 'ac-botao leve', type: 'button', text: 'Reativar acesso', onclick: async () => { try { await enviar(`/api/acessos/usuarios/${p.id}/reativar`, 'POST'); d.close(); toast('Acesso reativado.'); carregar(); } catch (x) { erro.textContent = x.message; } } });
+    // Apagar só aparece para quem nunca entrou (convite errado, cadastro repetido). O servidor confere o histórico.
+    const bApagar = p.nuncaEntrou ? confirmar(h('button', { class: 'ac-botao perigo', type: 'button', text: 'Apagar' }), `Confirmar: apagar ${primeiro}`, async () => { await api(`/api/acessos/usuarios/${p.id}`, { method: 'DELETE' }); d.close(); toast(`${primeiro} foi apagada.`); carregar(); }) : null;
+    const textoLink = p.nuncaEntrou ? 'Gerar novo convite' : 'Link para criar senha nova';
+    const bLink = p.ativo ? h('button', { class: 'ac-botao leve', type: 'button', text: textoLink, onclick: async () => {
+      bLink.disabled = true;
+      try { const r = await enviar(`/api/acessos/usuarios/${p.id}/link`, 'POST', {}); d.close(); carregar(); mostrarLink(r.tipo === 'convite' ? 'Convite novo' : 'Link para senha nova', r, p.nome); }
+      catch (x) { erro.textContent = x.message; bLink.disabled = false; }
+    } }) : null;
+    const situacao = !p.ativo ? 'Acesso desativado' : p.nuncaEntrou ? (p.convite ? `Convite em aberto até ${ateQuando(p.convite.expiraEm)}` : 'Ainda não entrou (o convite venceu: gere um novo)') : `Último acesso ${quando(p.ultimoAcesso)}`;
+    const d = janela(p.nome, h('p', { class: 'info', text: `${PAPEL[p.papel]} · ${situacao}` }), f,
+      h('h3', { class: 'ac-grupo', text: 'Senha e aparelhos' }),
+      h('p', { class: 'info', text: dados.envio?.email ? 'O link vai para o e-mail da pessoa e aparece aqui para copiar ou mandar pelo WhatsApp.' : 'O e-mail do sistema não está ligado: o link aparece aqui para copiar ou mandar pelo WhatsApp.' }),
+      sessoes,
+      h('div', { class: 'ac-acoes' }, bLink,
+        p.ativo ? h('button', { class: 'ac-botao leve', type: 'button', text: 'Desconectar de tudo', onclick: async () => { try { await enviar(`/api/acessos/usuarios/${p.id}/desconectar`, 'POST'); toast('Desconectada de todos os aparelhos.'); carregarSessoes(); } catch (x) { erro.textContent = x.message; } } }) : null),
+      h('div', { class: 'ac-acoes ac-separa' }, bAtivar, bApagar));
     carregarSessoes();
   }
 
   function novaPessoa() {
     const erro = h('p', { class: 'ac-erro', role: 'alert' });
     const senhaCaixa = h('label', { class: 'ac-largo', hidden: true }, 'Senha provisória (10+ caracteres, letras e números)', h('input', { name: 'senha', type: 'text', autocomplete: 'off', minLength: 10 }));
-    const validade = h('label', {}, 'Link vale por', h('select', { name: 'validade' }, h('option', { value: '24', text: '1 dia' }), h('option', { value: '72', text: '3 dias', selected: true }), h('option', { value: '168', text: '7 dias' })));
-    const modo = h('div', { class: 'ac-checks ac-largo' },
-      h('label', {}, h('input', { type: 'radio', name: 'modo', value: 'convite', checked: true }), 'Link de convite'),
-      h('label', {}, h('input', { type: 'radio', name: 'modo', value: 'senha' }), 'Senha provisória'));
-    modo.addEventListener('change', () => { const s = f.modo.value === 'senha'; senhaCaixa.hidden = !s; validade.hidden = s; f.senha.required = s; });
+    const validade = h('label', {}, 'O link vale por', h('select', { name: 'validade' }, h('option', { value: '24', text: '1 dia' }), h('option', { value: '72', text: '3 dias', selected: true }), h('option', { value: '168', text: '7 dias' })));
+    const modo = h('details', { class: 'ac-largo' }, h('summary', { style: 'cursor:pointer;font-weight:700;color:var(--texto);min-height:32px;font-size:13.5px' }, 'Outra forma: senha provisória'),
+      h('div', { class: 'ac-checks', style: 'margin-top:8px' },
+        h('label', {}, h('input', { type: 'radio', name: 'modo', value: 'convite', checked: true }), 'Link de convite (recomendado)'),
+        h('label', {}, h('input', { type: 'radio', name: 'modo', value: 'senha' }), 'Eu digito uma senha provisória')));
+    modo.addEventListener('change', () => { const s = f.modo.value === 'senha'; senhaCaixa.hidden = !s; validade.hidden = s; f.senha.required = s; bt.textContent = s ? 'Adicionar pessoa' : 'Convidar e gerar link'; });
+    const bt = h('button', { class: 'ac-botao', type: 'submit', text: 'Convidar e gerar link' });
     const f = h('form', { class: 'ac-form', onsubmit: async (e) => {
-      e.preventDefault();
-      const corpo = { nome: f.nome.value.trim(), email: f.email.value.trim(), papel: f.papel.value, unidades: unidadesDe(f), horario: horarioDe(f) };
+      e.preventDefault(); erro.textContent = '';
+      const corpo = { nome: f.nome.value.trim(), email: f.email.value.trim(), telefone: f.telefone.value.trim(), papel: f.papel.value, unidades: unidadesDe(f), horario: horarioDe(f) };
+      if (!corpo.telefone) delete corpo.telefone;
       if (f.modo.value === 'senha') Object.assign(corpo, { senha: f.senha.value, trocarSenha: true }); else corpo.validadeHoras = Number(f.validade.value);
+      bt.disabled = true;
       try {
         const r = await enviar('/api/acessos/usuarios', 'POST', corpo);
         d.close(); carregar();
-        if (r.link) mostrarLink('Convite criado', r, `Mande este link para ${corpo.nome.split(' ')[0]}: ela cria a própria senha e já entra.`);
+        if (r.link) mostrarLink('Convite pronto', r, corpo.nome);
         else toast('Pessoa adicionada. Ela troca a senha no primeiro login.');
-      } catch (x) { erro.textContent = x.message; }
+      } catch (x) { erro.textContent = x.message; bt.disabled = false; }
     } },
-      h('label', { class: 'ac-largo' }, 'Nome', h('input', { name: 'nome', required: true, minLength: 2, autocomplete: 'off' })),
-      h('label', { class: 'ac-largo' }, 'E-mail', h('input', { name: 'email', type: 'email', required: true, autocomplete: 'off' })),
+      dados.envio?.email
+        ? h('div', { class: 'ac-largo' }, avisoEnvio('ok', 'O convite vai para o e-mail da pessoa. Você também recebe o link para copiar ou mandar pelo WhatsApp.'))
+        : h('div', { class: 'ac-largo' }, avisoEnvio('atencao', 'O e-mail do sistema ainda não está ligado. Sem problema: depois de convidar, você copia o link ou manda pelo WhatsApp.')),
+      h('label', { class: 'ac-largo' }, 'Nome', h('input', { name: 'nome', required: true, minLength: 2, maxLength: 120, autocomplete: 'off' })),
+      h('label', {}, 'E-mail (vai ser o login)', h('input', { name: 'email', type: 'email', required: true, autocomplete: 'off' })),
+      h('label', {}, h('span', {}, 'WhatsApp ', h('span', { class: 'ac-dica-campo', text: '(opcional, para mandar o link)' })), h('input', { name: 'telefone', type: 'tel', inputmode: 'tel', placeholder: '(71) 99999-0000', autocomplete: 'off', maxLength: 30 })),
       h('label', {}, 'Papel', h('select', { name: 'papel' }, ...dados.papeis.map((x) => h('option', { value: x, text: PAPEL[x] })))),
+      validade,
       h('label', { class: 'ac-largo' }, 'Unidades', camposUnidades(dados.unidades.length === 1 ? dados.unidades : [])),
-      modo, validade, senhaCaixa, camposHorario(null), erro,
-      h('div', { class: 'ac-acoes ac-largo' }, h('button', { class: 'ac-botao', type: 'submit', text: 'Convidar' }), h('button', { class: 'ac-botao leve', type: 'button', text: 'Cancelar', onclick: () => d.close() })));
+      camposHorario(null), modo, senhaCaixa, erro,
+      h('div', { class: 'ac-acoes ac-largo' }, bt, h('button', { class: 'ac-botao leve', type: 'button', text: 'Cancelar', onclick: () => d.close() })));
     const d = janela('Convidar pessoa', f);
   }
 

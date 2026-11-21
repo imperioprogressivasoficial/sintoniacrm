@@ -138,7 +138,7 @@ import { registrarCadastro } from './empresa/cadastro-rotas.js';
 import { ArmazemProdutosLeadMemoria, ArmazemProdutosLeadPostgres, ProdutosLead } from './empresa/lead-produtos.js';
 import { registrarProdutosLead } from './empresa/lead-produtos-rotas.js';
 import { precosDoCadastro } from './empresa/precos-comercial.js';
-import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
+import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, telefonesDosPerfis, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
 /* integracoes: área de desenvolvedores (chaves de API, API v1, webhooks de saída e MCP) */
 import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integracoes/armazem.js';
 import { montarIntegracoes } from './integracoes/rotas.js';
@@ -690,12 +690,14 @@ async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void>
   }
 }
 const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+/* usuarios: um só armazém de perfis (Conta › Perfil e o telefone que a gestão usa para mandar o convite pelo WhatsApp). */
+const perfisUsuario = pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria();
 const app = criarServidor({
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   sintonia,
   repo,
   log,
-  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}), avisarBloqueio: avisarContaBloqueada /* perdas-saude */ },
+  auth: { contas, cookieSeguro: cfg.COOKIE_SEGURO === '1', ...(email ? { recuperacao: recuperacaoPorEmail(email, log) } : {}), avisarBloqueio: avisarContaBloqueada /* perdas-saude */, telefones: telefonesDosPerfis(perfisUsuario) /* usuarios */ },
   fila: { fila, avisar: () => trabalhador.avisar(), ...(filaIa ? { ia: () => filaIa.situacao() } : {}), ...(reservaEntrada ? { reserva: () => reservaEntrada!.pendentesNaReserva() } : {}) },
   contatos: { armazem: armazemContatos, empresaId: cfg.SINTONIA_EMPRESA_ID },
   get agenda() {
@@ -908,7 +910,7 @@ try {
 }
 registrarConta(app, {
   contas,
-  perfis: pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria(),
+  perfis: perfisUsuario,
   trocarEmail: pool ? trocarEmailPostgres(pool) : contas instanceof ContasMemoria ? trocarEmailMemoria(contas) : undefined,
 });
 registrarComercial(app, {

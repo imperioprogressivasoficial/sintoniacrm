@@ -59,7 +59,9 @@ export interface Contas {
   listarUsuarios(empresaId: string): Promise<Usuario[]>;
   buscarPorId(id: string): Promise<UsuarioComSenha | undefined>;
   /** Muda papel, unidades e/ou se está ativa. Devolve a usuária atualizada (undefined se não existe). */
-  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>): Promise<Usuario | undefined>;
+  atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome' | 'email'>>): Promise<Usuario | undefined>;
+  /** usuarios: apaga a pessoa (só quem não tem histórico; quem confere é a rota). Devolve se apagou. */
+  apagarUsuario(id: string): Promise<boolean>;
   definirSenha(id: string, senhaHash: string): Promise<void>;
   /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
   encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
@@ -159,9 +161,13 @@ export class ContasMemoria implements Contas {
     return u ? { ...u } : undefined;
   }
 
-  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>) {
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome' | 'email'>>) {
     const u = this.usuarios.find((x) => x.id === id);
     if (!u) return undefined;
+    if (campos.email !== undefined && this.usuarios.some((x) => x.id !== id && x.email.toLowerCase() === campos.email!.toLowerCase())) {
+      throw new Error('Já existe um usuário com esse e-mail.');
+    }
+    if (campos.email !== undefined) u.email = campos.email;
     if (campos.nome !== undefined) u.nome = campos.nome;
     if (campos.papel !== undefined) u.papel = campos.papel;
     if (campos.unidades !== undefined) u.unidades = [...campos.unidades];
@@ -173,6 +179,15 @@ export class ContasMemoria implements Contas {
   async definirSenha(id: string, senhaHash: string) {
     const u = this.usuarios.find((x) => x.id === id);
     if (u) u.senhaHash = senhaHash;
+  }
+
+  async apagarUsuario(id: string) {
+    const i = this.usuarios.findIndex((x) => x.id === id);
+    if (i < 0) return false;
+    this.usuarios.splice(i, 1);
+    await this.encerrarSessoesDe(id);
+    this.fotos.delete(id);
+    return true;
   }
 
   async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {
@@ -321,14 +336,25 @@ export class ContasPostgres implements Contas {
     return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
   }
 
-  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome'>>) {
-    const { rows } = await this.pool.query<LinhaUsuario>(
-      `update sintonia.usuarios set
-         papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo), nome = coalesce($5, nome)
-       where id = $1 returning *`,
-      [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null, campos.nome ?? null],
-    );
-    return rows[0] ? paraUsuario(rows[0]) : undefined;
+  async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome' | 'email'>>) {
+    try {
+      const { rows } = await this.pool.query<LinhaUsuario>(
+        `update sintonia.usuarios set
+           papel = coalesce($2, papel), unidades = coalesce($3, unidades), ativo = coalesce($4, ativo), nome = coalesce($5, nome), email = coalesce($6, email)
+         where id = $1 returning *`,
+        [id, campos.papel ?? null, campos.unidades ?? null, campos.ativo ?? null, campos.nome ?? null, campos.email ?? null],
+      );
+      return rows[0] ? paraUsuario(rows[0]) : undefined;
+    } catch (e) {
+      if ((e as { code?: string }).code === '23505') throw new Error('Já existe um usuário com esse e-mail.');
+      throw e;
+    }
+  }
+
+  async apagarUsuario(id: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return false;
+    const r = await this.pool.query('delete from sintonia.usuarios where id = $1', [id]);
+    return (r.rowCount ?? 0) > 0;
   }
 
   async definirSenha(id: string, senhaHash: string) {

@@ -99,7 +99,10 @@ export function limparAjustes(bruto: unknown): Ajustes {
 
 /** Padrão do papel ← ajuste do perfil na empresa ← ajuste da pessoa. */
 export function resolver(papel: Papel, perfil?: Ajustes, pessoa?: Ajustes): Permissoes {
-  return { ...perfilPadrao(papel), ...limparAjustes(perfil), ...limparAjustes(pessoa) };
+  const p = { ...perfilPadrao(papel), ...limparAjustes(perfil), ...limparAjustes(pessoa) };
+  // usuarios: a Administração nunca perde a equipe (nem por ajuste da pessoa): senão ninguém conserta os acessos depois.
+  if (papel === 'admin') p.equipe = true;
+  return p;
 }
 
 /** O que difere do padrão (é isso que se guarda, para o padrão poder evoluir). */

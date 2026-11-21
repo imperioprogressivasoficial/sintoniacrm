@@ -1,10 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Contas, Usuario } from './contas.js';
-import { acessosPara, type Acessos } from './acessos.js';
+import { acessosPara, idDaSessao, nomeDoAparelho, type Acessos } from './acessos.js';
+import { resumoToken } from './contas.js';
 import { registrarEquipe } from './equipe.js';
 import { comNivel, dentroDoHorario, permissaoDaRota, resolver, type Permissoes } from './permissoes.js';
-import { registrarUsuarios } from './usuarios-rotas.js';
+import { registrarUsuarios, type TelefonesEquipe } from './usuarios-rotas.js';
 import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
 import { LimiteLogin, mensagemBloqueio, type BloqueioConta } from './limite-login.js';
 import { diasDemonstracao, horarioValido, janelaDemonstracao } from '../vendas/demonstracao.js';
@@ -23,6 +24,8 @@ export interface OpcoesAuth {
   recuperacao?: Recuperacao;
   /** perdas-saude: avisa a dona da conta (sino e e-mail) quando a conta é bloqueada por muitas tentativas erradas. */
   avisarBloqueio?: (u: Usuario, b: BloqueioConta) => Promise<void>;
+  /** usuarios: telefone da pessoa (o mesmo da Conta › Perfil), para mandar convite e link pelo WhatsApp. */
+  telefones?: TelefonesEquipe;
 }
 
 /** Envio do link de redefinição. Sem nenhum canal, a tela orienta a pedir à administração. */
@@ -30,6 +33,8 @@ export interface Recuperacao {
   canais(): Promise<{ email: boolean; whatsapp: boolean }>;
   /** Manda o link pelos canais disponíveis; devolve por quais saiu. */
   enviar(u: Usuario, link: string, validadeMin: number): Promise<string[]>;
+  /** usuarios: manda o convite por e-mail; devolve se saiu. */
+  convidar?(u: Usuario, link: string, validadeHoras: number, quemConvidou: string): Promise<boolean>;
 }
 
 /** Validade do link pedido pela própria pessoa. */
@@ -269,8 +274,57 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     return { ok: true };
   });
 
+  // ---------------------------------------------------------------- usuarios: meus aparelhos conectados
+  // A própria pessoa vê onde está conectada e sai de um aparelho ou de todos os outros.
+  if (acessos) {
+    app.get('/api/auth/sessoes', async (req) => {
+      const u = req.usuario!;
+      const atual = idDaSessao(resumoToken(lerCookie(req, COOKIE) ?? ''));
+      const l = await acessos.sessoes(u.id, agora());
+      return {
+        sessoes: l.map((s) => ({
+          id: s.id,
+          aparelho: nomeDoAparelho(s.aparelho),
+          ip: s.ip,
+          criadaEm: s.criadaEm.toISOString(),
+          usadaEm: s.usadaEm?.toISOString() ?? null,
+          expiraEm: s.expiraEm.toISOString(),
+          atual: s.id === atual,
+        })),
+      };
+    });
+    app.delete('/api/auth/sessoes/:id', async (req, reply) => {
+      const u = req.usuario!;
+      const id = z.string().regex(/^[0-9a-f]{16}$/).safeParse((req.params as { id: string }).id);
+      if (!id.success) return reply.code(404).send({ erro: 'Aparelho não encontrado.' });
+      const atual = idDaSessao(resumoToken(lerCookie(req, COOKIE) ?? ''));
+      if (!(await acessos.encerrarSessao(u.id, id.data))) return reply.code(404).send({ erro: 'Aparelho não encontrado.' });
+      await acessos.auditar({ empresaId: u.empresaId, autorId: u.id, autorNome: u.nome, alvoId: u.id, alvoNome: u.nome, acao: 'saiu de um aparelho', em: agora() });
+      if (id.data === atual) reply.header('set-cookie', cookie('', 0));
+      return { ok: true, saiu: id.data === atual };
+    });
+    app.post('/api/auth/sessoes/sair-das-outras', async (req) => {
+      const u = req.usuario!;
+      const antes = (await acessos.sessoes(u.id, agora())).length;
+      await o.contas.encerrarSessoesDe(u.id, lerCookie(req, COOKIE));
+      await acessos.auditar({ empresaId: u.empresaId, autorId: u.id, autorNome: u.nome, alvoId: u.id, alvoNome: u.nome, acao: 'saiu dos outros aparelhos', em: agora() });
+      return { ok: true, encerradas: Math.max(0, antes - 1) };
+    });
+  }
+
   registrarEquipe(app, o.contas);
-  if (acessos) registrarUsuarios(app, { contas: o.contas, acessos, agora, invalidar, permissoesDe: async (u) => (await resolverDe(u)).perms, aoDefinirSenha: (u) => limiteLogin.liberarConta(u.email) });
+  if (acessos)
+    registrarUsuarios(app, {
+      contas: o.contas,
+      acessos,
+      agora,
+      invalidar,
+      permissoesDe: async (u) => (await resolverDe(u)).perms,
+      aoDefinirSenha: (u) => limiteLogin.liberarConta(u.email),
+      linkBase,
+      ...(o.recuperacao ? { recuperacao: o.recuperacao } : {}),
+      ...(o.telefones ? { telefones: o.telefones } : {}),
+    });
 
   const Contato = z.object({
     nome: z.string().trim().min(2).max(120),
