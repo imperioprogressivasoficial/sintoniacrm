@@ -114,6 +114,8 @@ import { registrarAgendadas } from './agendadas/rotas.js';
 /* empresa-conta: menu Empresa (dados, unidades, produtos e serviços, tabelas de preço, documentos) e Conta (perfil) */
 import { ArmazemCadastroMemoria, ArmazemCadastroPostgres, horarioDeFaixas } from './empresa/cadastro.js';
 import { registrarCadastro } from './empresa/cadastro-rotas.js';
+import { ArmazemProdutosLeadMemoria, ArmazemProdutosLeadPostgres, ProdutosLead } from './empresa/lead-produtos.js';
+import { registrarProdutosLead } from './empresa/lead-produtos-rotas.js';
 import { precosDoCadastro } from './empresa/precos-comercial.js';
 import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
 import { UNIDADES_EQUIPE } from './auth/acesso.js';
@@ -175,7 +177,12 @@ const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marca
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
 const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBase());
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
-const agente = new Agente(claude, agendas, () => base.texto(), { modelo: cfg.SINTONIA_MODELO, esforco: cfg.SINTONIA_ESFORCO });
+const agente = new Agente(claude, agendas, () => base.texto(), {
+  modelo: cfg.SINTONIA_MODELO,
+  esforco: cfg.SINTONIA_ESFORCO,
+  /* produtos-lead: a IA sabe o que a equipe vinculou ao lead */
+  produtosDoLead: (c) => produtosLead.textoParaIa(c),
+});
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
 if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
@@ -688,6 +695,8 @@ const extras = montarExtras({
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   /* clientes-tags: origem de cada conversa no exportar (filtro e coluna) */
   origens: (ids) => rastreio.selos(ids),
+  /* produtos-lead: coluna "Produtos" do exportar */
+  produtos: (ids) => produtosLead.resumoDe(cfg.SINTONIA_EMPRESA_ID, ids),
 });
 // A Agenda mostra também o que a recepção marca direto no sistema do salão (cache de 1 minuto por unidade e período).
 const agendaExterna = new AgendaExterna({ roteador: agendas, log });
@@ -695,6 +704,13 @@ registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: ext
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
 /* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços */
 const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
+/* produtos-lead: produtos e serviços vinculados ao lead (ficha, cartão do Pipeline, filtro, exportar, IA e Análises) */
+const produtosLead = new ProdutosLead({ armazem: pool ? new ArmazemProdutosLeadPostgres(pool) : new ArmazemProdutosLeadMemoria(), cadastro: armazemCadastro, valor: funis });
+registrarProdutosLead(app, { repo, servico: produtosLead, empresaId: cfg.SINTONIA_EMPRESA_ID });
+funis.ligarFiltros({
+  conversasComProdutos: (f) => produtosLead.conversasComFiltro(cfg.SINTONIA_EMPRESA_ID, f),
+  telefonesDasEmpresas: (chaves) => extras.leads.telefonesDasEmpresas(chaves),
+});
 const armazemComercialBase = pool ? new ArmazemComercialPostgres(pool) : new ArmazemComercialMemoria();
 const armazemComercial = precosDoCadastro(armazemComercialBase, armazemCadastro);
 registrarCadastro(app, {
@@ -742,6 +758,8 @@ registrarAnalises(app, {
   armazemComercial,
   origens: new OrigensConversa({ repo, contatos: armazemContatos, leads: extras.armazem, selos: (ids) => rastreio.selos(ids) }),
   contas,
+  /* produtos-lead: receita por produto/serviço vinculado */
+  produtosVinculados: (empresaId, ids) => produtosLead.porProduto(empresaId, ids),
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });

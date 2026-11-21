@@ -50,7 +50,7 @@
   }
 
   // ---------- filtro ----------
-  const VAZIO = () => ({ meus: false, situacao: '', tarefas: '', excluidos: false, tags: [], tagsTodas: false, etapas: [], donas: [], nome: '', criadaDe: '', criadaAte: '', atualizadaDe: '', atualizadaAte: '', valorMin: '', valorMax: '', semRespostaHoras: '', conversa: '', campos: [], produtos: [] });
+  const VAZIO = () => ({ meus: false, situacao: '', tarefas: '', excluidos: false, tags: [], tagsTodas: false, etapas: [], donas: [], nome: '', criadaDe: '', criadaAte: '', atualizadaDe: '', atualizadaAte: '', valorMin: '', valorMax: '', semRespostaHoras: '', conversa: '', campos: [], produtos: [], categorias: [], empresas: [] });
   const chaveFiltro = (funilId) => `sintonia.crm.filtro.${funilId || 'x'}`;
   function lerFiltro(funilId) { return { ...VAZIO(), ...lerJson(chaveFiltro(funilId), {}) }; }
   function gravarFiltro(s) { gravarLocal(chaveFiltro(s.funilId), vazio(s.filtro) ? null : JSON.stringify(s.filtro)); }
@@ -75,6 +75,9 @@
     const campos = (f.campos || []).filter((c) => String(c.valor ?? '').trim());
     if (campos.length) o.campos = campos.map((c) => ({ id: c.id, valor: String(c.valor).trim(), exato: !!c.exato }));
     if (f.produtos?.length) o.produtos = f.produtos;
+    /* produtos-lead: categorias dos produtos e empresa vinculada ao contato */
+    if (f.categorias?.length) o.categorias = f.categorias;
+    if (f.empresas?.length) o.empresas = f.empresas;
     return Object.keys(o).length ? o : null;
   }
   const vazio = (f) => !paraServidor(f);
@@ -111,6 +114,8 @@
     if (f.conversa) p.push({ rotulo: { com: 'Com conversa', sem: 'Sem conversa', nao_lidas: 'Não lidas' }[f.conversa], tirar: () => { f.conversa = ''; } });
     for (const c of f.campos || []) if (String(c.valor ?? '').trim()) p.push({ rotulo: `${(s.camposFicha || []).find((x) => x.id === c.id)?.nome || 'Campo'}: ${c.rotulo || c.valor}`, tirar: () => { f.campos = f.campos.filter((x) => x !== c); } });
     for (const id of f.produtos || []) p.push({ rotulo: `Produto: ${(s.produtos || []).find((x) => x.id === id)?.nome || '…'}`, tirar: () => { f.produtos = f.produtos.filter((x) => x !== id); } });
+    for (const c of f.categorias || []) p.push({ rotulo: `Categoria: ${c}`, tirar: () => { f.categorias = f.categorias.filter((x) => x !== c); } });
+    for (const k of f.empresas || []) p.push({ rotulo: `Empresa: ${(s.empresasContato || []).find((x) => x.chave === k)?.nome || k.replace(/^(nome|cnpj):/, '')}`, tirar: () => { f.empresas = f.empresas.filter((x) => x !== k); } });
     if (s.origem) {
       const o = (window.SintoniaRastreio?.opcoesFiltro?.() || []).find((x) => x.valor === s.origem);
       p.push({ rotulo: `Origem: ${o ? o.nome.trim() : s.origem}`, cliente: true, tirar: () => { s.origem = ''; gravarLocal('sintonia.crm.origem', ''); } });
@@ -354,7 +359,8 @@
         return b;
       }),
       el('button', { type: 'button', class: 'ft-pil ft-limpar', text: 'Limpar tudo', onclick: () => limpar(ctx) }),
-      ...(s.avisos || []).includes('produtos') ? [el('span', { class: 'ft-aviso-pil', text: 'O filtro por produto vale quando os produtos estiverem ligados aos leads.' })] : []);
+      ...(s.avisos || []).includes('produtos') ? [el('span', { class: 'ft-aviso-pil', text: 'O filtro por produto vale quando os produtos estiverem ligados aos leads.' })] : [],
+      ...(s.avisos || []).includes('empresas') ? [el('span', { class: 'ft-aviso-pil', text: 'O filtro por empresa ainda não está ligado neste servidor.' })] : []);
   }
   function limpar(ctx) {
     const { s } = ctx;
@@ -372,7 +378,9 @@
     const tarefas = [];
     if (!s.camposFicha) tarefas.push(api('/api/campos-contato').then((r) => { s.camposFicha = Array.isArray(r) ? r : []; }).catch(() => { s.camposFicha = []; }));
     // Produtos e serviços (Empresa): o filtro só aparece quando a rota existe.
-    if (s.produtos === undefined) tarefas.push(api('/api/produtos').then((r) => { const l = Array.isArray(r) ? r : Array.isArray(r?.produtos) ? r.produtos : null; s.produtos = l ? l.filter((p) => p && p.id && p.nome) : null; }).catch(() => { s.produtos = null; }));
+    if (s.produtos === undefined) tarefas.push(api('/api/produtos').then((r) => { const l = Array.isArray(r) ? r : Array.isArray(r?.produtos) ? r.produtos : null; s.produtos = l ? l.filter((p) => p && p.id && p.nome) : null; s.categoriasProdutos = Array.isArray(r?.categorias) ? r.categorias.filter((c) => typeof c === 'string' && c) : []; }).catch(() => { s.produtos = null; }));
+    /* produtos-lead: empresas ligadas aos contatos (Clientes › Empresas) para o filtro "Empresa vinculada" */
+    if (s.empresasContato === undefined) tarefas.push(api('/api/clientes/empresas').then((r) => { s.empresasContato = (Array.isArray(r?.empresas) ? r.empresas : []).filter((e) => e && e.chave && e.nome).slice(0, 200); }).catch(() => { s.empresasContato = []; }));
     if (!s.equipe) tarefas.push(api('/api/equipe').then((r) => { s.equipe = (r?.pessoas || []).filter((p) => p.ativo !== false).map((p) => ({ id: p.id, nome: p.nome })); }).catch(() => { s.equipe = []; }));
     if (window.SintoniaTags) tarefas.push(window.SintoniaTags.carregar().catch(() => {}));
     await Promise.all(tarefas);
@@ -484,7 +492,15 @@
         chip('Não lidas', r.conversa === 'nao_lidas', () => { r.conversa = r.conversa === 'nao_lidas' ? '' : 'nao_lidas'; }))));
       // Produtos (quando o cadastro existir)
       if (Array.isArray(s.produtos) && s.produtos.length) {
-        out.push(grupo('produtos', 'Produtos e serviços', el('div', { class: 'grupo' }, ...s.produtos.map((p) => chip(String(p.nome), r.produtos.includes(p.id), () => { r.produtos = alterna(r.produtos, p.id); })))));
+        /* produtos-lead: produtos vinculados ao lead e as categorias do cadastro */
+        const cats = s.categoriasProdutos || [];
+        out.push(grupo('produtos', 'Produtos e serviços',
+          cats.length ? el('div', { class: 'ft-campo' }, el('span', { text: 'Categoria' }), el('div', { class: 'grupo' }, ...cats.map((c) => chip(c, r.categorias.includes(c), () => { r.categorias = alterna(r.categorias, c); })))) : null,
+          el('div', { class: 'ft-campo' }, el('span', { text: 'Tem o produto ou serviço' }), el('div', { class: 'grupo' }, ...s.produtos.filter((p) => p.ativo !== false || r.produtos.includes(p.id)).map((p) => chip(String(p.nome), r.produtos.includes(p.id), () => { r.produtos = alterna(r.produtos, p.id); }))))));
+      }
+      /* produtos-lead: "propriedade vinculada" = empresa ligada ao contato (ficha › empresa) */
+      if (Array.isArray(s.empresasContato) && s.empresasContato.length) {
+        out.push(grupo('empresas', 'Empresa vinculada', el('div', { class: 'grupo' }, ...s.empresasContato.map((e) => chip(`${e.nome}${e.total > 1 ? ` (${e.total})` : ''}`, r.empresas.includes(e.chave), () => { r.empresas = alterna(r.empresas, e.chave); })))));
       }
       out.push(el('div', { class: 'rodape-filtros' },
         el('button', { type: 'button', class: 'limpar', text: 'Limpar', onclick: () => { Object.assign(rascunho, VAZIO()); origem = ''; unidade = ''; desenhar(); } }),

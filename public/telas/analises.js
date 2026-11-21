@@ -21,7 +21,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   ];
   const PERIODOS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['30d', '30 dias'], ['personalizado', 'Período']];
   const TABELAS = {
-    vendas: [['dias', 'Receita por dia'], ['atendentes', 'Por quem vendeu'], ['servicos', 'Por serviço'], ['origens', 'Campanhas e origens'], ['unidades', 'Por unidade']],
+    vendas: [['dias', 'Receita por dia'], ['atendentes', 'Por quem vendeu'], ['servicos', 'Por serviço'], ['produtos', 'Produtos vinculados aos leads'], ['origens', 'Campanhas e origens'], ['unidades', 'Por unidade']],
     clientes: [['resumo', 'Resumo de clientes'], ['fieis', 'Clientes fiéis'], ['sumidas', 'Para chamar de volta']],
     horarios: [['leads', 'Leads por dia e hora'], ['mensagens', 'Mensagens por dia e hora'], ['agendamentos', 'Agendamentos por dia e hora']],
     funil: [['etapas', 'Tempo em cada etapa'], ['paradas', 'Paradas há mais tempo'], ['perdas', 'Motivos de perda']],
@@ -324,6 +324,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         painel('unidades', 'Por unidade', null, 'rl-g4', csvDe('vendas', 'unidades'), unidades),
         painel('atendentes', 'Por quem vendeu', 'atendentes e IA, pela receita', 'rl-g6', csvDe('vendas', 'atendentes'), at),
         painel('servicos', 'Por serviço', 'receita · vendas · ticket médio', 'rl-g6', csvDe('vendas', 'servicos'), sv),
+        /* produtos-lead: produtos e serviços vinculados aos leads que compraram no período */
+        (r.produtos || []).length ? painel('produtos', 'Produtos e serviços vinculados', 'dos leads que compraram no período (soma dos produtos de cada lead)', 'rl-g12', csvDe('vendas', 'produtos'),
+          barras(r.produtos.slice(0, 12).map((x) => ({ nome: x.nome, valor: x.receita || x.quantidade, rotulo: fmtR(x.receita), nota: `${fmtN(x.quantidade)} ${x.quantidade === 1 ? 'unidade' : 'unidades'} · ${fmtN(x.leads)} ${x.leads === 1 ? 'lead' : 'leads'}${x.categoria ? ` · ${x.categoria}` : ''}` })))) : null,
         painel('origens', 'Campanhas e origens que viraram venda', 'leads que chegaram no período e quantos compraram; vendas e receita por origem (anúncio, link rastreado ou campo da ficha)', 'rl-g12', csvDe('vendas', 'origens'), og)),
     ];
   }
