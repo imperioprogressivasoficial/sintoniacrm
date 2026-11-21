@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 17h12 (Bahia):** no ar 6eb1a6c — rotas-celular (public/telas/voltar-celular.js; window.SintoniaConfigArea). Rodando: fluidez2 (parte 2: privacidade), notificacoes2 (C por categoria), rotas-celular (2º commit: telas).
 - **21/11 16h59 (Bahia):** no ar db3e3bb — capa com foto e atalhos por pessoa (700). Rodando: rotas-celular, fluidez2, notificacoes2 (esperando o dono escolher A/B/C; fazendo a limpeza do servidor).
 - **21/11 16h25 (Bahia):** no ar b6309ce — mensagem mandada pelo celular leva o nome da dona / última atendente / "Equipe" (690).
 - **21/11 16h18 (Bahia):** no ar 9faf68c — Configurações no celular = modelos 6 + 10 do dono (capa azul-marinho, busca, atalhos, áreas). Computador sem mudança.

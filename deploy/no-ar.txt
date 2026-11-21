@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 19:59 UTC (21/11, 16h59 na Bahia)
-commit: db3e3bb
-pacote sha256: e9c0217665e7f1124284cfe150461558bbeced19730c779bcfcc2a98fadb08b2
+data: 2026-11-21 20:12 UTC (21/11, 17h12 na Bahia)
+commit: 6eb1a6c
+pacote sha256: 97436228fc8558b85e72110cb277edb400810d58b825094a11d7c6d5cac73732
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-db3e3bb.b64); pode apagar depois.
-observação: em cima do b6309ce. Entra: capa-perfil (700: foto de capa por pessoa, atalhos escolhidos; public/capas/).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-6eb1a6c.b64); pode apagar depois.
+observação: em cima do db3e3bb. Entram: fotos da lista com anel inteiro (e319872) e rotas-celular (Voltar nas telas de dentro, histórico, borda, Agenda em 3 dias no celular).
