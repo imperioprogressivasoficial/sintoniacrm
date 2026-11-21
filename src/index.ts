@@ -114,6 +114,8 @@ import { Radar } from './radar/radar.js';
 import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
 import { juizClaude } from './radar/juiz.js';
 import { registrarRadar } from './radar/rotas.js';
+import { ArmazemRodizioMemoria, ArmazemRodizioPostgres, Rodizio } from './rodizio/rodizio.js'; // automacao-vendas
+import { registrarRodizio } from './rodizio/rotas.js'; // automacao-vendas
 import { registrarResgate } from './resgate/resgate.js';
 /* equipe: conversas de equipe (chat interno da empresa, sem WhatsApp) */
 import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
@@ -403,6 +405,8 @@ const automacoes = new Automacoes({
   transmissoes: () => transmissoes,
   variaveis: () => nps.variaveis(), // {link_avaliacao} da pesquisa de satisfação
 });
+/* automacao-vendas: gatilho "agendou" (agendamento da IA ou da equipe, e a cliente confirmando o horário). */
+observarEventos(repo, (e) => void automacoes.aoEvento(e));
 // Construtor de bots (fluxos em grafo): por cima dos ganchos de funis/automações; o bot responde antes da IA.
 const armazemBots = pool ? new ArmazemBotsPostgres(pool) : new ArmazemBotsMemoria();
 const bots = new Bots({
@@ -552,6 +556,26 @@ const sintonia = new Sintonia({
 
 aoTrocarChaveIa = () => sintonia.liberarIa();
 
+/* automacao-vendas: rodízio automático de leads entre quem está "Disponível para atender", por unidade. */
+const acessosRodizio = acessosPara(contas);
+const rodizio = new Rodizio({
+  armazem: pool ? new ArmazemRodizioPostgres(pool) : new ArmazemRodizioMemoria(repo),
+  contas,
+  presencas,
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  sintonia: () => sintonia,
+  // Só quem tem "Responder clientes" (perfil do papel + ajustes da pessoa) entra no rodízio.
+  podeResponder: async (u) => {
+    if (!acessosRodizio) return resolverPermissoes(u.papel).responder;
+    const [perfis, extras] = await Promise.all([acessosRodizio.perfis(u.empresaId), acessosRodizio.extras(u.id)]);
+    return resolverPermissoes(u.papel, perfis[u.papel], extras.ajustes).responder;
+  },
+  ehDemo: async (id) => (await armazemDemo.conversasDemo(cfg.SINTONIA_EMPRESA_ID)).has(id),
+  log,
+});
+observarEventos(repo, (e) => rodizio.aoEvento(e));
+
 /* grupos: Conversas de grupo (grupos do WhatsApp pela API não oficial), em tabelas próprias. */
 const armazemGrupos = pool ? new ArmazemGruposPostgres(pool) : new ArmazemGruposMemoria();
 const grupos = new Grupos({
@@ -622,6 +646,7 @@ const avisosReuniao = pool
       urlPublica: () => process.env.SINTONIA_URL_PUBLICA,
       avisarPessoa: (id, a) => notificador.avisarPessoa(id, a),
       avisarGestao: (a) => notificador.avisarGestao(a),
+      aoAgendou: (reuniaoId, conversaId) => automacoes.aoAgendouOnline(conversaId, reuniaoId), // automacao-vendas
       whatsapp: async (telefone, nome, texto) => {
         const n = numeros.find(ehReal);
         if (!n) return undefined;
@@ -752,7 +777,7 @@ const app = criarServidor({
     const { conversa, nova } = await repo.buscarOuCriarConversa({ empresaId: cfg.SINTONIA_EMPRESA_ID, unidade, canalId, telefone, nome, agora });
     if (nova) {
       // A conversa foi criada aqui (para nascer no modo certo): registra a chegada da cliente como num número real.
-      await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora });
+      await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora, dados: { origem: 'cliente_teste' } });
       const inicial = await agentesIa.modoInicial(conversa, agora);
       await sintonia.mudarModo(conversa.id, inicial ?? (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'));
     }
@@ -1045,6 +1070,7 @@ registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
 registrarNps(app, { nps, repo, automacoes });
 registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
+registrarRodizio(app, { rodizio }); // automacao-vendas
 // Resgatar mensagens: busca de novo na Evolution o que não apareceu (uma conversa ou todas), sem IA nem avisos.
 registrarResgate(app, {
   repo,

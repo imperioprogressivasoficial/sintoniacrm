@@ -155,6 +155,9 @@ Gatilhos (campo "gatilho"):
 - {"tipo":"tag_marcada","tagId":"…"}
 - {"tipo":"aniversario"}
 - {"tipo":"dias_apos_compareceu","dias":30}
+- {"tipo":"sem_resposta","quem":"equipe","minutos":30} (quem "equipe" = a cliente espera a loja; "cliente" = a loja espera a cliente)
+- {"tipo":"agendou","quando":"qualquer"} (quando: qualquer, ia, equipe, online ou confirmou)
+- {"tipo":"mensagem_recebida"}
 Passos (lista "passos", na ordem):
 - {"tipo":"enviar_mensagem","texto":"Oi {primeiro_nome}! …","so_no_horario":true} (variáveis: {primeiro_nome} {nome} {unidade} {atendente})
 - {"tipo":"esperar","minutos":60}
@@ -374,6 +377,13 @@ export function descreverGatilho(g: Gatilho, nomes: Map<string, string>): NoFlux
       return { tipo: g.tipo, titulo: 'Atendimento finalizado', detalhe: g.motivos.length ? `Motivo: ${g.motivos.map((m) => NOME_MOTIVO[m]).join(', ')}` : 'Qualquer motivo' };
     case 'nota_nps':
       return { tipo: g.tipo, titulo: 'Nota da pesquisa', detalhe: g.min === g.max ? `Nota ${g.min}` : `Nota de ${g.min} a ${g.max}` };
+    // automacao-vendas: gatilhos novos.
+    case 'sem_resposta':
+      return { tipo: g.tipo, titulo: g.quem === 'equipe' ? 'Cliente sem resposta da equipe' : 'Cliente não responde', detalhe: `Há ${tempo(g.minutos)}` };
+    case 'agendou':
+      return { tipo: g.tipo, titulo: g.quando === 'confirmou' ? 'Cliente confirmou o horário' : 'Agendou', detalhe: { qualquer: 'IA, equipe ou link online', ia: 'Pela IA', equipe: 'Pela equipe', online: 'Pelo link de agendamento online', confirmou: 'Na confirmação de agenda' }[g.quando] };
+    case 'mensagem_recebida':
+      return { tipo: g.tipo, titulo: 'Mensagem recebida', detalhe: 'Qualquer mensagem do contato' };
   }
 }
 

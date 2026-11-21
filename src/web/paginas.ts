@@ -131,6 +131,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/reunioes.js': { arquivo: 'telas/reunioes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/rotina.js': { arquivo: 'telas/rotina.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agendadas.js': { arquivo: 'telas/agendadas.js', tipo: 'text/javascript; charset=utf-8' }, // msg-agendada
+  '/telas/distribuicao.js': { arquivo: 'telas/distribuicao.js', tipo: 'text/javascript; charset=utf-8' }, // automacao-vendas
   // grupos: Conversas de grupo (grupos do WhatsApp) e a troca Conversas · Grupos · Equipe no celular.
   '/telas/grupos.js': { arquivo: 'telas/grupos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/conversas-abas.js': { arquivo: 'telas/conversas-abas.js', tipo: 'text/javascript; charset=utf-8' },

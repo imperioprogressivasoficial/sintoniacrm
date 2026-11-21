@@ -24,7 +24,7 @@
     relatorios: 'relatorios', desempenho: 'desempenho', analises: 'analises', comercial: 'comercial',
     transmissoes: 'transmissoes', email: 'email-marketing', links: 'rastreamento', criativos: 'criativos',
     acessos: 'acessos', empresa: 'empresa', planos: 'plano', equipe: 'equipe', configuracoes: 'configuracoes',
-    conta: 'conta', agendadas: 'mensagens-agendadas', integracoes: 'integracoes', // telas que chegaram junto (empresa-conta, msg-agendada, integracoes)
+    conta: 'conta', agendadas: 'mensagens-agendadas', integracoes: 'integracoes', distribuicao: 'distribuicao-e-prazos', /* automacao-vendas */ // telas que chegaram junto (empresa-conta, msg-agendada, integracoes)
   };
   const VISTA = {};
   for (const [v, c] of Object.entries(CAMINHO)) { VISTA[c] = v; if (!VISTA[v]) VISTA[v] = v; }

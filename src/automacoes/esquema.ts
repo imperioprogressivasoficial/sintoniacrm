@@ -10,6 +10,11 @@ import { zIdUnidade } from '../unidades.js';
 /** Unidade de um gatilho/ação: id do cadastro (Empresa › Unidades); aqui só o formato, o fluxo fica guardado. */
 const UnidadeAuto = zIdUnidade();
 export const MODOS = ['ia', 'copiloto', 'humano'] as const;
+/** automacao-vendas: de quem é a vez de responder no gatilho "sem resposta". */
+export const QUEM_SEM_RESPOSTA = ['equipe', 'cliente'] as const;
+/** automacao-vendas: "qualquer" = feito de qualquer jeito (IA, equipe ou link online); "confirmou" = a cliente confirmou. */
+export const QUANDO_AGENDOU = ['qualquer', 'ia', 'equipe', 'online', 'confirmou'] as const;
+export type QuandoAgendou = (typeof QUANDO_AGENDOU)[number];
 
 const id = z.string().trim().min(1).max(100);
 
@@ -36,6 +41,17 @@ export const Gatilho = z.discriminatedUnion('tipo', [
   z.object({ tipo: z.literal('atendimento_finalizado'), motivos: z.array(z.enum(MOTIVOS_FINALIZACAO)).max(MOTIVOS_FINALIZACAO.length).default([]) }),
   /** A cliente respondeu a pesquisa de satisfação com uma nota entre `min` e `max` (0 a 10). */
   z.object({ tipo: z.literal('nota_nps'), min: z.number().int().min(0).max(10).default(0), max: z.number().int().min(0).max(10).default(10) }),
+  /*
+   * automacao-vendas: gatilhos que faltavam (auditoria, item 17).
+   * sem_resposta: quem = 'equipe' → a cliente escreveu e a loja (equipe ou IA) não respondeu há `minutos`;
+   * quem = 'cliente' → a loja escreveu e a cliente não responde há `minutos`. Uma vez por silêncio da cliente
+   * (a próxima mensagem dela recomeça), e só para esperas que começaram depois de a automação ser criada.
+   */
+  z.object({ tipo: z.literal('sem_resposta'), quem: z.enum(QUEM_SEM_RESPOSTA), minutos: z.number().int().min(5).max(60 * 24 * 30) }),
+  /** Agendamento feito (pela IA, pela equipe ou pelo link de agendamento online) ou a cliente confirmou o horário. */
+  z.object({ tipo: z.literal('agendou'), quando: z.enum(QUANDO_AGENDOU).default('qualquer') }),
+  /** Qualquer mensagem da cliente (opcional: só de uma unidade). */
+  z.object({ tipo: z.literal('mensagem_recebida'), unidade: UnidadeAuto.optional() }),
 ]);
 export type Gatilho = z.infer<typeof Gatilho>;
 

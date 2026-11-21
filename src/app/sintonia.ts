@@ -231,7 +231,8 @@ export class Sintonia {
         return true;
       }
 
-      if (criada.nova) await this.evento('conversa_nova', conversa);
+      // automacao-vendas: origem "cliente" = a cliente escreveu primeiro (o rodízio de leads só distribui estas).
+      if (criada.nova) await this.evento('conversa_nova', conversa, { origem: 'cliente' });
       await this.gancho('rastreio', () => this.d.rastreio?.aoMensagem(conversa, msg));
       const primeira = !conversa.ultimaMensagemCliente;
       conversa.ultimaMensagemCliente = vistaEm(msg.em, agora, conversa);
