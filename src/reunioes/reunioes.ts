@@ -86,7 +86,28 @@ const DadosScript = z.object({
   ordem: z.number().int().min(0).max(9999).default(0),
 });
 
-export function registrarReunioes(app: FastifyInstance, pool: pg.Pool, o: { agora?: () => Date; pastaPublica?: URL } = {}): void {
+export function registrarReunioes(
+  app: FastifyInstance,
+  pool: pg.Pool,
+  o: {
+    agora?: () => Date;
+    pastaPublica?: URL;
+    /* integracoes: reunião marcada ou cancelada vira evento de webhook ("agendamento.*"). Nunca atrasa nem derruba a resposta. */
+    aoReuniao?: (tipo: 'criado' | 'cancelado', empresaId: string, reuniao: Record<string, unknown>) => void;
+  } = {},
+): void {
+  const avisar = (tipo: 'criado' | 'cancelado', r: Record<string, unknown> | undefined) => {
+    if (!o.aoReuniao || !r) return;
+    try {
+      const inicio = new Date(r.inicio as string);
+      const fim = new Date(r.fim as string);
+      o.aoReuniao(tipo, String(r.empresa_id), {
+        id: String(r.id), origem: 'link', status: tipo === 'criado' ? 'marcado' : 'cancelado', inicio: inicio.toISOString(), fim: fim.toISOString(),
+        duracaoMin: Math.round((fim.getTime() - inicio.getTime()) / 60_000), titulo: r.titulo ?? null, local: r.local || null, linkId: String(r.link_id),
+        cliente: { nome: r.nome ?? null, telefone: r.telefone ?? null, email: r.email ?? null }, observacao: r.observacao || null,
+      });
+    } catch { /* aviso é extra */ }
+  };
   const agora = o.agora ?? (() => new Date());
   const empresa = (req: FastifyRequest) => {
     if (!req.usuario) throw Object.assign(new Error('Faça login para continuar.'), { statusCode: 401 });
@@ -133,7 +154,10 @@ export function registrarReunioes(app: FastifyInstance, pool: pg.Pool, o: { agor
   });
   app.post('/api/reunioes/:id/cancelar', async (req) => {
     const e = empresa(req);
-    await pool.query(`update sintonia.reunioes set status='cancelada' where id=$1 and empresa_id=$2`, [Id.parse((req.params as { id: string }).id), e]);
+    const r = await pool.query(
+      `update sintonia.reunioes r set status='cancelada' from sintonia.links_reuniao l where r.id=$1 and r.empresa_id=$2 and l.id = r.link_id and r.status <> 'cancelada' returning r.*, l.titulo, l.local`,
+      [Id.parse((req.params as { id: string }).id), e]);
+    avisar('cancelado', r.rows[0]);
     return { ok: true };
   });
 
@@ -193,10 +217,11 @@ export function registrarReunioes(app: FastifyInstance, pool: pg.Pool, o: { agor
     const inicio = instante(d.data.data, d.data.hora);
     const fim = new Date(inicio.getTime() + link.duracao_min * 60_000);
     try {
-      await pool.query(
+      const r = await pool.query(
         `insert into sintonia.reunioes (id, link_id, empresa_id, nome, telefone, email, observacao, inicio, fim)
-         select $1, $2, empresa_id, $3, $4, $5, $6, $7, $8 from sintonia.links_reuniao where id = $2`,
+         select $1, $2, empresa_id, $3, $4, $5, $6, $7, $8 from sintonia.links_reuniao where id = $2 returning *`,
         [randomUUID(), link.id, d.data.nome, d.data.telefone || null, d.data.email || null, d.data.observacao, inicio, fim]);
+      if (r.rows[0]) avisar('criado', { ...r.rows[0], titulo: link.titulo, local: link.local });
     } catch (e) {
       if ((e as { code?: string }).code === '23505') return reply.code(409).send({ erro: 'Esse horário acabou de ser ocupado. Escolha outro.' });
       throw e;

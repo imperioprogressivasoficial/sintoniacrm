@@ -117,6 +117,9 @@ import { registrarCadastro } from './empresa/cadastro-rotas.js';
 import { precosDoCadastro } from './empresa/precos-comercial.js';
 import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, registrarConta, trocarEmailMemoria, trocarEmailPostgres } from './conta/conta.js';
 import { UNIDADES_EQUIPE } from './auth/acesso.js';
+/* integracoes: área de desenvolvedores (chaves de API, API v1, webhooks de saída e MCP) */
+import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integracoes/armazem.js';
+import { montarIntegracoes } from './integracoes/rotas.js';
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -496,6 +499,41 @@ const grupos = new Grupos({
 
 const trabalhador = new Trabalhador({ fila, processar: (m) => sintonia.receber(m), paralelo: cfg.SINTONIA_PARALELO, log });
 
+// Por qual número a unidade fala: o real; o de teste só enquanto nenhum número real estiver conectado.
+const canalDaUnidade = (unidade: import('./domain.js').UnidadeId): { canalId: string } | { erro: string } => {
+  const real = numeros.find((n) => n.unidade === unidade && ehReal(n));
+  if (real) return { canalId: real.canalId };
+  const teste = numeros.find((n) => n.unidade === unidade);
+  if (teste && !numeros.some(ehReal)) return { canalId: teste.canalId };
+  return { erro: 'Esta unidade ainda não tem WhatsApp conectado. Conecte o número em Conexões.' };
+};
+
+/* integracoes: chaves de API, API pública (/api/v1), webhooks de saída e MCP (/mcp). Só lê os eventos: não muda ninguém. */
+const producao = process.env.NODE_ENV === 'production';
+const integracoes = montarIntegracoes({
+  armazem: pool ? new ArmazemIntegracoesPostgres(pool) : new ArmazemIntegracoesMemoria(),
+  cofre,
+  repo,
+  sintonia,
+  canalDa: canalDaUnidade,
+  modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
+  contatos: armazemContatos,
+  tags: (e) => (e === tags.empresaId ? tags : undefined),
+  funis: (e) => (e === funis.empresaId ? funis : undefined),
+  pool,
+  contas,
+  nomes: {
+    funil: async (id) => (await funis.listar()).find((f) => f.id === id)?.nome,
+    etapa: async (id) => (await armazemTags.buscar(id))?.nome,
+  },
+  producao,
+  // Só em desenvolvimento: deixa testar webhook em http://localhost.
+  permitirLocal: !producao && process.env.WEBHOOKS_PERMITIR_LOCAL === '1',
+  avisar: (a) => notificador.avisarGestao(a),
+  log,
+});
+observarEventos(repo, (e) => integracoes.aoEvento(e));
+
 const app = criarServidor({
   sintonia,
   repo,
@@ -510,6 +548,7 @@ const app = criarServidor({
     return { canal: evolution, token: conexoes.get('webhookToken') };
   },
   grupos,
+  aoReuniao: integracoes.aoReuniao,
   conexoes: {
     conexoes,
     agendas,
@@ -779,13 +818,7 @@ registrarConversa(app, {
   transcricaoLigada: () => Boolean(cfg.WHISPER_URL || conexoes.get('openaiApiKey')),
   ia: { claude, modelo: cfg.SINTONIA_MODELO, base: () => base.texto(), ligada: () => iaLigada },
   // Envia pelo número real da unidade; o de teste só vale enquanto nenhum número real estiver conectado.
-  canalDa: (unidade) => {
-    const real = numeros.find((n) => n.unidade === unidade && ehReal(n));
-    if (real) return { canalId: real.canalId };
-    const teste = numeros.find((n) => n.unidade === unidade);
-    if (teste && !numeros.some(ehReal)) return { canalId: teste.canalId };
-    return { erro: 'Esta unidade ainda não tem WhatsApp conectado. Conecte o número em Conexões.' };
-  },
+  canalDa: canalDaUnidade,
   modoInicial: async () => (iaLigada ? (await empresa.configIa()).modoPadrao : 'humano'),
   controleIa: () => agentesIa.servico.controle(),
   // Serena cria coisas no CRM (sempre com prévia e "Salvar"): scripts, fluxos, links de agendamento e etiquetas.
@@ -866,6 +899,8 @@ registrarResgate(app, {
   importar: (m) => sintonia.importarHistorico(m),
   log,
 });
+/* integracoes: tela Integrações (/api/integracoes), API v1, MCP, /desenvolvedores e /openapi.json */
+integracoes.registrar(app);
 /* equipe: conversas de equipe (src/equipe) — direta, grupos e o "Geral"; aviso pelo push que já existe. */
 registrarChatEquipe(app, {
   chat: new ChatEquipe({ armazem: pool ? new ArmazemEquipePostgres(pool) : new ArmazemEquipeMemoria(), contas, repo, presencas, avisar: avisoPorPush(notificador), log }),
@@ -898,6 +933,11 @@ const relogio = setInterval(async () => {
   }
 }, 30_000);
 
+// integracoes: fila dos webhooks de saída, a cada 5 s.
+const relogioWebhooks = setInterval(() => {
+  integracoes.tick().catch((e) => log('Falha na fila dos webhooks', String(e)));
+}, 5_000);
+
 // Fila das transmissões: a cada 2 s (o ritmo de cada número decide quantas saem).
 const relogioTransmissoes = setInterval(() => {
   transmissoes?.tick().catch((e) => log('Falha no relógio das transmissões', String(e)));
@@ -926,12 +966,14 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     clearInterval(relogioTransmissoes);
     clearInterval(relogioFluxos);
     clearInterval(relogioAgendadas);
+    clearInterval(relogioWebhooks);
     whatsappSaude.parar();
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});
     await trabalhador.parar();
     await notificador.ocioso().catch(() => {});
+    await integracoes.webhooks.ocioso().catch(() => {});
     await whatsappSaude.ocioso().catch(() => {});
     await pool?.end();
     process.exit(0);
