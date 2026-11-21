@@ -128,6 +128,12 @@ export interface Repositorio {
    * texto das mensagens, e cursor (`antes`) para a rolagem infinita. Vem com a última mensagem de cada uma.
    */
   paginaConversas(p: PedidoPagina): Promise<{ conversas: Conversa[]; ultimas: Map<string, Mensagem>; proximo: { em: Date; id: string } | null }>;
+  /**
+   * serena-super: busca no texto das mensagens (o mesmo índice de trigramas da busca de Conversas, migração 550),
+   * da mais nova para a mais antiga, com o escopo de quem vê e filtros (período, unidade, quem mandou, conversas).
+   * Quem chama ainda confere podeVer em cada conversa.
+   */
+  buscarMensagens(p: PedidoBuscaMensagens): Promise<Mensagem[]>;
 
   /**
    * Retorna false se a mensagem (pelo idExterno) já foi registrada.
@@ -219,6 +225,21 @@ export interface PedidoPagina {
   busca?: string;
   /** Só as conversas com esta tag. */
   tagId?: string;
+}
+
+/** serena-super: pedido da busca no texto das mensagens. */
+export interface PedidoBuscaMensagens {
+  /** Texto procurado (2 letras ou mais). */
+  texto: string;
+  escopo?: EscopoVisao;
+  desde?: Date;
+  ate?: Date;
+  unidade?: string;
+  /** Quem mandou: cliente, equipe, ia (sem: todos menos as notas do sistema). */
+  autores?: Array<Mensagem['autor']>;
+  /** Só nestas conversas (ex.: a cliente que a pessoa citou). */
+  conversaIds?: string[];
+  limite: number;
 }
 
 /** Dígitos de uma busca que parece telefone (3 ou mais dígitos). */
@@ -321,6 +342,25 @@ export class RepositorioMemoria implements Repositorio {
     };
   }
 
+  async buscarMensagens(p: PedidoBuscaMensagens) {
+    const termo = p.texto.trim().toLowerCase();
+    if (termo.length < 2) return [];
+    const autores: Array<Mensagem['autor']> = p.autores?.length ? p.autores : ['cliente', 'equipe', 'ia'];
+    const conversas = new Map((await this.listarConversas({ escopo: p.escopo })).map((c) => [c.id, c]));
+    return this.msgs
+      .filter((m) => {
+        const c = conversas.get(m.conversaId);
+        if (!c || !autores.includes(m.autor)) return false;
+        if (p.unidade && c.unidade !== p.unidade) return false;
+        if (p.conversaIds && !p.conversaIds.includes(m.conversaId)) return false;
+        if (p.desde && m.em < p.desde) return false;
+        if (p.ate && m.em >= p.ate) return false;
+        return m.texto.toLowerCase().includes(termo);
+      })
+      .sort((a, b) => b.em.getTime() - a.em.getTime())
+      .slice(0, p.limite)
+      .map((m) => ({ ...m }));
+  }
 
   async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;

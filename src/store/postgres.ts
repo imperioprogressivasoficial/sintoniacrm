@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
-import { digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import { digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoBuscaMensagens, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 import { nomeEhReal, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
@@ -239,6 +239,36 @@ export class RepositorioPostgres implements Repositorio {
       ultimas: await this.ultimasMensagens(pagina.map((c) => c.id)),
       proximo: rows.length > p.limite && ultima ? { em: ultima.atualizadaEm, id: ultima.id } : null,
     };
+  }
+
+  /** serena-super: busca no texto das mensagens (trigramas em mensagens.texto, migração 550), com o escopo de quem vê. */
+  async buscarMensagens(p: PedidoBuscaMensagens) {
+    const termo = p.texto.trim();
+    if (termo.length < 2) return [];
+    const e = p.escopo ?? {};
+    const padrao = `%${termo.replace(/[\\%_]/g, (x) => `\\${x}`)}%`;
+    const autores = p.autores?.length ? p.autores : ['cliente', 'equipe', 'ia'];
+    const ids = p.conversaIds?.filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    if (p.conversaIds && !ids?.length) return [];
+    const { rows } = await this.pool.query<LinhaMensagem>(
+      `select ${COLUNAS_MENSAGEM}
+         from sintonia.mensagens m
+         join sintonia.conversas c on c.id = m.conversa_id
+         left join sintonia.midias md on md.mensagem_id = m.id
+        where m.texto ilike $1
+          and m.autor = any($2::text[])
+          and ($3::text is null or c.empresa_id = $3)
+          and ($4::text[] is null or c.unidade = any($4))
+          and ($5::uuid is null or c.responsavel_id is null or c.responsavel_id = $5)
+          and ($6::timestamptz is null or m.em >= $6)
+          and ($7::timestamptz is null or m.em < $7)
+          and ($8::text is null or c.unidade = $8)
+          and ($9::uuid[] is null or m.conversa_id = any($9))
+        order by m.em desc, m.id desc
+        limit $10`,
+      [padrao, autores, e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.desde ?? null, p.ate ?? null, p.unidade ?? null, ids ?? null, p.limite],
+    );
+    return rows.map(paraMensagem);
   }
 
   async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }) {
