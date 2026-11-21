@@ -142,7 +142,31 @@
       raiz.style.left = (pos.lado === 'dir' ? w - TAM - MARGEM : MARGEM) + 'px';
       // Parada, a bolinha se encosta na borda (fica só a pontinha) para não cobrir setas e botões das listas.
       raiz.style.setProperty('--ar-encosta', (pos.lado === 'dir' ? 1 : -1) * (TAM / 2 + MARGEM) + 'px');
-      raiz.style.top = y - TAM / 2 + 'px';
+      raiz.style.top = desviar(y - TAM / 2, pos.lado) + 'px';
+    }
+    /* rotas-celular: botão flutuante da tela (o "+" da Agenda, do Chatbot…) no mesmo canto: a bolinha sobe e fica logo
+       acima dele, sem cobrir. A posição escolhida pela pessoa continua guardada; volta sozinha quando o botão sai. */
+    const FLUTUANTES = '.area > .vista.ativa :is([class$="-fab"], [class*="-fab "], .fab, [data-flutuante])';
+    function desviar(topo, lado) {
+      let t = topo;
+      for (const f of document.querySelectorAll(FLUTUANTES)) {
+        const r = f.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const mesmoLado = lado === 'dir' ? r.right > innerWidth - TAM - MARGEM * 2 : r.left < TAM + MARGEM * 2;
+        if (mesmoLado && t + TAM + 8 > r.top && t < r.bottom + 8) t = Math.max(70, r.top - TAM - 14);
+      }
+      return t;
+    }
+    let espera = 0;
+    const conferir = () => {
+      clearTimeout(espera);
+      espera = setTimeout(() => { if (!arrasto && !aberta) aplicar(true); }, 200);
+    };
+    const area = document.querySelector('.area');
+    if (area) {
+      const obs = new MutationObserver(conferir);
+      obs.observe(area, { subtree: true, childList: true });
+      area.querySelectorAll(':scope > .vista').forEach((v) => obs.observe(v, { attributes: true, attributeFilter: ['class'] }));
     }
     function acordar() {
       raiz.classList.remove('ociosa'); clearTimeout(ocioso);

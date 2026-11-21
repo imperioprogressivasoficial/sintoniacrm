@@ -59,10 +59,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('thead', {}, el('tr', {}, el('th', { text: 'Atalho' }), el('th', { text: 'Texto' }), el('th', { text: 'De quem' }))),
       el('tbody', {}, ...itens.map((r) => {
         const tr = el('tr', { tabindex: '0', 'aria-current': s.editando?.id === r.id ? 'true' : null, title: r.podeEditar ? 'Editar' : 'Só a gestão muda as respostas da empresa' },
-          el('td', {}, el('b', { text: '/' + r.atalho, style: 'font-weight:600;color:var(--marca-azul)' })),
-          el('td', { text: r.texto.length > 90 ? r.texto.slice(0, 89) + '…' : r.texto, style: 'white-space:normal;color:var(--sub)' }),
-          el('td', {}, el('span', { class: 'ds-pilula', text: r.pessoal ? 'Minha' : 'Empresa' })));
-        const abrir = () => { if (!r.podeEditar) { u.toast('Só a gestão muda as respostas da empresa.'); return; } s.editando = r; desenhar(); s.caixa.querySelector('input[name="atalho"]')?.focus(); };
+          el('td', { class: 'rr-at' }, el('b', { text: '/' + r.atalho, style: 'font-weight:600;color:var(--marca-azul)' })),
+          el('td', { class: 'rr-tx', text: r.texto.length > 90 ? r.texto.slice(0, 89) + '…' : r.texto, style: 'white-space:normal;color:var(--sub)' }),
+          el('td', { class: 'rr-de' }, el('span', { class: 'ds-pilula', text: r.pessoal ? 'Minha' : 'Empresa' })));
+        const abrir = () => { if (!r.podeEditar) { u.toast('Só a gestão muda as respostas da empresa.'); return; } s.editando = r; desenhar(); const a = s.caixa.querySelector('input[name="atalho"]'); a?.focus(); a?.closest('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); /* rotas-celular: no celular o formulário fica embaixo da lista */ };
         tr.addEventListener('click', abrir);
         tr.addEventListener('keydown', (e) => { if (e.key === 'Enter') abrir(); });
         return tr;
@@ -104,6 +104,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!document.getElementById('estilo-respostas')) {
         const st = document.createElement('style'); st.id = 'estilo-respostas';
         st.textContent = '.rr-tela-grade { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; } @media (min-width: 1100px) { .rr-tela-grade { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); } } .rr-tela-grade tr[aria-current="true"] { background: var(--vidro-ativo); }';
+        /* rotas-celular: no celular a tabela vira cartões (atalho e "de quem" em cima, o texto embaixo, na largura toda) */
+        st.textContent += ` @media (max-width: 760px) {
+          .rr-tela-grade .ds-tabela, .rr-tela-grade .ds-tabela tbody { display: block; width: 100%; }
+          .rr-tela-grade .ds-tabela thead { display: none; }
+          .rr-tela-grade .ds-tabela tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--linha); cursor: pointer; }
+          .rr-tela-grade .ds-tabela tr:last-child { border-bottom: 0; }
+          .rr-tela-grade .ds-tabela td { display: block; padding: 0 !important; border: 0 !important; min-width: 0; }
+          .rr-tela-grade .ds-tabela td.rr-at { grid-column: 1; grid-row: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .rr-tela-grade .ds-tabela td.rr-de { grid-column: 2; grid-row: 1; }
+          .rr-tela-grade .ds-tabela td.rr-tx { grid-column: 1 / -1; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+        }`;
         document.head.append(st);
       }
       try { if (localStorage.getItem('sintonia.respostas.aba') === 'fluxos') s.aba = 'fluxos'; } catch { /* sem armazenamento */ }

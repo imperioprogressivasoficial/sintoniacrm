@@ -266,8 +266,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('button', { class: 'ra-botao leve', type: 'button', style: 'min-height:36px;padding:0 14px;margin-left:auto', text: l.ativo ? 'Desligar' : 'Ligar', onclick: async () => { try { await u.api(`/api/rastreio/links/${l.id}`, { method: 'PATCH', body: JSON.stringify({ ativo: !l.ativo }) }); carregarLinks(); } catch (x) { u.toast(x.message); } } })));
     }) : [el('div', { class: 'ra-vazio', text: t.erro || 'Nenhum link ainda. Crie o primeiro acima (ex.: o link da bio do Instagram).' })]));
     t.caixa.replaceChildren(el('div', { class: 'ra-tela' },
+      /* rotas-celular: título no topo, como nas outras telas (antes a tela começava direto no formulário) */
+      el('div', { class: 'ds-cab-tela' }, el('div', { class: 'ds-cab-txt' }, el('h1', { class: 'titulo-grande', text: 'Rastreamento e links' }),
+        el('p', { text: 'Links que mostram de onde veio cada cliente: bio do Instagram, anúncio, site.' }))),
       el('section', { class: 'ra-painel', 'aria-label': 'Criar link rastreado' },
-        el('h2', {}, 'Links rastreados', el('small', { text: 'Cada clique ganha um código curto que vai na mensagem do WhatsApp. Quando a cliente envia, a conversa fica ligada ao clique (com as UTMs, fbclid e gclid).' })),
+        el('h2', {}, 'Criar link', el('small', { text: 'Cada clique ganha um código curto que vai na mensagem do WhatsApp. Quando a cliente envia, a conversa fica ligada ao clique (com as UTMs, fbclid e gclid).' })),
         form,
         el('p', { class: 'ra-dica', html: 'Dica: dá para acrescentar UTMs no próprio endereço, e elas valem por cima das do link: <code>/l/bio?utm_campaign=black-friday</code>. Nos anúncios da Meta, use <code>utm_source=meta&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>.' })),
       el('section', { class: 'ra-painel', 'aria-label': 'Links' }, el('h2', { text: 'Seus links' }), lista)));
