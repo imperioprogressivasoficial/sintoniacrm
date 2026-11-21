@@ -15,6 +15,7 @@ import { tipoPeloMimetype } from '../midia.js';
 import { estaAberta, proximaAbertura } from '../engine/horario.js';
 import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, horaHHmm, MIN, partesBahia, dataISO } from '../util/tempo.js';
+import { buscarSeguro } from '../integracoes/ssrf.js';
 import {
   casarOpcao,
   FluxoAlteracao,
@@ -986,7 +987,8 @@ export class Bots {
       return { tipo: tipoMidia(m.mimetype), conteudo: m.conteudo, mimetype: m.mimetype, nomeArquivo: m.nome ?? undefined };
     }
     if (no.midiaUrl) {
-      const r = await (this.o.fetch ?? fetch)(no.midiaUrl, { signal: AbortSignal.timeout(15_000) });
+      // banco-seguranca: só endereço público (o bot não pode ser usado para ler a rede interna do servidor).
+      const r = await buscarSeguro(no.midiaUrl, { signal: AbortSignal.timeout(15_000) }, { fetchFn: this.o.fetch });
       if (!r.ok) throw new Error(`não consegui baixar a imagem (${r.status}).`);
       const mimetype = (r.headers.get('content-type') ?? 'image/jpeg').split(';')[0]!.trim();
       const conteudo = Buffer.from(await r.arrayBuffer());
@@ -1196,7 +1198,7 @@ export class Bots {
           em: agora.toISOString(),
         };
         try {
-          const r = await (this.o.fetch ?? fetch)(no.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(10_000) });
+          const r = await buscarSeguro(no.url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(corpo), signal: AbortSignal.timeout(10_000) }, { fetchFn: this.o.fetch });
           if (!r.ok) {
             this.anotar(e, no, false, `Webhook respondeu ${r.status}.`);
             return { ir: 'erro' };

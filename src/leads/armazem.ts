@@ -121,6 +121,11 @@ export class ArmazemLeadsPostgres implements ArmazemLeads {
       await c.query('update sintonia.eventos set conversa_id = $2 where conversa_id = $1', [deId, paraId]);
       // msg-agendada: o que estava agendado para a conversa juntada continua valendo na principal.
       await c.query('update sintonia.mensagens_agendadas set conversa_id = $2 where conversa_id = $1', [deId, paraId]);
+      // banco-seguranca: o histórico do atendimento (NPS, perdas, finalizações, radar, follow-up, reuniões, rotina,
+      // memória da IA, envios) vai para a principal. Antes ficava solto; com as ligações da migração 630 seria apagado.
+      for (const t of ['nps_pesquisas', 'perdas', 'atendimentos_finalizados', 'radar_historico', 'followup_envios', 'agenda_confirmacoes', 'reunioes', 'rotina_tarefas', 'memoria_cliente', 'transmissao_destinos', 'email_envios']) {
+        await c.query(`update sintonia.${t} set conversa_id = $2 where conversa_id = $1`, [deId, paraId]);
+      }
       await c.query(
         `update sintonia.tarefas t set conversa_id = $2
           where t.conversa_id = $1 and not t.feita

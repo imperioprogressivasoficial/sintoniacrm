@@ -1,4 +1,5 @@
 import { inflateSync } from 'node:zlib';
+import { buscarSeguro, ErroDestino } from '../integracoes/ssrf.js';
 
 /** Importação simples de conhecimento: página da web (texto) e arquivo .txt ou .pdf. */
 
@@ -36,10 +37,10 @@ export async function importarLink(url: string, f: typeof fetch = fetch): Promis
   } catch {
     throw Object.assign(new Error('Link inválido.'), { statusCode: 400 });
   }
-  if (!/^https?:$/.test(u.protocol) || /^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|\[?::1)/.test(u.hostname) || /^172\.(1[6-9]|2\d|3[01])\./.test(u.hostname)) {
-    throw Object.assign(new Error('Use um link público (http ou https).'), { statusCode: 400 });
-  }
-  const r = await f(u, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'Sintonia/1.0 (importar conhecimento)' } }).catch((e: unknown) => {
+  if (!/^https?:$/.test(u.protocol)) throw Object.assign(new Error('Use um link público (http ou https).'), { statusCode: 400 });
+  // banco-seguranca: confere o destino (DNS e cada redirecionamento): nada de rede interna (banco, Evolution, n8n).
+  const r = await buscarSeguro(u, { signal: AbortSignal.timeout(15_000), headers: { 'user-agent': 'Sintonia/1.0 (importar conhecimento)' } }, f === fetch ? {} : { fetchFn: f }).catch((e: unknown) => {
+    if (e instanceof ErroDestino) throw Object.assign(new Error('Use um link público (http ou https).'), { statusCode: 400 });
     throw Object.assign(new Error(`Não deu para abrir o link: ${String((e as Error).message ?? e)}`), { statusCode: 502 });
   });
   if (!r.ok) throw Object.assign(new Error(`A página respondeu ${r.status}.`), { statusCode: 502 });

@@ -199,6 +199,7 @@ export class RepositorioPostgres implements Repositorio {
       `select ${COLUNAS_CONVERSA} from sintonia.conversas c
         where ($1::text is null or c.empresa_id = $1)
           and ($2::text[] is null or c.unidade = any($2))
+          and ($10::text is null or c.unidade = $10)
           and ($3::uuid is null or c.responsavel_id is null or c.responsavel_id = $3)
           and ($4::timestamptz is null or (c.atualizada_em, c.id) < ($4, $5::uuid))
           and ($6::text is null
@@ -208,7 +209,8 @@ export class RepositorioPostgres implements Repositorio {
           and ($8::uuid is null or exists (select 1 from sintonia.conversa_tags ct where ct.conversa_id = c.id and ct.tag_id = $8))
         order by c.atualizada_em desc, c.id desc
         limit $9`,
-      [e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.antes?.em ?? null, p.antes?.id ?? null, padrao, digitos, p.tagId ?? null, p.limite + 1],
+      // banco-seguranca: com uma unidade só, o "= $10" deixa o Postgres 16 usar o índice conversas_unidade_recentes (631).
+      [e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.antes?.em ?? null, p.antes?.id ?? null, padrao, digitos, p.tagId ?? null, p.limite + 1, e.unidades?.length === 1 ? e.unidades[0] : null],
     );
     const pagina = rows.slice(0, p.limite).map(paraConversa);
     const ultima = pagina.at(-1);

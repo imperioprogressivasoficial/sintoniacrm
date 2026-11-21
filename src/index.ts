@@ -35,6 +35,9 @@ import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/cham
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import { criarServidor } from './server.js';
+import { AuditoriaMemoria, AuditoriaPostgres } from './seguranca/auditoria.js'; /* banco-seguranca */
+import { DadosCliente } from './seguranca/dados-cliente.js'; /* banco-seguranca */
+import { modoCsp } from './seguranca/protecao.js'; /* banco-seguranca */
 import { ArmazemGruposMemoria, ArmazemGruposPostgres } from './grupos/armazem.js';
 import { Grupos } from './grupos/grupos.js';
 import { registrarGrupos } from './grupos/rotas.js';
@@ -756,6 +759,8 @@ const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;',
 /* usuarios: um só armazém de perfis (Conta › Perfil e o telefone que a gestão usa para mandar o convite pelo WhatsApp). */
 const perfisUsuario = pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria();
 const app = criarServidor({
+  /* banco-seguranca: auditoria das ações sensíveis, LGPD (exportar/apagar dados de cliente) e CSP (SINTONIA_CSP) */
+  protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria: pool ? new AuditoriaPostgres(pool) : new AuditoriaMemoria(), ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   sintonia,
   repo,

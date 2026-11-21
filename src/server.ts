@@ -38,6 +38,7 @@ import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
 import { cabecalhoNotificacoes, problemasDaSituacao, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
 import { zUnidade } from './unidades.js';
+import { registrarProtecao, type OpcoesProtecao } from './seguranca/protecao.js'; /* banco-seguranca */
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -116,6 +117,8 @@ export interface DependenciasServidor {
   historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
+  /* banco-seguranca: cabeçalhos de segurança, limites, auditoria e LGPD (src/seguranca/protecao.ts). Sem isto, valem os padrões. */
+  protecao?: Partial<OpcoesProtecao>;
 }
 
 export interface OpcoesWebhookMeta {
@@ -175,6 +178,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
 
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
   if (d.auth) registrarAuth(app, d.auth);
+  /* banco-seguranca: depois do login (os limites e a auditoria sabem quem é a pessoa) e antes das outras rotas */
+  registrarProtecao(app, { empresaId: process.env.SINTONIA_EMPRESA_ID || 'imperio', log, ...d.protecao });
   registrarPaginas(app, d.auth);
   // Quando chegou o último webhook de cada número da API oficial (para a tela de Conexões mostrar se está chegando).
   const vistosMeta = new Map<string, Date>();

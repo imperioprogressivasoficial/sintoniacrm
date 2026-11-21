@@ -97,7 +97,7 @@ try {
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
 
-  process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
+  const receita = (`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
 ${comEvolution ? `  chave-evolution:
     image: alpine:3.20
@@ -237,7 +237,9 @@ ${comPresenca ? `
         condition: service_healthy
     environment:
       PGPASSWORD: ${senha}
-    command: ["sh", "-c", "while true; do d=$$(date +%u-%a); pg_dump -h db -U sintonia -d sintonia -Fc -f /copias/tmp.dump && mv /copias/tmp.dump /copias/sintonia-$$d.dump && echo copia ok $$d; sleep 86400; done"]
+    # banco-seguranca: a cópia só substitui a anterior se abrir (pg_restore -l confere que o arquivo abre); além das 7
+    # diárias, guarda uma por semana do mês (aos domingos: semana-0 a semana-4), ou seja, cerca de 1 mês para trás.
+    command: ["sh", "-c", "while true; do d=$$(date +%u-%a); if pg_dump -h db -U sintonia -d sintonia -Fc -f /copias/tmp.dump && pg_restore -l /copias/tmp.dump > /dev/null; then mv /copias/tmp.dump /copias/sintonia-$$d.dump && echo copia ok $$d; if [ $$(date +%u) = 7 ]; then cp /copias/sintonia-$$d.dump /copias/semana-$$(( ($$(date +%e) - 1) / 7 )).dump; fi; else echo COPIA FALHOU; fi; sleep 86400; done"]
     volumes:
       - copias:/copias
     networks:
@@ -318,6 +320,19 @@ ${comEvolution ? `  evolution:
     external: true
     name: ${REDE_EVOLUTION}
 ` : ''}`);
+  conferirReceita(receita);
+  process.stdout.write(receita);
 } finally {
   rmSync(pasta, { recursive: true, force: true });
+}
+
+/**
+ * banco-seguranca: trava de segurança da receita. Nenhum serviço da Sintonia publica porta no servidor (o banco
+ * nunca fica aberto para a internet; o app só é alcançado pelo Traefik, pela rede interna). Se alguém acrescentar
+ * "ports:" ou a rede do servidor aqui, a receita não é gerada.
+ */
+function conferirReceita(texto) {
+  if (/^\s+ports\s*:/m.test(texto)) throw new Error('A receita não pode publicar portas (ports:). Use o Traefik pela rede interna.');
+  if (/network_mode\s*:\s*["']?host/m.test(texto)) throw new Error('A receita não pode usar a rede do servidor (network_mode: host).');
+  if (/5432\s*:\s*5432|0\.0\.0\.0:5432/.test(texto)) throw new Error('O banco não pode ficar aberto fora da rede interna.');
 }
