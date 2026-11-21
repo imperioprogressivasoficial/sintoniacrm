@@ -13,6 +13,7 @@ Este arquivo é o caderno de passagem. **Quem chega lê primeiro; quem sai escre
 1. Faça commit e push de **tudo** (nada só no seu computador nem só no servidor).
 2. Atualize a seção "Onde parei" abaixo: branch, o que ficou pronto, o que falta, o que está no ar.
 
+- **21/11 21:52 UTC — no ar o 12ac647:** Serena super (src/serena/ler.ts, mudar.ts, internet.ts; Pensar mais) e nome da Serena no meio do topo. Conferir com a chave real: uma pesquisa na internet e um Pensar mais.
 - **21/11 21:40 UTC — no ar o ea13631:** etapa fixa "Entrada de leads" (migração 720) e caixa de automações por etapa (public/telas/etapa-acoes.js). Em andamento: claude/foto-atende (foto 18px modelo 2), claude/balao-fantasma (sugestão da IA como balão tracejado), serena-super. Modelos da barra do topo só com ícones aguardando escolha: https://claude.ai/artifact/R7Q9rzVpwDj6HxmHx1huxU
 - **21/11 21:26 UTC — no ar o 112adc2:** topo da conversa como o WhatsApp Web (public/telas/topo-conversa.js: Vídeo, Ligar, Agendar, Pesquisar em todas as mensagens via /api/conversas/:id/busca, ⋯ com ficha, radar, IA, atribuir, etapa, tarefa, favorito, silenciar, arquivar, papel de parede, exportar .txt via /api/conversas/:id/exportar, finalizar, fechar). Ocultar dados só em Conta › Privacidade. Juntada claude/brilho-cortado. Ainda rodando: etapa-entrada (720) e serena-super.
 - **21/11 20:55 UTC — no ar o 0c1929c:** olho (ocultar dados) no topo da conversa. Modelos da estética dos 4 botões aguardando escolha do dono: https://claude.ai/artifact/K2i22HwLQdqQKJj1YwHSiW
