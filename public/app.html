@@ -1154,6 +1154,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           <button class="so-gestao nav lt-item" data-vista="relatorios" data-rel="" title="Relatório geral"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 17v-3M12 17v-6M16 17v-2"/></svg><span class="lt-rot">Relatório geral</span></button>
           <button class="so-relatorios nav lt-item" data-vista="desempenho" id="lt-desempenho" title="Atendimento (desempenho)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-1v-6h3M4 12v4a2 2 0 0 0 2 2h1v-6H4"/></svg><span class="lt-rot">Atendimento</span></button>
           <button class="so-gestao lt-item lt-rel" data-rel="origem" type="button" title="Origem e marketing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg><span class="lt-rot">Origem e marketing</span></button>
+          <!-- relatorio-dia: Dia a dia (leads novos × agendamentos) -->
+          <button class="so-gestao lt-item lt-an" data-an="dia" type="button" title="Dia a dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4M8 14h3M8 17h6"/></svg><span class="lt-rot">Dia a dia</span></button>
           <!-- analises: Vendas e receita, Clientes e satisfação, Horários e funil e Painel da TV abrem a tela Análises (telas/analises.js) na aba certa -->
           <button class="so-gestao lt-item lt-an" data-an="vendas" type="button" title="Vendas e receita"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/></svg><span class="lt-rot">Vendas e receita</span></button>
           <button class="so-gestao lt-item lt-an" data-an="clientes" type="button" title="Clientes e satisfação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-9.6A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.4C19 15.6 12 20 12 20Z"/></svg><span class="lt-rot">Clientes e satisfação</span></button>
@@ -3160,6 +3162,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       gestor && pode('relatorios') && { id: 'analises', titulo: 'Análises', ic: IC.relatorio, cor: '#8b5cf6', itens: [
         { nome: 'Relatórios', ic: IC.relatorio, cor: '#8b5cf6', acao: () => mostrar('relatorios') },
         { nome: 'Desempenho do atendimento', ic: IC.desempenho, cor: '#a855f7', acao: () => mostrar('desempenho') },
+        /* relatorio-dia */
+        { nome: 'Dia a dia', sub: 'Leads novos × agendamentos e relatório no WhatsApp', ic: IC.relatorio, cor: '#106ebe', acao: () => { window.SintoniaTelas?.analises?.focar?.('dia'); mostrar('analises'); } },
         /* analises */
         { nome: 'Vendas e receita', sub: 'Por dia, atendente, serviço e origem', ic: IC.relatorio, cor: '#7c3aed', acao: () => { window.SintoniaTelas?.analises?.focar?.('vendas'); mostrar('analises'); } },
         { nome: 'Clientes e satisfação', sub: 'Quem voltou, quem sumiu e NPS', ic: IC.relatorio, cor: '#9333ea', acao: () => { window.SintoniaTelas?.analises?.focar?.('clientes'); mostrar('analises'); } },
@@ -3451,7 +3455,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }));
     document.querySelector('#lt-grupos [data-vista="relatorios"]')?.addEventListener('click', () => window.SintoniaTelas?.relatorios?.focar?.(''));
     /* analises: itens que abrem a tela Análises numa aba; o item aceso segue a aba (Satisfação acende "Clientes e satisfação"; Funil, "Horários e funil") */
-    const ITEM_DA_ABA = { vendas: 'vendas', clientes: 'clientes', satisfacao: 'clientes', horarios: 'horarios', funil: 'horarios', tv: 'tv', perdas: 'perdas', saude: 'saude' /* perdas-saude */ };
+    const ITEM_DA_ABA = { vendas: 'vendas', clientes: 'clientes', satisfacao: 'clientes', horarios: 'horarios', funil: 'horarios', tv: 'tv', perdas: 'perdas', saude: 'saude' /* perdas-saude */, dia: 'dia' /* relatorio-dia */ };
     function marcarAnalises(aba) {
       document.querySelectorAll('#lt-grupos .lt-an').forEach((x) => (estado.vista === 'analises' && x.dataset.an === ITEM_DA_ABA[aba] ? x.setAttribute('aria-current', 'page') : x.removeAttribute('aria-current')));
       trilha();
@@ -3569,6 +3573,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/analises.js" defer></script><!-- analises -->
 <script src="/telas/perdas.js" defer></script><!-- perdas-saude: motivo de perda obrigatório -->
 <script src="/telas/saude.js" defer></script><!-- perdas-saude: painel de saúde da gestão -->
+<script src="/telas/relatorio-dia.js" defer></script><!-- relatorio-dia: Análises › Dia a dia e relatório automático -->
 <script src="/telas/planos.js" defer></script>
 <script src="/telas/leads.js" defer></script>
 <script src="/telas/transmissoes.js" defer></script>

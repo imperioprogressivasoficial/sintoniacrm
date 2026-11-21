@@ -7,6 +7,7 @@
  *   funil       tempo parado em cada etapa, quem está parado agora e motivos de perda
  *   perdas      perdas por motivo, pela etapa em que o lead estava, por quem atendia e pela origem (perdas-saude)
  *   tv          link do Painel na TV (copiar, abrir, gerar novo, revogar) e prévia
+ *   dia         Dia a dia: leads novos × agendaram no dia, por dia de chegada e grupo de leads (telas/relatorio-dia.js)
  *   saude       saúde do sistema: filas, tempo até aparecer, IA, mídias, WhatsApp, processo e banco (telas/saude.js)
  * Dados: /api/analises/:tipo (src/analises). Mesmo visual do Relatório geral (classes .rl- de relatorios.js) e,
  * no computador, toda a largura com margem de 28px como o Dashboard. Texto do servidor sempre por textContent.
@@ -14,6 +15,7 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const ABAS = [
+    ['dia', 'Dia a dia'], // relatorio-dia: leads novos × agendamentos (telas/relatorio-dia.js)
     ['vendas', 'Vendas'],
     ['clientes', 'Clientes'],
     ['satisfacao', 'Satisfação'],
@@ -548,7 +550,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const el = s.ui.el;
     const op = s.opcoes || { unidades: [], atendentes: [] };
     const linha = el('div', { class: 'rl-controles' });
-    if (s.aba === 'tv' || s.aba === 'saude') return linha;
+    if (s.aba === 'tv' || s.aba === 'saude' || s.aba === 'dia') return linha; /* relatorio-dia: os filtros do Dia a dia ficam dentro dele */
     linha.append(el('div', { class: 'rl-trilho rl-vidro', role: 'group', 'aria-label': 'Período' },
       ...PERIODOS.map(([k, t]) => el('button', { type: 'button', 'aria-pressed': String(k === s.f.periodo), text: t, onclick: () => mudar({ periodo: k, ...(k === 'personalizado' && !s.f.de ? { de: addDias(hojeBahia(), -29), ate: hojeBahia() } : {}) }) }))));
     if (s.f.periodo === 'personalizado') {
@@ -587,6 +589,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function subtitulo(r) {
     if (s.aba === 'tv') return 'Painel da sala comercial para deixar aberto na TV';
     if (s.aba === 'saude') return 'Atualiza a cada 15 s enquanto esta tela está aberta';
+    if (s.aba === 'dia') return 'Leads novos × agendamentos, dia a dia'; // relatorio-dia
     if (!r || !r.inicio) return 'Carregando…';
     const ultimo = new Date(new Date(r.fim).getTime() - 1);
     const dias = Math.round((new Date(r.fim) - new Date(r.inicio)) / 864e5) || 1;
@@ -606,6 +609,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const topo = el('div', { class: 'rl-topo' }, el('h1', { class: 'titulo-grande' }, 'Análises', el('span', { class: 'rl-quando', text: `${titulo} · ${subtitulo(s.aba === 'satisfacao' ? r && { inicio: r.inicio, fim: r.fim } : r)}` })));
     const raiz = el('div', { class: 'rl an' }, topo, abas(), controles());
     if (s.aba === 'tv') raiz.append(...abaTv());
+    else if (s.aba === 'dia') { /* relatorio-dia: telas/relatorio-dia.js desenha e busca os próprios dados */
+      const host = el('div', { class: 'an-dia' });
+      raiz.append(host);
+      if (window.SintoniaRelatorioDia) window.SintoniaRelatorioDia.montar(host, ui); else host.append(vazio('O Dia a dia não carregou. Recarregue a página.'));
+    }
     else if (s.aba === 'saude') { /* perdas-saude: telas/saude.js desenha e atualiza sozinho (só com a tela aberta) */
       const host = el('div', { class: 'an-saude' });
       raiz.append(host);
@@ -642,7 +650,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const { ui } = s;
     const g = ++s.geracao;
     s.erro = null;
-    if (s.aba === 'saude') { desenharTudo(); return; } // perdas-saude: o painel pede os próprios dados
+    if (s.aba === 'saude' || s.aba === 'dia') { desenharTudo(); return; } // perdas-saude e relatorio-dia: o painel pede os próprios dados
     if (s.aba !== 'tv' && s.f.periodo === 'personalizado' && (!s.f.de || !s.f.ate)) { desenharTudo(); return; }
     desenharTudo();
     try {
