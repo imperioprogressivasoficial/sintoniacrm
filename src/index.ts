@@ -2,7 +2,7 @@ import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
 import { LayoutsPainelMemoria, LayoutsPainelPostgres } from './painel/layout.js';
 import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
-import { lerConfig } from './config.js';
+import { lerChaveDeArquivo, lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
 import { AgendasDasUnidades, UNIDADES_AGENDA } from './agenda/unidades-agenda.js';
 import { AgendaExterna } from './agenda/agenda-externa.js';
@@ -226,7 +226,12 @@ if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
 }
 
 // Conexões: o que for salvo na tela vale por cima do ambiente, e é aplicado na hora.
-const cofre = new Cofre(process.env.SINTONIA_SEGREDO || cfg.DATABASE_URL || 'sintonia-local');
+/* robustez: chave própria do cofre (SINTONIA_COFRE_CHAVE ou SINTONIA_COFRE_CHAVE_ARQUIVO), sem perder o que já foi
+   gravado: a chave antiga (tirada do endereço do banco) continua valendo só para LER. Sem a chave nova, tudo como antes.
+   Plano completo em docs/SEGURANCA-SERVIDOR.md ("Chave do cofre"). */
+const chaveAntigaCofre = process.env.SINTONIA_SEGREDO || cfg.DATABASE_URL || 'sintonia-local';
+const chaveNovaCofre = process.env.SINTONIA_COFRE_CHAVE || lerChaveDeArquivo(process.env.SINTONIA_COFRE_CHAVE_ARQUIVO);
+const cofre = chaveNovaCofre ? new Cofre(chaveNovaCofre, [chaveAntigaCofre]) : new Cofre(chaveAntigaCofre);
 const conexoes = new Conexoes(
   pool ? new ArmazemPostgres(pool) : new ArmazemMemoria(),
   cofre,

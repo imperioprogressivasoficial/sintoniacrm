@@ -19,6 +19,7 @@ import { LIMITE_FORMULARIO, SEM_GRAVAR } from '../src/auth/rotas.js';
 import { criarPool, ehErroDeConexao, esperarBanco } from '../src/store/banco.js';
 import { RepositorioMemoria } from '../src/store/repositorio.js';
 import { umaPorVez } from '../src/util/relogio.js';
+import { Cofre } from '../src/conexoes/cofre.js';
 import { bahia, MIN } from '../src/util/tempo.js';
 import { fabricas, poolDeTeste, temPostgres } from './repos.js';
 
@@ -479,5 +480,24 @@ describe('Permissão "Responder" vale para tudo o que manda mensagem à cliente'
     pode = true;
     await servico.enviarNaConversa(ctx, conversa.id, 'Oi!');
     expect(canal.enviados).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------- 11. chave do cofre
+
+describe('Cofre: chave nova sem perder o que foi gravado com a antiga', () => {
+  it('lê com as duas chaves, grava só com a nova e aponta o que falta regravar', () => {
+    const antigo = new Cofre('postgres://sintonia:senha@db:5432/sintonia');
+    const gravadoAntes = antigo.cifrar('sk-ant-chave-da-ia');
+    const novo = new Cofre('segredo-novo-bem-comprido', ['postgres://sintonia:senha@db:5432/sintonia']);
+    expect(novo.decifrar(gravadoAntes)).toBe('sk-ant-chave-da-ia');
+    expect(novo.precisaRegravar(gravadoAntes)).toBe(true);
+    const regravado = novo.recifrar(gravadoAntes);
+    expect(novo.precisaRegravar(regravado)).toBe(false);
+    expect(novo.decifrar(regravado)).toBe('sk-ant-chave-da-ia');
+    // O regravado não abre mais com a chave antiga sozinha (por isso a antiga só sai depois de regravar tudo).
+    expect(() => antigo.decifrar(regravado)).toThrow();
+    // Chave errada continua sendo recusada.
+    expect(() => new Cofre('outra').decifrar(gravadoAntes)).toThrow();
   });
 });

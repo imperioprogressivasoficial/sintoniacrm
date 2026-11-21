@@ -112,6 +112,14 @@ ${comEvolution ? `  chave-evolution:
     image: node:22-alpine
     restart: unless-stopped
     user: node
+    # robustez: teto de memória (o servidor é dividido com n8n, Evolution, Traefik e Espaço Rainha; sem teto, um pico
+    # do app podia levar o sistema a matar processos dos outros). Medido: ~150 MB parado, 350-600 MB em uso normal,
+    # ~900 MB no pior pico antigo (histórico de 40 MB, agora em lotes). 1 GB de teto com o Node limitado a 640 MB de
+    # objetos: ele recolhe a memória antes de chegar no teto em vez de ser morto. Se passar, o Docker reinicia só o app.
+    mem_limit: 1g
+    memswap_limit: 1g
+    # Desligamento limpo: termina o que a IA está pensando (até 15 s) antes de sair.
+    stop_grace_period: 30s
     depends_on:
       db:
         condition: service_healthy
@@ -121,6 +129,11 @@ ${comEvolution ? `      chave-evolution:
     environment:
       NODE_ENV: production
       PORT: "3333"
+      NODE_OPTIONS: --max-old-space-size=640
+      # robustez: mensagens que chegam com o banco fora ficam aqui (volume sintonia_app) até o banco voltar.
+      SINTONIA_RESERVA_DIR: /home/node/reserva
+      # robustez: só o Traefik (rede interna do Docker) pode informar o endereço real do visitante.
+      SINTONIA_PROXY_CONFIAVEL: "loopback,uniquelocal"
       DATABASE_URL: postgres://sintonia:${senha}@${hostBanco}:5432/sintonia
       SINTONIA_SEGREDO: postgres://sintonia:${senha}@db:5432/sintonia
 ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
@@ -152,6 +165,12 @@ ${comEvolution ? '      - evolution\n' : ''}    healthcheck:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    # robustez: teto de memória do banco da Sintonia (os outros sistemas têm bancos próprios). 768 MB cobre o cache
+    # (shared_buffers 128 MB, o padrão) + até 100 conexões com work_mem de 8 MB (ordenações da lista sem ir ao disco).
+    mem_limit: 768m
+    memswap_limit: 768m
+    shm_size: 128m
+    command: ["postgres", "-c", "max_connections=100", "-c", "shared_buffers=128MB", "-c", "work_mem=8MB", "-c", "maintenance_work_mem=64MB", "-c", "effective_cache_size=512MB"]
     environment:
       POSTGRES_USER: sintonia
       POSTGRES_DB: sintonia
