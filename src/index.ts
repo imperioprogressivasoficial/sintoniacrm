@@ -1133,8 +1133,8 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     await trabalhador.parar();
     await importadorHistorico?.encerrar().catch(() => {});
     // A IA em andamento tem até 15 s para terminar; o que ficar na fila volta pela tarefa "reavaliar" do banco.
-    await Promise.race([filaIa?.ocioso(), new Promise((r) => setTimeout(r, 15_000))]);
-    await Promise.all([rodadaRelogio.ocioso(), rodadaFluxos.ocioso(), rodadaAgendadas.ocioso(), rodadaTransmissoes.ocioso(), rodadaWebhooks.ocioso(), rodadaReserva.ocioso()]).catch(() => {});
+    await Promise.race([filaIa?.encerrar(), new Promise((r) => setTimeout(r, 15_000))]);
+    await Promise.race([Promise.all([rodadaRelogio.ocioso(), rodadaFluxos.ocioso(), rodadaAgendadas.ocioso(), rodadaTransmissoes.ocioso(), rodadaWebhooks.ocioso(), rodadaReserva.ocioso()]).catch(() => {}), new Promise((r) => setTimeout(r, 10_000))]);
     await notificador.ocioso().catch(() => {});
     await integracoes.webhooks.ocioso().catch(() => {});
     await whatsappSaude.ocioso().catch(() => {});

@@ -20,6 +20,7 @@ export class FilaIa {
   private readonly aguardando = new Map<string, Array<() => void>>();
   private ociosos: Array<() => void> = [];
   private feitas = 0;
+  private parada = false;
 
   constructor(
     private readonly o: {
@@ -52,13 +53,13 @@ export class FilaIa {
   }
 
   private andar(): void {
-    while (this.pensando.size < this.o.paralelo && this.espera.length) {
+    while (!this.parada && this.pensando.size < this.o.paralelo && this.espera.length) {
       const id = this.espera.shift()!;
       this.naFila.delete(id);
       this.pensando.add(id);
       void this.rodar(id);
     }
-    if (!this.pensando.size && !this.espera.length) {
+    if (!this.pensando.size && (!this.espera.length || this.parada)) {
       const l = this.ociosos;
       this.ociosos = [];
       for (const r of l) r();
@@ -90,9 +91,23 @@ export class FilaIa {
     return { esperando: this.espera.length, pensando: this.pensando.size, feitas: this.feitas };
   }
 
+  /**
+   * Desligamento: não começa mais nenhuma conversa e espera só as que estão sendo pensadas. As que ficaram na fila
+   * voltam pela tarefa "reavaliar" do banco quando o app subir de novo.
+   */
+  encerrar(): Promise<void> {
+    this.parada = true;
+    // Quem esperava uma conversa que não vai mais começar (o relógio) não fica preso.
+    for (const id of this.espera) {
+      for (const r of this.aguardando.get(id) ?? []) r();
+      this.aguardando.delete(id);
+    }
+    return this.ocioso();
+  }
+
   /** Espera a fila esvaziar (desligamento e testes). */
   ocioso(): Promise<void> {
-    if (!this.pensando.size && !this.espera.length) return Promise.resolve();
+    if (!this.pensando.size && (!this.espera.length || this.parada)) return Promise.resolve();
     return new Promise<void>((r) => this.ociosos.push(r));
   }
 }

@@ -304,6 +304,15 @@ describe('Fila da IA: limites', () => {
     expect(fila.situacao()).toMatchObject({ esperando: 0, pensando: 0 });
   });
 
+  it('ao desligar, termina só as que estão sendo pensadas e não começa outras', async () => {
+    const pensadas: string[] = [];
+    const fila = new FilaIa({ paralelo: 2, pensar: async (id) => { await new Promise((r) => setTimeout(r, 20)); pensadas.push(id); } });
+    for (const id of ['a', 'b', 'c', 'd']) fila.pedir(id);
+    await fila.encerrar();
+    expect(pensadas.sort()).toEqual(['a', 'b']);
+    expect(fila.situacao()).toMatchObject({ esperando: 2, pensando: 0 });
+  });
+
   it('com 5 mensagens por segundo e IA de 8 s, a mensagem aparece em menos de 2 s (antes: dezenas de segundos)', async () => {
     const repo = new RepositorioMemoria();
     const agente = { executar: async () => { await new Promise((r) => setTimeout(r, 8000 / 40)); return { texto: 'ok', acoes: [], recusou: false }; } };
