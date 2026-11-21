@@ -483,7 +483,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       }),
       c.modo !== 'ia' ? (() => {
         const ligadas = c.modo === 'copiloto';
-        const b = opcao('neutra', IC2.auto, 'Sugestões automáticas', ligadas ? 'A IA deixa uma resposta pronta acima do campo' : 'Desligadas: a IA não sugere sozinha', async () => {
+        const b = opcao('neutra', IC2.auto, 'Sugestões automáticas', ligadas ? 'A IA deixa uma resposta pronta no fim da conversa' : 'Desligadas: a IA não sugere sozinha', async () => {
           fechar(); await ui.mudarModo(ligadas ? 'humano' : 'copiloto'); toast(ligadas ? 'Sugestões automáticas desligadas.' : 'Sugestões automáticas ligadas.');
         }, { role: 'switch', 'aria-checked': String(ligadas) });
         b.append(el('span', { class: 'cx-chave' + (ligadas ? ' ligada' : ''), 'aria-hidden': 'true' }));
