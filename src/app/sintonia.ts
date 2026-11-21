@@ -80,6 +80,8 @@ export interface DependenciasSintonia {
   filaIa?: { pedir(conversaId: string): void; executar?(conversaId: string): Promise<void> };
 }
 
+/** robustez: pausa da IA depois de a chave ser recusada (401). Trocar a chave em Conexões vale depois da pausa. */
+export const PAUSA_IA_RECUSADA_MS = 15 * 60_000;
 /** robustez: falhas seguidas da IA numa conversa antes de desistir (a conversa fica para a equipe). */
 export const MAX_FALHAS_IA = 5;
 /** Espera antes de a IA tentar de novo: 2, 4, 8, 16 e 30 min (teto). */
@@ -136,6 +138,8 @@ export class Sintonia {
   private readonly log: (msg: string, extra?: unknown) => void;
   /** robustez: falhas seguidas da IA por conversa (zera quando dá certo). */
   private readonly falhasIa = new Map<string, number>();
+  /** robustez: até quando a IA fica pausada depois de recusar a chave (401 / sem chave). */
+  private iaRecusadaAte = 0;
   /** robustez: dentro deste processo, a mesma conversa é pensada pela IA uma vez por vez (fora da trava do banco). */
   private readonly vezDaIa = new TravaMemoria();
 
@@ -251,6 +255,8 @@ export class Sintonia {
 
   /** robustez: há IA para esta conversa? Falha ao conferir = considera que há (não cala a IA por um erro de leitura). */
   private async temIa(c: Conversa): Promise<boolean> {
+    // robustez: a IA recusou a chave (401) há pouco: não chama de novo a cada mensagem (pausa de 15 min).
+    if (this.iaRecusadaAte > this.agora().getTime()) return false;
     if (!this.d.iaDisponivel) return true;
     try {
       return await this.d.iaDisponivel(c);
@@ -769,14 +775,22 @@ export class Sintonia {
       await this.vezDaIa.comTrava(conversaId, () => this.processarAgora(conversaId));
       this.falhasIa.delete(conversaId);
     } catch (e) {
+      // robustez: chave da IA ausente ou recusada (401): não adianta tentar de novo nem chamar a IA na próxima
+      // mensagem. Pausa a IA por 15 min (todas as conversas ficam para a equipe), com UM aviso no log e um evento,
+      // em vez de "Falha ao processar AuthenticationError 401" a cada mensagem recebida.
+      if ((e as { codigo?: string }).codigo === 'sem_chave' || (e as { status?: number }).status === 401) {
+        this.falhasIa.delete(conversaId);
+        const jaPausada = this.iaRecusadaAte > this.agora().getTime();
+        this.iaRecusadaAte = this.agora().getTime() + PAUSA_IA_RECUSADA_MS;
+        if (!jaPausada) {
+          this.log('A IA recusou a chave (confira em Conexões); a IA fica pausada por 15 min e as conversas ficam com a equipe', String((e as Error)?.message ?? e).slice(0, 200));
+          await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: 'chave da IA recusada (401)', pausaMin: PAUSA_IA_RECUSADA_MS / 60_000 } }).catch(() => undefined);
+        }
+        return;
+      }
       // A mensagem já está salva; a falha foi ao pensar ou enviar (IA fora, WhatsApp fora).
       this.log('Falha ao processar', String(e));
       await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: String(e) } }).catch(() => undefined);
-      // robustez: sem chave da IA não adianta tentar de novo (a conversa fica para a equipe).
-      if ((e as { codigo?: string }).codigo === 'sem_chave' || (e as { status?: number }).status === 401) {
-        this.falhasIa.delete(conversaId);
-        return;
-      }
       // robustez: novas tentativas com espera crescente (2, 4, 8, 16, 30 min) e teto; depois desiste e a conversa
       // fica para a equipe (a próxima mensagem da cliente recomeça a contagem).
       const falhas = (this.falhasIa.get(conversaId) ?? 0) + 1;
@@ -790,6 +804,11 @@ export class Sintonia {
       this.falhasIa.set(conversaId, falhas);
       await this.reavaliarEm(conversaId, new Date(this.agora().getTime() + esperaFalhaIa(falhas)));
     }
+  }
+
+  /** robustez: a chave da IA mudou em Conexões: tira a pausa (a próxima mensagem já tenta com a chave nova). */
+  liberarIa(): void {
+    this.iaRecusadaAte = 0;
   }
 
   /** robustez: quantas falhas seguidas da IA esta conversa tem (testes e painel). */

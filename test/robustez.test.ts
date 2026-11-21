@@ -226,12 +226,33 @@ describe.each(fabricas)('IA sem chave não é chamada nem reagendada para sempre
     expect(s.falhasDaIa(c!.id)).toBe(1);
   });
 
-  it('chave recusada pela IA (401) não fica tentando de novo', async () => {
+  it('chave recusada pela IA (401): um aviso só, IA pausada 15 min (nada de "Falha ao processar" a cada mensagem)', async () => {
     const repo = await f.criar();
-    const { s } = sintoniaCom(repo, { t: madrugada() }, { agente: { executar: async () => { throw Object.assign(new Error('invalid x-api-key'), { status: 401 }); } } });
-    await s.receber(msg('oi', madrugada()));
+    const relogio = { t: madrugada() };
+    let chamadas = 0;
+    const logs: string[] = [];
+    const { s } = sintoniaCom(repo, relogio, { log: (m) => logs.push(m), agente: { executar: async () => { chamadas++; throw Object.assign(new Error('401 invalid x-api-key'), { status: 401 }); } } });
+    await s.receber(msg('oi', relogio.t));
     const [c] = await repo.listarConversas();
     expect((await repo.tarefasPendentes(c!.id)).filter((x) => x.tipo === 'reavaliar')).toHaveLength(0);
+    // Mais mensagens (de outras clientes também) nos próximos minutos: a IA não é chamada de novo.
+    for (let i = 1; i <= 5; i++) {
+      relogio.t = madrugada(i);
+      await s.receber(msg(`oi ${i}`, relogio.t, { telefone: `557199000010${i}` }));
+    }
+    expect(chamadas).toBe(1);
+    expect(logs.filter((l) => l.includes('recusou a chave'))).toHaveLength(1);
+    expect(logs.filter((l) => l.includes('Falha ao processar'))).toHaveLength(0);
+    // Conversa nova durante a pausa nasce com a equipe.
+    expect((await repo.listarConversas({ telefone: '5571990000105' }))[0]!.modo).toBe('humano');
+    // Chave trocada em Conexões: tenta de novo na hora.
+    s.liberarIa();
+    await s.receber(msg('alô', madrugada(6), { telefone: '5571990000199' }));
+    expect(chamadas).toBe(2);
+    // Passou a pausa: tenta de novo sozinha.
+    relogio.t = madrugada(40);
+    await s.receber(msg('voltei', relogio.t, { telefone: '5571990000198' }));
+    expect(chamadas).toBe(3);
   });
 
   it('esperas: 2, 4, 8, 16 e 30 min (teto)', () => {

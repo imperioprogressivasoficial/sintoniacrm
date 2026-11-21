@@ -280,8 +280,15 @@ definirAgendaDasUnidades((id) => {
   return { trinksEstabelecimentoId: a.escolha === 'trinks' ? a.local : null, agendaAberta: a.escolha !== 'nenhum' };
 });
 
+/* robustez: chave da IA trocada em Conexões tira a pausa de 15 min depois de um 401 (ligado quando a Sintonia existir). */
+let aoTrocarChaveIa: () => void = () => {};
+let chaveIaAplicada: string | undefined;
 function aplicarConexoes() {
   const chaveIA = conexoes.get('anthropicApiKey');
+  if (chaveIA !== chaveIaAplicada) {
+    chaveIaAplicada = chaveIA;
+    aoTrocarChaveIa();
+  }
   claudeAtual = new Anthropic({ apiKey: chaveIA || 'sem-chave' });
   iaLigada = Boolean(chaveIA);
   trinks.definirChave(conexoes.get('trinksApiKey') ?? '');
@@ -542,6 +549,8 @@ const sintonia = new Sintonia({
     for (const destino of destinosRelatorio()) await sintonia.enviarAvulso(n, destino, texto);
   },
 });
+
+aoTrocarChaveIa = () => sintonia.liberarIa();
 
 /* grupos: Conversas de grupo (grupos do WhatsApp pela API não oficial), em tabelas próprias. */
 const armazemGrupos = pool ? new ArmazemGruposPostgres(pool) : new ArmazemGruposMemoria();
