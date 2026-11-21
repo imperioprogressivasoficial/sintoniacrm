@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { COOKIE } from '../auth/rotas.js';
 import { conferirSenha, gerarHash } from '../auth/senha.js';
 import type { Usuario } from '../auth/contas.js';
+import { assinaturaDeImagem } from '../auth/equipe.js';
 
 /**
  * Conta da pessoa logada (abre pelo nome/foto no rodapé do menu): perfil (nome, e-mail, telefone,
@@ -37,6 +38,29 @@ const LadoPapel = z.object({ cor: z.enum(CORES_PAPEL).catch('padrao').default('p
 export const PapelParede = z.object({ claro: LadoPapel, escuro: LadoPapel }).prefault({});
 export type PapelParede = z.infer<typeof PapelParede>;
 
+/**
+ * capa-perfil (dono 21/11): capa atrás do perfil em Configurações (celular) e no topo da Conta.
+ * 5 fotos de paisagem prontas (public/capas/, créditos em public/capas/CREDITOS.txt), "nenhuma" (só a cor)
+ * ou "minha" (a foto que a pessoa mandou, guardada em sintonia.usuario_capas, migração 700).
+ */
+export const CAPAS = ['praia', 'montanha', 'por-do-sol', 'floresta', 'cidade'] as const;
+export const OPCOES_CAPA = [...CAPAS, 'nenhuma', 'minha'] as const;
+export const CAPA_PADRAO = 'montanha' satisfies (typeof CAPAS)[number];
+/** Foto de capa já reduzida pela tela (~1200 px de largura): bem abaixo disto. */
+export const LIMITE_CAPA = 400 * 1024;
+
+/**
+ * capa-perfil: atalhos redondos de Configurações (celular), escolhidos por pessoa, na ordem dela. Cada um é o código
+ * de um item do app ("grupo:nome", "conta:nome" ou "aba:tela"); a tela ignora o que a pessoa não pode abrir.
+ */
+export const MAX_ATALHOS = 8;
+export const ATALHOS_PADRAO = ['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena'];
+const CodigoAtalho = z.string().regex(/^[a-z0-9]+(?:[:-][a-z0-9]+)*$/, 'Atalho inválido.').max(60);
+const ListaAtalhos = z
+  .array(CodigoAtalho)
+  .max(MAX_ATALHOS, `Escolha até ${MAX_ATALHOS} atalhos.`)
+  .transform((l) => [...new Set(l)]);
+
 export const Preferencias = z
   .object({
     tema: z.enum(['claro', 'escuro', 'auto']).default('auto'),
@@ -46,6 +70,9 @@ export const Preferencias = z
     papelParede: PapelParede,
     /** ligacoes-modos: o último jeito de ligar que a pessoa usou (vem marcado na próxima vez). Sem valor = o padrão da unidade. */
     modoLigacao: z.enum(['telefone', 'whatsapp']).optional().catch(undefined),
+    /* capa-perfil */
+    capa: z.enum(OPCOES_CAPA).catch(CAPA_PADRAO).default(CAPA_PADRAO),
+    atalhos: ListaAtalhos.catch([...ATALHOS_PADRAO]).default([...ATALHOS_PADRAO]),
   })
   .prefault({});
 export type Preferencias = z.infer<typeof Preferencias>;
@@ -62,9 +89,20 @@ const ler = <T>(s: z.ZodType<T>, b: unknown): T => {
   return r.success ? r.data : s.parse({});
 };
 
+/** capa-perfil: a foto de capa que a pessoa mandou. */
+export interface CapaUsuario {
+  conteudo: Buffer;
+  tipo: string;
+  atualizadaEm: Date;
+}
+
 export interface ArmazemPerfis {
   ler(usuarioId: string): Promise<Perfil>;
   gravar(usuarioId: string, p: Omit<Perfil, 'atualizadoEm'>): Promise<void>;
+  /* capa-perfil: foto de capa da própria pessoa (null apaga). */
+  capaDe(usuarioId: string): Promise<CapaUsuario | undefined>;
+  capaEm(usuarioId: string): Promise<Date | undefined>;
+  salvarCapaDe(usuarioId: string, capa: { conteudo: Buffer; tipo: string } | null): Promise<void>;
 }
 
 export class ArmazemPerfisMemoria implements ArmazemPerfis {
@@ -75,6 +113,17 @@ export class ArmazemPerfisMemoria implements ArmazemPerfis {
   }
   async gravar(usuarioId: string, p: Omit<Perfil, 'atualizadoEm'>) {
     this.m.set(usuarioId, { ...structuredClone(p), atualizadoEm: new Date() });
+  }
+  private readonly capas = new Map<string, CapaUsuario>();
+  async capaDe(usuarioId: string) {
+    return this.capas.get(usuarioId);
+  }
+  async capaEm(usuarioId: string) {
+    return this.capas.get(usuarioId)?.atualizadaEm;
+  }
+  async salvarCapaDe(usuarioId: string, capa: { conteudo: Buffer; tipo: string } | null) {
+    if (!capa) this.capas.delete(usuarioId);
+    else this.capas.set(usuarioId, { ...capa, atualizadaEm: new Date() });
   }
 }
 
@@ -93,6 +142,29 @@ export class ArmazemPerfisPostgres implements ArmazemPerfis {
       `insert into sintonia.perfis_usuario (usuario_id, telefone, assinatura, preferencias, atualizado_em) values ($1, $2, $3, $4, now())
        on conflict (usuario_id) do update set telefone = excluded.telefone, assinatura = excluded.assinatura, preferencias = excluded.preferencias, atualizado_em = now()`,
       [usuarioId, p.telefone, JSON.stringify(p.assinatura), JSON.stringify(p.preferencias)],
+    );
+  }
+  async capaDe(usuarioId: string) {
+    const { rows } = await this.pool.query<{ conteudo: Buffer; tipo: string; atualizada_em: Date }>(
+      'select conteudo, tipo, atualizada_em from sintonia.usuario_capas where usuario_id = $1',
+      [usuarioId],
+    );
+    const r = rows[0];
+    return r ? { conteudo: r.conteudo, tipo: r.tipo, atualizadaEm: r.atualizada_em } : undefined;
+  }
+  async capaEm(usuarioId: string) {
+    const { rows } = await this.pool.query<{ atualizada_em: Date }>('select atualizada_em from sintonia.usuario_capas where usuario_id = $1', [usuarioId]);
+    return rows[0]?.atualizada_em;
+  }
+  async salvarCapaDe(usuarioId: string, capa: { conteudo: Buffer; tipo: string } | null) {
+    if (!capa) {
+      await this.pool.query('delete from sintonia.usuario_capas where usuario_id = $1', [usuarioId]);
+      return;
+    }
+    await this.pool.query(
+      `insert into sintonia.usuario_capas (usuario_id, conteudo, tipo, atualizada_em) values ($1, $2, $3, now())
+       on conflict (usuario_id) do update set conteudo = excluded.conteudo, tipo = excluded.tipo, atualizada_em = now()`,
+      [usuarioId, capa.conteudo, capa.tipo],
     );
   }
 }
@@ -154,6 +226,8 @@ const PerfilCorpo = z.object({
       telaInicial: z.enum(TELAS_INICIAIS).optional(),
       densidade: z.enum(['confortavel', 'compacta']).optional(),
       modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
+      capa: z.enum(OPCOES_CAPA).optional(), // capa-perfil
+      atalhos: ListaAtalhos.optional(), // capa-perfil
       papelParede: z
         .object({
           claro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),
@@ -198,6 +272,7 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
   const conta = async (req: FastifyRequest) => {
     const u = eu(req);
     const p = await o.perfis.ler(u.id);
+    const capaEm = await o.perfis.capaEm(u.id).catch(() => undefined);
     return {
       id: u.id,
       nome: u.nome,
@@ -210,6 +285,8 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
       preferencias: p.preferencias,
       atualizadoEm: p.atualizadoEm,
       podeTrocarEmail: Boolean(o.trocarEmail),
+      /* capa-perfil: quando a foto de capa própria mudou (a tela põe no endereço para não pegar a antiga do cache). */
+      capaEm: capaEm ? capaEm.getTime() : null,
     };
   };
 
@@ -223,6 +300,8 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
       req.usuario = { ...u, nome: b.nome };
     }
     const atual = await o.perfis.ler(u.id);
+    // capa-perfil: "minha" só vale se a pessoa já mandou a foto dela.
+    if (b.preferencias?.capa === 'minha' && !(await o.perfis.capaEm(u.id))) throw erro(400, 'Envie a sua foto de capa primeiro.');
     await o.perfis.gravar(u.id, {
       telefone: b.telefone ?? atual.telefone,
       assinatura: Assinatura.parse({ ...atual.assinatura, ...semIndefinidos(b.assinatura ?? {}) }),
@@ -285,10 +364,45 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
     await o.contas.definirSenha(u.id, await gerarHash(randomBytes(24).toString('base64url')));
     await o.contas.salvarFotoDe(u.id, null, new Date());
     await o.perfis.gravar(u.id, { telefone: '', assinatura: Assinatura.parse({}), preferencias: Preferencias.parse({}) });
+    await o.perfis.salvarCapaDe(u.id, null); // capa-perfil
     await o.contas.encerrarSessoesDe(u.id);
     await o.aoExcluir?.(u).catch(() => undefined);
     reply.header('set-cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
     return { ok: true, mensagem: 'Sua conta foi excluída. Seus dados pessoais foram apagados.' };
+  });
+
+  /* capa-perfil: foto de capa própria. A tela reduz para ~1200 px (WebP ou JPEG) antes de mandar; aqui confere tipo,
+     tamanho e os primeiros bytes (igual à foto do rosto). Só a própria pessoa vê e troca a capa dela. */
+  app.get('/api/conta/capa', async (req, reply) => {
+    const u = eu(req);
+    const c = await o.perfis.capaDe(u.id);
+    if (!c) return reply.header('cache-control', 'no-store').code(204).send();
+    return reply.header('cache-control', 'private, max-age=600').type(c.tipo).send(c.conteudo);
+  });
+  const CapaNova = z.object({ base64: z.string().min(10).max(Math.ceil((LIMITE_CAPA * 4) / 3) + 200), mimetype: z.enum(['image/jpeg', 'image/png', 'image/webp']) });
+  app.put('/api/conta/capa', { bodyLimit: 1024 * 1024 }, async (req, reply) => {
+    const u = eu(req);
+    const b = CapaNova.safeParse(req.body ?? {});
+    if (!b.success) {
+      const grande = b.error.issues.some((i) => i.path[0] === 'base64' && i.code === 'too_big');
+      return reply.code(grande ? 413 : 400).send({ erro: grande ? 'Foto grande demais (até 400 KB depois de reduzida).' : 'Envie uma foto JPG, PNG ou WebP.' });
+    }
+    const conteudo = Buffer.from(b.data.base64.replace(/^data:[^,]*,/, ''), 'base64');
+    if (conteudo.length > LIMITE_CAPA) return reply.code(413).send({ erro: 'Foto grande demais (até 400 KB depois de reduzida).' });
+    if (!assinaturaDeImagem(conteudo, b.data.mimetype)) return reply.code(400).send({ erro: 'O arquivo não é uma imagem válida.' });
+    await o.perfis.salvarCapaDe(u.id, { conteudo, tipo: b.data.mimetype });
+    const atual = await o.perfis.ler(u.id);
+    await o.perfis.gravar(u.id, { telefone: atual.telefone, assinatura: atual.assinatura, preferencias: { ...atual.preferencias, capa: 'minha' } });
+    return conta(req);
+  });
+  app.delete('/api/conta/capa', async (req) => {
+    const u = eu(req);
+    await o.perfis.salvarCapaDe(u.id, null);
+    const atual = await o.perfis.ler(u.id);
+    if (atual.preferencias.capa === 'minha') {
+      await o.perfis.gravar(u.id, { telefone: atual.telefone, assinatura: atual.assinatura, preferencias: { ...atual.preferencias, capa: CAPA_PADRAO } });
+    }
+    return conta(req);
   });
 
   // Assinatura nas mensagens que a pessoa manda pela conversa (só quem ligou em Conta › Perfil).

@@ -43,6 +43,18 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/logo.png': { arquivo: 'logo.png', tipo: 'image/png' },
   '/logo-escuro.png': { arquivo: 'logo-escuro.png', tipo: 'image/png' },
   // Página de vendas: prints reais do app (mockups), foto do herói e rostos da equipe.
+  /* capa-perfil: 5 capas de paisagem (foto grande + miniatura do seletor). Fotos do Unsplash (Licença Unsplash,
+     uso livre e gratuito); origem e autor de cada uma em public/capas/CREDITOS.txt. */
+  '/capas/praia.webp': { arquivo: 'capas/praia.webp', tipo: 'image/webp' },
+  '/capas/praia-mini.webp': { arquivo: 'capas/praia-mini.webp', tipo: 'image/webp' },
+  '/capas/montanha.webp': { arquivo: 'capas/montanha.webp', tipo: 'image/webp' },
+  '/capas/montanha-mini.webp': { arquivo: 'capas/montanha-mini.webp', tipo: 'image/webp' },
+  '/capas/por-do-sol.webp': { arquivo: 'capas/por-do-sol.webp', tipo: 'image/webp' },
+  '/capas/por-do-sol-mini.webp': { arquivo: 'capas/por-do-sol-mini.webp', tipo: 'image/webp' },
+  '/capas/floresta.webp': { arquivo: 'capas/floresta.webp', tipo: 'image/webp' },
+  '/capas/floresta-mini.webp': { arquivo: 'capas/floresta-mini.webp', tipo: 'image/webp' },
+  '/capas/cidade.webp': { arquivo: 'capas/cidade.webp', tipo: 'image/webp' },
+  '/capas/cidade-mini.webp': { arquivo: 'capas/cidade-mini.webp', tipo: 'image/webp' },
   '/vendas/equipe-01.webp': { arquivo: 'vendas/equipe-01.webp', tipo: 'image/webp' },
   '/vendas/equipe-02.webp': { arquivo: 'vendas/equipe-02.webp', tipo: 'image/webp' },
   '/vendas/equipe-03.webp': { arquivo: 'vendas/equipe-03.webp', tipo: 'image/webp' },
@@ -153,6 +165,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/empresa.js': { arquivo: 'telas/empresa.js', tipo: 'text/javascript; charset=utf-8' }, // layout-telas: Empresa em seções
   '/telas/conta.js': { arquivo: 'telas/conta.js', tipo: 'text/javascript; charset=utf-8' }, // empresa-conta: Conta da pessoa
+  '/telas/capa-perfil.js': { arquivo: 'telas/capa-perfil.js', tipo: 'text/javascript; charset=utf-8' }, // capa-perfil: capa com foto e atalhos
   '/telas/papel-parede.js': { arquivo: 'telas/papel-parede.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
   '/telas/conversa-extra.js': { arquivo: 'telas/conversa-extra.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
   '/telas/chanfro.js': { arquivo: 'telas/chanfro.js', tipo: 'text/javascript; charset=utf-8' },

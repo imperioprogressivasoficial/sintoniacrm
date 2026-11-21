@@ -185,7 +185,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ec-form' }, campo('Nome na assinatura', texto, { dica: 'Vazio: o seu primeiro nome.' }), el('span', { class: 'ec-campo' }, document.createTextNode('Onde vai'), posicao)),
       el('div', { class: 'ct-previa' }, el('span', { class: 'ec-sub', text: 'Como a cliente vê' }), bolha),
       erroA, el('div', { class: 'ec-acoes ec-fim' }, salvarA));
-    encher(corpo, el('div', { class: 'ec-grade ec-2' }, secPerfil, el('div', { style: 'display:grid;gap:16px;min-width:0' }, secAcesso, secAss)));
+    /* capa-perfil: a mesma capa de Configurações no topo do Perfil, com o botão "Capa" para trocar (telas/capa-perfil.js) */
+    encher(corpo, window.SintoniaCapaPerfil?.faixa?.(conta) || null, el('div', { class: 'ec-grade ec-2' }, secPerfil, el('div', { style: 'display:grid;gap:16px;min-width:0' }, secAcesso, secAss)));
   }
   function trocarEmail() {
     EC.janela('Trocar e-mail de login', (form, fechar) => {

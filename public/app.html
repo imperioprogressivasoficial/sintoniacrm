@@ -1065,16 +1065,27 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     .cfg-capa .topo-grupo .icone.redondo { color: #fff !important; }
     .cfg-capa .mais-perfil.cfg-perfil { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #fff; margin-bottom: 12px; }
     .cfg-capa .mais-perfil .mais-txt small { color: rgba(255,255,255,.72); }
-    .cfg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-    .cfg-chips span { font-size: 12px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.12); color: #e7f1ff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .cfg-chips span:empty { display: none; }
+    /* capa-perfil: foto atrás do perfil (com véu escuro, telas/capa-perfil.js), botão "Capa" no canto, sem chips */
+    .cfg-capa { position: relative; overflow: hidden; padding-bottom: 76px; }
+    .cfg-capa > :not(.cp-fundo) { position: relative; z-index: 1; }
+    .cfg-capa > .cp-trocar { position: absolute; right: 16px; bottom: 38px; }
+    .cfg-capa[data-capa]:not([data-capa="nenhuma"]) .mais-perfil.cfg-perfil { background: rgba(6,18,38,.34); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .cfg-capa[data-capa]:not([data-capa="nenhuma"]) .cfg-capa-tit { text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+    .cfg-sec.cfg-sec-at { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .cfg-editar { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--azul, #106ebe); padding: 6px 4px; -webkit-tap-highlight-color: transparent; }
+    .cfg-editar:focus-visible { outline: 2px solid #106ebe; outline-offset: 2px; border-radius: 6px; }
+    html[data-tema="escuro"] .cfg-editar { color: #6bb8ff; }
     .cfg-folha { position: relative; margin: -26px -14px 0; padding: 16px 14px 0; border-radius: 26px 26px 0 0; background: var(--fundo); }
     .cfg-busca { display: flex; align-items: center; gap: 10px; height: 50px; border-radius: 16px; padding: 0 14px; background: color-mix(in srgb, #106ebe 7%, var(--fundo)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #106ebe 14%, transparent); margin-bottom: 18px; color: var(--sub); }
     .cfg-busca svg { width: 19px; height: 19px; color: var(--azul, #106ebe); flex: none; }
     .cfg-busca input { all: unset; flex: 1; min-width: 0; font-size: 16px; color: var(--texto); }
     .cfg-busca input::placeholder { color: var(--sub); }
-    .cfg-atalhos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 20px; }
-    .cfg-at { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 7px; font-size: 12.5px; color: var(--texto); text-align: center; -webkit-tap-highlight-color: transparent; }
+    .cfg-atalhos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 4px; margin-bottom: 22px; }
+    .cfg-at { all: unset; cursor: pointer; display: grid; justify-items: center; align-content: start; gap: 7px; font-size: 12.5px; color: var(--texto); text-align: center; -webkit-tap-highlight-color: transparent; min-width: 0; }
+    .cfg-at > em { font-style: normal; max-width: 100%; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+    .cfg-at:focus-visible > span { outline: 2px solid #106ebe; outline-offset: 2px; }
+    .cfg-at-mais { color: var(--sub); }
+    .cfg-atalhos .cfg-at-mais > span { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #106ebe 30%, transparent); }
     .cfg-at > span { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: var(--azul, #106ebe); background: color-mix(in srgb, #106ebe 9%, var(--fundo)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #106ebe 16%, transparent); }
     .cfg-at > span svg { width: 23px; height: 23px; }
     .cfg-sec { margin: 0 4px 6px; font-size: 13px; font-weight: 700; color: var(--texto); }
@@ -1089,6 +1100,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
     .cfg-resultado { margin-bottom: 14px; }
     html[data-tema="escuro"] .cfg-busca, html[data-tema="escuro"] .cfg-at > span { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
     html[data-tema="escuro"] .cfg-at > span { color: #6bb8ff; }
+    html[data-tema="escuro"] .cfg-atalhos .cfg-at-mais > span { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.22); }
     html[data-tema="escuro"] .cfg-capa { background: linear-gradient(160deg, #06142a 0%, #0c2a52 60%, #0d5aa0 100%); }
   }
 </style>
@@ -3312,20 +3324,58 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const abrirArea = (g) => window.SintoniaPainel.abrir({ id: 'cfg-' + g.id, titulo: g.titulo, montar: (corpo) => corpo.append(el('div', { class: 'mais-lista' }, ...g.itens.map((it) => linhaItem({ ...it, acao: fecharE(it.acao) })))) });
       const perfilCapa = el('button', { class: 'mais-perfil cfg-perfil', type: 'button', title: 'Minha conta', onclick: perfil.onclick || (() => (window.SintoniaTelas?.conta ? (window.SintoniaTelas.conta.irAba('perfil'), mostrar('conta')) : abrirMinhaConta())) },
         avatarPessoa(eu.nome, '', eu.id), el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: PAPEL[eu.papel] || eu.papel })));
-      const chips = el('div', { class: 'cfg-chips' }, el('span', { text: nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : 'Sem unidade') }), el('span', { text: eu.email || '' }));
+      /* capa-perfil (dono 21/11): sem os chips de unidades e e-mail; capa com foto (public/telas/capa-perfil.js) e
+         atalhos escolhidos pela pessoa (até 8, em 2 linhas de 4), guardados em /api/conta. */
+      const CP = window.SintoniaCapaPerfil;
       const capa = el('div', { class: 'cfg-capa' },
         el('div', { class: 'cfg-capa-barra' }, el('span', { class: 'cfg-capa-tit', text: 'Configurações' }), window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),
-        perfilCapa, chips);
+        perfilCapa, CP ? CP.botaoTrocar() : null);
       const campo = el('input', { type: 'search', placeholder: 'O que você procura?', 'aria-label': 'Buscar em Configurações', enterkeyhint: 'search' });
       const caixaBusca = el('label', { class: 'cfg-busca' }, el('span', { html: IC.busca, 'aria-hidden': 'true' }), campo);
-      const ATALHOS = [['Agenda', IC.agenda, 'agenda'], ['Respostas', IC.respostas, 'respostas'], ['Rotina', I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), 'rotina'], ['Serena', IC.ia, 'serena']];
-      const atalhos = el('div', { class: 'cfg-atalhos' }, ...ATALHOS.map(([n, ic, v]) => el('button', { class: 'cfg-at', type: 'button', onclick: () => mostrar(v) }, el('span', { html: ic, 'aria-hidden': 'true' }), document.createTextNode(n))));
+      // Catálogo dos atalhos: as telas da barra, Conversas › Grupos/Equipe, cada item das áreas e de Minha conta (só o que a pessoa pode abrir).
+      const codigo = (t) => semAcento(t).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const IC_ROTINA = I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>');
+      const IC_CONVERSA = I('<path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/>');
+      const IC_GRUPOS = I('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/>');
+      const IC_PAINEL = I('<rect x="4" y="4" width="6" height="16" rx="1.5"/><rect x="14" y="4" width="6" height="7" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>');
+      const CURTO = { 'atendimento:respostas-rapidas': 'Respostas', 'atendimento:agendamento-online': 'Agendar online', 'atendimento:mensagens-agendadas': 'Agendadas', 'atendimento:distribuicao-e-prazos': 'Distribuição',
+        'clientes:clientes-e-leads': 'Clientes', 'clientes:importar-e-exportar': 'Importar', 'vendas:criar-novo-pipeline': 'Novo pipeline', 'vendas:funis-e-etapas': 'Funis', 'marketing:rastreamento-e-links': 'Links',
+        'marketing:central-de-criativos': 'Criativos', 'marketing:e-mail-marketing': 'E-mail', 'automacoes:agente-de-ia': 'Agente de IA', 'automacoes:pesquisa-de-satisfacao': 'Pesquisa', 'automacoes:mensagens-agendadas': 'Agendadas (todas)',
+        'analises:desempenho-do-atendimento': 'Desempenho', 'analises:vendas-e-receita': 'Vendas', 'analises:clientes-e-satisfacao': 'Satisfação', 'analises:horarios-e-funil': 'Horários', 'analises:painel-da-tv': 'Painel da TV',
+        'analises:saude-do-sistema': 'Saúde', 'empresa:dados-da-empresa': 'Empresa', 'empresa:produtos-e-servicos': 'Produtos', 'empresa:tabelas-de-preco': 'Preços', 'empresa:equipe-e-acessos': 'Acessos',
+        'empresa:integracoes-e-api': 'API', 'empresa:dados-de-demonstracao': 'Demonstração', 'conta:foto-nome-e-senha': 'Minha conta', 'conta:privacidade-e-excluir-conta': 'Privacidade', 'conta:personalizar-dashboard': 'Dashboard (blocos)' };
+      const catalogo = [
+        { id: 'aba:conversas', nome: 'Conversas', ic: IC_CONVERSA, secao: 'Telas', acao: () => mostrar('conversas') },
+        { id: 'aba:grupos', nome: 'Grupos', sub: 'Conversas › Grupos', ic: IC_GRUPOS, secao: 'Telas', acao: () => mostrar('grupos') },
+        window.SintoniaTelas?.equipe && { id: 'aba:chat-equipe', nome: 'Equipe', sub: 'Conversas › Equipe (chat interno)', ic: IC.clientes, secao: 'Telas', acao: () => (window.SintoniaTelas.equipe.abrir ? window.SintoniaTelas.equipe.abrir() : mostrar('chat-equipe')) },
+        { id: 'aba:painel', nome: 'Dashboard', ic: IC_PAINEL, secao: 'Telas', acao: () => mostrar('painel') },
+        { id: 'aba:serena', nome: 'Serena', sub: 'Sua assistente de IA', ic: IC.ia, secao: 'Telas', acao: () => mostrar('serena') },
+        ...grupos.flatMap((g) => g.itens.map((it) => ({ ...it, id: `${g.id}:${codigo(it.nome)}`, secao: g.titulo }))),
+        ...itensConta.filter((it) => it.nome).map((it) => ({ ...it, id: `conta:${codigo(it.nome)}`, secao: 'Minha conta' })),
+      ].filter(Boolean).map((c) => ({ ...c, ic: c.id === 'atendimento:rotina' ? IC_ROTINA : c.ic, curto: CURTO[c.id] || c.nome }));
+      const porId = new Map(); catalogo.forEach((c) => { if (!porId.has(c.id)) porId.set(c.id, c); });
+      const ATALHOS_PADRAO = ['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena'];
+      const atalhos = el('div', { class: 'cfg-atalhos' });
+      const editar = () => CP?.editarAtalhos([...porId.values()]);
+      const pintarAtalhos = () => {
+        const ids = (CP ? CP.prefs().atalhos : ATALHOS_PADRAO).filter((id) => porId.has(id)).slice(0, 8);
+        atalhos.replaceChildren(...[...ids.map((id) => { const c = porId.get(id); return el('button', { class: 'cfg-at', type: 'button', title: c.nome, onclick: c.acao }, el('span', { html: c.ic, 'aria-hidden': 'true' }), el('em', { text: c.curto })); }),
+          CP && ids.length < 8 && (ids.length === 0 || ids.length % 4) ? el('button', { class: 'cfg-at cfg-at-mais', type: 'button', 'aria-label': 'Adicionar atalho', onclick: editar }, el('span', { html: I('<path d="M12 5v14M5 12h14"/>'), 'aria-hidden': 'true' }), el('em', { text: 'Adicionar' })) : null].filter(Boolean));
+      };
+      const cabAtalhos = el('div', { class: 'cfg-sec cfg-sec-at' }, el('span', { text: 'Atalhos' }), CP ? el('button', { class: 'cfg-editar', type: 'button', text: 'Editar', 'aria-label': 'Editar atalhos', onclick: editar }) : null);
+      pintarAtalhos();
+      if (CP) {
+        CP.pintar(capa);
+        const aoMudar = () => { if (!capa.isConnected) { removeEventListener('sintonia:capa-perfil', aoMudar); return; } CP.pintar(capa); pintarAtalhos(); };
+        addEventListener('sintonia:capa-perfil', aoMudar);
+        CP.carregar();
+      }
       const areas = el('div', { class: 'cfg-areas' }, ...grupos.map((g) => el('button', { class: 'cfg-area', type: 'button', onclick: () => abrirArea(g) },
         el('i', { class: 'cfg-area-ic', html: g.ic }), el('span', { class: 'mais-txt' }, el('b', { text: g.titulo }), el('small', { text: g.itens.length + (g.itens.length === 1 ? ' opção' : ' opções') })), el('span', { class: 'mais-seta', html: IC.seta }))));
       const todos = [...grupos.flatMap((g) => g.itens.map((it) => ({ ...it, sub: it.sub || g.titulo }))), ...itensConta.map((it) => ({ ...it, sub: it.sub || 'Minha conta' }))];
       const resultado = el('div', { class: 'mais-lista cfg-resultado', hidden: '' });
       const nada = el('p', { class: 'mais-nada', text: 'Nada com esse nome.', hidden: '' });
-      const normais = el('div', {}, atalhos, el('p', { class: 'cfg-sec', text: 'Tudo da Sintonia' }), areas, el('div', { class: 'mais-lista', style: 'margin-top:18px' }, linhaItem(sair)));
+      const normais = el('div', {}, cabAtalhos, atalhos, el('p', { class: 'cfg-sec', text: 'Tudo da Sintonia' }), areas, el('div', { class: 'mais-lista', style: 'margin-top:18px' }, linhaItem(sair)));
       campo.addEventListener('input', () => {
         const q = semAcento(campo.value.trim());
         normais.hidden = Boolean(q);
@@ -3797,6 +3847,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/integracoes.js" defer></script><!-- integracoes -->
 <script src="/telas/empresa.js" defer></script><!-- layout-telas -->
 <script src="/telas/conta.js" defer></script><!-- empresa-conta: Conta da pessoa -->
+<script src="/telas/capa-perfil.js" defer></script><!-- capa-perfil: capa com foto e atalhos por pessoa -->
 <script src="/telas/chanfro.js" defer></script>
 <script src="/telas/puxar.js" defer></script>
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
