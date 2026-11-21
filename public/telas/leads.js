@@ -38,7 +38,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ld-campos { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .ld-campo { display: grid; gap: 5px; font-size: 12px; color: var(--sub); font-weight: 700; min-width: 0; }
   .ld-campo select, .ld-campo input:not([type=checkbox]), .ld-campo textarea { font: inherit; font-size: 15px; font-weight: 600; color: var(--texto); background: var(--vidro-item); border: 1px solid var(--vidro-borda); border-radius: 14px; padding: 11px 12px; min-width: 0; width: 100%; box-sizing: border-box; min-height: 44px; }
-  .ld-campo textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 13px; font-weight: 500; }
+  .ld-campo textarea { min-height: 120px; resize: vertical; font-family: var(--fonte-mono); font-size: 13px; font-weight: 500; }
   .ld-campo select option { color: #106ebe; }
   .ld-periodo { grid-column: 1 / -1; max-width: 560px; }
   .ld-periodo > div { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }

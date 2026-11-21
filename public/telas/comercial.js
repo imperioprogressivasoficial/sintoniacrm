@@ -50,7 +50,7 @@
   .cm-tab th, .cm-tab td { text-align: left; padding: 6px; border-bottom: 1px solid var(--linha); vertical-align: middle; }
   .cm-tab input, .cm-tab select, .cm-in { font: inherit; font-size: 13.5px; padding: 7px 9px; border-radius: 10px; border: 1px solid var(--linha); background: var(--entrada); color: var(--texto); width: 100%; min-width: 70px; min-height: 36px; }
   .cm-rod { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; position: sticky; bottom: 0; background: var(--fundo); padding: 12px 0 0; }
-  .cm-link { font-family: ui-monospace, monospace; font-size: 12.5px; word-break: break-all; padding: 10px; border-radius: 12px; background: var(--painel); border: 1px solid var(--linha); }
+  .cm-link { font-family: var(--fonte-mono); font-size: 12.5px; word-break: break-all; padding: 10px; border-radius: 12px; background: var(--painel); border: 1px solid var(--linha); }
   .cm-ab { display: flex; gap: 6px; flex-wrap: wrap; }
   .cm-rolar { overflow-x: auto; }
   .cm-dlg label { display: flex !important; gap: 10px; align-items: center; cursor: pointer; }

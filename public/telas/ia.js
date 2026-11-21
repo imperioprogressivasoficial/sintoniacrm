@@ -213,7 +213,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-ed-corpo { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
   .iax-ed-corpo .iax-titulo-campo { font-size: 20px; font-weight: 700; }
   .iax-ed-meta { font-size: 12.5px; color: var(--sub); padding: 0 2px; }
-  .iax-ed-corpo textarea.iax-conteudo { flex: 1; min-height: 320px; resize: none; font-size: 15px; line-height: 1.55; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .iax-ed-corpo textarea.iax-conteudo { flex: 1; min-height: 320px; resize: none; font-size: 15px; line-height: 1.55; font-family: var(--fonte-mono); }
   .iax-pendlista { border-radius: 14px; background: var(--chip-ativo); color: var(--chip-ativo-txt); padding: 10px 12px; display: grid; gap: 6px; font-size: 13.5px; border: 1px solid rgba(15, 252, 190, .35); }
   .iax-pendlista b { font-weight: 750; }
   .iax-pendlista button { all: unset; cursor: pointer; display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
@@ -226,8 +226,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iax-versao-cab .iax-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
   .iax-versao-cab b { font-size: 14.5px; font-weight: 600; color: var(--texto); }
   .iax-versao-cab .iax-txt > span { font-size: 12.5px; color: var(--sub); }
-  .iax-versao pre { margin: 0; padding: 10px 12px; max-height: 180px; overflow: auto; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .iax-leitura { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--texto); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .iax-versao pre { margin: 0; padding: 10px 12px; max-height: 180px; overflow: auto; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); font-family: var(--fonte-mono); }
+  .iax-leitura { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; color: var(--texto); font-family: var(--fonte-mono); }
   .iax-leitura mark { background: var(--badge); color: var(--badge-txt); border-radius: 4px; padding: 0 3px; box-shadow: 0 0 8px rgba(15,252,190,.45); }
   .iax-leitura .iax-h { font-weight: 800; color: var(--marca-azul); }
   @media (prefers-color-scheme: dark) { .iax-leitura .iax-h { color: var(--marca-menta); } }

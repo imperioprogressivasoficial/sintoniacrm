@@ -38,7 +38,7 @@
   #capi details.passos > div { display: grid; gap: 12px; padding: 4px 0 14px; }
   #capi .an-reg { display: grid; gap: 8px; }
   #capi .an-reg .cartao p { overflow-wrap: anywhere; }
-  #capi .an-mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  #capi .an-mono { font-family: var(--fonte-mono); font-size: 12px; overflow-wrap: anywhere; }
   `;
   const st = document.createElement('style'); st.textContent = CSS; document.head.append(st);
 

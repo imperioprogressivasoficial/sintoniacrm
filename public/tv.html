@@ -9,7 +9,7 @@
 <link rel="icon" href="/favicon-escuro-64.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <style>
 /* Painel da sala comercial para TV (16:9). Tudo em rem, e o rem acompanha a largura da tela:
    16px em 1920x1080, 10,7px em 1280x720. Feito para ler a 3 metros. */
@@ -17,11 +17,12 @@
   --azul: #106ebe; --azul-claro: #1a8be0; --menta: #0ffcbe; --noite: #04172b; --noite-2: #071d33; --noite-3: #0b2a47;
   --ceu: #7cc4ff; --ambar: #f5b800; --coral: #ff7a59; --prata: #c9d6e3; --bronze: #e0a36f;
   --texto: #eef6ff; --sub: #9fb6cc; --vidro: rgba(11, 42, 71, .46); --vidro-forte: rgba(16, 60, 100, .5); --borda: rgba(255, 255, 255, .12);
+  --fonte: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --fonte-titulo: "Sintony", "Poppins", ui-sans-serif, system-ui, sans-serif;
   color-scheme: dark;
   font-size: min(calc(100vw / 120), calc(100vh / 67.5));
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--noite); color: var(--texto); font-family: Poppins, system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--noite); color: var(--texto); font-family: var(--fonte); }
 body {
   background:
     radial-gradient(60rem 40rem at 0% 0%, rgba(16, 110, 190, .55), transparent 60%),
@@ -33,7 +34,7 @@ body {
 .tv { position: absolute; inset: 0; margin: auto; width: 120rem; height: 67.5rem; padding: 2.2rem 2.6rem 2rem; display: grid; grid-template-rows: auto 1fr; gap: 1.6rem; }
 .topo { display: flex; align-items: center; gap: 1.4rem; }
 .topo img { width: 3.6rem; height: 3.6rem; border-radius: 1rem; }
-.topo h1 { margin: 0; font-family: Sintony, Poppins, sans-serif; font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; }
+.topo h1 { margin: 0; font-family: var(--fonte-titulo); font-size: 2.6rem; font-weight: 700; letter-spacing: -.02em; }
 .topo .sub { color: var(--sub); font-size: 1.3rem; margin-top: .1rem; }
 .topo .tela-nome { margin-left: 1.6rem; display: flex; gap: .6rem; }
 .topo .tela-nome span { width: 1rem; height: 1rem; border-radius: 50%; background: rgba(255,255,255,.18); transition: background .3s; }
@@ -44,9 +45,9 @@ body {
 .ao-vivo i { width: .9rem; height: .9rem; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 0 0 rgba(255,77,77,.7); animation: vivo 1.8s ease-out infinite; }
 @keyframes vivo { 0% { box-shadow: 0 0 0 0 rgba(255,77,77,.7); } 70% { box-shadow: 0 0 0 .9rem rgba(255,77,77,0); } 100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); } }
 .ao-vivo + .relogio { margin-left: 2rem; }
-.meta .valor { font-size: 2.2rem; font-weight: 800; letter-spacing: -.02em; color: var(--texto); }
+.meta .valor { font-size: 2.2rem; font-weight: 700; letter-spacing: -.02em; color: var(--texto); }
 .meta .valor small { font-size: .55em; font-weight: 600; color: var(--sub); letter-spacing: 0; }
-.relogio .h { font-size: 4.4rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.relogio .h { font-size: 4.4rem; font-weight: 700; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .relogio .d { color: var(--sub); font-size: 1.3rem; }
 .vidro { background: var(--vidro); border: 1px solid var(--borda); border-radius: 2rem; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1.5rem 4rem rgba(0,0,0,.25);
          -webkit-backdrop-filter: blur(1.6rem) saturate(1.4); backdrop-filter: blur(1.6rem) saturate(1.4); padding: 1.8rem 2rem; min-height: 0; min-width: 0; overflow: hidden; }
@@ -68,13 +69,13 @@ body {
 .anel .fundo { stroke: rgba(255,255,255,.1); }
 .anel .frente { stroke: var(--menta); transition: stroke-dashoffset 1.2s ease; }
 .anel .centro { position: absolute; inset: 0; display: grid; place-content: center; }
-.anel .pct { font-size: 6.4rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+.anel .pct { font-size: 6.4rem; font-weight: 700; line-height: 1; letter-spacing: -.04em; }
 .anel .pct small { font-size: .45em; }
 .anel .de { color: var(--sub); font-size: 1.4rem; margin-top: .3rem; }
 .meta .linha { font-size: 1.5rem; color: var(--sub); }
 .meta .linha b { color: var(--texto); font-size: 1.15em; }
 .hoje { display: grid; align-content: center; justify-items: center; text-align: center; }
-.hoje .n { font-size: 11rem; font-weight: 800; line-height: .95; letter-spacing: -.05em; color: var(--menta); text-shadow: 0 0 3rem rgba(15,252,190,.35); font-variant-numeric: tabular-nums; }
+.hoje .n { font-size: 11rem; font-weight: 700; line-height: .95; letter-spacing: -.05em; color: var(--menta); text-shadow: 0 0 3rem rgba(15,252,190,.35); font-variant-numeric: tabular-nums; }
 .hoje .r { font-size: 1.9rem; font-weight: 600; margin-top: .4rem; }
 .hoje .u { display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap; justify-content: center; }
 .pilula { background: rgba(255,255,255,.08); border: 1px solid var(--borda); border-radius: 99rem; padding: .5rem 1.2rem; font-size: 1.35rem; color: var(--sub); white-space: nowrap; }
@@ -84,8 +85,8 @@ body {
 .rank { display: grid; gap: 1rem; align-content: start; }
 .pessoa { display: grid; grid-template-columns: 3.4rem 5.6rem 1fr auto; gap: 1.2rem; align-items: center; padding: .9rem 1.2rem; border-radius: 1.4rem; background: rgba(255,255,255,.04); border: 1px solid transparent; }
 .pessoa.ouro { background: linear-gradient(90deg, rgba(245,184,0,.18), rgba(255,255,255,.03)); border-color: rgba(245,184,0,.35); }
-.pos { font-size: 2.4rem; font-weight: 800; text-align: center; color: var(--sub); }
-.medalha { width: 3.2rem; height: 3.2rem; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; font-weight: 800; color: #08243f; }
+.pos { font-size: 2.4rem; font-weight: 700; text-align: center; color: var(--sub); }
+.medalha { width: 3.2rem; height: 3.2rem; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; font-weight: 700; color: #08243f; }
 .medalha.ouro { background: radial-gradient(circle at 30% 30%, #ffe48a, var(--ambar)); box-shadow: 0 0 1.2rem rgba(245,184,0,.6); }
 .medalha.prata { background: radial-gradient(circle at 30% 30%, #fff, var(--prata)); }
 .medalha.bronze { background: radial-gradient(circle at 30% 30%, #ffd2ab, var(--bronze)); }
@@ -99,7 +100,7 @@ body {
 .barra i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--azul-claro), var(--menta)); box-shadow: 0 0 1rem rgba(15,252,190,.5); transition: width 1.2s ease; }
 .pessoa .meta-txt { color: var(--sub); font-size: 1.2rem; margin-top: .3rem; }
 .pessoa .num { text-align: right; }
-.pessoa .num b { display: block; font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.pessoa .num b { display: block; font-size: 3.4rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .pessoa .num span { color: var(--sub); font-size: 1.2rem; }
 .t2 .rank { grid-template-columns: 1fr 1fr; gap: 1.2rem 2rem; }
 
@@ -115,7 +116,7 @@ body {
 
 /* último agendamento */
 .ultimo { background: linear-gradient(160deg, rgba(16,110,190,.42), rgba(11,42,71,.5)); }
-.ultimo .quem { font-size: 2.6rem; font-weight: 800; line-height: 1.15; }
+.ultimo .quem { font-size: 2.6rem; font-weight: 700; line-height: 1.15; }
 .ultimo .oq { font-size: 1.7rem; color: var(--menta); font-weight: 600; margin-top: .3rem; }
 .ultimo .det { font-size: 1.3rem; color: var(--sub); margin-top: .4rem; }
 .lista-ult { display: grid; gap: .9rem; }
@@ -132,7 +133,7 @@ body {
 .festa .cartao { padding: 3rem 5rem; border-radius: 3rem; text-align: center; background: rgba(4,23,43,.82); border: 2px solid rgba(15,252,190,.6); box-shadow: 0 0 6rem rgba(15,252,190,.45); transform: scale(.9); transition: transform .5s cubic-bezier(.2,1.4,.4,1); }
 .festa.ver .cartao { transform: scale(1); }
 .festa .t { font-size: 2rem; color: var(--menta); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
-.festa .q { font-size: 5rem; font-weight: 800; margin: .6rem 0; }
+.festa .q { font-size: 5rem; font-weight: 700; margin: .6rem 0; }
 .festa .o { font-size: 2.4rem; color: var(--sub); }
 canvas#confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 4; }
 .aviso { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; font-size: 2.4rem; padding: 4rem; z-index: 9; background: var(--noite); }

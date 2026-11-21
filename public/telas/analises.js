@@ -104,7 +104,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     .an-etapa .an-v small.an-rot { display: block; }
   }
   .an-tv { display: grid; gap: 14px; }
-  .an-tv-link { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; padding: 12px 14px; border-radius: 14px; background: var(--vidro-item); overflow-wrap: anywhere; user-select: all; }
+  .an-tv-link { font-family: var(--fonte-mono); font-size: 13.5px; padding: 12px 14px; border-radius: 14px; background: var(--vidro-item); overflow-wrap: anywhere; user-select: all; }
   .an-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
   .an-bt { all: unset; cursor: pointer; box-sizing: border-box; min-height: 44px; display: inline-flex; align-items: center; gap: 7px; padding: 0 18px; border-radius: 999px; font-weight: 800; font-size: 14px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--texto); }
   .an-bt.principal { background: linear-gradient(90deg, #106ebe, #3aa0ff); color: #fff; box-shadow: none; }

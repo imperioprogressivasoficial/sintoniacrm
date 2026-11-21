@@ -22,7 +22,7 @@
 <meta name="apple-mobile-web-app-title" content="Sintonia">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Sintony:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="stylesheet" href="/ds.css">
 <script src="/telas/email-conexoes.js" defer></script>
 <script src="/telas/anuncios-conexao.js" defer></script><!-- marketing -->
@@ -68,7 +68,7 @@
   .cab .dica { font-size: 12px; color: var(--sub); }
   input { background: var(--vidro-item); border: 1px solid var(--vidro-borda); box-shadow: inset 0 1px 2px rgba(8,36,63,.06); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--texto); width: 100%; min-width: 0; }
   input:focus { outline: 2px solid color-mix(in srgb, var(--marca-azul) 60%, transparent); outline-offset: 1px; background: var(--vidro-ativo); }
-  input[readonly] { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  input[readonly] { font-family: var(--fonte-mono); font-size: 13px; }
   .campos { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .linha { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .copia { display: flex; gap: 6px; min-width: 0; }
@@ -208,7 +208,7 @@
   details.passos summary::after { content: "＋"; color: var(--sub); }
   details.passos[open] summary::after { content: "－"; }
   details.passos ol { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--sub); line-height: 1.5; }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: var(--vidro-ativo); padding: 1px 6px; border-radius: 6px; color: var(--texto); word-break: break-all; }
+  code { font-family: var(--fonte-mono); font-size: 12.5px; background: var(--vidro-ativo); padding: 1px 6px; border-radius: 6px; color: var(--texto); word-break: break-all; }
   .modelos { display: grid; gap: 8px; }
   .modelo { border-radius: 12px; padding: 10px 12px; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda); display: grid; gap: 4px; font-size: 13px; }
   .modelo b { font-size: 13.5px; word-break: break-all; }
