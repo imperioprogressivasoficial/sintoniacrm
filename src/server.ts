@@ -105,6 +105,8 @@ export interface DependenciasServidor {
   poolRotina?: import('pg').Pool;
   /** Presença da equipe ("Disponível para atender"). */
   presencas?: Presencas;
+  /** ia-completa: a pessoa mudou "Disponível para atender" (a IA cobre ou devolve as conversas dela). */
+  aoMudarPresenca?: (u: import('./auth/contas.js').Usuario, status: 'online' | 'offline') => Promise<unknown>;
   /** Origem do lead (src/rastreio): selo e ícone de cada conversa, para a lista. */
   /** Última vez que cada conversa foi finalizada (selo verde "Finalizado" na lista). */
   finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
@@ -690,7 +692,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     },
   });
   if (d.poolRotina) registrarRotina(app, { pool: d.poolRotina, contas: d.auth?.contas, repo: d.repo, visivelPara, agora });
-  if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas });
+  if (d.presencas) registrarPresenca(app, { presencas: d.presencas, contas: d.auth?.contas, aoMudar: d.aoMudarPresenca });
 
   // ---------- Tags, aba IA, painel completo e empresa ----------
   registrarGestao(app, {

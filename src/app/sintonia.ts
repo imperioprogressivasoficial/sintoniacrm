@@ -16,7 +16,7 @@ import { bahia, DIA, partesBahia } from '../util/tempo.js';
 import { resumir, textoRelatorio } from './relatorio.js';
 import { TravaMemoria, type Trava } from '../fila/trava.js';
 /* ia-completa */
-import { TEXTO_PASSAGEM } from '../ai/agente.js';
+import { textoPassagem } from '../ai/agente.js';
 import type { AplicadorCrmIa } from '../ai/crm-ia.js';
 import { partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
 import { PREFIXO_NOTA_IA, type Percepcao } from '../ai/prompt.js';
@@ -98,6 +98,8 @@ export interface DependenciasSintonia {
   crmIa?: AplicadorCrmIa;
   /** ia-completa: limite de uso da IA por conversa por dia. */
   guardaCusto?: GuardaCusto;
+  /** ia-completa: quem da equipe está disponível agora (vai para a IA em cada resposta). */
+  equipeAgora?: (c: Conversa) => Promise<{ texto: string; disponiveis: number; responsavelDisponivel: boolean | null } | undefined>;
 }
 
 /** ia-completa: espera máxima para juntar mensagens seguidas ou esperar uma mídia baixar. */
@@ -148,6 +150,8 @@ const vistaEm = (enviadaEm: Date, agora: Date, c: Conversa) =>
       agora.getTime(),
       (c.ultimaMensagemIa?.getTime() ?? 0) + 1,
       (c.ultimaMensagemEquipe?.getTime() ?? 0) + 1,
+      // ia-completa: duas mensagens da cliente no mesmo milissegundo ainda contam como "chegou mensagem nova".
+      (c.ultimaMensagemCliente?.getTime() ?? 0) + 1,
     ),
   );
 
@@ -937,6 +941,7 @@ export class Sintonia {
         tagsDisponiveis: await this.tagsParaIa(),
         objetivo: await this.objetivoDe(c),
         ...(percepcao?.size ? { percepcao } : {}),
+        ...(await this.equipeDe(c)),
         continuar,
       });
 
@@ -1108,13 +1113,20 @@ export class Sintonia {
     await this.mutar(c.id, async (d) => {
       if (modo === 'responder' && d.modo !== 'humano') {
         const em = this.agora();
-        const e = await this.enviarPartes(d, [TEXTO_PASSAGEM], em);
+        const e = await this.enviarPartes(d, [textoPassagem((await this.equipeDe(d)).equipe)], em);
         if (e.n) d.ultimaMensagemIa = em;
       }
       await this.aplicarAcoes(d, [{ tipo: 'passar_para_humano', motivo: 'A IA chegou ao limite de uso desta conversa hoje (proteção de custo).' }], 'ia');
       await this.d.repo.salvarConversa(d);
     });
     return true;
+  }
+
+  /** ia-completa: o que a IA sabe da equipe agora (falha = segue sem). */
+  private async equipeDe(c: Conversa): Promise<{ equipe?: { texto: string; disponiveis: number; responsavelDisponivel: boolean | null } }> {
+    if (!this.d.equipeAgora) return {};
+    const e = await this.d.equipeAgora(c).catch(() => undefined);
+    return e ? { equipe: e } : {};
   }
 
   /** ia-completa: nota interna na conversa (a equipe vê; a IA lê nas próximas respostas). */
@@ -1149,6 +1161,7 @@ export class Sintonia {
       tipoAtivo: t.tipo,
       tagsDisponiveis: await this.tagsParaIa(),
       objetivo: await this.objetivoDe(c),
+      ...(await this.equipeDe(c)),
     });
     if (!r.texto.trim()) {
       await this.aplicarAcoes(c, r.acoes, 'ia');

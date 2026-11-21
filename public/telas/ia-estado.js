@@ -21,17 +21,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .iae-linhas { display: grid; gap: 2px; }
   .iae-linha { display: flex; gap: 10px; align-items: flex-start; padding: 9px 2px; border-top: 1px solid var(--linha); min-width: 0; }
   .iae-linha:first-child { border-top: 0; }
-  .iae-linha > svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
-  .iae-linha.ok > svg { color: #0a9f7a; }
-  [data-tema="escuro"] .iae-linha.ok > svg { color: var(--marca-menta); }
-  .iae-linha.falta > svg { color: #c98f00; }
-  .iae-linha.neutro > svg { color: var(--sub); }
+  .iae-ic { width: 20px; height: 20px; flex: none; display: inline-grid; }
+  .iae-ic svg { width: 100%; height: 100%; }
+  .iae-linha > .iae-ic { margin-top: 1px; }
+  .iae-linha.ok > .iae-ic { color: #0a9f7a; }
+  [data-tema="escuro"] .iae-linha.ok > .iae-ic { color: var(--marca-menta); }
+  .iae-linha.falta > .iae-ic { color: #c98f00; }
+  .iae-linha.neutro > .iae-ic { color: var(--sub); }
+  .agx-vidro h2 .iae-ic { color: var(--marca-azul); }
+  [data-tema="escuro"] .agx-vidro h2 .iae-ic { color: var(--marca-menta); }
   .iae-linha .agx-txt { display: grid; gap: 2px; min-width: 0; flex: 1; overflow-wrap: anywhere; }
   .iae-linha .agx-txt b { font-size: 14.5px; }
   .iae-linha .agx-txt span { font-size: 13.5px; color: var(--sub); line-height: 1.4; }
-  .iae-onde { font-size: 12.5px; font-weight: 650; color: var(--marca-azul); white-space: nowrap; }
-  [data-tema="escuro"] .iae-onde { color: var(--marca-menta); }
+  .iae-linha .agx-txt span.iae-onde { font-size: 12.5px; font-weight: 650; color: var(--marca-azul); }
+  [data-tema="escuro"] .iae-linha .agx-txt span.iae-onde { color: var(--marca-menta); }
   .iae-grade { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); }
+  .iae-grade > .agx-vidro { align-content: start; }
   .iae-ferr { display: grid; gap: 6px; padding: 11px 0; border-top: 1px solid var(--linha); }
   .iae-ferr:first-of-type { border-top: 0; }
   .iae-ferr b { font-size: 15px; }
@@ -52,9 +57,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const d = await ui.api('/api/ia/estado' + (testar ? '?testar=1' : ''));
     if (!ctx.vivo()) return;
     const linha = (tipo, titulo, texto, onde) => el('div', { class: 'iae-linha ' + tipo },
-      el('span', { html: ICONE[tipo], 'aria-hidden': 'true', style: 'display:contents' }),
-      el('span', { class: 'agx-txt' }, el('b', { text: titulo }), texto ? el('span', { text: texto }) : null),
-      onde ? el('span', { class: 'iae-onde', text: onde }) : null);
+      el('span', { class: 'iae-ic', html: ICONE[tipo], 'aria-hidden': 'true' }),
+      el('span', { class: 'agx-txt' }, el('b', { text: titulo }), texto ? el('span', { text: texto }) : null, onde ? el('span', { class: 'iae-onde', text: 'Onde: ' + onde }) : null));
 
     // ---- pronta?
     const pronto = d.pronta && !d.falta.length;
@@ -98,10 +102,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'agx-vidro' }, cab, faltas),
       el('div', { class: 'iae-grade' },
         el('div', { class: 'agx-vidro' }, el('h2', { text: 'Situação' }), sit),
-        el('div', { class: 'agx-vidro' }, el('h2', {}, el('span', { html: ICONE.agenda, 'aria-hidden': 'true', style: 'display:inline-grid;width:20px;height:20px' }), el('span', { text: 'Agenda por unidade' })), agendas, el('div', {}, testarBtn))),
+        el('div', { class: 'agx-vidro' }, el('h2', {}, el('span', { class: 'iae-ic', html: ICONE.agenda, 'aria-hidden': 'true' }), el('span', { text: 'Agenda por unidade' })), agendas, el('div', {}, testarBtn))),
       el('div', { class: 'agx-vidro' }, el('h2', {}, el('span', { text: 'O que ela pode fazer' }), el('small', { text: 'verde = ligado' })),
         el('p', { class: 'agx-sub', text: 'A IA padrão faz tudo. Nos agentes do estúdio, ligue ou desligue em Agentes › (agente) › Ferramentas permitidas.' }), ferr),
-      el('div', { class: 'agx-vidro' }, el('h2', {}, el('span', { html: ICONE.escudo, 'aria-hidden': 'true', style: 'display:inline-grid;width:20px;height:20px' }), el('span', { text: 'Proteções sempre ligadas' })), protecoes, el('p', { class: 'agx-sub', text: limite })));
+      el('div', { class: 'agx-vidro' }, el('h2', {}, el('span', { class: 'iae-ic', html: ICONE.escudo, 'aria-hidden': 'true' }), el('span', { text: 'Proteções sempre ligadas' })), protecoes, el('p', { class: 'agx-sub', text: limite })));
   }
 
   window.SintoniaTelas.iaEstado = { desenhar: (ctx) => desenhar(ctx, false) };

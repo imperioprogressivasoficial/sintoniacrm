@@ -56,6 +56,8 @@ export interface PedidoAgente {
    * se a equipe assumiu (ou chegou mensagem nova), a IA para na hora, sem gastar nem agendar.
    */
   continuar?: () => Promise<boolean>;
+  /** ia-completa: quem da equipe está disponível agora (src/presenca/cobertura.ts). */
+  equipe?: { texto: string; disponiveis: number; responsavelDisponivel: boolean | null };
 }
 
 export interface RespostaAgente {
@@ -69,6 +71,11 @@ export interface RespostaAgente {
 
 export const TEXTO_PASSAGEM =
   'Vou pedir para alguém da nossa equipe continuar seu atendimento por aqui, tá bom? Já já te respondem.';
+/** ia-completa: passagem quando ninguém da equipe está disponível agora (almoço, fim do expediente). */
+export const TEXTO_PASSAGEM_DEPOIS =
+  'Vou deixar seu atendimento separado para a nossa equipe. Assim que alguém voltar, te responde por aqui, tá bom?';
+/** A mensagem de passagem certa para o momento da equipe. */
+export const textoPassagem = (equipe?: { disponiveis: number }) => (equipe && equipe.disponiveis === 0 ? TEXTO_PASSAGEM_DEPOIS : TEXTO_PASSAGEM);
 
 /** Cliente mínimo da API que o agente usa (facilita testes). */
 export type ClienteClaude = { beta: { messages: Pick<Anthropic['beta']['messages'], 'create'> } };
@@ -139,7 +146,7 @@ export class Agente {
     const ultima = esperandoResposta(p.mensagens);
     if (escreve && !p.tipoAtivo && ultima && this.opcoes.passagemAutomatica !== false) {
       const pass = conferirPassagem(ultimasDaCliente(p.mensagens), PASSAGEM_PADRAO);
-      if (pass.passar) return { texto: TEXTO_PASSAGEM, acoes: [{ tipo: 'passar_para_humano', motivo: pass.motivo! }], recusou: false };
+      if (pass.passar) return { texto: textoPassagem(p.equipe), acoes: [{ tipo: 'passar_para_humano', motivo: pass.motivo! }], recusou: false };
     }
 
     const ferramentas = [
@@ -171,7 +178,7 @@ export class Agente {
       });
 
       if (resp.stop_reason === 'refusal') {
-        return { texto: TEXTO_PASSAGEM, acoes: [{ tipo: 'passar_para_humano', motivo: 'A IA recusou responder.' }], recusou: true };
+        return { texto: textoPassagem(p.equipe), acoes: [{ tipo: 'passar_para_humano', motivo: 'A IA recusou responder.' }], recusou: true };
       }
 
       if (resp.stop_reason === 'tool_use') {
@@ -216,16 +223,16 @@ export class Agente {
           continue;
         }
         return {
-          texto: escreve ? TEXTO_PASSAGEM : '',
+          texto: escreve ? textoPassagem(p.equipe) : '',
           acoes: [...acoes, ...(escreve ? [{ tipo: 'passar_para_humano' as const, motivo: 'A IA citou um valor que não está no sistema; a equipe confirma o preço.' }] : [])],
           recusou: false,
         };
       }
-      return { texto: texto || TEXTO_PASSAGEM, acoes, recusou: false };
+      return { texto: texto || textoPassagem(p.equipe), acoes, recusou: false };
     }
 
     return {
-      texto: TEXTO_PASSAGEM,
+      texto: textoPassagem(p.equipe),
       acoes: [...acoes, { tipo: 'passar_para_humano', motivo: 'A IA não concluiu a resposta no limite de passos.' }],
       recusou: false,
     };
@@ -233,6 +240,7 @@ export class Agente {
 
   private montarMensagens(p: PedidoAgente, produtos: string | null): Anthropic.Beta.Messages.BetaMessageParam[] {
     const extra: string[] = [contextoDaConversa(p.conversa, p.agora)];
+    if (p.equipe) extra.push(`<equipe>\n${p.equipe.texto}\n</equipe>`);
     if (produtos) extra.push(`<produtos_do_lead>${produtos}</produtos_do_lead>`);
     if (p.tipoAtivo) {
       extra.push(

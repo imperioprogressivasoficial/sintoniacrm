@@ -27,6 +27,9 @@ export const O_QUE_FAZ: Record<FerramentaAgente, string> = {
   lembrete_ligacao: 'Cria lembrete para a equipe ligar (aparece em "Ligar hoje"). Só nos agentes do estúdio.',
 };
 
+/** Ordem na tela: do mais importante ao mais específico. */
+const ORDEM_TELA: FerramentaAgente[] = ['responder', 'consultar_agenda', 'agendar', 'transferir', 'mover_etapa', 'produtos', 'enviar_arquivos', 'tarefas', 'retorno', 'marcar_tag', 'lembrete_ligacao'];
+
 /** Proteções que valem sempre (não dá para desligar). */
 export const PROTECOES = [
   'Para na hora se alguém da equipe assumir a conversa.',
@@ -36,6 +39,8 @@ export const PROTECOES = [
   'Se o WhatsApp cair na hora de enviar, guarda a resposta e reenvia quando voltar.',
   'Limite de uso da IA por conversa por dia, com aviso.',
   'Respostas curtas: no máximo 3 mensagens de cada vez.',
+  'Quem desliga "Disponível para atender" tem as conversas cobertas pela IA; ao voltar, elas são devolvidas.',
+  'Sabe quantas pessoas estão atendendo agora: sem ninguém, não promete "já já".',
 ];
 
 export interface OpcoesEstadoIa {
@@ -125,7 +130,7 @@ export async function estadoIa(o: OpcoesEstadoIa, op: { testarAgenda?: boolean }
   }
 
   // Ferramentas: o agente padrão tem todas; os do estúdio, as que estão marcadas nele.
-  const ferramentas = FERRAMENTAS_AGENTE.map((id) => ({ id, nome: NOME_FERRAMENTA[id], oQueFaz: O_QUE_FAZ[id] }));
+  const ferramentas = ORDEM_TELA.map((id) => ({ id, nome: NOME_FERRAMENTA[id], oQueFaz: O_QUE_FAZ[id] }));
   const padrao = FERRAMENTAS_AGENTE.filter((f) => f !== 'lembrete_ligacao' && (f !== 'marcar_tag' || cfg.marcarTags));
   const doEstudio = agentes.map((a) => ({
     id: a.id,

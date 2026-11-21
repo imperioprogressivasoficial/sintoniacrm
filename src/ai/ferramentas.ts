@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Agendamento, Conversa, Etapa } from '../domain.js';
 import { agendar, agendaDaUnidade, ErroAgendamento, horariosLivres } from '../agenda/agendar.js';
-import { ErroAgenda, type AgendamentoDoSistema, type FonteAgenda, type ServicoAgenda } from '../agenda/sistema.js';
+import { ErroAgenda, ErroIntegracaoPendente, type AgendamentoDoSistema, type FonteAgenda, type ServicoAgenda } from '../agenda/sistema.js';
 import { dataISO, deDataEHora, DIA, horaHHmm } from '../util/tempo.js';
 import { idsUnidades, primeiraUnidade, unidadeDe, unidadesComAgenda, zUnidade } from '../unidades.js';
 import { horaDoSistema } from '../agenda/agenda-externa.js';
@@ -262,7 +262,7 @@ export async function executarFerramenta(
     const r = DA_AGENDA.has(nome) ? await comPrazo(trabalho, ctx.prazoAgendaMs ?? 25_000) : await trabalho;
     if (sessao) anotarPrecosDe(r, sessao.precos);
     if (DA_AGENDA.has(nome) && unidade) anotarAgenda(unidade, true, null, ctx.agora);
-    return { conteudo: typeof r === 'string' ? r : JSON.stringify(r), erro: false };
+    return { conteudo: JSON.stringify(r), erro: false };
   } catch (e) {
     if (e instanceof z.ZodError) {
       return { conteudo: `Parâmetros inválidos: ${e.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`, erro: true };
@@ -278,6 +278,8 @@ export async function executarFerramenta(
       return { conteudo: e.message, erro: true };
     }
     if (e instanceof RecusaFerramenta) return { conteudo: e.message, erro: true };
+    // Integração que ainda depende do fornecedor (Avec/AppBarber): não é "fora do ar", é "ainda não faz".
+    if (e instanceof ErroIntegracaoPendente) return { conteudo: e.message, erro: true };
     const msg = e instanceof Error ? e.message : String(e);
     if (DA_AGENDA.has(nome)) {
       if (unidade) anotarAgenda(unidade, false, msg, ctx.agora);

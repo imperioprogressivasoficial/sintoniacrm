@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ClienteClaude, PedidoAgente, RespostaAgente } from '../ai/agente.js';
-import { conferirPrecos, TEXTO_PASSAGEM, ultimasDaCliente } from '../ai/agente.js';
+import { conferirPrecos, TEXTO_PASSAGEM, textoPassagem, ultimasDaCliente } from '../ai/agente.js';
 import {
   type AcaoAgente,
   type Agenda,
@@ -160,7 +160,7 @@ export class ExecutorAgentes {
     if (escreve && !p.tipoAtivo && permitidas.has('passar_para_humano') && ultima && this.esperandoResposta(p.mensagens)) {
       const pass = conferirPassagem(ultimasDaCliente(p.mensagens) || ultima.texto, cfg.passagem);
       if (pass.passar) {
-        res.texto = TEXTO_PASSAGEM;
+        res.texto = textoPassagem(p.equipe);
         res.acoes.push({ tipo: 'passar_para_humano', motivo: pass.motivo! });
         res.passagemDireta = pass.motivo;
         res.ferramentas.push({ nome: 'passar_para_humano', entrada: { motivo: pass.motivo }, ok: true, resultado: 'Condição de passagem do agente.' });
@@ -324,6 +324,7 @@ export class ExecutorAgentes {
 
   private montarMensagens(p: PedidoAgente, memoria: string, simulacao: boolean): Anthropic.Beta.Messages.BetaMessageParam[] {
     const extra: string[] = [contextoDaConversa(p.conversa, p.agora)];
+    if (p.equipe) extra.push(`<equipe>\n${p.equipe.texto}\n</equipe>`);
     if (memoria) extra.push(memoria);
     if (p.tipoAtivo) {
       extra.push(`<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`);

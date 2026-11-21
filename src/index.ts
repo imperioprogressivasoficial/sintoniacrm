@@ -13,6 +13,7 @@ import { ArmazemTarefasIaMemoria, ArmazemTarefasIaPostgres, montarCrmIa } from '
 import { GuardaCusto } from './ai/guarda.js';
 import { registrarEstadoIa } from './ai/estado-ia.js';
 import { PercepcaoIa } from './app/percepcao.js';
+import { ArmazemCoberturaMemoria, ArmazemCoberturaPostgres, CoberturaIa } from './presenca/cobertura.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
 import { ArmazemMemoria, ArmazemPostgres, Conexoes } from './conexoes/conexoes.js';
@@ -581,6 +582,7 @@ const sintonia = new Sintonia({
   percepcao: new PercepcaoIa({ repo, transcricoes, transcritor, transcricaoLigada, log }),
   crmIa,
   guardaCusto,
+  equipeAgora: (c) => cobertura.equipeAgora(c),
   rastreio,
   ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -627,6 +629,25 @@ const rodizio = new Rodizio({
   log,
 });
 observarEventos(repo, (e) => rodizio.aoEvento(e));
+
+/* ia-completa: a IA cobre quem saiu do ar (fim do turno, almoço) e sabe quantas pessoas estão atendendo agora. */
+const cobertura = new CoberturaIa({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemCoberturaPostgres(pool) : new ArmazemCoberturaMemoria(),
+  repo,
+  contas,
+  presencas,
+  comConversa: (id, fn) => sintonia.comConversa(id, fn),
+  temIa: async (c) => !sintonia.iaPausadaAte() && (await agentesIa.temIaPara(c)),
+  reavaliar: (id) => sintonia.reavaliar(id),
+  podeAtender: async (u) => {
+    if (!acessosRodizio) return resolverPermissoes(u.papel).responder;
+    const [perfis, extras] = await Promise.all([acessosRodizio.perfis(u.empresaId), acessosRodizio.extras(u.id)]);
+    return resolverPermissoes(u.papel, perfis[u.papel], extras.ajustes).responder;
+  },
+  finalizadas: (ids) => armazemNps.ultimasFinalizacoes(ids),
+  log,
+});
 
 /* grupos: Conversas de grupo (grupos do WhatsApp pela API não oficial), em tabelas próprias. */
 const armazemGrupos = pool ? new ArmazemGruposPostgres(pool) : new ArmazemGruposMemoria();
@@ -827,6 +848,8 @@ const app = criarServidor({
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
   ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
   presencas,
+  /* ia-completa: "Disponível" desligado = a IA cobre as conversas da pessoa; ligado de novo = devolve. */
+  aoMudarPresenca: (u, status) => cobertura.aoMudar(u, status),
   gestao: {
     tags,
     empresa,
