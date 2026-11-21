@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 13h05 (Bahia):** no ar ce257bb. Rodando: contato-nome, sem-pagamento (App Store: tira pagamentos, cadastro só por convite, privacidade/termos/excluir conta; falta o WhatsApp do dono), banco-seguranca (migrações 630+), pesquisa Evolution, n8n-sintonia.
 - **21/11 12h48 (Bahia):** no ar 38cbd6f — Grupos/Equipe com o topo de Conversas (topo-lista.js). Rodando: agente contato-nome (nome do WhatsApp + número +55 (71) 9xxxx-xxxx; worktree /home/user/wt-contato-nome) e n8n-sintonia.
 - **21/11 12h22 (Bahia):** no ar 5eb7335 — + arrastar de lado troca de aba (celular) e ia-completa (migração 610: IA cobre quem desliga o Disponível; ferramentas remarcar/cancelar/mover em qualquer pipeline/produtos/tarefa/retorno/arquivo; ouve áudio e vê foto). Rodando: n8n-sintonia. Aguardando o dono: modelo de Configurações no celular (1–5) e dos contadores sem brilho (1–4).
 - **21/11 11h50 (Bahia):** no ar 0a846e8 — chave Disponível pequena ao lado do nome (Configurações no celular). Rodando: agentes ia-completa (600) e n8n-sintonia. Próximo: IA assume as conversas de quem está Indisponível e sabe quantos estão atendendo.
