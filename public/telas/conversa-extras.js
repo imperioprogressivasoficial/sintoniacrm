@@ -369,6 +369,58 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   };
   const opcao = (classe, ic, titulo, sub, onclick, extra = {}) => el('button', { type: 'button', class: `cx-op ${classe}`, onclick, ...extra }, el('i', { html: ic }), el('span', {}, el('b', { text: titulo }), sub ? el('small', { text: sub, class: extra.subClasse || '' }) : null));
 
+  /* ia2 (modelo 2 escolhido pelo dono em 21/11): folha "Atendimento e IA" em blocos como os Ajustes do iPhone,
+     ícones novos (traço 1.8, uma cor), linhas baixas com setinha e o atalho "Mover de etapa" dentro da conversa. */
+  const I2 = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const IC2 = {
+    ia: I2('<path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.7Z"/><path d="M18.5 15.5l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6Z"/>'),
+    eu: I2('<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>'),
+    mover: I2('<rect x="3" y="5" width="5" height="14" rx="1.5"/><rect x="10" y="5" width="5" height="9" rx="1.5"/><path d="M17.5 9.5h3.5M19.5 7.5l2 2-2 2"/>'),
+    transferir: I2('<path d="M7 7h12l-3-3M17 17H5l3 3"/>'),
+    agendar: I2('<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16M12 13v4M10 15h4"/>'),
+    finalizar: I2('<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.2 2.4 2.4 4.6-4.8"/>'),
+    bot: I2('<rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V5M9.5 13h.01M14.5 13h.01M10 16.5h4"/>'),
+    tarefa: I2('<rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V3.5h6v1"/><path d="m9 12.5 2 2 4-4"/>'),
+    sugerir: I2('<path d="M4 18.5V7a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 7v7a2.5 2.5 0 0 1-2.5 2.5H8Z"/><path d="M12 8l.8 2.2 2.2.8-2.2.8L12 14l-.8-2.2-2.2-.8 2.2-.8Z"/>'),
+    melhorar: I2('<path d="M14.5 5.5l4 4L9 19H5v-4Z"/><path d="M12.5 7.5l4 4"/>'),
+    resumir: I2('<path d="M5 6h14M5 10h14M5 14h9M5 18h6"/>'),
+    proximo: I2('<path d="M5 12h13M13 6.5l5.5 5.5-5.5 5.5"/>'),
+    explicar_audio: I2('<rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V20.5"/>'),
+    auto: I2('<path d="M12 3.5l1.7 4.8 4.8 1.7-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.7Z"/>'),
+    pronta: I2('<path d="M4 18.5V7a2.5 2.5 0 0 1 2.5-2.5h11A2.5 2.5 0 0 1 20 7v7a2.5 2.5 0 0 1-2.5 2.5H8Z"/><path d="m9 10.5 2 2 4-4"/>'),
+  };
+  if (!document.getElementById('ia2-css')) document.head.append(Object.assign(document.createElement('style'), { id: 'ia2-css', textContent: `
+  .ia2 { --ia2-fundo: #f2f5f9; --ia2-ilha: #ffffff; --ia2-ic: #106ebe; --ia2-icf: #e8f1fb; --ia2-linha: rgba(13,34,64,.08); background: var(--ia2-fundo); padding: 4px 14px 22px !important; }
+  html[data-tema="escuro"] .ia2 { --ia2-fundo: #071427; --ia2-ilha: #0e2240; --ia2-ic: #7cc4ff; --ia2-icf: rgba(124,196,255,.12); --ia2-linha: rgba(233,243,255,.08); }
+  .ia2 .cx-secao { margin: 16px 4px 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--sub); }
+  .ia2 .folha-lista, .ia2-ilha { background: var(--ia2-ilha); border-radius: 16px; overflow: hidden; border: 0 !important; box-shadow: none !important; padding: 0 !important; gap: 0 !important; }
+  .ia2 .cx-op { display: flex !important; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 7px 14px !important; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; }
+  .ia2 .cx-op + .cx-op { border-top: 1px solid var(--ia2-linha) !important; }
+  .ia2 .cx-op > i { width: 30px !important; height: 30px !important; border-radius: 9px !important; background: var(--ia2-icf) !important; color: var(--ia2-ic) !important; box-shadow: none !important; }
+  .ia2 .cx-op > i svg { width: 18px !important; height: 18px !important; }
+  .ia2 .cx-op > span { flex: 1; min-width: 0; }
+  .ia2 .cx-op b { font-size: 14.5px !important; font-weight: 500 !important; }
+  .ia2 .cx-op small { font-size: 12px !important; line-height: 16px !important; }
+  .ia2 .cx-op:not([role="switch"])::after { content: ""; width: 7px; height: 7px; flex: none; border-right: 1.8px solid var(--sub); border-bottom: 1.8px solid var(--sub); transform: rotate(-45deg); margin-right: 4px; opacity: .7; }
+  .ia2 .cx-op[aria-disabled="true"] { opacity: .5; }
+  .ia2 .cx-op:active { background: var(--ia2-linha) !important; }
+  .ia2-resp { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .ia2-av { width: 38px !important; height: 38px !important; min-width: 38px; max-width: 38px; border-radius: 50%; flex: 0 0 38px !important; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; background: linear-gradient(135deg,#106ebe,#3aa0ff); box-shadow: 0 0 0 2px var(--ia2-ilha), 0 0 0 3.5px #0ffcbe; overflow: hidden; }
+  .ia2-av img { width: 38px !important; height: 38px !important; object-fit: cover; border-radius: 50%; }
+  .ia2-resp > span { flex: 1; min-width: 0; display: grid; }
+  .ia2-resp small { font-size: 11.5px; color: var(--sub); } .ia2-resp b { font-size: 15px; font-weight: 600; }
+  .ia2-resp em { font-style: normal; font-size: 12px; color: var(--sub); }
+  .ia2-bt { padding: 8px 14px; border-radius: 999px; border: 0; font: 600 13px var(--fonte, inherit); background: #0d2240; color: #fff; cursor: pointer; }
+  html[data-tema="escuro"] .ia2-bt { background: #e9f3ff; color: #0d2240; }
+  .ia2-seg { display: grid; grid-template-columns: 1fr 1fr; margin: 0 14px 14px; padding: 4px; border-radius: 13px; background: var(--ia2-fundo); box-shadow: inset 0 0 0 1px var(--ia2-linha); }
+  .ia2-seg button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 0; border-radius: 10px; background: none; font: 600 13.5px var(--fonte, inherit); color: var(--sub); cursor: pointer; }
+  .ia2-seg button svg { width: 18px; height: 18px; }
+  .ia2-seg button[aria-pressed="true"] { background: var(--ia2-ilha); color: var(--texto); box-shadow: 0 1px 3px rgba(13,34,64,.16); }
+  .ia2-seg button[aria-pressed="true"] svg { color: var(--ia2-ic); }
+  .ia2-seg button[aria-disabled="true"] { opacity: .5; }
+  .ia2 .cx-aviso { margin: 14px 2px 0; }
+  ` }));
+
   /** Folha única do chip "quem atende": seção Quem atende + seção Ajuda para escrever. */
   function abrirMenuIa() {
     const c = conversa(); if (!c) return;
@@ -379,60 +431,67 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const minha = c.responsavelId && c.responsavelId === eu.id;
     const { d, corpo } = folha('d-ia', 'Atendimento e IA');
 
-    // ---- quem atende
-    const quem = c.modo === 'ia' ? 'Atendida pela IA' : minha ? 'Atendida por você' : c.responsavelId ? `Atendida por ${c.responsavelNome || 'outra pessoa'}` : 'Sem responsável'; /* conversa-ux */
-    const detalhe = c.modo === 'ia'
-      ? (c.responsavelId ? `A IA responde sozinha · responsável: ${minha ? 'você' : c.responsavelNome || 'outra pessoa'}` : 'A IA responde e agenda sozinha')
-      : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
-    const status = el('div', { class: 'cx-status' + (c.modo === 'ia' ? ' ia' : ''), role: 'status' }, el('i'), el('span', {}, el('b', { text: quem }), el('small', { text: detalhe })));
+    // ---- quem atende (ia2: responsável + "IA atende | Eu atendo" num bloco só)
     const fechar = () => d.close();
+    const jaEu = minha && c.modo !== 'ia';
+    const bloqueado = !minha && c.responsavelId && !perm.assumir;
+    const nomeResp = minha ? 'Você' : c.responsavelId ? (c.responsavelNome || 'Outra pessoa') : 'Sem responsável';
+    const iniciais = (nomeResp === 'Você' ? (eu.nome || 'Eu') : nomeResp).split(/\s+/).filter(Boolean).map((x) => x[0]).slice(0, 2).join('').toUpperCase() || '·';
+    const av = el('span', { class: 'ia2-av', text: c.responsavelId ? iniciais : '—' });
+    if (c.responsavelId && window.SintoniaFotos?.url?.(c.responsavelId)) { const im = el('img', { alt: '', src: window.SintoniaFotos.url(c.responsavelId), decoding: 'async' }); im.onerror = () => im.remove(); av.replaceChildren(im); }
+    const explicacao = c.modo === 'ia' ? 'A IA responde e agenda sozinha' : c.responsavelId ? (c.modo === 'copiloto' ? 'A IA só sugere; a pessoa envia' : 'Sem ajuda automática da IA') : 'Quem responder primeiro fica com ela';
+    const assumir = async () => {
+      if (jaEu) { fechar(); return; }
+      if (bloqueado) { toast('Esta conversa já tem responsável. Peça para a gerente transferir para você.'); return; }
+      fechar();
+      if (!minha && perm.assumir && !(await ui.assumirConversa())) return;
+      if (c.modo === 'ia') await ui.mudarModo('copiloto');
+      else if (minha) toast('A conversa é sua.');
+    };
+    const botaoResp = minha ? null : perm.transferir && c.responsavelId ? el('button', { type: 'button', class: 'ia2-bt', text: 'Transferir', onclick: () => { fechar(); ui.abrirTransferir(); } })
+      : !bloqueado ? el('button', { type: 'button', class: 'ia2-bt', text: 'Assumir', onclick: assumir }) : null;
+    const seg = el('div', { class: 'ia2-seg', role: 'group', 'aria-label': 'Quem responde' },
+      el('button', { type: 'button', 'aria-pressed': String(c.modo === 'ia'), html: IC2.ia + '<span>IA atende</span>', onclick: async () => { if (c.modo === 'ia') { fechar(); return; } fechar(); await ui.mudarModo('ia'); toast('A IA está atendendo esta conversa.'); } }),
+      el('button', { type: 'button', 'aria-pressed': String(jaEu), 'aria-disabled': String(Boolean(bloqueado)), html: IC2.eu + '<span>Eu atendo</span>', onclick: assumir }));
+    const blocoQuem = el('div', { class: 'ia2-ilha' },
+      el('div', { class: 'ia2-resp', role: 'status' }, av, el('span', {}, el('small', { text: 'Responsável' }), el('b', { text: nomeResp }), el('em', { text: explicacao })), botaoResp), seg);
+
+    // ---- ações (Mover de etapa primeiro: o atalho de mover dentro da conversa)
+    const etapaAtual = det.conversa?.etapaNome || ui.NOME_ETAPA?.[det.conversa?.etapa] || '';
     const quemLista = el('div', { class: 'folha-lista' },
-      opcao('ia', SVG_ATENDE.ia, 'IA atende', c.modo === 'ia' ? 'A IA já está atendendo' : 'A IA responde, tira dúvidas e agenda sozinha', async () => {
-        if (c.modo === 'ia') { fechar(); return; }
-        fechar(); await ui.mudarModo('ia'); toast('A IA está atendendo esta conversa.');
-      }, { 'aria-pressed': String(c.modo === 'ia') }),
-      (() => {
-        const jaEu = minha && c.modo !== 'ia';
-        const bloqueado = !minha && c.responsavelId && !perm.assumir;
-        return opcao('pessoa', SVG_ATENDE.eu, 'Eu assumo', jaEu ? 'Você já atende esta conversa' : bloqueado ? 'Já tem responsável: peça para a gerente transferir para você' : 'Você responde; a IA para de enviar e só sugere', async () => {
-          if (jaEu) { fechar(); return; }
-          if (bloqueado) { toast('Esta conversa já tem responsável. Peça para a gerente transferir para você.'); return; }
-          fechar();
-          if (!minha && perm.assumir && !(await ui.assumirConversa())) return;
-          if (c.modo === 'ia') await ui.mudarModo('copiloto');
-          else if (minha) toast('A conversa é sua.');
-        }, { 'aria-pressed': String(jaEu), 'aria-disabled': String(Boolean(bloqueado)) });
-      })(),
-      perm.transferir ? opcao('neutra', SVG_ATENDE.transferir, 'Transferir conversa', 'Passar para outra pessoa da equipe', () => { fechar(); ui.abrirTransferir(); }) : null,
+      opcao('neutra', IC2.mover, 'Mover de etapa', etapaAtual ? `Agora: ${etapaAtual}` : 'Etapa do funil e etiquetas', () => { fechar(); const g = window.SintoniaTelas?.conversasGestos; setTimeout(() => (g?.fazer ? g.fazer('mover', c.id) : ui.abrirCrmRapido()), 60); }),
+      perm.transferir ? opcao('neutra', IC2.transferir, 'Transferir conversa', 'Passar para outra pessoa da equipe', () => { fechar(); ui.abrirTransferir(); }) : null,
+      ui.abrirAgendar ? opcao('neutra', IC2.agendar, 'Agendar horário', 'Marcar na agenda da unidade', () => { fechar(); setTimeout(() => ui.abrirAgendar(), 60); }) : null,
       // nps-posvenda: encerra o atendimento (motivo) e, se ligado, manda a pesquisa de satisfação.
-      window.SintoniaTelas?.nps?.finalizarNaConversa ? opcao('neutra', SVG_ATENDE.finalizar, 'Finalizar atendimento', 'Registra o motivo e manda a pesquisa de satisfação', () => { fechar(); window.SintoniaTelas.nps.finalizarNaConversa(c.id, ui); }) : null,
-      window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', SVG_ATENDE.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null,
+      window.SintoniaTelas?.nps?.finalizarNaConversa ? opcao('neutra', IC2.finalizar, 'Finalizar atendimento', 'Motivo e pesquisa de satisfação', () => { fechar(); window.SintoniaTelas.nps.finalizarNaConversa(c.id, ui); }) : null,
+      window.SintoniaTelas?.bot?.iniciarNaConversa ? opcao('neutra', IC2.bot, 'Iniciar bot', 'Um fluxo pronto conduz a conversa', () => { fechar(); window.SintoniaTelas.bot.iniciarNaConversa(c.id); }) : null,
       // rotina: criar tarefa ligada a esta conversa (public/telas/rotina.js)
-      window.SintoniaTelas?.rotina?.novaTarefa ? opcao('neutra', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>', 'Criar tarefa', 'Lembrete com prazo ligado a esta conversa', () => { fechar(); window.SintoniaTelas.rotina.novaTarefa({ conversaId: c.id }); }) : null);
+      window.SintoniaTelas?.rotina?.novaTarefa ? opcao('neutra', IC2.tarefa, 'Criar tarefa', 'Lembrete com prazo ligado a esta conversa', () => { fechar(); window.SintoniaTelas.rotina.novaTarefa({ conversaId: c.id }); }) : null);
 
     // ---- ajuda para escrever
     const temAudio = (det.mensagens || []).some((m) => m.autor === 'cliente' && m.anexo?.tipo === 'audio');
     const temTexto = campo.value.trim().length > 0;
     const pronta = det.sugestao && c.modo !== 'humano' ? det.sugestao : null;
     const ajuda = el('div', { class: 'folha-lista' },
-      pronta ? opcao('ia', SVG_ATENDE.sugestao, 'Usar sugestão pronta', pronta, () => { fechar(); ui.usarTexto(pronta); }, { subClasse: 'cx-sug-txt' }) : null,
+      pronta ? opcao('ia', IC2.pronta, 'Usar sugestão pronta', pronta, () => { fechar(); ui.usarTexto(pronta); }, { subClasse: 'cx-sug-txt' }) : null,
       ...OPCOES_IA.filter((o) => o.acao !== 'explicar_audio' || temAudio).map((o) => {
         const sub = o.acao === 'melhorar' && !temTexto ? 'Escreva algo no campo primeiro' : o.sub;
-        return opcao('ia', o.ic, o.titulo, sub, () => {
+        return opcao('ia', IC2[o.acao] || o.ic, o.titulo, sub, () => {
           if (o.acao === 'melhorar' && !campo.value.trim()) { toast('Escreva sua mensagem no campo; a IA melhora o que estiver lá.'); fechar(); campo.focus(); return; }
           pedirIa(o.acao, o.titulo);
         }, { 'aria-disabled': String(o.acao === 'melhorar' && !temTexto) });
       }),
       c.modo !== 'ia' ? (() => {
         const ligadas = c.modo === 'copiloto';
-        const b = opcao('neutra', SVG.brilho, 'Sugestões automáticas', ligadas ? 'A IA deixa uma resposta pronta acima do campo' : 'Desligadas: a IA não sugere sozinha', async () => {
+        const b = opcao('neutra', IC2.auto, 'Sugestões automáticas', ligadas ? 'A IA deixa uma resposta pronta acima do campo' : 'Desligadas: a IA não sugere sozinha', async () => {
           fechar(); await ui.mudarModo(ligadas ? 'humano' : 'copiloto'); toast(ligadas ? 'Sugestões automáticas desligadas.' : 'Sugestões automáticas ligadas.');
         }, { role: 'switch', 'aria-checked': String(ligadas) });
         b.append(el('span', { class: 'cx-chave' + (ligadas ? ' ligada' : ''), 'aria-hidden': 'true' }));
         return b;
       })() : null);
 
-    corpo.replaceChildren(el('div', { class: 'cx-secao', text: 'Quem atende' }), status, quemLista, el('div', { class: 'cx-secao', text: 'Ajuda para escrever' }), ajuda);
+    corpo.classList.add('ia2');
+    corpo.replaceChildren(el('div', { class: 'cx-secao', text: 'Quem atende' }), blocoQuem, el('div', { class: 'cx-secao', text: 'Ações' }), quemLista, el('div', { class: 'cx-secao', text: 'Ajuda da IA' }), ajuda);
     { const extra = window.SintoniaConversaExtra?.secaoMenu?.(c, fechar); if (extra) corpo.append(...extra.filter(Boolean)); } /* conversa-extra: silenciar, arquivar, papel de parede */
     if (!recursos.ia && !estado.situacao?.iaLigada) corpo.append(el('p', { class: 'cx-aviso' }, document.createTextNode('A IA ainda está desligada: falta configurar a chave da IA (Anthropic) em Conexões. '), linkConexoes()));
     abrirFolha(d);
