@@ -229,3 +229,73 @@ html[data-tema="escuro"] :focus-visible { outline-color: var(--marca-menta); }
   .nt-painel .nt-cab .nt-botao { min-height: 44px; }
   .nt-painel .nt-cab h2 { font-size: 21px; font-weight: 700; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 }
+
+/* brilho-cortado: nenhum brilho/sombra cortado em linha reta.
+   Faixas que rolam de lado (overflow) cortam a sombra de quem está dentro. Regra: a faixa ganha uns px de
+   "folga" (padding) com a mesma margem negativa, então nada sai do lugar e o brilho cabe inteiro.
+   Onde a faixa é um trilho com fundo próprio (padding fixo), a sombra do item ativo ficou um pouco mais curta.
+   O :root na frente ganha das regras que cada tela injeta depois (mesma especificidade). */
+
+/* Conversas: Todas | Não lidas | Esperando | IA atendendo */
+:root .filtros { padding: 6px 8px 10px; margin: -6px -8px -4px; scroll-padding: 0 20px; }
+:root .filtros .chip[aria-pressed="true"] { box-shadow: 0 3px 10px rgba(16,110,190,.26); }
+@media (max-width: 760px) {
+  :root .filtros { padding: 6px 8px 10px; margin: -4px -8px -4px; gap: 7px; }
+  /* chips um pouco menores no celular (40px → 34px), mesma proporção */
+  :root .filtros .chip, :root .filtros .chip-nova { min-height: 34px; height: 34px; }
+  :root #filtros .chip { padding: 0 11px; font-size: 13px; gap: 5px; }
+  :root #filtros .chip .qtd { font-size: 12px; }
+  :root #filtros .chip-radar svg.rd { width: 15px; height: 15px; }
+}
+
+/* Rotina: abas Hoje | Atrasadas | ... */
+:root .rt-abas { padding: 6px 8px 12px; margin: -6px -8px -12px; }
+:root .rt-aba[aria-selected="true"] { box-shadow: 0 4px 12px rgba(16,110,190,.25); }
+
+/* Automações: pílulas de filtro */
+:root .au-filtros { padding: 6px 8px 12px; margin: -4px -6px -10px; }
+
+/* fileiras de números (círculos com brilho) em Transmissões, E-mail, Relatórios e Automações */
+:root .tx-numeros, :root .em-numeros, :root .au-numeros { padding-top: 8px; padding-bottom: 18px; margin-top: -6px; margin-bottom: -16px; }
+:root .au-numeros { padding-left: 8px; padding-right: 8px; margin-left: -6px; margin-right: -6px; }
+@media (min-width: 761px) {
+  :root .tx-numeros, :root .em-numeros, :root .rl-numeros { padding: 8px 8px 18px; margin: -6px -6px -16px; }
+}
+
+/* trilhos com fundo próprio (Clientes, Análises, Relatórios, Desempenho, Agentes de IA, Pipeline):
+   a sombra do item ativo cabe nos 4px do trilho */
+:root .ct-abas button[aria-selected="true"],
+:root .rl-trilho button[aria-pressed="true"],
+:root .dp-trilho button[aria-pressed="true"] { box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+:root .agx-trilho button[aria-selected="true"],
+:root #funil-abas .chip[aria-pressed="true"], :root .fn-trilho .fn-pilula[aria-pressed="true"] { box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 1px 5px rgba(16,110,190,.14); }
+html[data-tema="escuro"]:root #funil-abas .chip[aria-pressed="true"], html[data-tema="escuro"]:root .fn-trilho .fn-pilula[aria-pressed="true"],
+html[data-tema="escuro"]:root .agx-trilho button[aria-selected="true"] { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 1px 5px rgba(0,0,0,.3); }
+
+/* chips e abas menores no celular, iguais no app todo (34px, letra 13px) */
+@media (max-width: 760px) {
+  :root .rt-aba { padding: 7px 12px; font-size: 13px; }
+  :root .ct-abas button { padding: 7px 8px; font-size: 13px; }
+  :root .rl-trilho button, :root .dp-trilho button, :root .agx-trilho button { padding: 6px 13px; font-size: 13px; }
+  :root #automacoes .au-pilula { min-height: 34px; height: 34px; padding: 0 13px; font-size: 13px; }
+}
+
+/* menu lateral (computador): o item ativo dos submenus não corta à direita nem embaixo */
+:root .lt-filhos-in { padding-right: 10px; margin-right: -10px; }
+:root .lt-grupo.aberto .lt-filhos-in { padding-top: 8px; padding-bottom: 14px; margin-top: -6px; margin-bottom: -8px; }
+:root .lt-filhos-in .lt-item[aria-current="page"] { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marca-azul) 55%, var(--vidro-borda)), 0 4px 14px rgba(16,110,190,.16); }
+html[data-tema="escuro"]:root .lt-filhos-in .lt-item[aria-current="page"] { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 6px 18px rgba(0,0,0,.32); }
+/* selo Online/Offline na foto do rodapé do menu */
+:root #lt-eu .pres-pilula { box-shadow: 0 0 0 2px var(--fundo), 0 1px 3px rgba(8,36,63,.18); }
+
+/* Serena: bolinha "ao vivo" no título */
+:root .srn-titulo small { padding: 3px 0 3px 4px; margin: -3px 0 -3px -4px; }
+/* Agentes de IA: bolinha acesa do modo */
+:root .iax-modo b { padding: 4px 0 4px 8px; margin: -4px 0 -4px -8px; }
+
+/* Conversa: botão do microfone/enviar, colado no fim da tela */
+html:root #chat-aberto #enviar.falar, html:root #chat-aberto #grav-enviar.falar { box-shadow: 0 2px 8px rgba(16,110,190,.28); }
+html[data-tema="escuro"]:root #chat-aberto #enviar.falar, html[data-tema="escuro"]:root #chat-aberto #grav-enviar.falar { box-shadow: 0 2px 9px rgba(58,160,255,.25); }
+
+/* Pipeline em colunas (computador, claro): a sombra das colunas cabe na moldura do quadro */
+html:not([data-tema="escuro"]):root #v-funil .fn-quadro .fn-col:not(.fn-alvo) { box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 18px rgba(16,110,190,.1); }
