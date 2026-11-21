@@ -245,7 +245,11 @@ export class RepositorioPostgres implements Repositorio {
       `insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa)
        select m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12::timestamptz, '-infinity')
          from sintonia.mensagens m where m.id_externo = $2 and m.conversa_id = $1
-       on conflict (mensagem_id) do nothing
+       on conflict (mensagem_id) do update
+         -- Já existia e falhou (ex.: antes não havia a mensagem completa): com a referência nova, tenta de novo do zero.
+         set ref_canal = excluded.ref_canal, situacao = 'pendente', tentativas = 0, erro = null, proxima_tentativa = excluded.proxima_tentativa
+         where sintonia.midias.situacao in ('falhou', 'pendente') and excluded.ref_canal is not null
+           and sintonia.midias.ref_canal is distinct from excluded.ref_canal
        returning mensagem_id`,
       [conversaId, idExterno, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, o.ref ?? null, o.proxima ?? null],
     );

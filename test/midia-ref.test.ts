@@ -32,7 +32,8 @@ describe('mídia da Evolution com a mensagem completa', () => {
   it('baixa mandando a mensagem completa; se falhar, tenta pelo id', async () => {
     const pedidos: unknown[] = [];
     let primeira = true;
-    const fetchFn = (async (_url: string, init: RequestInit) => {
+    const fetchFn = (async (url: string, init: RequestInit) => {
+      if (String(url).includes('whatsapp.net')) return new Response('x', { status: 404 });
       pedidos.push(JSON.parse(String(init.body)));
       if (primeira) { primeira = false; return new Response('{"message":"erro"}', { status: 400 }); }
       return new Response(JSON.stringify({ base64: Buffer.from('arquivo').toString('base64'), mimetype: 'image/jpeg' }), { status: 200 });
@@ -47,7 +48,7 @@ describe('mídia da Evolution com a mensagem completa', () => {
 
   it('com a mensagem completa dá certo de primeira', async () => {
     const pedidos: unknown[] = [];
-    const fetchFn = (async (_url: string, init: RequestInit) => { pedidos.push(JSON.parse(String(init.body))); return new Response(JSON.stringify({ base64: Buffer.from('x').toString('base64') }), { status: 200 }); }) as unknown as typeof fetch;
+    const fetchFn = (async (url: string, init: RequestInit) => { if (String(url).includes('whatsapp.net')) return new Response('x', { status: 404 }); pedidos.push(JSON.parse(String(init.body))); return new Response(JSON.stringify({ base64: Buffer.from('x').toString('base64') }), { status: 200 }); }) as unknown as typeof fetch;
     const canal = new CanalEvolution('http://evo', 'k', fetchFn, async () => {});
     const [m] = lerWebhookEvolution(corpo);
     await canal.baixarMidia('sintonia-1', 'ABC123', m!.anexo!.ref);

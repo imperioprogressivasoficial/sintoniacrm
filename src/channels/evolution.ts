@@ -4,6 +4,7 @@ import type { TipoAnexo } from '../domain.js';
 import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, tamanhoBase64, textoDoAnexo } from '../midia.js';
 import { telefoneDoJid } from '../util/telefone.js';
 import { referenciaDaEvolution } from '../rastreio/referencia.js';
+import { baixarDoWhatsApp } from './whatsapp-cdn.js';
 
 /**
  * Evolution API (v2), a que já roda no VPS da Império (fluxo "Serena" no n8n).
@@ -384,9 +385,19 @@ export class CanalEvolution implements CanalWhatsApp {
     // Com a mensagem completa (ref), a Evolution baixa direto do WhatsApp; sem ela, procura pelo id no banco dela.
     let completa: unknown;
     if (ref && ref.startsWith('{')) { try { const r = JSON.parse(ref) as { key?: unknown; message?: unknown }; if (r.key && r.message) completa = r; } catch { /* ref antiga */ } }
+    // 1º: direto do servidor de mídia do WhatsApp (endereço + chave que vêm na própria mensagem), sem a Evolution.
+    const erros: string[] = [];
+    if (completa) {
+      try {
+        const r = await baixarDoWhatsApp((completa as { message: unknown }).message, { limite: LIMITE_MIDIA, fetchFn: this.fetchFn });
+        return { conteudo: r.conteudo, mimetype: r.mimetype, nomeArquivo: r.nomeArquivo };
+      } catch (e) { if (String(e).includes('grande demais')) throw new ErroMidiaGrande(LIMITE_MIDIA + 1); erros.push(`direto: ${e instanceof Error ? e.message : String(e)}`); }
+    }
+    // 2º: a Evolution com a mensagem completa; 3º: a Evolution pelo id (só funciona se ela guardou a mensagem).
     let resp = completa ? await this.postar('chat/getBase64FromMediaMessage', instancia, { message: completa, convertToMp4: false }, 60_000) : null;
+    if (resp && !resp.ok) erros.push(`evolution completa: ${resp.status} ${(await resp.text()).slice(0, 160)}`);
     if (!resp || !resp.ok) resp = await this.postar('chat/getBase64FromMediaMessage', instancia, { message: { key: { id: idExterno } }, convertToMp4: false }, 60_000);
-    if (!resp.ok) throw new Error(`Evolution não entregou a mídia (${resp.status}): ${(await resp.text()).slice(0, 300)}`);
+    if (!resp.ok) throw new Error(`Evolution não entregou a mídia (${resp.status}): ${(await resp.text()).slice(0, 200)}${erros.length ? ' | ' + erros.join(' | ') : completa ? '' : ' | sem a mensagem completa guardada'}`);
     const j = (await resp.json()) as { base64?: string; mimetype?: string; fileName?: string };
     if (!j.base64) throw new Error('Evolution respondeu sem o arquivo');
     if (tamanhoBase64(j.base64) > LIMITE_MIDIA) throw new ErroMidiaGrande(tamanhoBase64(j.base64));

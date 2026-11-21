@@ -311,7 +311,15 @@ export class RepositorioMemoria implements Repositorio {
 
   async completarMidia(conversaId: string, idExterno: string, anexo: Anexo, o: { ref?: string; proxima?: Date } = {}) {
     const m = this.msgs.find((x) => x.idExterno === idExterno && x.conversaId === conversaId);
-    if (!m || this.midias.has(m.id)) return undefined;
+    if (!m) return undefined;
+    const ja = this.midias.get(m.id);
+    if (ja) {
+      // Falhou antes e agora veio a mensagem completa: tenta de novo do zero (igual ao Postgres).
+      if (!o.ref || ja.ref === o.ref || (ja.anexo.situacao !== 'falhou' && ja.anexo.situacao !== 'pendente')) return undefined;
+      Object.assign(ja, { ref: o.ref, tentativas: 0, proxima: o.proxima?.getTime() ?? 0 });
+      ja.anexo = { ...ja.anexo, situacao: 'pendente' };
+      return m.id;
+    }
     this.midias.set(m.id, { conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: o.proxima?.getTime() ?? 0, ref: o.ref });
     return m.id;
   }
