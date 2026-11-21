@@ -1350,7 +1350,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       <div class="chat" id="chat">
         <div class="sem-conversa" id="sem-conversa"><div>
           <picture><source srcset="/logo-escuro.png" media="(prefers-color-scheme: dark)"><img src="/logo.png" alt="Sintonia" width="220" loading="lazy" decoding="async"></picture><!-- fluidez2: só baixa no computador (no celular fica escondida) -->
-          <p>Escolha uma conversa para começar. A IA lê cada mensagem e deixa uma sugestão de resposta logo acima da caixa de texto.</p>
+          <p>Escolha uma conversa para começar. A IA lê cada mensagem e deixa uma sugestão de resposta no fim da conversa, pronta para enviar.</p>
         </div></div>
         <div id="chat-aberto" style="display:none">
           <header class="chat-topo">
@@ -2255,9 +2255,11 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     }
     if (!mensagens.length) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
     window.SintoniaAgendadas?.noFim?.(caixa, c); /* msg-agendada: "Agendada para…" no fim */
+    /* balao-fantasma: a sugestão da IA vira o último balão (tracejado) da conversa; a faixa antiga só sem o arquivo */
+    const fantasma = window.SintoniaBalaoFantasma?.noFim?.(caixa, c, sugestao, mensagens);
     if (noFim || caixa.dataset.conversa !== c.id) caixa.scrollTop = caixa.scrollHeight;
     caixa.dataset.conversa = c.id;
-    const mostrarSug = Boolean(sugestao) && c.modo !== 'humano';
+    const mostrarSug = Boolean(sugestao) && c.modo !== 'humano' && fantasma === undefined; /* balao-fantasma */
     $('sugestao').hidden = !mostrarSug; if (mostrarSug) $('sugestao-txt').textContent = sugestao;
     desenharFicha(c);
   }
@@ -2465,17 +2467,20 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   // Com texto, o botão envia. Sem texto, é o microfone (segurar/clicar: veja "nota de voz" abaixo).
   $('enviar').addEventListener('click', (e) => { if (texto.value.trim()) enviar(); else if (e.detail === 0 && !grav.rec) iniciarGravacao(); });
   $('camera').addEventListener('click', () => $('arq-foto').click());
-  async function enviar() {
-    const t = texto.value.trim(); if (!t || !estado.aberta) return;
+  /* balao-fantasma: enviar(pronto) manda um texto pronto (a sugestão da IA) pelo mesmo caminho, sem mexer no que está escrito no campo */
+  async function enviar(pronto) {
+    const direto = typeof pronto === 'string';
+    const t = (direto ? pronto : texto.value).trim(); if (!t || !estado.aberta) return false;
     $('enviar').disabled = true;
-    try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); texto.value = ''; texto.style.height = ''; $('revisao').hidden = true; trocarBotao(); await atualizar(); }
+    try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
     catch (x) {
       /* whatsapp-estavel: o servidor já explica ("Não enviada: …"). O aviso fica na conversa, acima da caixa, e o texto continua lá. */
       const doWa = /^Não enviada|pode ter saído/.test(x.message);
       if (doWa) { $('revisao-tit').textContent = /pode ter saído/.test(x.message) ? 'Envio sem confirmação' : 'Mensagem não enviada'; $('revisao-txt').textContent = x.message; $('revisao-usar').hidden = true; $('revisao').hidden = false; }
       toast(doWa ? x.message : 'Não enviou: ' + x.message);
+      return false;
     }
-    finally { $('enviar').disabled = false; texto.focus(); }
+    finally { $('enviar').disabled = false; if (!direto) texto.focus(); }
   }
   const usarTexto = (t) => { texto.value = t; texto.dispatchEvent(new Event('input')); texto.focus(); };
   $('usar-sugestao').addEventListener('click', () => usarTexto($('sugestao-txt').textContent));
@@ -3726,6 +3731,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   Object.assign(window.Sintonia.ui, { usarTexto, atualizar, desenharLista, abrirTeste: () => $('d-teste').showModal(), abrirFicha, abrirCrmRapido, abrirTransferir, assumirConversa, mudarModo, abrirAgendar, abrirRegistroLigacao, carregarLigacoes });
   Object.assign(window.Sintonia.ui, { naoLida, esperando, textoPrevia }); /* conversas-gestos: arrastar e segurar a linha da lista */
   Object.assign(window.Sintonia.ui, { fecharConversa }); /* rotas-fontes: voltar do navegador fecha a conversa (computador) */
+  Object.assign(window.Sintonia.ui, { enviarTexto: (t) => enviar(String(t || '')) }); /* balao-fantasma: "Enviar" da sugestão */
 
   (async () => {
     /* fluidez: tudo o que a abertura precisa sai junto (antes: um pedido esperava o outro) */
@@ -3906,6 +3912,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/reunioes.js" defer></script>
 <script src="/telas/rotina.js" defer></script>
 <script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
+<script src="/telas/balao-fantasma.js" defer></script><!-- balao-fantasma: sugestão da IA como balão tracejado na conversa -->
 <script src="/telas/distribuicao.js" defer></script><!-- automacao-vendas -->
 <script src="/telas/scripts.js" defer></script>
 <script src="/telas/integracoes.js" defer></script><!-- integracoes -->
