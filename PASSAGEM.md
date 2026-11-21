@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **PENDENTE (pedido do dono 21/11, fazer depois que todos os agentes terminarem):** atualizar toda a página de vendas (prints das telas novas e a copy) com o que foi criado: Serena gerente, relatório Dia a dia, ligações, topo igual, gestos, contadores etc. Sem preços (App Store); contato só pelo WhatsApp.
 - **21/11 09h58 (Bahia; os horários "Bahia" das 4 linhas de baixo estão 3 h adiantados por engano):** no ar 8f874e9 — + contato-nome (src/contatos/nome.ts, nomes-whatsapp.ts, public/telas/fone.js). Rodando: sem-pagamento, banco-seguranca, relatorio-dia (650), ligacoes-modos (660). n8n-sintonia terminou: fluxos refeitos e DESLIGADOS (falta credenciais; trocar senha do usuário assia-integracao, que vazou no histórico do n8n).
 - **21/11 13h05 (Bahia):** no ar ce257bb. Rodando: contato-nome, sem-pagamento (App Store: tira pagamentos, cadastro só por convite, privacidade/termos/excluir conta; falta o WhatsApp do dono), banco-seguranca (migrações 630+), pesquisa Evolution, n8n-sintonia.
 - **21/11 12h48 (Bahia):** no ar 38cbd6f — Grupos/Equipe com o topo de Conversas (topo-lista.js). Rodando: agente contato-nome (nome do WhatsApp + número +55 (71) 9xxxx-xxxx; worktree /home/user/wt-contato-nome) e n8n-sintonia.
