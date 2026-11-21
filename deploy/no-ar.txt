@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 15:41 UTC (21/11, 12h41 na Bahia)
-commit: afc2b56
-pacote sha256: 04effb97963e48e1d0b60efb6315f3e4389f88b63bb814b04e70f850f6147165
+data: 2026-11-21 17:40 UTC (21/11, 14h40 na Bahia)
+commit: 59870a1
+pacote sha256: 4a7dcb4e9bbb70ce93f3eec0b7ab30054690ece3b717907fcfbd84ee641b617e
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-afc2b56.b64); pode apagar depois.
-observação: em cima do f5963e7. Entram: serena-faz (Serena do app envia/agenda/move com cartão e Confirmar) e sem-exemplos (670: sem modelos prontos em fluxos/chatbot/follow-up).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-59870a1.b64); pode apagar depois.
+observação: em cima do afc2b56. Entra: prints novos na página de vendas (mesma página; o dono NÃO quis a página nova da branch claude/pagina-vendas-nova).
