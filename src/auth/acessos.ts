@@ -49,11 +49,28 @@ export interface Acessos {
   verConvite(token: string, agora: Date): Promise<{ usuarioId: string; tipo: TipoConvite } | undefined>;
   /** Gasta o convite (e invalida os outros da pessoa). */
   usarConvite(token: string, agora: Date): Promise<{ usuarioId: string; tipo: TipoConvite } | undefined>;
+  /** usuarios: o convite/link em aberto mais novo da pessoa (para a tela mostrar "convite pendente"). */
+  conviteAberto(usuarioId: string, agora: Date): Promise<{ tipo: TipoConvite; expiraEm: Date } | undefined>;
+  /**
+   * usuarios: a pessoa deixou rastro no sistema? Devolve o motivo (ex.: "já entrou no Sintonia") ou null.
+   * Quem tem histórico não é apagado, só desativado (os relatórios e as conversas continuam com o nome dela).
+   */
+  historico(usuarioId: string): Promise<string | null>;
   auditar(e: EventoAuditoria): Promise<void>;
   auditoria(empresaId: string, limite: number): Promise<Array<Required<Omit<EventoAuditoria, 'em'>> & { em: Date }>>;
 }
 
-const idDaSessao = (hash: string) => hash.slice(0, 16);
+export const idDaSessao = (hash: string) => hash.slice(0, 16);
+
+/** usuarios: nome amigável do aparelho a partir do navegador (ex.: "Chrome no Windows", "Safari no iPhone"). */
+export function nomeDoAparelho(ua: string | null | undefined): string {
+  const t = String(ua ?? '');
+  if (!t) return 'Aparelho';
+  const sistema = /iPhone/.test(t) ? 'iPhone' : /iPad/.test(t) ? 'iPad' : /Android/.test(t) ? 'Android' : /Windows/.test(t) ? 'Windows' : /Mac OS X|Macintosh/.test(t) ? 'Mac' : /Linux/.test(t) ? 'Linux' : '';
+  const nav = /Edg\//.test(t) ? 'Edge' : /OPR\/|Opera/.test(t) ? 'Opera' : /SamsungBrowser/.test(t) ? 'Samsung Internet' : /Firefox\/|FxiOS/.test(t) ? 'Firefox' : /Chrome\/|CriOS/.test(t) ? 'Chrome' : /Safari\//.test(t) ? 'Safari' : '';
+  if (nav && sistema) return `${nav} no ${sistema}`;
+  return nav || sistema || t.trim().slice(0, 40) || 'Aparelho';
+}
 const semExtras = (): ExtrasUsuario => ({ ajustes: {}, trocarSenha: false, horario: null, ultimoAcesso: null });
 
 // ---------------------------------------------------------------- memória
@@ -123,6 +140,19 @@ export class AcessosMemoria implements Acessos {
     if (!v) return undefined;
     for (const c of this.convites.values()) if (c.usuarioId === v.usuarioId && !c.usado) c.usado = agora;
     return v;
+  }
+  async conviteAberto(usuarioId: string, agora: Date) {
+    let melhor: { tipo: TipoConvite; expiraEm: Date } | undefined;
+    for (const c of this.convites.values()) {
+      if (c.usuarioId !== usuarioId || c.usado || c.expiraEm <= agora) continue;
+      if (!melhor || c.expiraEm > melhor.expiraEm) melhor = { tipo: c.tipo, expiraEm: c.expiraEm };
+    }
+    return melhor;
+  }
+  async historico(usuarioId: string) {
+    if ((await this.extras(usuarioId)).ultimoAcesso) return 'já entrou no Sintonia';
+    if (this.eventos.some((e) => e.autorId === usuarioId && e.alvoId !== usuarioId)) return 'já mexeu nos acessos da equipe';
+    return null;
   }
   async auditar(e: EventoAuditoria) {
     this.eventos.unshift({ empresaId: e.empresaId, autorId: e.autorId, autorNome: e.autorNome, alvoId: e.alvoId ?? null, alvoNome: e.alvoNome ?? null, acao: e.acao, detalhe: e.detalhe ?? null, em: e.em ?? new Date() });
@@ -209,6 +239,34 @@ export class AcessosPostgres implements Acessos {
     if (!v) return undefined;
     await this.pool.query('update sintonia.acesso_convites set usado_em = $2 where usuario_id = $1 and usado_em is null', [v.usuarioId, agora]);
     return v;
+  }
+  async conviteAberto(usuarioId: string, agora: Date) {
+    if (!/^[0-9a-f-]{36}$/i.test(usuarioId)) return undefined;
+    const { rows } = await this.pool.query<{ tipo: TipoConvite; expira_em: Date }>(
+      'select tipo, expira_em from sintonia.acesso_convites where usuario_id = $1 and usado_em is null and expira_em > $2 order by expira_em desc limit 1',
+      [usuarioId, agora],
+    );
+    return rows[0] ? { tipo: rows[0].tipo, expiraEm: rows[0].expira_em } : undefined;
+  }
+  async historico(usuarioId: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(usuarioId)) return null;
+    // Cada pergunta é só "existe?" (para no primeiro achado). A ordem vai da mais barata para a mais cara.
+    const perguntas: Array<[string, string]> = [
+      ['já entrou no Sintonia', 'select 1 from sintonia.acesso_usuarios where usuario_id = $1 and ultimo_acesso is not null'],
+      ['tem conversas no nome dela', 'select 1 from sintonia.conversas where responsavel_id = $1 limit 1'],
+      ['já mexeu nos acessos da equipe', "select 1 from sintonia.acesso_auditoria where autor_id = $1 and alvo_id is distinct from $1 limit 1"],
+      ['tem mensagens no chat da equipe', 'select 1 from sintonia.equipe_mensagens where autor_id = $1::text limit 1'],
+      ['aparece no histórico das conversas', "select 1 from sintonia.eventos where dados->>'porId' = $1::text or dados->>'paraId' = $1::text or dados->>'usuarioId' = $1::text or dados->>'atendenteId' = $1::text limit 1"],
+    ];
+    for (const [motivo, sql] of perguntas) {
+      try {
+        if ((await this.pool.query(sql, [usuarioId])).rowCount) return motivo;
+      } catch (e) {
+        // Tabela que não existe nesta instalação: a pergunta não vale. Qualquer outro erro: na dúvida, não apaga.
+        if ((e as { code?: string }).code !== '42P01') return 'não deu para conferir o histórico agora';
+      }
+    }
+    return null;
   }
   async auditar(e: EventoAuditoria) {
     await this.pool.query(

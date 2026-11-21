@@ -21,6 +21,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/abertura.css">
+<meta name="referrer" content="no-referrer">
+<style>
+  .lado-form .miudo a, .lado-form .voltar { color: #106EBE; font-weight: 600; text-decoration: none; }
+  .lado-form .miudo a:hover, .lado-form .voltar:hover { text-decoration: underline; }
+  .lado-form .voltar { font-size: 13.5px; justify-self: start; }
+  .lado-form .feito { display: grid; gap: 12px; }
+  .lado-form .feito .icone-ok { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #dffcf4; color: #087a5c; }
+  .lado-form .feito .icone-ok svg { width: 24px; height: 24px; }
+  .lado-form .forca { height: 4px; border-radius: 999px; background: rgba(16,110,190,.12); overflow: hidden; }
+  .lado-form .forca span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #3aa0ff, #0ffcbe); transition: width .25s ease; }
+  /* usuarios: regras da senha conferidas enquanto digita */
+  .lado-form .regras { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--cinza); }
+  .lado-form .regras li { display: flex; align-items: center; gap: 8px; }
+  .lado-form .regras li::before { content: ''; width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px #b9c6d3; }
+  .lado-form .regras li.ok { color: #087a5c; font-weight: 600; }
+  .lado-form .regras li.ok::before { box-shadow: none; background: #19c3a6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E") center/11px no-repeat; }
+  [hidden] { display: none !important; }
+</style>
 </head>
 <body>
 <div class="tela-login">
@@ -29,54 +48,91 @@
     <a class="logo" href="/" aria-label="Sintonia CRM, início"><img src="/simbolo-escuro.png" alt="" width="40" height="40" style="filter:drop-shadow(0 4px 14px rgba(15,252,190,.35))"><span>sintonia<b>.</b></span></a>
     <div>
       <h1>Boas-vindas à equipe. <em>Falta só a sua senha.</em></h1>
-      <p>Crie uma senha só sua para entrar no Sintonia.</p>
+      <p>Crie uma senha só sua. Depois é só entrar com o seu e-mail e ela.</p>
     </div>
     <span></span>
   </section>
   <section class="lado-form">
-    <form class="cartao" id="form-convite" novalidate>
+    <form class="cartao" id="form-nova" novalidate>
       <div>
-        <h2 id="titulo">Criar senha</h2>
-        <p class="sub" id="quem">Conferindo o link…</p>
+        <h2 id="titulo">Criar sua senha</h2>
+        <p class="sub" id="quem">Conferindo o convite…</p>
       </div>
-      <div class="campo">
-        <label for="senha">Nova senha</label>
-        <div class="senha"><input id="senha" name="senha" type="password" autocomplete="new-password" minlength="10" required><button type="button" id="ver-senha" aria-controls="senha">Mostrar</button></div>
+      <div id="campos">
+        <div class="campo">
+          <label for="senha">Sua senha</label>
+          <div class="senha"><input id="senha" name="senha" type="password" autocomplete="new-password" minlength="10" required><button type="button" id="ver-senha" aria-controls="senha">Mostrar</button></div>
+        </div>
+        <div class="forca" aria-hidden="true" style="margin-top:8px"><span id="forca"></span></div>
+        <div class="campo" style="margin-top:14px"><label for="senha2">Repita a senha</label><input id="senha2" name="senha2" type="password" autocomplete="new-password" required></div>
       </div>
-      <div class="campo"><label for="senha2">Repita a senha</label><input id="senha2" name="senha2" type="password" autocomplete="new-password" required></div>
-      <p class="miudo">Pelo menos 10 caracteres, com letras e números.</p>
+<ul class="regras" id="regras" aria-live="polite">
+          <li data-r="tam">Pelo menos 10 caracteres</li>
+          <li data-r="mix">Letras e números</li>
+          <li data-r="igual">As duas senhas iguais</li>
+        </ul>
       <div id="aviso" role="status" aria-live="polite"></div>
       <button class="botao botao-azul" type="submit" id="ok" disabled>Salvar e entrar</button>
+      <p class="miudo" id="pedir-outro" hidden>Peça um link novo para quem te convidou (a gestão gera outro em Atendentes e acessos). Se você já criou a senha, <a href="/entrar">entre por aqui</a>.</p>
     </form>
   </section>
 </div>
+<div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo o aplicativo" hidden>
+  <div class="ab-topo" aria-hidden="true"><span></span></div>
+  <div class="ab-brilho" aria-hidden="true"><img src="/simbolo-escuro.png" alt="" width="104" height="104" decoding="async"></div><span class="ab-nome" aria-hidden="true">sintonia<i>.</i></span>
+  <p class="ab-texto">Abrindo o aplicativo<small>Senha criada</small></p>
+</div>
 <script>
 (() => {
-  const t = new URLSearchParams(location.search).get('t') || '';
   const $ = (id) => document.getElementById(id);
+  // O token sai da barra de endereço logo de cara (não fica no histórico nem vaza por referência).
+  const t = new URLSearchParams(location.search).get('t') || '';
+  try { history.replaceState(null, '', '/convite'); } catch {}
   const erro = (m) => { $('aviso').className = 'aviso erro'; $('aviso').textContent = m; };
+  const invalido = (m) => { $('quem').textContent = m; $('campos').hidden = true; $('regras').hidden = true; $('ok').hidden = true; $('pedir-outro').hidden = false; };
   let email = '';
   $('ver-senha').addEventListener('click', () => { const s = $('senha'); const m = s.type === 'text'; s.type = m ? 'password' : 'text'; $('senha2').type = s.type; $('ver-senha').textContent = m ? 'Mostrar' : 'Esconder'; });
-  fetch('/api/auth/convite?t=' + encodeURIComponent(t)).then(async (r) => {
+  $('senha').addEventListener('input', (e) => {
+    const v = e.target.value; let n = Math.min(v.length / 14, 1) * 0.6;
+    if (/[a-z]/i.test(v) && /\d/.test(v)) n += 0.25; if (/[^a-z0-9]/i.test(v) || /[A-Z]/.test(v) && /[a-z]/.test(v)) n += 0.15;
+    $('forca').style.width = Math.round(Math.min(1, n) * 100) + '%';
+  });
+  // usuarios: as regras ficam verdes enquanto a pessoa digita (as mesmas que o servidor confere).
+  const conferir = () => {
+    const v = $('senha').value, v2 = $('senha2').value;
+    const r = { tam: v.length >= 10, mix: /[a-z]/i.test(v) && /\d/.test(v), igual: v.length > 0 && v === v2 };
+    for (const li of document.querySelectorAll('#regras li')) li.classList.toggle('ok', !!r[li.dataset.r]);
+    return r.tam && r.mix && r.igual;
+  };
+  $('senha').addEventListener('input', conferir); $('senha2').addEventListener('input', conferir);
+  if (!t) invalido('Este link não está completo. Confira se copiou tudo ou peça um novo.');
+  else fetch('/api/auth/convite?t=' + encodeURIComponent(t)).then(async (r) => {
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) { $('quem').textContent = j.erro || 'Link inválido.'; return; }
+    if (!r.ok) return invalido(r.status === 429 ? (j.erro || 'Muitas tentativas. Espere alguns minutos.') : 'Este link venceu ou já foi usado.');
     email = j.email;
-    $('titulo').textContent = j.tipo === 'redefinir' ? 'Nova senha' : 'Criar senha';
+    if (j.tipo === 'redefinir') { $('titulo').textContent = 'Criar senha nova'; document.title = 'Nova senha · Sintonia CRM'; }
     $('quem').textContent = `${j.nome} · ${j.email}`;
-    $('ok').disabled = false;
+    $('ok').disabled = false; $('senha').focus();
   }).catch(() => { $('quem').textContent = 'Sem conexão. Tente de novo.'; });
-  $('form-convite').addEventListener('submit', async (e) => {
+  $('form-nova').addEventListener('submit', async (e) => {
     e.preventDefault();
     const senha = $('senha').value;
+    if (senha.length < 10) return erro('Use pelo menos 10 caracteres.');
+    if (!/[a-z]/i.test(senha) || !/\d/.test(senha)) return erro('Use letras e números na senha.');
     if (senha !== $('senha2').value) return erro('As duas senhas não são iguais.');
-    $('ok').disabled = true;
+    $('ok').disabled = true; $('ok').textContent = 'Salvando…';
     try {
       const r = await fetch('/api/auth/convite', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t, senha }) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) { erro(j.erro || 'Não deu certo.'); $('ok').disabled = false; return; }
+      if (!r.ok) { erro(j.erro || 'Não deu certo.'); $('ok').disabled = false; $('ok').textContent = 'Salvar e entrar'; if (r.status === 404) invalido('Este link venceu ou já foi usado.'); return; }
       const e2 = await fetch('/api/auth/entrar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, senha }) });
-      location.href = e2.ok ? '/app' : '/entrar';
-    } catch { erro('Sem conexão. Tente de novo.'); $('ok').disabled = false; }
+      if (!e2.ok) { location.href = '/entrar'; return; }
+      const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('form-nova').classList.add('saindo'); document.querySelector('.lado-azul')?.classList.add('saindo');
+      const ab = $('abertura');
+      setTimeout(() => { ab.hidden = false; ab.style.setProperty('--ab-p', '0.4'); setTimeout(() => ab.style.setProperty('--ab-p', '0.72'), 300); }, reduz ? 100 : 360);
+      setTimeout(() => { try { sessionStorage.setItem('sintonia.abertura', String(Date.now())); } catch {} location.href = '/app'; }, reduz ? 450 : 1300);
+    } catch { erro('Sem conexão. Tente de novo.'); $('ok').disabled = false; $('ok').textContent = 'Salvar e entrar'; }
   });
 })();
 </script>

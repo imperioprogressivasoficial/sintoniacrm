@@ -32,6 +32,12 @@
   .lado-form .feito .icone-ok svg { width: 24px; height: 24px; }
   .lado-form .forca { height: 4px; border-radius: 999px; background: rgba(16,110,190,.12); overflow: hidden; }
   .lado-form .forca span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #3aa0ff, #0ffcbe); transition: width .25s ease; }
+  /* usuarios: regras da senha conferidas enquanto digita */
+  .lado-form .regras { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--cinza); }
+  .lado-form .regras li { display: flex; align-items: center; gap: 8px; }
+  .lado-form .regras li::before { content: ''; width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px #b9c6d3; }
+  .lado-form .regras li.ok { color: #087a5c; font-weight: 600; }
+  .lado-form .regras li.ok::before { box-shadow: none; background: #19c3a6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E") center/11px no-repeat; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -60,10 +66,14 @@
         <div class="forca" aria-hidden="true" style="margin-top:8px"><span id="forca"></span></div>
         <div class="campo" style="margin-top:14px"><label for="senha2">Repita a senha</label><input id="senha2" name="senha2" type="password" autocomplete="new-password" required></div>
       </div>
-      <p class="miudo">Pelo menos 10 caracteres, com letras e números.</p>
+<ul class="regras" id="regras" aria-live="polite">
+          <li data-r="tam">Pelo menos 10 caracteres</li>
+          <li data-r="mix">Letras e números</li>
+          <li data-r="igual">As duas senhas iguais</li>
+        </ul>
       <div id="aviso" role="status" aria-live="polite"></div>
       <button class="botao botao-azul" type="submit" id="ok" disabled>Salvar e entrar</button>
-      <p class="miudo" id="pedir-outro" hidden><a href="/esqueci-senha">Pedir um link novo</a> ou peça para a administração redefinir sua senha.</p>
+      <p class="miudo" id="pedir-outro" hidden><a href="/esqueci-senha">Pedir um link novo</a> ou peça para a gestão gerar outro link para você.</p>
     </form>
   </section>
 </div>
@@ -79,7 +89,7 @@
   const t = new URLSearchParams(location.search).get('t') || '';
   try { history.replaceState(null, '', '/nova-senha'); } catch {}
   const erro = (m) => { $('aviso').className = 'aviso erro'; $('aviso').textContent = m; };
-  const invalido = (m) => { $('quem').textContent = m; $('campos').hidden = true; $('ok').hidden = true; $('pedir-outro').hidden = false; };
+  const invalido = (m) => { $('quem').textContent = m; $('campos').hidden = true; $('regras').hidden = true; $('ok').hidden = true; $('pedir-outro').hidden = false; };
   let email = '';
   $('ver-senha').addEventListener('click', () => { const s = $('senha'); const m = s.type === 'text'; s.type = m ? 'password' : 'text'; $('senha2').type = s.type; $('ver-senha').textContent = m ? 'Mostrar' : 'Esconder'; });
   $('senha').addEventListener('input', (e) => {
@@ -87,6 +97,14 @@
     if (/[a-z]/i.test(v) && /\d/.test(v)) n += 0.25; if (/[^a-z0-9]/i.test(v) || /[A-Z]/.test(v) && /[a-z]/.test(v)) n += 0.15;
     $('forca').style.width = Math.round(Math.min(1, n) * 100) + '%';
   });
+  // usuarios: as regras ficam verdes enquanto a pessoa digita (as mesmas que o servidor confere).
+  const conferir = () => {
+    const v = $('senha').value, v2 = $('senha2').value;
+    const r = { tam: v.length >= 10, mix: /[a-z]/i.test(v) && /\d/.test(v), igual: v.length > 0 && v === v2 };
+    for (const li of document.querySelectorAll('#regras li')) li.classList.toggle('ok', !!r[li.dataset.r]);
+    return r.tam && r.mix && r.igual;
+  };
+  $('senha').addEventListener('input', conferir); $('senha2').addEventListener('input', conferir);
   if (!t) invalido('Este link não está completo. Peça um novo.');
   else fetch('/api/auth/convite?t=' + encodeURIComponent(t)).then(async (r) => {
     const j = await r.json().catch(() => ({}));
@@ -99,6 +117,7 @@
     e.preventDefault();
     const senha = $('senha').value;
     if (senha.length < 10) return erro('Use pelo menos 10 caracteres.');
+    if (!/[a-z]/i.test(senha) || !/\d/.test(senha)) return erro('Use letras e números na senha.');
     if (senha !== $('senha2').value) return erro('As duas senhas não são iguais.');
     $('ok').disabled = true; $('ok').textContent = 'Salvando…';
     try {

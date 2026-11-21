@@ -92,6 +92,15 @@ export class ArmazemPerfisPostgres implements ArmazemPerfis {
   }
 }
 
+/** usuarios: o telefone da Conta › Perfil também serve para a gestão mandar o convite pelo WhatsApp. */
+export const telefonesDosPerfis = (perfis: ArmazemPerfis) => ({
+  de: async (usuarioId: string) => (await perfis.ler(usuarioId)).telefone,
+  definir: async (usuarioId: string, telefone: string) => {
+    const { atualizadoEm: _, ...atual } = await perfis.ler(usuarioId);
+    await perfis.gravar(usuarioId, { ...atual, telefone });
+  },
+});
+
 /** Troca o e-mail de login. Devolve false se outro login já usa esse e-mail. */
 export type TrocarEmail = (usuarioId: string, email: string) => Promise<boolean>;
 export const trocarEmailPostgres =
