@@ -41,6 +41,8 @@ export const Preferencias = z
     telaInicial: z.enum(TELAS_INICIAIS).default('conversas'),
     densidade: z.enum(['confortavel', 'compacta']).default('confortavel'),
     papelParede: PapelParede,
+    /** ligacoes-modos: o último jeito de ligar que a pessoa usou (vem marcado na próxima vez). Sem valor = o padrão da unidade. */
+    modoLigacao: z.enum(['telefone', 'whatsapp']).optional().catch(undefined),
   })
   .prefault({});
 export type Preferencias = z.infer<typeof Preferencias>;
@@ -148,6 +150,7 @@ const PerfilCorpo = z.object({
       idioma: z.enum(['pt-BR']).optional(),
       telaInicial: z.enum(TELAS_INICIAIS).optional(),
       densidade: z.enum(['confortavel', 'compacta']).optional(),
+      modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
       papelParede: z
         .object({
           claro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),

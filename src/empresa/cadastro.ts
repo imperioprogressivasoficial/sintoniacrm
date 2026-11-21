@@ -111,6 +111,8 @@ export const DadosUnidade = z.object({
   observacao: T(500).default(''),
   /** Nome que vai nas mensagens para os clientes (vazio = o nome da unidade). Ex.: "Salvador Norte Shopping". */
   nomeCliente: T(80).default(''),
+  /** ligacoes-modos: jeito de ligar que vem marcado para quem ainda não escolheu (a gestão define). */
+  modoLigacao: z.enum(['telefone', 'whatsapp']).catch('telefone').default('telefone'),
 });
 export type DadosUnidade = z.infer<typeof DadosUnidade>;
 export const lerDadosUnidade = (b: unknown): DadosUnidade => {

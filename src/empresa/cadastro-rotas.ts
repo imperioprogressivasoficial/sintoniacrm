@@ -137,6 +137,7 @@ const UnidadeCorpo = z.object({
   horario: Horario.nullable().optional(),
   observacao: T(500).optional(),
   nomeCliente: T(80).optional(),
+  modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
 });
 
 const ProdutoBase = z.object({
@@ -330,7 +331,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): Cada
   const dadosUnidade = (b: z.infer<typeof UnidadeCorpo>, atual?: Unidade) =>
     DadosUnidade.parse({
       ...(atual?.dados ?? {}),
-      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao, nomeCliente: b.nomeCliente }).filter(([, v]) => v !== undefined)),
+      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao, nomeCliente: b.nomeCliente, modoLigacao: b.modoLigacao }).filter(([, v]) => v !== undefined)),
     });
 
   app.post('/api/unidades', async (req, reply) => {

@@ -5,6 +5,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import { ehGestor, podeVer, veTudo } from '../auth/acesso.js';
 import { normalizarCelular } from '../util/telefone.js';
 import type { ArmazemChamadas, Chamada } from './chamadas.js';
+import { canalVozDesligado, MODOS_LIGACAO, RECURSOS_LIGACOES, type CanalVoz } from './canal-voz.js';
 
 /**
  * Tela "Ligações": histórico (efetuadas pelo app, recebidas/perdidas avisadas pelo WhatsApp), favoritos,
@@ -16,6 +17,8 @@ export interface OpcoesLigacoes {
   chamadas: ArmazemChamadas;
   empresaId: string;
   agora: () => Date;
+  /** ligacoes-modos: linha VoIP da empresa. Sem ela (hoje), o modo VoIP responde "não configurado". */
+  canalVoz?: CanalVoz;
 }
 
 const erro = (msg: string, statusCode: number) => Object.assign(new Error(msg), { statusCode });
@@ -51,6 +54,7 @@ export function registrarLigacoes(app: FastifyInstance, o: OpcoesLigacoes): void
       unidade: x.unidade,
       em: x.em,
       origem: x.origem,
+      modo: x.modo,
     };
   };
   const lerCursor = (s?: string) => {
@@ -70,8 +74,21 @@ export function registrarLigacoes(app: FastifyInstance, o: OpcoesLigacoes): void
     return { itens: pagina.map(paraTela(conversas)), proximo: itens.length > q.limite && ult ? `${ult.em.getTime()}_${ult.id}` : null };
   });
 
-  // Ligar (contato ou número digitado): a ligação sai do celular; aqui só fica registrado quem ligou e quando.
-  const Efetuada = z.object({ conversaId: z.string().min(1).max(64).optional(), telefone: z.string().max(40).optional() }).refine((b) => b.conversaId || b.telefone, 'Informe o contato ou o número.');
+  // ligacoes-modos: os jeitos de ligar e o que ainda está travado (a tela desenha o "Em breve" a partir daqui).
+  const canalVoz = o.canalVoz ?? canalVozDesligado;
+  app.get('/api/ligacoes/modos', async () => ({
+    modos: [
+      { id: 'telefone', disponivel: true },
+      { id: 'whatsapp', disponivel: true },
+      { id: 'voip', disponivel: canalVoz.configurado, emBreve: !canalVoz.configurado },
+    ],
+    ligacoesIa: { disponivel: RECURSOS_LIGACOES.ligacoesIa, emBreve: !RECURSOS_LIGACOES.ligacoesIa },
+  }));
+
+  // Ligar (contato ou número digitado): a ligação sai do celular (chip ou WhatsApp); aqui só fica registrado quem ligou, quando e por onde.
+  const Efetuada = z
+    .object({ conversaId: z.string().min(1).max(64).optional(), telefone: z.string().max(40).optional(), modo: z.enum(MODOS_LIGACAO).default('telefone') })
+    .refine((b) => b.conversaId || b.telefone, 'Informe o contato ou o número.');
   app.post('/api/ligacoes/efetuada', async (req, reply) => {
     const b = Efetuada.parse(req.body);
     let c: Conversa | undefined;
@@ -85,10 +102,17 @@ export function registrarLigacoes(app: FastifyInstance, o: OpcoesLigacoes): void
       // Número de uma cliente que a pessoa vê: liga à conversa dela.
       c = (await o.repo.listarConversas({ telefone })).find((x) => ve(req, x)); // robustez: direto no banco
     }
+    // VoIP: só quando houver linha de verdade. Hoje o canal desligado responde "não configurado" e nada é registrado.
+    let idExterno: string | null = null;
+    if (b.modo === 'voip') {
+      const r = await canalVoz.ligar('', telefone);
+      if (!r.ok) throw erro(r.mensagem, r.motivo === 'nao_configurado' ? 409 : 502);
+      idExterno = r.idExterno ?? null;
+    }
     const u = quem(req);
     const unidade: UnidadeId | null = c?.unidade ?? (req.usuario?.unidades?.[0] as UnidadeId | undefined) ?? null;
-    const x = await o.chamadas.registrar({ empresaId: o.empresaId, conversaId: c?.id ?? null, telefone, direcao: 'efetuada', atendenteId: u.id, atendenteNome: u.nome, unidade, em: o.agora(), origem: 'app' });
-    return reply.code(201).send({ id: x.id, telefone, conversaId: x.conversaId });
+    const x = await o.chamadas.registrar({ empresaId: o.empresaId, conversaId: c?.id ?? null, telefone, direcao: 'efetuada', atendenteId: u.id, atendenteNome: u.nome, unidade, em: o.agora(), origem: 'app', modo: b.modo, idExterno });
+    return reply.code(201).send({ id: x.id, telefone, conversaId: x.conversaId, modo: x.modo });
   });
 
   // Programar uma ligação (vira lembrete na hora marcada e entra em "Programadas para hoje").
