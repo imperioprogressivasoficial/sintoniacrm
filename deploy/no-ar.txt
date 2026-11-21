@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 04:55 UTC (21/11, 01h55 na Bahia)
-commit: 071f7f2
-pacote sha256: a9081e2e7d724e3c29b29301054db8cd663eba447bbfaab3867dda29ced704f3
+data: 2026-11-21 05:20 UTC (21/11, 02h20 na Bahia)
+commit: 0c738da
+pacote sha256: 13f8240b159261cb58082f1f1728f884ae8f1bb6970ceca70a40d08b119468a7
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-071f7f2.b64); pode apagar depois.
-observação: em cima do 93110f7. Correção: fotos/áudios/arquivos do WhatsApp não oficial voltam a baixar (base64 no webhook + mensagem completa no download).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-0c738da.b64); pode apagar depois.
+observação: em cima do 071f7f2. Entra: Pipeline no computador com 3 modos (Foco, Lista, Colunas) — public/telas/funil-modos.js.
