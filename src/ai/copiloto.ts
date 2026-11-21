@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Conversa, Mensagem } from '../domain.js';
 import type { TrinksServico } from '../agenda/trinks.js';
 import { contextoDaConversa, historicoParaTurnos } from './prompt.js';
+import { identidade } from '../empresa/identidade.js';
 
 /**
  * Revisão do rascunho enquanto a atendente digita (antes de enviar).
@@ -24,7 +25,7 @@ export type Revisao = z.infer<typeof Revisao>;
 
 export type ClienteClaudeParse = { beta: { messages: Pick<Anthropic['beta']['messages'], 'parse'> } };
 
-const INSTRUCOES = `Você revisa, antes do envio, a mensagem que uma atendente da Império Progressivas escreveu para uma cliente no WhatsApp.
+const INSTRUCOES = () => `Você revisa, antes do envio, a mensagem que uma atendente da ${identidade().nome} escreveu para uma cliente no WhatsApp.
 Aponte só o que importa:
 - preco: valor diferente da tabela do Trinks informada abaixo.
 - informacao: afirmação insegura ou incorreta ("não sei", promessa de resultado, regra que não existe na base).
@@ -52,7 +53,7 @@ export async function revisarRascunho(
     system: [
       {
         type: 'text',
-        text: `${INSTRUCOES}\n\n<base_de_conhecimento>\n${opcoes.baseConhecimento}\n</base_de_conhecimento>`,
+        text: `${INSTRUCOES()}\n\n<base_de_conhecimento>\n${opcoes.baseConhecimento}\n</base_de_conhecimento>`,
         cache_control: { type: 'ephemeral' },
       },
     ],

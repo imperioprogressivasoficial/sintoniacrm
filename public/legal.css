@@ -1,0 +1,50 @@
+/* sem-pagamento: páginas públicas de Privacidade, Termos de uso e Suporte (claro e escuro, celular e computador). */
+:root {
+  --lg-fundo: #f4f8fc; --lg-cartao: #ffffff; --lg-texto: #08243f; --lg-sub: #4f6276; --lg-linha: #dbe6f1;
+  --lg-azul: #106ebe; --lg-link: #0d5fa6; --lg-realce: #e8f3fd; --lg-sombra: 0 10px 30px rgba(8, 36, 63, .07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    --lg-fundo: #061527; --lg-cartao: #0b2138; --lg-texto: #eaf3fc; --lg-sub: #9db7d1; --lg-linha: rgba(255, 255, 255, .1);
+    --lg-azul: #3aa0ff; --lg-link: #7cc4ff; --lg-realce: rgba(58, 160, 255, .12); --lg-sombra: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body.legal { margin: 0; background: var(--lg-fundo); color: var(--lg-texto); font: 16px/1.65 "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.lg-topo { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--lg-fundo) 88%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--lg-linha); padding-top: env(safe-area-inset-top); }
+.lg-barra { max-width: 860px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.lg-logo { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; font-weight: 700; font-size: 18px; }
+.lg-logo b { color: #0ffcbe; }
+.lg-logo img { border-radius: 9px; background: #0d2240; }
+.lg-barra nav { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.lg-barra nav a { color: var(--lg-sub); text-decoration: none; font-size: 14px; padding: 6px 10px; border-radius: 999px; }
+.lg-barra nav a[aria-current="page"] { color: var(--lg-texto); background: var(--lg-realce); font-weight: 600; }
+main.lg { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+.lg-cab h1 { font-size: clamp(26px, 5vw, 36px); line-height: 1.2; margin: 8px 0 6px; letter-spacing: -.01em; }
+.lg-cab p { color: var(--lg-sub); margin: 0; }
+.lg-resumo { margin: 20px 0 8px; padding: 16px 18px; border-radius: 18px; background: var(--lg-realce); }
+.lg-resumo ul { margin: 6px 0 0; padding-left: 20px; }
+.lg-sec { margin-top: 16px; padding: 18px 20px; border-radius: 20px; background: var(--lg-cartao); box-shadow: inset 0 0 0 1px var(--lg-linha), var(--lg-sombra); }
+.lg-sec h2 { font-size: 19px; line-height: 1.3; margin: 0 0 8px; }
+.lg-sec h3 { font-size: 16px; margin: 14px 0 4px; }
+.lg-sec p, .lg-sec li { color: var(--lg-texto); }
+.lg-sec ul { padding-left: 20px; margin: 6px 0; }
+.lg-sec li + li { margin-top: 4px; }
+a { color: var(--lg-link); }
+.lg-acoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.lg-bt { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px; border: 0; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+.lg-bt.leve { color: var(--lg-texto); background: var(--lg-realce); }
+.lg-bt svg { width: 20px; height: 20px; flex: none; }
+.lg-form { display: grid; gap: 12px; margin-top: 10px; }
+.lg-form label { display: grid; gap: 4px; font-size: 14px; font-weight: 600; }
+.lg-form input, .lg-form textarea { font: inherit; font-weight: 400; color: var(--lg-texto); background: var(--lg-fundo); border: 1px solid var(--lg-linha); border-radius: 12px; padding: 10px 12px; width: 100%; }
+.lg-form textarea { min-height: 110px; resize: vertical; }
+.lg-form .escondido { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.lg-aviso { min-height: 1.4em; font-size: 14px; margin: 0; }
+.lg-aviso.ok { color: #0a8f6a; } .lg-aviso.erro { color: #c43a3a; }
+.lg-rodape { max-width: 860px; margin: 0 auto; padding: 18px 16px calc(28px + env(safe-area-inset-bottom)); color: var(--lg-sub); font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 8px 16px; border-top: 1px solid var(--lg-linha); }
+.lg-rodape a { color: var(--lg-sub); }
+@media (max-width: 560px) { .lg-barra nav a { padding: 6px 8px; font-size: 13px; } .lg-sec { padding: 16px; } }

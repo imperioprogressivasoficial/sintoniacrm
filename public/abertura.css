@@ -1,0 +1,94 @@
+/* Tela "abrindo suas conversas": barra fina no topo com progresso, anel com dois plugues conectando e texto.
+ * Usada no login (depois da senha certa) e na primeira carga do /app, com o mesmo visual para a passagem não piscar. */
+:root {
+  --ab-fundo-1: #041427;
+  --ab-fundo-2: #0a2d52;
+  --ab-menta: #0ffcbe;
+  --ab-azul: #3aa0ff;
+  --ab-texto: #e9f3ff;
+  --ab-sub: rgba(233, 243, 255, .62);
+}
+
+.abertura {
+  position: fixed; inset: 0; z-index: 2147483000;
+  display: grid; place-content: center; justify-items: center; gap: 22px;
+  padding: 24px 16px; box-sizing: border-box;
+  background:
+    radial-gradient(60% 50% at 50% 42%, rgba(15, 252, 190, .13), transparent 70%),
+    radial-gradient(80% 70% at 50% 110%, rgba(58, 160, 255, .22), transparent 70%),
+    linear-gradient(160deg, var(--ab-fundo-1), var(--ab-fundo-2));
+  color: var(--ab-texto);
+  font-family: var(--fonte, "Poppins", ui-sans-serif, system-ui, sans-serif);
+  opacity: 1; transition: opacity .5s ease, visibility 0s linear 0s;
+}
+.abertura[hidden] { display: none; }
+.abertura.ab-entrando { opacity: 0; }
+.abertura.ab-saindo { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .5s ease, visibility 0s linear .5s; }
+
+
+.ab-topo { position: fixed; top: 0; left: 0; right: 0; height: 3px; overflow: hidden; background: rgba(233, 243, 255, .08); }
+.ab-topo > span {
+  position: absolute; inset: 0 auto 0 0; width: calc(var(--ab-p, .08) * 100%);
+  background: linear-gradient(90deg, var(--ab-azul), var(--ab-menta)); box-shadow: 0 0 10px rgba(15, 252, 190, .6);
+  transition: width .45s cubic-bezier(.2, .7, .2, 1);
+}
+.ab-topo > span::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); transform: translateX(-100%); animation: ab-reflexo 1.3s ease-in-out infinite; }
+
+/* Anel que gira e se fecha no instante em que os dois plugues se conectam (traço fino, azul e menta). */
+.ab-con-loader{width:72px;height:72px}
+.ab-con-svg{display:block;overflow:visible}
+.ab-con-giro{transform-origin:36px 36px;animation:ab-con-giro 1400ms linear infinite}
+.ab-con-arco{stroke-dasharray:100 100;animation:ab-con-arco 2800ms infinite both}
+.ab-con-g{opacity:.3;animation:ab-con-g 2800ms ease-in-out infinite both}
+.ab-con-arco.ab-con-g{animation:ab-con-arco 2800ms infinite both,ab-con-g 2800ms ease-in-out infinite both}
+.ab-con-e{animation:ab-con-e 2800ms infinite both}
+.ab-con-d{animation:ab-con-d 2800ms infinite both}
+.ab-con-j{opacity:.6;animation:ab-con-j 2800ms ease-out infinite both}
+.ab-con-b{opacity:0;animation:ab-con-b 2800ms linear infinite both}
+@keyframes ab-con-giro{to{transform:rotate(360deg)}}
+@keyframes ab-con-arco{0%,10%{stroke-dasharray:22 100;animation-timing-function:cubic-bezier(.4,0,.2,1)}36%,72%{stroke-dasharray:100 100;animation-timing-function:cubic-bezier(.5,0,.3,1)}90%,100%{stroke-dasharray:22 100}}
+@keyframes ab-con-g{0%,30%{opacity:.14}38%,72%{opacity:.34}86%,100%{opacity:.14}}
+@keyframes ab-con-e{0%,10%{transform:translateX(-5px);animation-timing-function:cubic-bezier(.3,0,.1,1)}36%,72%{transform:translateX(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}86%,100%{transform:translateX(-5px)}}
+@keyframes ab-con-d{0%,10%{transform:translateX(5px);animation-timing-function:cubic-bezier(.3,0,.1,1)}36%,72%{transform:translateX(0);animation-timing-function:cubic-bezier(.55,0,.3,1)}86%,100%{transform:translateX(5px)}}
+@keyframes ab-con-j{0%,34%{opacity:0}38%{opacity:1}72%{opacity:.55}80%,100%{opacity:0}}
+@keyframes ab-con-b{0%,37%{opacity:0}41%,68%{opacity:1}73%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.ab-con-giro,.ab-con-arco,.ab-con-g,.ab-con-e,.ab-con-d,.ab-con-j,.ab-con-b{animation:none}}
+
+.ab-texto { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .01em; text-align: center; }
+.ab-texto small { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 400; color: var(--ab-sub); }
+
+@keyframes ab-reflexo { to { transform: translateX(100%); } }
+
+/* Login: o cartão sai com desfoque e escala antes da tela de abertura. */
+.cartao.saindo { animation: ab-cartao-sai .48s cubic-bezier(.4, 0, .2, 1) forwards; pointer-events: none; }
+.lado-azul.saindo { transition: filter .5s ease, opacity .5s ease; filter: blur(6px); opacity: .5; }
+@keyframes ab-cartao-sai { to { opacity: 0; transform: scale(.92) translateY(6px); filter: blur(10px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ab-topo > span::after { animation: none; }
+  .cartao.saindo { animation: ab-cartao-some .2s linear forwards; }
+  .lado-azul.saindo { filter: none; }
+  .abertura, .abertura.ab-saindo { transition-duration: .2s; }
+  @keyframes ab-cartao-some { to { opacity: 0; } }
+}
+
+/* Abertura "Brilho" (escolha do dono 20/11): a logo com uma faixa de luz passando e o nome embaixo.
+ * O texto "Abrindo suas conversas" fica só para leitores de tela (o role=status já anuncia). */
+.ab-brilho { position: relative; width: 104px; height: 104px; }
+.ab-brilho img { width: 100%; height: 100%; display: block; }
+.ab-brilho::after { content: ""; position: absolute; inset: 0;
+  -webkit-mask: url(/simbolo-escuro.png) center / contain no-repeat; mask: url(/simbolo-escuro.png) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .85) 50%, transparent 65%) no-repeat; background-size: 250% 100%;
+  animation: ab-brilho-passa 2.2s ease-in-out infinite; }
+@keyframes ab-brilho-passa { 0% { background-position: 120% 0; } 60%, 100% { background-position: -30% 0; } }
+.ab-nome { font-size: 22px; font-weight: 700; letter-spacing: -.3px; margin-top: -6px; }
+.ab-nome i { color: var(--ab-menta); font-style: normal; }
+.abertura .ab-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .ab-brilho::after { animation: none; opacity: 0; } }
+
+/* Abertura "Direto + linha no topo" (escolha do dono 21/11: modelos 1 e 3). Nada cobre a tela: o app aparece na hora,
+ * a lista mostra blocos cinzas parados (esqueleto) até as conversas chegarem, e só a linha fina do topo corre.
+ * O "Brilho" (logo + nome) saiu. A capa continua no HTML só para a linha do topo e para leitores de tela. */
+.abertura { background: transparent !important; pointer-events: none; place-content: initial; }
+.abertura .ab-brilho, .abertura .ab-nome, .abertura .ab-con-loader { display: none !important; }
+.abertura .ab-topo { z-index: 2147483001; }

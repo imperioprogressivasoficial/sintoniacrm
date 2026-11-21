@@ -27,6 +27,8 @@ A atendente e a IA trabalham juntas na mesma conversa. A IA lê cada mensagem, s
 | Servidor (webhooks e API da tela) | `src/server.ts` | Pronto |
 | Banco Postgres | `db/migrations/`, `src/store/postgres.ts` | Pronto e testado contra Postgres 16; aplicado sozinho ao subir |
 | Fila persistente e trabalhadores | `src/fila/` | Pronto e testado: nada se perde, cada cliente em ordem, nova tentativa e lista de falhas |
+| Página de vendas e login | `public/`, `src/web/paginas.ts` | Pronto: `/` vendas com formulário de demonstração, `/entrar` login, `/app` área logada (provisória) |
+| Login com senha | `src/auth/`, `scripts/criar-usuario.ts` | Pronto e testado: senha com scrypt, sessão por cookie, limite de 5 tentativas, API toda protegida |
 | Tela do CRM | — | Próximo passo (o protótipo mostra o desenho) |
 
 ## Rodar
@@ -36,10 +38,21 @@ cp .env.example .env   # preencha as chaves
 npm install
 npm test               # testes em memória
 npm run test:pg        # os mesmos testes também contra um Postgres de teste (SINTONIA_TESTE_PG)
-npm run dev            # sobe em http://localhost:3333
+npm run dev            # sobe em http://localhost:3333 (vendas em /, login em /entrar)
+
+# criar um usuário (a senha é pedida na tela)
+DATABASE_URL=... npx tsx scripts/criar-usuario.ts --nome "Carla Lima" --email carla@empresa.com --papel atendente --unidades norte
 ```
 
 Na Evolution, aponte o webhook da instância para `https://SEU_DOMINIO/webhooks/evolution`, com o evento `MESSAGES_UPSERT` e o cabeçalho `x-sintonia-token` igual a `EVOLUTION_WEBHOOK_TOKEN`.
+
+## Publicar no VPS (Hostinger, Docker + Traefik)
+
+```bash
+node scripts/gerar-deploy.mjs > sintonia-compose.yaml
+```
+
+O arquivo leva o código compactado dentro (o servidor monta a imagem sozinho, sem acesso ao GitHub) e cria o projeto `sintonia`: app + Postgres próprio, rede interna própria, nenhuma porta aberta no servidor. O Traefik publica em `https://sintonia.n8nimperio.tech` com HTTPS automático. Variáveis do projeto: `POSTGRES_SENHA` (obrigatória), `ADMIN_NOME`, `ADMIN_EMAIL`, `ADMIN_SENHA`, `ANTHROPIC_API_KEY`, `TRINKS_API_KEY` e as da Evolution.
 
 ## Decisões importantes
 
