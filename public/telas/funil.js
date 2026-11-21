@@ -850,7 +850,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
     // Quem atende: selo "IA" quando a IA responde sozinha; senão, a foto ou as iniciais da atendente.
     const atende = cartao.modo === 'ia'
-      ? el('span', { class: 'fn-ia', title: 'A IA está atendendo', text: 'IA' })
+      ? (window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 22 }) : el('span', { class: 'fn-ia', title: 'A IA está atendendo', text: 'IA' })) /* conversa-extra: foto da Serena */
       : bolinha(cartao.dona, cartao.dona ? `Atendida por ${cartao.dona.nome}` : 'Sem atendente');
     const ra = window.SintoniaRastreio;
     const origem = cartao.origem?.icone && cartao.origem.icone !== 'desconhecido' ? cartao.origem : (ra?.selo(cartao.conversaId) || { icone: 'desconhecido' });
@@ -1218,7 +1218,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const desenharAchados = () => {
       if (!input.value.trim()) { fechar(); return; }
       s.achados.replaceChildren(...(achados.length ? achados.map((a, i) => {
-        const atende = a.modo === 'ia' ? el('span', { class: 'fn-ia', text: 'IA' }) : bolinha(a.dona, a.dona ? `Atendida por ${a.dona.nome}` : 'Sem atendente');
+        const atende = a.modo === 'ia' ? (window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 20 }) : el('span', { class: 'fn-ia', text: 'IA' })) : bolinha(a.dona, a.dona ? `Atendida por ${a.dona.nome}` : 'Sem atendente');
         const etapa = el('small', {}, el('i'), el('span', { text: `${a.etapa.nome} · ${funil()?.nome || ''}` }));
         etapa.style.setProperty('--cor', a.etapa.cor);
         const linha = el('div', { class: 'fn-achado', role: 'option', 'aria-selected': String(i === sel), onmousedown: (e) => e.preventDefault(), onclick: () => { fechar(); pular(a.conversaId, a.etapa.id, a); } },

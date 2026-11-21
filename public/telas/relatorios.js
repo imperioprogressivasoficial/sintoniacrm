@@ -342,7 +342,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const tot = ia.agendamentos + equipe.agendamentos;
     const linha = (rot, v) => el('div', {}, el('dt', { text: rot }), el('dd', { text: v }));
     const lado = (titulo, cor, x, extra) => el('div', { class: 'rl-lado' },
-      el('h3', {}, el('i', { class: 'rl-bol', style: `background:${cor}` }), titulo),
+      el('h3', {}, titulo === 'IA' && window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 18, titulo: 'Serena (IA)' }) : el('i', { class: 'rl-bol', style: `background:${cor}` }), titulo === 'IA' && window.SintoniaSerenaSelo ? ' Serena (IA)' : titulo), /* conversa-extra */
       el('dl', {}, linha('Respostas', fmtN(x.respostas)), linha('1ª resposta', fmtTempo(x.primeiraRespostaSeg)), linha('Tempo médio', fmtTempo(x.tempoMedioRespostaSeg)), linha('Agendamentos', fmtN(x.agendamentos)), ...extra));
     return painel(ui, 'ia-equipe', 'IA × equipe', null, 'rl-g6',
       el('div', { class: 'rl-duelo' },

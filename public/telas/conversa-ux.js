@@ -351,7 +351,7 @@
       if (unidade) lista.push(chipEl('', 'unidade', unidade));
       const etapa = u.NOME_ETAPA?.[c.etapa];
       if (etapa) lista.push(chipEl('etapa', 'etapa', etapa));
-      if (c.modo === 'ia') lista.push(chipEl('', 'ia', 'IA atendendo'));
+      if (c.modo === 'ia') lista.push(window.SintoniaSerenaSelo ? chipEl('', null, 'Serena atendendo', window.SintoniaSerenaSelo({ tam: 18 })) : chipEl('', 'ia', 'IA atendendo')); /* conversa-extra: foto da Serena */
       else if (c.responsavelId) lista.push(chipEl('', null, c.responsavelId === u.estado?.eu?.id ? 'Você' : (c.responsavelNome || 'Equipe'), miniPessoa('mini', c.responsavelId, c.responsavelNome)));
       else lista.push(chipEl('', 'sem_pessoa', 'Sem responsável'));
       chips.replaceChildren(...lista);
