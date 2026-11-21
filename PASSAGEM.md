@@ -42,6 +42,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Depois de publicar, atualize `deploy/no-ar.txt`.
 
 ## Onde parei
+- **21/11 01h45 (Bahia):** no ar 93110f7 — + atendimento-extra (540) e unidades (530). ATENÇÃO: UnidadeId agora é string; use unidadeDe(id)/zUnidade() (src/unidades.ts), nunca listas fixas. Rodando: robustez (550, correções da auditoria).
 - **21/11 01h10 (Bahia):** no ar f4e93ae — + conversa-extra (510) e produtos-lead (520). Rodando: unidades (530), atendimento-extra (540), robustez (550, correções da auditoria).
 - **21/11 00h20 (Bahia):** no ar 3437a6b — juntados: resgate, rotas-fontes, msg-agendada (470), conversa-ux (ffmpeg p/ áudio no iPhone), crm-topo (480), empresa-conta (490), integracoes (500). Falta só o agente `auditoria` (só docs). Rotas: /app/<tela> (public/telas/rotas.js — tela nova precisa entrar no mapa CAMINHO). O publicar.sh precisa de URL pública para conferir (o /app agora redireciona sem login).
 - **20/11 21h35 (Bahia):** no ar 5608cf2 — TODOS os agentes do dia juntados (fluidez, grupos 410, equipe 420, clientes-tags 430, analises, layout-telas, marketing 450). Vistas: `chat-equipe` = chat interno; `acessos` = Atendentes e acessos (a antiga `equipe` ainda existe). Agentes rodando: conversa-ux, msg-agendada (470), auditoria (só docs), grupos v2 (arquivados), crm-topo (480), empresa-conta (490), integracoes (500), rotas-fontes.
