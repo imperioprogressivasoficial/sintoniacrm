@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 12h22 (Bahia):** no ar 5eb7335 — + arrastar de lado troca de aba (celular) e ia-completa (migração 610: IA cobre quem desliga o Disponível; ferramentas remarcar/cancelar/mover em qualquer pipeline/produtos/tarefa/retorno/arquivo; ouve áudio e vê foto). Rodando: n8n-sintonia. Aguardando o dono: modelo de Configurações no celular (1–5) e dos contadores sem brilho (1–4).
 - **21/11 11h50 (Bahia):** no ar 0a846e8 — chave Disponível pequena ao lado do nome (Configurações no celular). Rodando: agentes ia-completa (600) e n8n-sintonia. Próximo: IA assume as conversas de quem está Indisponível e sabe quantos estão atendendo.
 - **21/11 08h20 (Bahia):** no ar 659e1f4 — + mídias direto do WhatsApp (whatsapp-cdn.ts), barra do celular some ao rolar, folha Atendimento e IA modelo 2, rodízio/prazos (570, rodízio desligado por padrão), perdas/saúde/login (580). Sem agentes rodando. Antes de publicação grande: node scripts/carga.mjs.
 - **21/11 03h25 (Bahia):** no ar 1f47263 — robustez (550) juntada; pipeline 3 modos e correção de mídia (base64 no webhook) também. Sem agentes rodando. Pendências do dono em docs/PEDIDOS.md (revisão 21/11).
