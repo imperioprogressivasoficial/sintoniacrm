@@ -85,3 +85,10 @@
 .ab-nome i { color: var(--ab-menta); font-style: normal; }
 .abertura .ab-texto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .ab-brilho::after { animation: none; opacity: 0; } }
+
+/* Abertura "Direto + linha no topo" (escolha do dono 21/11: modelos 1 e 3). Nada cobre a tela: o app aparece na hora,
+ * a lista mostra blocos cinzas parados (esqueleto) até as conversas chegarem, e só a linha fina do topo corre.
+ * O "Brilho" (logo + nome) saiu. A capa continua no HTML só para a linha do topo e para leitores de tela. */
+.abertura { background: transparent !important; pointer-events: none; place-content: initial; }
+.abertura .ab-brilho, .abertura .ab-nome, .abertura .ab-con-loader { display: none !important; }
+.abertura .ab-topo { z-index: 2147483001; }

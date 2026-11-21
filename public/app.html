@@ -1014,6 +1014,13 @@ html[data-tema="escuro"] .pres-pilula.off { color: #ff9a9c; background: #3d1418;
 .lt-pres-chave input:checked + .lt-chave::after { transform: translateX(14px); }
 .lt-pres-chave input:focus-visible + .lt-chave { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
 .recolhida .lt-pres-chave { display: none; }
+/* abertura-direta: esqueleto da lista de conversas (blocos parados, sem animação) até a lista chegar */
+.esq-li { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 10px 16px; }
+.esq-li i, .esq-li b, .esq-li em, .esq-li small { display: block; background: var(--esq, rgba(13,34,64,.08)); border-radius: 7px; }
+.esq-li i { width: 48px; height: 48px; border-radius: 50%; }
+.esq-li span { display: grid; gap: 8px; } .esq-li b { height: 12px; width: 62%; } .esq-li em { height: 10px; width: 40%; } .esq-li small { width: 30px; height: 10px; align-self: start; margin-top: 6px; }
+html[data-tema="escuro"] .esq-li { --esq: rgba(233,243,255,.08); }
+@media (max-width: 760px) { .esq-li { grid-template-columns: 56px 1fr auto; padding: 10px 16px; } .esq-li i { width: 56px; height: 56px; } }
 /* largura-total (pedido do dono 20/11): no computador as telas ocupam toda a largura do painel, sem faixa vazia
    dos lados (como Conversas). A Serena mantém a coluna de leitura no centro. */
 @media (min-width: 761px) {
@@ -1224,7 +1231,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
           </div>
           <div class="filtros-ativos" id="filtros-ativos" hidden></div>
         </div>
-        <div class="itens" id="itens"></div>
+        <div class="itens" id="itens"><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div><div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div></div><!-- abertura-direta: esqueleto até a lista chegar (desenharLista troca tudo) -->
       </div>
 
       <div class="chat" id="chat">
@@ -1802,6 +1809,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     contarRadar();
     const lista = filtradas();
     const cxTopo = window.SintoniaConversaExtra?.topoLista?.(); /* conversa-extra: linha "Arquivadas (N)" no topo (ou o aviso dentro do arquivo) */
+    /* abertura-direta: enquanto a primeira lista não chegou do servidor (e não há lista guardada), fica o esqueleto */
+    if (!lista.length && !estado.conversasDoServidor && !estado.conversas.length) { if (!caixa.querySelector('.esq-li')) caixa.innerHTML = '<div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div>'.repeat(10); return; }
     if (!lista.length) {
       caixa.replaceChildren(...(cxTopo ? [cxTopo] : [])); linhasFz.clear();
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
