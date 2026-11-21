@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 21:57 UTC (21/11, 18h57 na Bahia)
-commit: f5a4bb5
-pacote sha256: db36475a91b930d0d99251549ad48e47dce31dccef43c94303fb2adf8c573cad
+data: 2026-11-21 22:12 UTC (21/11, 19h12 na Bahia)
+commit: cdea070
+pacote sha256: 4acc1a283fcf3c91da0632bbac5bdaf8d3575bcd5f68e4e0ba68f70e10a6b148
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f5a4bb5.b64); pode apagar depois.
-observação: em cima do 12ac647. Entra: branch claude/balao-fantasma (sugestão da IA como balão tracejado no fim da conversa, com Descartar, Editar e Enviar).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-cdea070.b64); pode apagar depois.
+observação: em cima do f5a4bb5. Entra: Sair (botão no menu lateral, janela com a chave de Disponível, animação de saída) e branch claude/foto-atende (foto de quem atende 18px abaixo do tempo, modelo 2).
