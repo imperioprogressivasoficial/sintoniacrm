@@ -207,7 +207,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------- utilidades ----------
   const fmtN = (n) => Number(n || 0).toLocaleString('pt-BR');
   const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
-  const fmtTel = (t) => { const d = String(t || '').replace(/\D/g, ''); return d.length === 13 ? `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}` : d.length === 12 ? `(${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}` : t; };
+  const fmtTel = (t) => window.SintoniaFone.formatar(t); /* contato-nome: padrão +55 (71) 99220-0365 */
   const quando = (d) => (d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }) : '');
   const hm = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -436,7 +436,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         linhaResumo(`Fora: receberam nos últimos ${r.publico.excluirRecebeuDias} dias`, fmtN(pv.excluidos.receberamRecente)),
         linhaResumo('Fora: conversando agora', fmtN(pv.excluidos.conversando)),
         linhaResumo('Fora: sem celular válido', fmtN(pv.excluidos.semCelular))) : null,
-      pv?.amostra?.length ? el('div', { class: 'tx-nota', text: `Exemplos: ${pv.amostra.slice(0, 4).map((a) => (a.nome || fmtTel(a.telefone))).join(', ')}${r.publico.ordem === 'aleatorio' ? ' (o sorteio final é feito no envio)' : ''}` }) : null);
+      pv?.amostra?.length ? el('div', { class: 'tx-nota', text: `Exemplos: ${pv.amostra.slice(0, 4).map((a) => (window.SintoniaFone.rotulo(a.nome, a.telefone))).join(', ')}${r.publico.ordem === 'aleatorio' ? ' (o sorteio final é feito no envio)' : ''}` }) : null);
     return [blocoPublico, previaMensagem()];
   }
   const linhaResumo = (a, b) => el('div', { class: 'tx-linha' }, el('span', { text: a }), el('b', { text: b }));
@@ -740,8 +740,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (nome === 'apagar') { if (!confirm('Apagar esta transmissão e o histórico dela?')) return; await s.ui.api(`/api/transmissoes/${c.id}`, { method: 'DELETE' }).catch((e) => toast(e.message)); await voltarLista(); return; }
     try {
       if (nome === 'duplicar') { const n = await s.ui.post(`/api/transmissoes/${c.id}/duplicar`); toast('Cópia criada'); editar(n); return; }
-      if (nome === 'simular') { const r = await s.ui.post(`/api/transmissoes/${c.id}/simular-resposta`, { texto: 'Oi! Quero saber mais 😍' }); toast(`${r.nome || fmtTel(r.telefone)} respondeu (simulação)`); }
-      else if (nome === 'simular-sair') { const r = await s.ui.post(`/api/transmissoes/${c.id}/simular-resposta`, { texto: 'SAIR' }); toast(`${r.nome || fmtTel(r.telefone)} pediu para sair (simulação)`); }
+      if (nome === 'simular') { const r = await s.ui.post(`/api/transmissoes/${c.id}/simular-resposta`, { texto: 'Oi! Quero saber mais 😍' }); toast(`${window.SintoniaFone.rotulo(r.nome, r.telefone)} respondeu (simulação)`); }
+      else if (nome === 'simular-sair') { const r = await s.ui.post(`/api/transmissoes/${c.id}/simular-resposta`, { texto: 'SAIR' }); toast(`${window.SintoniaFone.rotulo(r.nome, r.telefone)} pediu para sair (simulação)`); }
       else { await s.ui.post(`/api/transmissoes/${c.id}/${nome}`, nome === 'iniciar' ? { agendarPara: null } : {}); if (msg) toast(msg); }
     } catch (e) { toast(e.message); }
     await atualizarCampanha(c.id);
@@ -816,7 +816,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       d?.itens?.length ? el('div', {}, ...d.itens.map((x) => {
         const momento = x.respondeuEm || x.lidaEm || x.entregueEm || x.enviadaEm || x.falhouEm || x.entrouEm;
         return el('div', { class: 'tx-dest' },
-          el('div', { style: 'min-width:0' }, el('b', { text: x.nome || fmtTel(x.telefone) }), el('small', { text: x.erro ? `⚠ ${x.erro}` : `${fmtTel(x.telefone)}${x.origem && x.origem !== 'publico' ? ` · ${x.origem}` : ''}` })),
+          el('div', { style: 'min-width:0' }, el('b', { text: window.SintoniaFone.rotulo(x.nome, x.telefone) }), el('small', { text: x.erro ? `⚠ ${x.erro}` : `${fmtTel(x.telefone)}${x.origem && x.origem !== 'publico' ? ` · ${x.origem}` : ''}` })),
           el('div', { class: 'dir' }, pilula(STATUS_DEST, x.status), el('small', { text: quando(momento) }), x.conversaId ? el('button', { type: 'button', class: 'tx-link', onclick: () => s.ui.abrir(x.conversaId) }, 'Abrir conversa') : null));
       })) : el('div', { class: 'tx-nota', text: d ? 'Ninguém aqui ainda.' : 'Carregando…' }));
   }

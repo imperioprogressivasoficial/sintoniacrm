@@ -5,6 +5,7 @@ import type { ArmazemCadastro } from '../empresa/cadastro.js';
 import type { ProdutosLead } from '../empresa/lead-produtos.js';
 import { ehEtapaDePerda, type Funis } from '../funis/funis.js';
 import type { Perdas } from '../perdas/perdas.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * ia-completa: o que a IA de atendimento enxerga e mexe no CRM, além da agenda.
@@ -175,7 +176,7 @@ export function montarCrmIa(o: OpcoesCrmIa): CrmIa {
       let resp: { id: string; nome: string } | undefined = c.responsavelId ? { id: c.responsavelId, nome: c.responsavelNome ?? 'dona da conversa' } : undefined;
       resp ??= await o.responsavelPadrao();
       if (!resp) throw new Error('Ninguém da equipe para receber a tarefa.');
-      await o.tarefas.criar({ empresaId: c.empresaId, titulo: t.titulo, descricao: t.descricao, venceEm: t.venceEm, responsavelId: resp.id, conversaId: c.id, clienteNome: c.nome || c.telefone, prioridade: t.prioridade });
+      await o.tarefas.criar({ empresaId: c.empresaId, titulo: t.titulo, descricao: t.descricao, venceEm: t.venceEm, responsavelId: resp.id, conversaId: c.id, clienteNome: nomeOuTelefone(c.nome, c.telefone), prioridade: t.prioridade });
       return { responsavel: resp.nome };
     },
     async arquivo(_c, origem, id) {

@@ -340,7 +340,7 @@
   }
 
   // ---------- Foco ----------
-  const nomeDe = (s, c) => c.nome || (s.ui.formatarTel ? s.ui.formatarTel(c.telefone) : s.ui.nomeDe({ telefone: c.telefone }));
+  const nomeDe = (s, c) => window.SintoniaFone.rotulo(c.nome, c.telefone);
   const primeiro = (n) => String(n || '').split(/\s+/)[0];
   const DIA = 86400000;
 

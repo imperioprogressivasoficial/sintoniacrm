@@ -78,6 +78,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/vendas/logo-kommo.png': { arquivo: 'vendas/logo-kommo.png', tipo: 'image/png' },
   '/vendas/logo-hubspot.png': { arquivo: 'vendas/logo-hubspot.png', tipo: 'image/png' },
   '/vendas/logo-rdstation.png': { arquivo: 'vendas/logo-rdstation.png', tipo: 'image/png' },
+  '/telas/fone.js': { arquivo: 'telas/fone.js', tipo: 'text/javascript; charset=utf-8' } /* contato-nome */,
   '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },

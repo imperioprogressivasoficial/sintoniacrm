@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Conversa } from '../domain.js';
-import { aplicarEdicao, contatoVazio, EdicaoContato, ErroCampoRepetido, TIPOS_CAMPO, type ArmazemContatos } from './contatos.js';
+import { aplicarEdicao, contatoVazio, EdicaoContato, ErroCampoRepetido, TIPOS_CAMPO, type ArmazemContatos, type Contato } from './contatos.js';
+import { nomeEhReal } from './nome.js';
 
 export interface OpcoesContatos {
   contatos: ArmazemContatos;
@@ -26,6 +27,12 @@ const EdicaoCampo = z.object({
   ordem: z.number().int().min(0).max(999).optional(),
 });
 
+/** contato-nome: ficha guardada só com o número no nome, e a conversa já tem o nome do WhatsApp: mostra o nome. */
+function comNome(salvo: Contato | undefined, c: Conversa): Contato {
+  if (!salvo) return contatoVazio(c.telefone, c.nome);
+  return !nomeEhReal(salvo.nome) && nomeEhReal(c.nome) ? { ...salvo, nome: c.nome ?? null } : salvo;
+}
+
 /** Ficha do contato (dados, e-mail, empresa, campos personalizados) e os campos que a empresa criou. */
 export function registrarContatos(app: FastifyInstance, o: OpcoesContatos): void {
   const quem = (req: FastifyRequest) => req.usuario?.email ?? 'sistema';
@@ -35,7 +42,7 @@ export function registrarContatos(app: FastifyInstance, o: OpcoesContatos): void
 
   app.get('/api/conversas/:id/contato', async (req) => {
     const c = await o.conversaVisivel(req);
-    const contato = (await o.contatos.obter(o.empresaId, c.telefone)) ?? contatoVazio(c.telefone, c.nome);
+    const contato = comNome(await o.contatos.obter(o.empresaId, c.telefone), c);
     return { contato, campos: await o.contatos.campos(o.empresaId) };
   });
 
@@ -43,7 +50,7 @@ export function registrarContatos(app: FastifyInstance, o: OpcoesContatos): void
     const c = await o.conversaVisivel(req);
     const edicao = EdicaoContato.parse(req.body);
     const defs = await o.contatos.campos(o.empresaId);
-    const atual = (await o.contatos.obter(o.empresaId, c.telefone)) ?? contatoVazio(c.telefone, c.nome);
+    const atual = comNome(await o.contatos.obter(o.empresaId, c.telefone), c);
     let nova;
     try {
       nova = aplicarEdicao(atual, edicao, defs);

@@ -6,6 +6,7 @@ import { ehGestor } from '../auth/acesso.js';
 import type { Contas, Usuario } from '../auth/contas.js';
 import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * Rotina do vendedor (Atendimento › Rotina): "o vendedor tem rotinas e tarefas que precisa fazer, para não se perder".
@@ -147,7 +148,7 @@ export function registrarRotina(app: FastifyInstance, o: OpcoesRotina): void {
     if (!id) return { conversaId: null, clienteNome: null };
     const c = await o.repo?.buscarConversa(id).catch(() => undefined);
     if (!c || c.empresaId !== u.empresaId || (o.visivelPara && !o.visivelPara(req)(c))) throw erro(404, 'Conversa não encontrada.');
-    return { conversaId: c.id, clienteNome: c.nome || c.telefone };
+    return { conversaId: c.id, clienteNome: nomeOuTelefone(c.nome, c.telefone) };
   };
   /** Tarefa que a pessoa pode mexer: a dela (responsável ou criadora) ou, para o gestor, qualquer uma da empresa. */
   const tarefaDe = async (u: Usuario, idBruto: string) => {

@@ -548,7 +548,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return vistaGrade();
   }
 
-  const tituloEv = (i) => [i.cliente || s.ui.formatarTel?.(i.telefone) || i.telefone, i.servico].filter(Boolean).join(' — ');
+  const tituloEv = (i) => [window.SintoniaFone.rotulo(i.cliente, i.telefone), i.servico].filter(Boolean).join(' — ');
   const rotuloEv = (i) => `${ehReu(i) ? 'Reunião online: ' : ''}${tituloEv(i)}, ${diaLongo(i._dia)}, das ${hm(new Date(i.inicio))} às ${hm(new Date(i.fim))}${i.profissional ? ', com ' + i.profissional : ''}`;
   const jaFoi = (i) => new Date(i.fim) < new Date();
 

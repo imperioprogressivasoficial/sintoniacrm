@@ -264,7 +264,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     let conversaId = v.conversaId, prioridade = v.prioridade;
     if (conversaId && !v.clienteNome) {
       const c = (ui.estado?.conversas || []).find((k) => k.id === conversaId) || (ui.estado?.aberta?.id === conversaId ? ui.estado.aberta : null);
-      v.clienteNome = c ? (c.nome || ui.formatarTel?.(c.telefone) || c.telefone) : 'Conversa';
+      v.clienteNome = c ? (window.SintoniaFone.rotulo(c.nome, c.telefone) || c.telefone) : 'Conversa';
     }
     const titulo = el('input', { value: v.titulo, maxlength: '140', placeholder: 'Ex.: Retornar a Ana sobre o orçamento', required: '' });
     const desc = el('textarea', { rows: '2', maxlength: '2000', placeholder: 'Detalhes (opcional)' }); desc.value = v.descricao || '';
@@ -279,7 +279,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     // Cliente: a conversa ligada (chip) ou escolher entre as conversas carregadas.
     const listaId = 'rt-clientes-' + Math.random().toString(36).slice(2, 7);
     const conversas = (ui.estado?.conversas || []).slice(0, 400);
-    const rotuloConv = (c) => `${c.nome || 'Sem nome'} · ${ui.formatarTel?.(c.telefone) || c.telefone}`;
+    const rotuloConv = (c) => `${window.SintoniaFone.temNome(c.nome) ? c.nome : 'Sem nome'} · ${window.SintoniaFone.formatar(c.telefone)}`;
     const busca = el('input', { list: listaId, placeholder: 'Buscar pelo nome ou telefone', autocomplete: 'off' });
     const dl = el('datalist', { id: listaId }, ...conversas.map((c) => el('option', { value: rotuloConv(c) })));
     const zonaCliente = el('div');

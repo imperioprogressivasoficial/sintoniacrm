@@ -1,3 +1,5 @@
+import { telefoneDoJid } from '../util/telefone.js';
+
 /**
  * Administração da Evolution API v2: criar a instância de cada loja, mostrar o QR Code,
  * saber se está conectada e desconectar. Usa a chave global da Evolution.
@@ -343,6 +345,46 @@ export class EvolutionAdmin {
   async listarGrupos(nome: string): Promise<InfoGrupo[]> {
     const r = await this.chamar<unknown>('GET', `/group/fetchAllGroups/${encodeURIComponent(nome)}?getParticipants=false`, undefined, 180_000);
     return (Array.isArray(r) ? r : []).map((g) => lerGrupo(g as Record<string, unknown>)).filter((g): g is InfoGrupo => Boolean(g));
+  }
+
+  /**
+   * contato-nome: nome do perfil (pushName) de cada contato do número, por telefone (só dígitos, com 55 e o 9).
+   * Lê POST /chat/findContacts (os contatos) e POST /chat/findChats (para achar o número dos contatos "@lid",
+   * que vem na última mensagem como remoteJidAlt/senderPn). O nome volta como veio: quem usa limpa e confere.
+   */
+  async nomesDeContatos(nome: string, timeoutMs = 60_000): Promise<Map<string, string>> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const inst = encodeURIComponent(nome);
+    const contatos = await this.chamar<unknown>('POST', `/chat/findContacts/${inst}`, { where: {} }, timeoutMs);
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${inst}`, {}, timeoutMs).catch(() => []);
+    const texto = (v: unknown) => (typeof v === 'string' ? v : '');
+    const telDe = (jid: string) => {
+      if (!jid || jid.endsWith('@lid')) return null;
+      return telefoneDoJid(jid.includes('@') ? jid : `${jid}@s.whatsapp.net`);
+    };
+    // "@lid" → número, pelas conversas.
+    const doLid = new Map<string, string>();
+    const listaChats = (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>;
+    for (const c of listaChats) {
+      const jid = texto(c.remoteJid);
+      if (!jid.endsWith('@lid')) continue;
+      const k = ((c.lastMessage as Record<string, unknown> | undefined)?.key ?? {}) as Record<string, unknown>;
+      const tel = telDe(texto(k.remoteJidAlt) || texto(k.senderPn) || texto(c.remoteJidAlt));
+      if (tel) doLid.set(jid, tel);
+    }
+    const saida = new Map<string, string>();
+    const por = (r: Record<string, unknown>, nomeBruto: unknown) => {
+      const n = texto(nomeBruto).trim();
+      if (!n || !/\p{L}/u.test(n)) return; // sem letra (número, pontos, emojis): não é nome
+      const jid = texto(r.remoteJid) || texto(r.id);
+      const alt = texto(r.remoteJidAlt) || texto(r.senderPn) || texto(r.phoneNumber) || texto(r.jidAlt);
+      const tel = (jid.endsWith('@lid') ? (telDe(alt) ?? doLid.get(jid)) : telDe(jid)) ?? null;
+      if (tel && !saida.has(tel)) saida.set(tel, n);
+    };
+    for (const c of (Array.isArray(contatos) ? contatos : []) as Array<Record<string, unknown>>) por(c, c.pushName);
+    // Conversa sem contato salvo: o nome que a Evolution guardou na conversa (só pessoas, nunca grupo).
+    for (const c of listaChats) if (!texto(c.remoteJid).endsWith('@g.us')) por(c, c.pushName);
+    return saida;
   }
 
   /** Grupos que têm conversa guardada na Evolution (POST /chat/findChats, só "@g.us"): rápido, só jid e nome. */

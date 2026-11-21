@@ -504,7 +504,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     for (const m of tela.itens) {
       const d = diaTxt(m.enviarEm);
       if (d !== dia) { dia = d; lista.append(el('div', { class: 'ag-dia', text: d })); }
-      const cli = m.conversa?.nome || u.formatarTel?.(m.conversa?.telefone) || m.conversa?.telefone || 'Cliente';
+      const cli = window.SintoniaFone.rotulo(m.conversa?.nome, m.conversa?.telefone) || 'Cliente';
       const prev = [m.anexo ? `[${m.anexo.nome || NOME_ANEXO[m.anexo.tipo] || 'arquivo'}]` : '', m.texto].filter(Boolean).join(' ');
       const acoes = el('div', { class: 'ag-item-acoes' });
       if (PENDENTE(m) && m.situacao !== 'enviando') {
