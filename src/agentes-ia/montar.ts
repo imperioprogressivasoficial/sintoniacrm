@@ -42,6 +42,8 @@ export interface OpcoesAgentesIa {
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
   fetch?: typeof fetch;
+  /** ia-completa: pipelines, produtos e arquivos para as ferramentas de CRM dos agentes. */
+  crm?: () => import('../ai/crm-ia.js').ServicosCrmIa | undefined;
   /** Para testes: substitui a criação do cliente do provedor. */
   cliente?: (provedor: Provedor, chave?: string) => ClienteClaude;
 }
@@ -61,7 +63,7 @@ export function montarAgentesIa(o: OpcoesAgentesIa) {
       if (!o.chaveGeral('anthropic')) throw new SemChave('anthropic');
       return o.claudeGeral;
     });
-  const executor = new ExecutorAgentes({ empresaId: o.empresaId, armazem, cofre: o.cofre, agenda: o.agenda, baseGeral: o.baseGeral, cliente, repo: o.repo, agora: o.agora, log: o.log });
+  const executor = new ExecutorAgentes({ empresaId: o.empresaId, armazem, cofre: o.cofre, agenda: o.agenda, baseGeral: o.baseGeral, cliente, repo: o.repo, agora: o.agora, log: o.log, crm: o.crm });
   const temChave = (a: AgenteIa) => Boolean(a.chaveCifrada) || Boolean(o.chaveGeral(a.provedor));
   const controle = new ControleIa({ empresaId: o.empresaId, armazem, executor, padrao: o.padrao, repo: o.repo, temChave, sintonia: o.sintonia, agora: o.agora, log: o.log });
   const servico = new ServicoAgentesIa({ empresaId: o.empresaId, armazem, cofre: o.cofre, executor, repo: o.repo, baseGeral: o.baseGeral, agora: o.agora, fetch: o.fetch });

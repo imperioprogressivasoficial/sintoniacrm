@@ -10,7 +10,9 @@ export type TipoEnvio =
   | 'followup_3d'
   | 'recuperar_falta'
   | 'manutencao_90d'
-  | 'pos_atendimento';
+  | 'pos_atendimento'
+  /** ia-completa: retorno que a IA combinou com a cliente (agendar_retorno). */
+  | 'retorno_ia';
 
 export interface EnvioProgramado {
   tipo: TipoEnvio;

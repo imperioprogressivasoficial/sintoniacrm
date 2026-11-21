@@ -77,7 +77,10 @@ const Pedido = z.object({ status: z.enum(['online', 'offline']) });
  *                      as pessoas da equipe que ela enxerga (igual ao serviço antigo, que usava /api/equipe).
  * PUT /api/presenca  { status } → { ok: true, status }: muda só o da própria pessoa.
  */
-export function registrarPresenca(app: FastifyInstance, o: { presencas: Presencas; contas?: Contas }): void {
+export function registrarPresenca(
+  app: FastifyInstance,
+  o: { presencas: Presencas; contas?: Contas; aoMudar?: (u: import('../auth/contas.js').Usuario, status: StatusPresenca) => Promise<unknown> },
+): void {
   app.get('/api/presenca', async (req, reply) => {
     const eu = req.usuario;
     if (!eu) return reply.code(401).send({ erro: 'Entre de novo.' });
@@ -94,7 +97,17 @@ export function registrarPresenca(app: FastifyInstance, o: { presencas: Presenca
     if (!eu) return reply.code(401).send({ erro: 'Entre de novo.' });
     const b = Pedido.safeParse(req.body);
     if (!b.success) return reply.code(400).send({ erro: 'Status inválido.' });
+    const antes = (await statusDe(o.presencas, [eu.id]))[eu.id];
     await o.presencas.gravar(eu.id, b.data.status);
+    // ia-completa: ficou indisponível = a IA cobre as conversas dela; voltou = devolve (src/presenca/cobertura.ts).
+    if (o.aoMudar && antes !== b.data.status) {
+      try {
+        const r = (await o.aoMudar(eu, b.data.status)) as { cobertas?: number; devolvidas?: number } | undefined;
+        return { ok: true, status: b.data.status, ...(r ?? {}) };
+      } catch (e) {
+        req.log.error(e, 'Falha na cobertura da IA');
+      }
+    }
     return { ok: true, status: b.data.status };
   });
 }

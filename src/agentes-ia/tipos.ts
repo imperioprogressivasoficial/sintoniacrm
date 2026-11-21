@@ -8,17 +8,34 @@ import { identidade } from '../empresa/identidade.js';
  * conhecimento, memória, ferramentas permitidas e quando passar para a equipe.
  */
 
-export const FERRAMENTAS_AGENTE = ['responder', 'agendar', 'mover_etapa', 'marcar_tag', 'transferir', 'lembrete_ligacao', 'consultar_agenda'] as const;
+export const FERRAMENTAS_AGENTE = [
+  'responder',
+  'agendar',
+  'mover_etapa',
+  'marcar_tag',
+  'transferir',
+  'lembrete_ligacao',
+  'consultar_agenda',
+  /* ia-completa */
+  'produtos',
+  'tarefas',
+  'retorno',
+  'enviar_arquivos',
+] as const;
 export type FerramentaAgente = (typeof FERRAMENTAS_AGENTE)[number];
 
 export const NOME_FERRAMENTA: Record<FerramentaAgente, string> = {
   responder: 'Responder a cliente',
-  agendar: 'Agendar no Trinks',
-  mover_etapa: 'Mover etapa no CRM',
+  agendar: 'Agendar, remarcar e cancelar',
+  mover_etapa: 'Mover em qualquer pipeline (com motivo de perda)',
   marcar_tag: 'Marcar tag',
   transferir: 'Transferir para a equipe',
   lembrete_ligacao: 'Criar lembrete de ligação',
-  consultar_agenda: 'Consultar agenda e serviços',
+  consultar_agenda: 'Consultar agenda, serviços e produtos',
+  produtos: 'Ligar produto de interesse ao lead',
+  tarefas: 'Criar tarefa para a equipe',
+  retorno: 'Combinar retorno com a cliente',
+  enviar_arquivos: 'Mandar foto de produto e catálogo',
 };
 
 export const CHAVES_MEMORIA = ['tipo_cabelo', 'comprimento', 'ultima_quimica', 'preferencia_horario', 'objecao', 'gestante', 'unidade_preferida', 'outro'] as const;
@@ -63,7 +80,7 @@ export const ConfigAgente = z.object({
     .default({ sempre: [], nunca: [] }),
   padroes: z.array(z.object({ situacao: texto(80).min(1), resposta: texto(1500).min(1) })).max(40).default([]),
   exemplos: z.array(z.object({ cliente: texto(800).min(1), resposta: texto(1500).min(1) })).max(30).default([]),
-  ferramentas: z.array(z.enum(FERRAMENTAS_AGENTE)).default(['responder', 'consultar_agenda', 'agendar', 'mover_etapa', 'transferir']),
+  ferramentas: z.array(z.enum(FERRAMENTAS_AGENTE)).default(['responder', 'consultar_agenda', 'agendar', 'mover_etapa', 'transferir', 'produtos', 'tarefas', 'retorno', 'enviar_arquivos']),
   passagem: z
     .object({
       reclamacao: z.boolean().default(true),

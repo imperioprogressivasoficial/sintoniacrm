@@ -15,6 +15,12 @@ import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
 import { resumir, textoRelatorio } from './relatorio.js';
 import { TravaMemoria, type Trava } from '../fila/trava.js';
+/* ia-completa */
+import { textoPassagem } from '../ai/agente.js';
+import type { AplicadorCrmIa } from '../ai/crm-ia.js';
+import { partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
+import { PREFIXO_NOTA_IA, type Percepcao } from '../ai/prompt.js';
+import { dataISO, horaHHmm } from '../util/tempo.js';
 
 /** Número de WhatsApp conectado: por qual canal e de qual unidade. */
 export interface NumeroConectado {
@@ -78,7 +84,31 @@ export interface DependenciasSintonia {
    * por trás (src/app/fila-ia.ts). Ausente = pensa na hora, dentro de `receber` (comportamento antigo, testes).
    */
   filaIa?: { pedir(conversaId: string): void; executar?(conversaId: string): Promise<void> };
+  /**
+   * ia-completa: a cliente costuma mandar várias mensagens seguidas ("oi" / "tudo bem?" / "quanto é a progressiva?").
+   * A IA espera este silêncio (ms) depois da última antes de responder, e responde tudo de uma vez (no máximo
+   * JUNTAR_MAX_MS de espera). Ausente/0 = responde na hora (comportamento antigo, testes).
+   */
+  juntarMs?: number;
+  /** Como esperar (testes trocam por um relógio falso). */
+  esperar?: (ms: number) => Promise<void>;
+  /** ia-completa: transcreve os áudios e pega as fotos da cliente antes de a IA pensar. */
+  percepcao?: { preparar(c: Conversa, mensagens: import('../domain.js').Mensagem[], agora: Date): Promise<{ percepcao: Percepcao; esperar: boolean }> };
+  /** ia-completa: o que a IA mexe no CRM (pipeline, produto do lead, tarefa da equipe, arquivo para a cliente). */
+  crmIa?: AplicadorCrmIa;
+  /** ia-completa: limite de uso da IA por conversa por dia. */
+  guardaCusto?: GuardaCusto;
+  /** ia-completa: quem da equipe está disponível agora (vai para a IA em cada resposta). */
+  equipeAgora?: (c: Conversa) => Promise<{ texto: string; disponiveis: number; responsavelDisponivel: boolean | null } | undefined>;
 }
+
+/** ia-completa: espera máxima para juntar mensagens seguidas ou esperar uma mídia baixar. */
+export const JUNTAR_MAX_MS = 25_000;
+/** ia-completa: lembretes do agendamento (cancelados quando a IA remarca ou cancela). */
+const LEMBRETES: Tarefa['tipo'][] = ['lembrete_vespera', 'lembrete_2h'];
+/** ia-completa: ações que já aconteceram fora da Sintonia (na agenda) e precisam entrar no CRM de qualquer jeito. */
+const FATOS: AcaoAgente['tipo'][] = ['agendou', 'remarcou', 'cancelou'];
+const diaHora = (d: Date) => `${dataISO(d).split('-').reverse().slice(0, 2).join('/')} às ${horaHHmm(d)}`;
 
 /** robustez: pausa da IA depois de a chave ser recusada (401). Trocar a chave em Conexões vale depois da pausa. */
 export const PAUSA_IA_RECUSADA_MS = 15 * 60_000;
@@ -120,6 +150,8 @@ const vistaEm = (enviadaEm: Date, agora: Date, c: Conversa) =>
       agora.getTime(),
       (c.ultimaMensagemIa?.getTime() ?? 0) + 1,
       (c.ultimaMensagemEquipe?.getTime() ?? 0) + 1,
+      // ia-completa: duas mensagens da cliente no mesmo milissegundo ainda contam como "chegou mensagem nova".
+      (c.ultimaMensagemCliente?.getTime() ?? 0) + 1,
     ),
   );
 
@@ -142,8 +174,15 @@ export class Sintonia {
   private iaRecusadaAte = 0;
   /** robustez: dentro deste processo, a mesma conversa é pensada pela IA uma vez por vez (fora da trava do banco). */
   private readonly vezDaIa = new TravaMemoria();
+  /**
+   * ia-completa: resposta pronta que não saiu (WhatsApp desconectado na hora de enviar). As ações já foram aplicadas;
+   * na próxima tentativa só o texto é reenviado (a IA não pensa de novo nem agenda duas vezes).
+   */
+  private readonly naoEnviadas = new Map<string, { partes: string[]; marco: number | undefined; criadaEm: number }>();
+  private readonly esperar: (ms: number) => Promise<void>;
 
   constructor(private readonly d: DependenciasSintonia) {
+    this.esperar = d.esperar ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.agora = d.agora ?? (() => new Date());
     this.regras = d.regras ?? REGRAS_PADRAO;
     this.log = d.log ?? (() => {});
@@ -786,6 +825,9 @@ export class Sintonia {
         if (!jaPausada) {
           this.log('A IA recusou a chave (confira em Conexões); a IA fica pausada por 15 min e as conversas ficam com a equipe', String((e as Error)?.message ?? e).slice(0, 200));
           await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: 'chave da IA recusada (401)', pausaMin: PAUSA_IA_RECUSADA_MS / 60_000 } }).catch(() => undefined);
+          // ia-completa: a equipe fica sabendo (uma vez por pausa) que as conversas estão com ela.
+          const c = await this.d.repo.buscarConversa(conversaId).catch(() => undefined);
+          if (c) await this.d.avisarEquipe?.('A IA está pausada: a chave da IA foi recusada. Confira a chave em Mais › Conexões. Enquanto isso, as conversas ficam com a equipe.', c)?.catch(() => undefined);
         }
         return;
       }
@@ -799,6 +841,14 @@ export class Sintonia {
         this.falhasIa.delete(conversaId);
         this.log(`A IA falhou ${MAX_FALHAS_IA} vezes seguidas nesta conversa; ela fica para a equipe`, conversaId);
         await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: 'IA desistiu depois de várias falhas', desistiu: true } }).catch(() => undefined);
+        // ia-completa: a conversa não fica esquecida: etiqueta "precisa da equipe" e aviso (o modo não muda: a próxima
+        // mensagem da cliente ainda tenta a IA de novo).
+        this.naoEnviadas.delete(conversaId);
+        await this.mutar(conversaId, async (c) => {
+          if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
+          await this.d.repo.salvarConversa(c);
+          await this.d.avisarEquipe?.(`A IA não conseguiu responder ${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome}) depois de várias tentativas. Alguém da equipe pode responder?`, c)?.catch(() => undefined);
+        }).catch(() => undefined);
         return;
       }
       if (this.falhasIa.size > 5000) this.falhasIa.clear();
@@ -830,13 +880,15 @@ export class Sintonia {
    */
   private async processarAgora(conversaId: string): Promise<void> {
     const { regras } = await this.configAgora();
-    for (let rodada = 0; rodada < 3; rodada++) {
+    for (let rodada = 0; rodada < 4; rodada++) {
       // Lê e decide sob a trava (rápido): o que já estava esperando a conversa (bot, automação, resposta da equipe)
       // termina antes, e a IA nem é chamada se a mensagem já foi respondida.
-      const c = await this.trava.comTrava(conversaId, () => this.d.repo.buscarConversa(conversaId));
+      let c = await this.trava.comTrava(conversaId, () => this.d.repo.buscarConversa(conversaId));
       if (!c) return;
+      // ia-completa: resposta que já estava pronta e não saiu (WhatsApp fora): só reenvia, sem pensar de novo.
+      if (await this.reenviarPendente(c)) return;
       const agora = this.agora();
-      const decisao = decidirQuemResponde(c, unidadeDe(c.unidade), agora, regras);
+      let decisao = decidirQuemResponde(c, unidadeDe(c.unidade), agora, regras);
 
       if (decisao.acao === 'nada') return;
       if (await this.botConduz(c)) return;
@@ -847,19 +899,69 @@ export class Sintonia {
       // robustez: sem chave da IA (ou IA desligada), não chama nem reagenda: a conversa fica para a equipe.
       if (!(await this.temIa(c))) return;
 
-      const marco = c.ultimaMensagemCliente?.getTime();
-      const mensagens = await this.d.repo.mensagens(c.id);
-      const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
-      const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo, tagsDisponiveis: await this.tagsParaIa(), objetivo: await this.objetivoDe(c) });
+      // ia-completa: várias mensagens seguidas viram uma resposta só (espera a cliente parar de digitar).
+      if (this.d.juntarMs) {
+        const juntada = await this.esperarSilencio(c);
+        if (!juntada) return;
+        c = juntada;
+        decisao = decidirQuemResponde(c, unidadeDe(c.unidade), this.agora(), regras);
+        if (decisao.acao !== 'ia_responde' && decisao.acao !== 'sugerir') continue;
+      }
 
-      const fim = await this.trava.comTrava(conversaId, async (): Promise<'fim' | 'de_novo'> => {
+      const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
+      // ia-completa: limite de uso da IA por conversa por dia.
+      if (await this.limiteDeCusto(c, modo)) return;
+
+      const marco = c.ultimaMensagemCliente?.getTime();
+      let mensagens = await this.d.repo.mensagens(c.id);
+      // ia-completa: áudio transcrito e foto como imagem; mídia que acabou de chegar e ainda baixa: espera um pouco.
+      let percepcao: Percepcao | undefined;
+      if (this.d.percepcao) {
+        const limite = this.agora().getTime() + JUNTAR_MAX_MS;
+        for (;;) {
+          const r = await this.d.percepcao.preparar(c, mensagens, this.agora()).catch(() => undefined);
+          percepcao = r?.percepcao;
+          if (!r?.esperar || this.agora().getTime() >= limite) break;
+          await this.esperar(5_000);
+          mensagens = await this.d.repo.mensagens(c.id);
+        }
+      }
+      const atual = c;
+      const continuar = async (): Promise<boolean> => {
+        const d = await this.d.repo.buscarConversa(atual.id).catch(() => undefined);
+        if (!d) return false;
+        if (d.ultimaMensagemCliente?.getTime() !== marco) return false;
+        return modo !== 'responder' || decidirQuemResponde(d, unidadeDe(d.unidade), this.agora(), regras).acao === 'ia_responde';
+      };
+      const r = await this.d.agente.executar({
+        conversa: c,
+        mensagens,
+        agora,
+        modo,
+        tagsDisponiveis: await this.tagsParaIa(),
+        objetivo: await this.objetivoDe(c),
+        ...(percepcao?.size ? { percepcao } : {}),
+        ...(await this.equipeDe(c)),
+        continuar,
+      });
+
+      const resultado = await this.trava.comTrava(conversaId, async (): Promise<'fim' | 'de_novo'> => {
         // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
-        const depois = await this.d.repo.buscarConversa(c.id);
+        const depois = await this.d.repo.buscarConversa(c!.id);
         if (!depois) return 'fim';
-        if (depois.ultimaMensagemCliente?.getTime() !== marco) return 'de_novo';
+        if (depois.ultimaMensagemCliente?.getTime() !== marco) {
+          // ia-completa: o que a IA já fez na agenda vale (e fica anotado para a próxima resposta saber).
+          await this.aplicarFatos(depois, r.acoes, 'chegou mensagem nova antes de a IA responder');
+          return 'de_novo';
+        }
         // A equipe assumiu enquanto a IA pensava: não atropela.
         if (modo === 'responder' && decidirQuemResponde(depois, unidadeDe(depois.unidade), this.agora(), regras).acao !== 'ia_responde') {
+          await this.aplicarFatos(depois, r.acoes, 'a equipe assumiu a conversa antes de a IA responder');
           return 'fim';
+        }
+        if (r.interrompida) {
+          await this.aplicarFatos(depois, r.acoes, 'a resposta foi interrompida');
+          return 'de_novo';
         }
 
         if (decisao.acao === 'sugerir') {
@@ -878,9 +980,22 @@ export class Sintonia {
           return 'fim';
         }
         const enviadoEm = this.agora();
-        const id = await this.enviar(depois, r.texto);
         const espera = this.tempoDeResposta(depois, enviadoEm);
-        await this.d.repo.adicionarMensagem({ conversaId: depois.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
+        // ia-completa: sem markdown e em até 3 mensagens curtas.
+        const partes = partirParaWhatsApp(r.texto);
+        const enviadas = await this.enviarPartes(depois, partes, enviadoEm);
+        if (enviadas.erro) {
+          // ia-completa: o WhatsApp não aceitou (desconectado). O que a IA fez vale; a resposta espera para ser reenviada.
+          this.naoEnviadas.set(depois.id, { partes: partes.slice(enviadas.n), marco, criadaEm: enviadoEm.getTime() });
+          if (enviadas.n > 0) {
+            depois.ultimaMensagemIa = enviadoEm;
+            depois.atualizadaEm = enviadoEm;
+          }
+          if (decisao.assumiu) depois.modo = 'ia';
+          await this.aplicarAcoes(depois, r.acoes, 'ia');
+          await this.d.repo.salvarConversa(depois);
+          throw enviadas.erro;
+        }
         depois.ultimaMensagemIa = enviadoEm;
         depois.atualizadaEm = enviadoEm;
         if (decisao.assumiu) {
@@ -894,8 +1009,131 @@ export class Sintonia {
         await this.programarFollowups(depois, enviadoEm);
         return 'fim';
       });
-      if (fim === 'fim') return;
+      if (resultado === 'fim') return;
     }
+    // ia-completa: a cliente não parou de escrever em 4 rodadas: tenta de novo em 30 s (nunca fica sem resposta).
+    await this.reavaliarEm(conversaId, new Date(this.agora().getTime() + 30_000));
+  }
+
+  /** ia-completa: espera a cliente parar de mandar mensagens (juntarMs de silêncio, no máximo JUNTAR_MAX_MS). */
+  private async esperarSilencio(c: Conversa): Promise<Conversa | undefined> {
+    const juntar = this.d.juntarMs ?? 0;
+    const limite = this.agora().getTime() + JUNTAR_MAX_MS;
+    let atual = c;
+    for (;;) {
+      const falta = Math.min((atual.ultimaMensagemCliente?.getTime() ?? 0) + juntar, limite) - this.agora().getTime();
+      if (falta <= 0) return atual;
+      await this.esperar(falta);
+      const d = await this.d.repo.buscarConversa(c.id);
+      if (!d) return undefined;
+      atual = d;
+    }
+  }
+
+  /**
+   * ia-completa: envia as partes da resposta em ordem. Para na primeira que falhar e devolve quantas saíram e o erro
+   * (as que saíram ficam gravadas na conversa).
+   */
+  private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown }> {
+    let n = 0;
+    for (const texto of partes) {
+      try {
+        const id = await this.enviar(c, texto);
+        // Cada parte 1 ms depois da anterior: a ordem na tela é a ordem em que saíram.
+        await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto, em: new Date(em.getTime() + n), idExterno: id });
+        n++;
+      } catch (erro) {
+        return { n, erro };
+      }
+    }
+    return { n };
+  }
+
+  /**
+   * ia-completa: reenvia a resposta que não saiu, se a conversa ainda está como estava (a cliente não escreveu de
+   * novo e a equipe não respondeu). Devolve true se tratou a conversa (enviou ou falhou de novo).
+   */
+  private async reenviarPendente(c: Conversa): Promise<boolean> {
+    const p = this.naoEnviadas.get(c.id);
+    if (!p) return false;
+    const valeAinda = c.ultimaMensagemCliente?.getTime() === p.marco && (c.ultimaMensagemEquipe?.getTime() ?? 0) < p.criadaEm;
+    if (!valeAinda) {
+      this.naoEnviadas.delete(c.id);
+      return false;
+    }
+    const r = await this.trava.comTrava(c.id, async () => {
+      const d = await this.d.repo.buscarConversa(c.id);
+      if (!d) return { n: 0 };
+      const em = this.agora();
+      const e = await this.enviarPartes(d, p.partes, em);
+      if (e.n > 0) {
+        d.ultimaMensagemIa = em;
+        d.atualizadaEm = em;
+        await this.d.repo.salvarConversa(d);
+      }
+      if (e.erro) {
+        p.partes = p.partes.slice(e.n);
+        return e;
+      }
+      this.naoEnviadas.delete(c.id);
+      await this.evento('ia_respondeu', d, { reenvio: true });
+      await this.d.repo.cancelarTarefas(d.id, ['reavaliar']);
+      await this.programarFollowups(d, em);
+      return e;
+    });
+    if (r.erro) throw r.erro;
+    return true;
+  }
+
+  /**
+   * ia-completa: a IA pensou mas a resposta não vai sair (mensagem nova ou a equipe assumiu). O que ela já fez na
+   * agenda (agendou, remarcou, cancelou) aconteceu de verdade: entra no CRM e fica anotado na conversa.
+   */
+  private async aplicarFatos(c: Conversa, acoes: AcaoAgente[], porque: string): Promise<void> {
+    const fatos = acoes.filter((a) => FATOS.includes(a.tipo));
+    if (!fatos.length) return;
+    await this.aplicarAcoes(c, fatos, 'ia');
+    for (const a of fatos) {
+      if (a.tipo === 'agendou') await this.nota(c, `IA marcou ${a.agendamento.servico} em ${diaHora(a.agendamento.inicio)} (${porque}; a cliente ainda não recebeu a confirmação).`);
+    }
+    await this.d.repo.salvarConversa(c);
+  }
+
+  /** ia-completa: limite de uso por conversa. Devolve true se a IA não deve ser chamada agora. */
+  private async limiteDeCusto(c: Conversa, modo: 'responder' | 'sugerir'): Promise<boolean> {
+    const g = this.d.guardaCusto;
+    if (!g) return false;
+    const sit = g.situacao(c.id);
+    if (sit === 'perto' && g.primeiroAviso(c.id, 'perto')) {
+      await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: c.id, unidade: c.unidade, em: this.agora(), dados: { etapa: 'custo', aviso: 'A IA já usou 80% do limite desta conversa hoje.' } }).catch(() => undefined);
+    }
+    if (sit !== 'estourou') return false;
+    if (!g.primeiroAviso(c.id, 'estourou')) return true;
+    // Primeira vez que estoura no dia: a conversa vai para a equipe, com aviso; a cliente recebe a mensagem de passagem.
+    await this.mutar(c.id, async (d) => {
+      if (modo === 'responder' && d.modo !== 'humano') {
+        const em = this.agora();
+        const e = await this.enviarPartes(d, [textoPassagem((await this.equipeDe(d)).equipe)], em);
+        if (e.n) d.ultimaMensagemIa = em;
+      }
+      await this.aplicarAcoes(d, [{ tipo: 'passar_para_humano', motivo: 'A IA chegou ao limite de uso desta conversa hoje (proteção de custo).' }], 'ia');
+      await this.d.repo.salvarConversa(d);
+    });
+    return true;
+  }
+
+  /** ia-completa: o que a IA sabe da equipe agora (falha = segue sem). */
+  private async equipeDe(c: Conversa): Promise<{ equipe?: { texto: string; disponiveis: number; responsavelDisponivel: boolean | null } }> {
+    if (!this.d.equipeAgora) return {};
+    const e = await this.d.equipeAgora(c).catch(() => undefined);
+    return e ? { equipe: e } : {};
+  }
+
+  /** ia-completa: nota interna na conversa (a equipe vê; a IA lê nas próximas respostas). */
+  private async nota(c: Conversa, texto: string): Promise<void> {
+    await this.d.repo
+      .adicionarMensagem({ conversaId: c.id, autor: 'sistema', texto: `${PREFIXO_NOTA_IA}${texto}`, em: this.agora() })
+      .catch((e) => this.log('Falha ao anotar na conversa', String(e)));
   }
 
   private async enviarAtivo(t: Tarefa, c: Conversa): Promise<void> {
@@ -903,6 +1141,8 @@ export class Sintonia {
     if (await this.botConduz(c)) return;
     // robustez: follow-up e lembrete da IA sem chave: não chama a IA (nada sai).
     if (!(await this.temIa(c))) return;
+    // ia-completa: conversa que já estourou o limite de uso da IA hoje não recebe mensagem automática da IA.
+    if (this.d.guardaCusto?.situacao(c.id) === 'estourou') return;
     const numero = this.numeroDa(c);
     // Na API oficial, mensagem ativa fora da janela de 24h exige modelo aprovado (Fase 3).
     if (TIPOS_COM_JANELA_24H.includes(numero.canal.tipo)) {
@@ -921,6 +1161,7 @@ export class Sintonia {
       tipoAtivo: t.tipo,
       tagsDisponiveis: await this.tagsParaIa(),
       objetivo: await this.objetivoDe(c),
+      ...(await this.equipeDe(c)),
     });
     if (!r.texto.trim()) {
       await this.aplicarAcoes(c, r.acoes, 'ia');
@@ -928,8 +1169,9 @@ export class Sintonia {
       return;
     }
     const enviadoEm = this.agora();
-    const id = await this.enviar(c, r.texto);
-    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
+    // ia-completa: sem markdown e em até 3 mensagens; nada saiu = erro (o relógio registra a falha).
+    const e = await this.enviarPartes(c, partirParaWhatsApp(r.texto), enviadoEm);
+    if (!e.n && e.erro) throw e.erro;
     c.ultimaMensagemIa = enviadoEm;
     await this.aplicarAcoes(c, r.acoes, 'ia');
     if (t.tipo === 'followup_3d') await this.moverFunil(c, { tipo: 'followups_esgotados' });
@@ -968,12 +1210,92 @@ export class Sintonia {
           duracaoMin: a.agendamento.duracaoMin,
         });
       }
+      if (a.tipo === 'remarcou' || a.tipo === 'cancelou') await this.aplicarMudancaDeAgenda(c, a);
+      if (a.tipo === 'mover_funil' || a.tipo === 'vincular_produto' || a.tipo === 'tarefa_equipe' || a.tipo === 'retorno' || a.tipo === 'enviar_arquivo') {
+        await this.aplicarCrm(c, a).catch(async (e) => {
+          this.log(`Falha ao aplicar ação da IA (${a.tipo})`, String(e));
+          await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: c.id, unidade: c.unidade, em: this.agora(), dados: { etapa: 'ia_acao', acao: a.tipo, erro: String(e).slice(0, 300) } }).catch(() => undefined);
+          await this.nota(c, `IA tentou ${a.tipo === 'enviar_arquivo' ? `mandar "${a.nome}"` : a.tipo.replace(/_/g, ' ')} e não conseguiu (${String((e as Error)?.message ?? e).slice(0, 120)}).`);
+        });
+      }
       if (a.tipo === 'passar_para_humano') {
         c.modo = 'humano';
         if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
         await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
         await this.evento('passou_para_humano', c, { motivo: a.motivo });
         await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome}) para a equipe. Motivo: ${a.motivo}`, c);
+      }
+    }
+  }
+
+  /** ia-completa: a IA remarcou ou cancelou na agenda: lembretes, funil, nota na conversa e aviso para a equipe. */
+  private async aplicarMudancaDeAgenda(c: Conversa, a: Extract<AcaoAgente, { tipo: 'remarcou' | 'cancelou' }>): Promise<void> {
+    await this.d.repo.cancelarTarefas(c.id, LEMBRETES);
+    const quem = `${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome})`;
+    const antigo = `${a.antigo.servico ?? 'horário'} de ${a.antigo.inicio.replace('T', ' ').slice(0, 16)}`;
+    if (a.tipo === 'remarcou') {
+      c.trinksClienteId = a.clienteTrinksId;
+      if ((await this.motorDe(c)).lembretes) {
+        for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) await this.d.repo.programar({ conversaId: c.id, tipo: l.tipo, quando: l.quando });
+      }
+      await this.evento('agendamento_ia', c, {
+        trinksId: a.agendamento.trinksId,
+        servico: a.agendamento.servico,
+        inicio: a.agendamento.inicio.toISOString(),
+        profissional: a.agendamento.profissional,
+        duracaoMin: a.agendamento.duracaoMin,
+        remarcadoDe: a.antigo.id,
+      });
+      await this.nota(c, `IA remarcou ${antigo} para ${diaHora(a.agendamento.inicio)}${a.cancelouAntigo ? '' : ' (o horário antigo NÃO foi cancelado na agenda: cancele à mão)'}.`);
+      await this.d.avisarEquipe?.(`A IA remarcou ${quem}: ${antigo} → ${diaHora(a.agendamento.inicio)}.${a.cancelouAntigo ? '' : ` ATENÇÃO: o horário antigo não foi cancelado na agenda (${a.erroCancelar ?? 'erro'}). Cancele à mão.`}`, c)?.catch(() => undefined);
+    } else {
+      if (a.restam === 0) await this.moverFunil(c, { tipo: 'agendamento_cancelado' });
+      await this.nota(c, `IA cancelou ${antigo}. Motivo: ${a.motivo || 'não informado'}.`);
+      await this.d.avisarEquipe?.(`A IA cancelou o horário de ${quem}: ${antigo}. Motivo: ${a.motivo || 'não informado'}.`, c)?.catch(() => undefined);
+    }
+    await this.evento('ia_acao', c, { acao: a.tipo, agendamentoId: a.antigo.id, inicio: a.antigo.inicio, servico: a.antigo.servico, ...(a.tipo === 'cancelou' ? { motivo: a.motivo } : { para: a.agendamento.inicio.toISOString(), cancelouAntigo: a.cancelouAntigo }) });
+  }
+
+  /** ia-completa: ações de CRM da IA (já sob a trava da conversa; quem chama grava a conversa). */
+  private async aplicarCrm(c: Conversa, a: Extract<AcaoAgente, { tipo: 'mover_funil' | 'vincular_produto' | 'tarefa_equipe' | 'retorno' | 'enviar_arquivo' }>): Promise<void> {
+    const crm = this.d.crmIa;
+    switch (a.tipo) {
+      case 'mover_funil': {
+        if (!crm) return;
+        const mudou = await crm.moverFunil(c, a);
+        if (mudou) await this.evento('ia_acao', c, { acao: a.tipo, funilId: a.funilId, etapaId: a.etapaId, etapa: a.etapa, motivo: a.motivo, perda: a.perda });
+        if (mudou && a.perda) await this.nota(c, `IA moveu para "${a.etapa}" (${a.funil}). Motivo: ${a.motivo}${a.perda.detalhe ? ` — ${a.perda.detalhe}` : ''}.`);
+        return;
+      }
+      case 'vincular_produto':
+        if (!crm) return;
+        await crm.vincularProduto(c, a.produtoId, a.quantidade);
+        await this.evento('ia_acao', c, { acao: a.tipo, produtoId: a.produtoId, nome: a.nome, quantidade: a.quantidade });
+        return;
+      case 'tarefa_equipe': {
+        if (!crm) return;
+        const r = await crm.criarTarefa(c, a);
+        await this.evento('ia_acao', c, { acao: a.tipo, titulo: a.titulo, responsavel: r.responsavel, venceEm: a.venceEm?.toISOString() ?? null });
+        await this.nota(c, `IA criou a tarefa "${a.titulo}" para ${r.responsavel}${a.venceEm ? ` (prazo ${diaHora(a.venceEm)})` : ''}.`);
+        return;
+      }
+      case 'retorno':
+        await this.d.repo.cancelarTarefas(c.id, ['retorno_ia']);
+        await this.d.repo.programar({ conversaId: c.id, tipo: 'retorno_ia', quando: a.quando });
+        await this.evento('ia_acao', c, { acao: a.tipo, quando: a.quando.toISOString(), motivo: a.motivo });
+        await this.nota(c, `Retorno combinado para ${diaHora(a.quando)}: ${a.motivo}`);
+        return;
+      case 'enviar_arquivo': {
+        if (!crm) return;
+        const arq = await crm.arquivo(c, a.origem, a.id);
+        if (!arq) throw new Error('arquivo não encontrado');
+        await this.enviarMidiaAutomatico(
+          c,
+          { tipo: arq.tipo, conteudo: arq.conteudo, mimetype: arq.mimetype, ...(arq.nomeArquivo ? { nomeArquivo: arq.nomeArquivo } : {}), ...(a.legenda ? { legenda: a.legenda } : {}) },
+          'IA',
+        );
+        await this.evento('ia_acao', c, { acao: a.tipo, origem: a.origem, id: a.id, nome: a.nome });
+        return;
       }
     }
   }

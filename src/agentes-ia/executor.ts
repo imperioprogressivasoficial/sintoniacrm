@@ -2,16 +2,20 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ClienteClaude, PedidoAgente, RespostaAgente } from '../ai/agente.js';
-import { TEXTO_PASSAGEM } from '../ai/agente.js';
+import { conferirPrecos, TEXTO_PASSAGEM, textoPassagem, ultimasDaCliente } from '../ai/agente.js';
 import {
   type AcaoAgente,
   type Agenda,
   executarFerramenta,
   ferramentaMarcarTag,
+  FERRAMENTAS_AGENDA_MUDAR,
   FERRAMENTAS_ESCRITA,
   FERRAMENTAS_LEITURA,
+  novaSessao,
 } from '../ai/ferramentas.js';
-import { contextoDaConversa, historicoParaTurnos, INSTRUCAO_ATIVA, instrucaoObjetivo } from '../ai/prompt.js';
+import { CRM_ESCRITA_NOMES, FERRAMENTAS_CRM } from '../ai/ferramentas-crm.js';
+import type { ServicosCrmIa } from '../ai/crm-ia.js';
+import { contextoDaConversa, INSTRUCAO_ATIVA, instrucaoObjetivo, montarTurnos } from '../ai/prompt.js';
 import { descreverAcao } from '../ai/simulacao.js';
 import type { Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -53,16 +57,22 @@ export const FERRAMENTA_LEMBRETE = def('criar_lembrete_ligacao', 'Cria um lembre
   texto: { type: 'string', description: 'Motivo da ligação, curto' },
 });
 
-const porNome = new Map([...FERRAMENTAS_LEITURA, ...FERRAMENTAS_ESCRITA].map((f) => [f.name, f]));
-const ESCRITA = new Set(['agendar', 'passar_para_humano']);
+const porNome = new Map([...FERRAMENTAS_LEITURA, ...FERRAMENTAS_ESCRITA, ...FERRAMENTAS_AGENDA_MUDAR, ...FERRAMENTAS_CRM].map((f) => [f.name, f]));
+const ESCRITA = new Set(['agendar', 'passar_para_humano', 'remarcar_agendamento', 'cancelar_agendamento', ...CRM_ESCRITA_NOMES]);
+/** ia-completa: ferramentas que dependem do CRM (pipelines, produtos, arquivos). */
+const DO_CRM = new Set(FERRAMENTAS_CRM.map((f) => f.name));
 
 /** Ferramentas da API (nomes) que cada opção da tela libera. */
 export function ferramentasPermitidas(permitidas: FerramentaAgente[], memoria: boolean): Set<string> {
   const s = new Set<string>();
   const tem = (f: FerramentaAgente) => permitidas.includes(f);
-  if (tem('consultar_agenda') || tem('agendar')) ['ver_servicos', 'consultar_horarios', 'ver_agendamentos_da_cliente'].forEach((n) => s.add(n));
-  if (tem('agendar')) s.add('agendar');
-  if (tem('mover_etapa')) s.add('registrar_etapa');
+  if (tem('consultar_agenda') || tem('agendar')) ['ver_servicos', 'consultar_horarios', 'ver_agendamentos_da_cliente', 'ver_produtos'].forEach((n) => s.add(n));
+  if (tem('agendar')) ['agendar', 'remarcar_agendamento', 'cancelar_agendamento'].forEach((n) => s.add(n));
+  if (tem('mover_etapa')) ['registrar_etapa', 'ver_funis', 'mover_no_funil'].forEach((n) => s.add(n));
+  if (tem('produtos')) ['ver_produtos', 'vincular_produto'].forEach((n) => s.add(n));
+  if (tem('tarefas')) s.add('criar_tarefa_equipe');
+  if (tem('retorno')) s.add('agendar_retorno');
+  if (tem('enviar_arquivos')) ['ver_produtos', 'enviar_arquivo'].forEach((n) => s.add(n));
   if (tem('marcar_tag')) s.add('marcar_tag');
   if (tem('transferir')) s.add('passar_para_humano');
   if (tem('lembrete_ligacao')) s.add('criar_lembrete_ligacao');
@@ -100,6 +110,8 @@ export interface DependenciasExecutor {
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
   maxPassos?: number;
+  /** ia-completa: pipelines, produtos e arquivos (ausente = essas ferramentas não aparecem). */
+  crm?: () => ServicosCrmIa | undefined;
 }
 
 export class ExecutorAgentes {
@@ -146,9 +158,9 @@ export class ExecutorAgentes {
     // Condições de passagem: decididas aqui, sem gastar IA.
     const ultima = p.mensagens.filter((m) => m.autor === 'cliente').at(-1);
     if (escreve && !p.tipoAtivo && permitidas.has('passar_para_humano') && ultima && this.esperandoResposta(p.mensagens)) {
-      const pass = conferirPassagem(ultima.texto, cfg.passagem);
+      const pass = conferirPassagem(ultimasDaCliente(p.mensagens) || ultima.texto, cfg.passagem);
       if (pass.passar) {
-        res.texto = TEXTO_PASSAGEM;
+        res.texto = textoPassagem(p.equipe);
         res.acoes.push({ tipo: 'passar_para_humano', motivo: pass.motivo! });
         res.passagemDireta = pass.motivo;
         res.ferramentas.push({ nome: 'passar_para_humano', entrada: { motivo: pass.motivo }, ok: true, resultado: 'Condição de passagem do agente.' });
@@ -156,7 +168,11 @@ export class ExecutorAgentes {
       }
     }
 
-    const nomes = [...permitidas].filter((n) => (ESCRITA.has(n) ? escreve : true)).filter((n) => n !== 'marcar_tag' || p.tagsDisponiveis?.length);
+    const crm = this.d.crm?.();
+    const nomes = [...permitidas]
+      .filter((n) => (ESCRITA.has(n) ? escreve : true))
+      .filter((n) => n !== 'marcar_tag' || p.tagsDisponiveis?.length)
+      .filter((n) => !DO_CRM.has(n) || crm);
     const ferramentas: Ferramenta[] = nomes
       .map((n) =>
         n === 'marcar_tag' ? ferramentaMarcarTag(p.tagsDisponiveis!) : n === 'lembrar_cliente' ? FERRAMENTA_LEMBRAR : n === 'criar_lembrete_ligacao' ? FERRAMENTA_LEMBRETE : porNome.get(n),
@@ -169,8 +185,12 @@ export class ExecutorAgentes {
     const messages = this.montarMensagens(p, textoMemoria(memoria), simulacao);
     const anthropic = a.provedor === 'anthropic';
     const comReserva = anthropic && /^claude-(opus|sonnet)-5-5/.test(a.modelo);
+    const sessao = novaSessao();
+    const maxPassos = this.d.maxPassos ?? 12;
+    let correcoes = 0;
 
-    for (let passo = 0; passo < (this.d.maxPassos ?? 8); passo++) {
+    for (let passo = 0; passo < maxPassos; passo++) {
+      if (passo > 0 && p.continuar && !(await p.continuar().catch(() => true))) return { ...res, texto: '', interrompida: true } as ResultadoAgente;
       const pedido: Record<string, unknown> = {
         model: a.modelo,
         max_tokens: 16000,
@@ -191,7 +211,7 @@ export class ExecutorAgentes {
         const resultados: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
         for (const bloco of resp.content) {
           if (bloco.type !== 'tool_use') continue;
-          const r = await this.rodarFerramenta(a, bloco.name, bloco.input, p, res, permitidas, nomes, simulacao);
+          const r = await this.rodarFerramenta(a, bloco.name, bloco.input, p, res, permitidas, nomes, simulacao, sessao, crm);
           res.ferramentas.push({ nome: bloco.name, entrada: bloco.input, ok: !r.erro, resultado: r.conteudo.slice(0, 500) });
           resultados.push({ type: 'tool_result', tool_use_id: bloco.id, content: r.conteudo, is_error: r.erro });
         }
@@ -207,6 +227,18 @@ export class ExecutorAgentes {
         .map((b) => b.text)
         .join('\n')
         .trim();
+      // ia-completa: preço que não veio do sistema volta para a IA corrigir (uma vez); se insistir, a equipe assume.
+      const correcao = responde && texto ? conferirPrecos(texto, sessao, [system], p.mensagens) : null;
+      if (correcao) {
+        if (correcoes++ === 0 && passo + 1 < maxPassos) {
+          messages.push({ role: 'assistant', content: resp.content });
+          messages.push({ role: 'user', content: [{ type: 'text', text: `[verificação automática da Sintonia, não é a cliente] ${correcao}` }] });
+          continue;
+        }
+        res.texto = escreve ? TEXTO_PASSAGEM : '';
+        if (escreve && permitidas.has('passar_para_humano')) res.acoes.push({ tipo: 'passar_para_humano', motivo: 'A IA citou um valor que não está no sistema; a equipe confirma o preço.' });
+        return res;
+      }
       res.texto = responde ? texto || TEXTO_PASSAGEM : '';
       return res;
     }
@@ -229,6 +261,8 @@ export class ExecutorAgentes {
     permitidas: Set<string>,
     oferecidas: string[],
     simulacao: boolean,
+    sessao: ReturnType<typeof novaSessao>,
+    crm: ServicosCrmIa | undefined,
   ): Promise<{ conteudo: string; erro: boolean }> {
     // Conferido de novo aqui: o modelo nunca usa o que não foi liberado para este agente.
     if (!permitidas.has(nome) || !oferecidas.includes(nome)) return { conteudo: 'Ferramenta não permitida para este agente.', erro: true };
@@ -263,6 +297,9 @@ export class ExecutorAgentes {
         const i = entrada as Record<string, unknown>;
         return { conteudo: JSON.stringify({ ok: true, simulacao: true, aviso: `Teste: agendaria ${String(i.data)} às ${String(i.hora)}; nada foi marcado no Trinks.` }), erro: false };
       }
+      if (simulacao && (nome === 'remarcar_agendamento' || nome === 'cancelar_agendamento' || CRM_ESCRITA_NOMES.has(nome))) {
+        return { conteudo: JSON.stringify({ ok: true, simulacao: true, aviso: `Teste: usaria ${nome}; nada foi gravado.` }), erro: false };
+      }
       if (simulacao && nome === 'passar_para_humano') {
         const i = z.object({ motivo: z.string() }).parse(entrada);
         res.acoes.push({ tipo: 'passar_para_humano', motivo: i.motivo });
@@ -279,22 +316,22 @@ export class ExecutorAgentes {
       acoes: res.acoes,
       podeEscrever: p.modo === 'responder' && !simulacao,
       tagsDisponiveis: p.tagsDisponiveis,
+      crm,
+      aindaComIa: p.continuar,
+      sessao,
     });
   }
 
   private montarMensagens(p: PedidoAgente, memoria: string, simulacao: boolean): Anthropic.Beta.Messages.BetaMessageParam[] {
-    const turnos = historicoParaTurnos(p.mensagens);
     const extra: string[] = [contextoDaConversa(p.conversa, p.agora)];
+    if (p.equipe) extra.push(`<equipe>\n${p.equipe.texto}\n</equipe>`);
     if (memoria) extra.push(memoria);
     if (p.tipoAtivo) {
       extra.push(`<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`);
     }
     if (p.objetivo?.trim()) extra.push(instrucaoObjetivo(p.objetivo));
     if (p.modo === 'sugerir' && !simulacao) extra.push('Você está em modo copiloto: escreva a resposta que a atendente vai revisar e enviar.');
-    const ultimo = turnos.at(-1);
-    if (ultimo?.role === 'user') ultimo.content = `${ultimo.content}\n\n${extra.join('\n')}`;
-    else turnos.push({ role: 'user', content: `[sem nova mensagem da cliente]\n\n${extra.join('\n')}` });
-    return turnos.map((t) => ({ role: t.role, content: t.content }));
+    return montarTurnos(p.mensagens, extra, p.percepcao);
   }
 
   /** Teste na tela: uma cliente fictícia conversa com o agente. Nada é enviado nem gravado. */
