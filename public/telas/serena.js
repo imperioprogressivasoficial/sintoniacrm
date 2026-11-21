@@ -98,6 +98,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .srn-vazio { visibility: hidden; pointer-events: none; }
   @media (min-width: 761px) { .srn-vazio { display: none; } }
   .srn-cab { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; padding-top: calc(12px + env(safe-area-inset-top)); }
+  .srn-cab > .srn-lado { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .srn-cab > .srn-lado.dir { justify-content: flex-end; }
+  .srn-cab > .srn-titulo { flex: 0 1 auto; }
   .srn-bt { all: unset; box-sizing: border-box; cursor: pointer; position: relative; overflow: hidden; flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--texto);
     background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 2px 8px rgba(8,36,63,.06); transition: transform .3s var(--srn-mola); }
   .srn-bt svg { width: 21px; height: 21px; }
@@ -651,7 +654,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     R.veu = el('button', { type: 'button', class: 'srn-veu', 'aria-label': 'Fechar o menu', tabindex: '-1', onclick: () => fecharMenu() });
     R.tela = el('div', { class: 'srn-tela' },
       /* serena-chave: chave pequena "Ligada / Pausada" ao lado do título (no lugar do espaço vazio que equilibrava o topo) */
-      R.cab = el('header', { class: 'srn-cab' }, R.btMenu, window.SintoniaSerenaChave?.chave ? window.SintoniaSerenaChave.chave({ tamanho: 'pequena' }) : el('span', { class: 'srn-bt srn-vazio', 'aria-hidden': 'true', style: 'visibility:hidden;pointer-events:none' }), R.titulo, window.SintoniaBotaoTema ? window.SintoniaBotaoTema('srn-bt srn-tema') : null, R.btNova),
+      R.cab = el('header', { class: 'srn-cab' }, el('span', { class: 'srn-lado' }, R.btMenu, window.SintoniaSerenaChave?.chave ? window.SintoniaSerenaChave.chave({ tamanho: 'pequena' }) : el('span', { class: 'srn-bt srn-vazio', 'aria-hidden': 'true', style: 'visibility:hidden;pointer-events:none' })), R.titulo, el('span', { class: 'srn-lado dir' }, window.SintoniaBotaoTema ? window.SintoniaBotaoTema('srn-bt srn-tema') : null, R.btNova)), /* lados com a mesma largura: o nome fica no meio da tela (dono 21/11: estava torto) */
       R.faixa, R.miolo,
       el('div', { class: 'srn-baixo' }, R.anexo, R.opcoes, R.compor), ...Object.values(R.arquivos), R.veu);
 

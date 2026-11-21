@@ -451,7 +451,7 @@ export class RepositorioPostgres implements Repositorio {
     return rows.map(paraMensagem);
   }
 
-  async buscarMensagens(conversaId: string, termo: string, limite = 50) {
+  async buscarNaConversa(conversaId: string, termo: string, limite = 50) {
     const padrao = '%' + termo.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
     const { rows } = await this.pool.query<LinhaMensagem>(
       `select ${COLUNAS_MENSAGEM}

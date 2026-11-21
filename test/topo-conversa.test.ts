@@ -82,7 +82,7 @@ describe.skipIf(!temPostgres)('Pesquisar dentro da conversa (postgres)', () => {
     const { conversa } = await repo.buscarOuCriarConversa({ empresaId: 'imperio', unidade: 'norte', canalId: 'teste-norte', telefone: `5571${Date.now() % 1e8}`, nome: 'Teste busca', agora });
     await repo.adicionarMensagem({ conversaId: conversa.id, autor: 'cliente', texto: 'desconto de 10% hoje', em: agora });
     await repo.adicionarMensagem({ conversaId: conversa.id, autor: 'cliente', texto: 'desconto de 10 reais', em: new Date(agora.getTime() + 1000) });
-    expect((await repo.buscarMensagens(conversa.id, '10%')).map((m) => m.texto)).toEqual(['desconto de 10% hoje']);
-    expect((await repo.buscarMensagens(conversa.id, 'DESCONTO')).map((m) => m.texto)).toEqual(['desconto de 10 reais', 'desconto de 10% hoje']);
+    expect((await repo.buscarNaConversa(conversa.id, '10%')).map((m) => m.texto)).toEqual(['desconto de 10% hoje']);
+    expect((await repo.buscarNaConversa(conversa.id, 'DESCONTO')).map((m) => m.texto)).toEqual(['desconto de 10 reais', 'desconto de 10% hoje']);
   });
 });

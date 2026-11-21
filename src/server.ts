@@ -452,8 +452,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const conversa = await conversaVisivel(req);
     const q = String((req.query as { q?: unknown })?.q ?? '').trim().slice(0, 100);
     if (q.length < 2) return { termo: q, resultados: [] };
-    const achadas = d.repo.buscarMensagens
-      ? await d.repo.buscarMensagens(conversa.id, q, 50)
+    const achadas = d.repo.buscarNaConversa
+      ? await d.repo.buscarNaConversa(conversa.id, q, 50)
       : (await d.repo.mensagens(conversa.id, 5000)).filter((m) => m.texto.toLocaleLowerCase('pt-BR').includes(q.toLocaleLowerCase('pt-BR'))).reverse().slice(0, 50);
     return { termo: q, resultados: achadas.map((m) => ({ id: m.id, texto: m.texto, em: m.em, autor: m.autor, autorNome: m.autorNome ?? null })) };
   });
