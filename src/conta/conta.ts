@@ -46,6 +46,8 @@ export const Preferencias = z
     papelParede: PapelParede,
     /** ligacoes-modos: o último jeito de ligar que a pessoa usou (vem marcado na próxima vez). Sem valor = o padrão da unidade. */
     modoLigacao: z.enum(['telefone', 'whatsapp']).optional().catch(undefined),
+    /** fluidez2: "Ocultar dados dos clientes" (nomes, números e fotos desfocados para mostrar a tela). */
+    ocultarDados: z.boolean().default(false).catch(false),
   })
   .prefault({});
 export type Preferencias = z.infer<typeof Preferencias>;
@@ -154,6 +156,7 @@ const PerfilCorpo = z.object({
       telaInicial: z.enum(TELAS_INICIAIS).optional(),
       densidade: z.enum(['confortavel', 'compacta']).optional(),
       modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
+      ocultarDados: z.boolean().optional(), // fluidez2: modo privacidade
       papelParede: z
         .object({
           claro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),

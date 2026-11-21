@@ -222,6 +222,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       cartao('geral', 'Aparência',
         opcao('Tema', 'Automático segue o modo claro ou escuro do aparelho.', tema),
         opcao('Densidade', 'Compacta mostra mais conversas na tela.', densidade),
+        /* fluidez2: modo privacidade (também no ⋯ das Conversas) */
+        window.SintoniaPrivacidade ? opcao('Ocultar dados dos clientes (para mostrar a tela)', 'Nomes, números e fotos das clientes ficam desfocados. As mensagens continuam legíveis.',
+          chave(window.SintoniaPrivacidade.ligada(), (v) => window.SintoniaPrivacidade.definir(v), 'Ocultar dados dos clientes')) : null,
         el('p', { class: 'ec-sub', text: 'Vale em todos os aparelhos em que você entrar.' })),
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v10h14V10"/></svg>', 'Ao abrir a Sintonia',
         opcao('Tela inicial', 'A primeira tela quando você abre o app.', tela),
