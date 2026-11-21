@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 13:35 UTC (21/11, 10h35 na Bahia)
-commit: e87c484
-pacote sha256: 0ab1fc12481a0b5c5c0e7f399d0a8ac474ee75acd2fc692ecd86a97e8af49695
+data: 2026-11-21 15:15 UTC (21/11, 12h15 na Bahia)
+commit: f5963e7
+pacote sha256: df8d2f66bdf66954b65b229c2aa0b0acbabfc9c5337b1281f72cabcbb6be4925
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-e87c484.b64); pode apagar depois.
-observação: em cima do 8f874e9. Entram: sem-pagamento (sem planos/Asaas, cadastro só por convite, /privacidade /termos /suporte, excluir conta), ligacoes-modos (660), banco-seguranca (630/631, cabeçalhos, CSP só relatório, auditoria, LGPD por API), relatorio-dia (650, envio desligado). gerar-deploy agora tira comentários (limite de 8192 letras da Hostinger).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f5963e7.b64); pode apagar depois.
+observação: em cima do e87c484. Entra: ESC fecha a conversa; emojis Noto no Windows/Linux.
