@@ -1708,6 +1708,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const esperando = (c) => { const cl = c.ultimaMensagemCliente && new Date(c.ultimaMensagemCliente).getTime(); if (!cl) return false; const resp = Math.max(new Date(c.ultimaMensagemEquipe || 0).getTime(), new Date(c.ultimaMensagemIa || 0).getTime()); return cl > resp; };
 
   // navegação
+  /* abas-deslizar: desenha antes a tela da aba vizinha (sem trocar de tela) para ela aparecer cheia durante o arrasto */
+  window.SintoniaAbas = { preparar(v) {
+    const c = $('v-' + v); if (!c || c.classList.contains('ativa') || !estado.eu) return;
+    if (v !== 'configuracoes') { if (c.dataset.adPronta) return; c.dataset.adPronta = '1'; }
+    try { if (v === 'configuracoes') desenharConfiguracoes(); else if (v === 'painel') carregarPainel(); else if (window.SintoniaTelas?.[v]?.desenhar) window.SintoniaTelas[v].desenhar($(v), window.Sintonia.ui); } catch { /* fica para quando abrir */ }
+  } };
   // A barra responde na hora (a pílula já anda) e a tela nova é montada no quadro seguinte, para a animação não engasgar.
   document.querySelectorAll('.nav[data-vista]').forEach((b) => b.addEventListener('click', () => {
     const v = b.dataset.vista;
@@ -3576,6 +3582,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/espera-selo.js" defer></script>
 <script src="/telas/resgatar.js" defer></script>
 <script src="/telas/barra-some.js" defer></script><!-- barra-some: barra de baixo do celular some ao rolar -->
+<script src="/telas/abas-deslizar.js" defer></script><!-- abas-deslizar: arrastar para o lado troca de aba (celular) -->
 <script src="/telas/chat-ia.js" defer></script>
 <script src="/telas/serena.js" defer></script>
 <script src="/telas/ligacoes.js" defer></script>
