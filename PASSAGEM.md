@@ -43,6 +43,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **21/11 12h41 (Bahia):** no ar afc2b56 — serena-faz e sem-exemplos (670). Página de vendas nova pronta na branch claude/pagina-vendas-nova (591edbc), ESPERANDO o ok do dono pelos prints antes de juntar/publicar.
 - **PENDENTE (dono 21/11, depois):** seção "Ajuda" com tutorial de cada função (fluxos, chatbot, follow-up…): um exemplo só + o passo a passo. Os exemplos prontos saem agora (agente sem-exemplos).
 - **21/11 10h35 (Bahia):** no ar e87c484 — sem-pagamento, ligacoes-modos (660), banco-seguranca (630/631), relatorio-dia (650). ATENÇÃO: a Hostinger recusa receita > 8192 letras (gerar-deploy agora tira comentários e falha se passar). Falta do dono: número do WhatsApp de vendas (SINTONIA_WHATSAPP_VENDAS no gerar-deploy), razão social/CNPJ/e-mail LGPD para /privacidade. Recomendações de segurança pendentes do ok dele em docs/SEGURANCA-SERVIDOR.md (firewall, cópia fora do VPS, usuário próprio do Umami). Sem agentes rodando.
 - **PENDENTE (pedido do dono 21/11, fazer depois que todos os agentes terminarem):** atualizar toda a página de vendas (prints das telas novas e a copy) com o que foi criado: Serena gerente, relatório Dia a dia, ligações, topo igual, gestos, contadores etc. Sem preços (App Store); contato só pelo WhatsApp.
