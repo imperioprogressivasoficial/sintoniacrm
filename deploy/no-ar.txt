@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 20:45 UTC (21/11, 17h45 na Bahia)
-commit: 62f7cfe
-pacote sha256: b954191fc23ea9dcff4df13ca0c3c2536740334d77d1b37bf172ecca6a31f332
+data: 2026-11-21 20:55 UTC (21/11, 17h55 na Bahia)
+commit: 0c1929c
+pacote sha256: 6c5768e69573b95a683777e0948b225254e2533824717adaecafbd3a268b915b
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-62f7cfe.b64); pode apagar depois.
-observação: em cima do d7c603c. Entra: olho do modo oculto ao lado do Radar.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-0c1929c.b64); pode apagar depois.
+observação: em cima do 62f7cfe. Entra: olho do modo oculto sai dos filtros e vai para o topo da conversa (Radar, Olho, Agendar, Ligar).
