@@ -305,7 +305,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const maxR = Math.max(1, ...r.atendentes.map((a) => a.receita || a.vendas));
     const at = r.atendentes.length
       ? el('div', { class: 'an-rank', role: 'list' }, ...r.atendentes.map((a) => el('div', { class: 'an-rank-l', role: 'listitem' },
-        pessoa(a.nome, a.porIa ? null : a.id, a.porIa ? 'IA' : null),
+        a.porIa && window.SintoniaSerenaSelo ? el('span', { class: 'rl-pessoa' }, window.SintoniaSerenaSelo({ classe: 'rl-ini', titulo: 'Vendas da Serena (IA)' }), a.nome) : pessoa(a.nome, a.porIa ? null : a.id, a.porIa ? 'IA' : null), /* conversa-extra */
         el('b', { text: fmtR(a.receita) }),
         el('span', { class: 'rl-trilha', 'aria-hidden': 'true' }, el('i', { style: `width:${Math.max(2, ((a.receita || a.vendas) / maxR) * 100)}%;background:${a.porIa ? 'var(--marca-menta)' : 'linear-gradient(90deg,#106ebe,#3aa0ff)'}` })),
         el('small', { text: `${fmtN(a.vendas)} ${a.vendas === 1 ? 'venda' : 'vendas'} · ticket ${fmtR(a.ticketMedio)} · ${fmtPct(a.comparecimentoPct)} compareceram` }))))

@@ -24,12 +24,23 @@ export const Assinatura = z
   .prefault({});
 export type Assinatura = z.infer<typeof Assinatura>;
 
+/**
+ * conversa-extra: papel de parede das conversas (fundo atrás dos balões), separado para o tema claro e o escuro,
+ * como no WhatsApp. 'padrao' = a cor de sempre; desenho = os pontinhos sutis por cima. As cores de verdade
+ * (versão clara e escura de cada uma) ficam em public/telas/papel-parede.js.
+ */
+export const CORES_PAPEL = ['padrao', 'ceu', 'menta', 'marinho', 'aqua', 'areia', 'lavanda', 'grafite'] as const;
+const LadoPapel = z.object({ cor: z.enum(CORES_PAPEL).catch('padrao').default('padrao'), desenho: z.boolean().catch(true).default(true) }).prefault({});
+export const PapelParede = z.object({ claro: LadoPapel, escuro: LadoPapel }).prefault({});
+export type PapelParede = z.infer<typeof PapelParede>;
+
 export const Preferencias = z
   .object({
     tema: z.enum(['claro', 'escuro', 'auto']).default('auto'),
     idioma: z.enum(['pt-BR']).default('pt-BR'),
     telaInicial: z.enum(TELAS_INICIAIS).default('conversas'),
     densidade: z.enum(['confortavel', 'compacta']).default('confortavel'),
+    papelParede: PapelParede,
   })
   .prefault({});
 export type Preferencias = z.infer<typeof Preferencias>;
@@ -128,6 +139,12 @@ const PerfilCorpo = z.object({
       idioma: z.enum(['pt-BR']).optional(),
       telaInicial: z.enum(TELAS_INICIAIS).optional(),
       densidade: z.enum(['confortavel', 'compacta']).optional(),
+      papelParede: z
+        .object({
+          claro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),
+          escuro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
@@ -187,7 +204,19 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
     await o.perfis.gravar(u.id, {
       telefone: b.telefone ?? atual.telefone,
       assinatura: Assinatura.parse({ ...atual.assinatura, ...semIndefinidos(b.assinatura ?? {}) }),
-      preferencias: Preferencias.parse({ ...atual.preferencias, ...semIndefinidos(b.preferencias ?? {}) }),
+      preferencias: (() => {
+        const { papelParede: pp, ...resto } = b.preferencias ?? {};
+        const papel = atual.preferencias.papelParede;
+        return Preferencias.parse({
+          ...atual.preferencias,
+          ...semIndefinidos(resto),
+          // conversa-extra: mudar só o claro (ou só a cor) não apaga o resto do papel de parede.
+          papelParede: {
+            claro: { ...papel.claro, ...semIndefinidos(pp?.claro ?? {}) },
+            escuro: { ...papel.escuro, ...semIndefinidos(pp?.escuro ?? {}) },
+          },
+        });
+      })(),
     });
     return conta(req);
   });

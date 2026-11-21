@@ -1,4 +1,5 @@
 import { LeiturasMemoria, LeiturasPostgres } from './app/leituras.js';
+import { ConversasPessoaisMemoria, ConversasPessoaisPostgres } from './conversa/pessoal.js'; /* conversa-extra */
 import { LayoutsPainelMemoria, LayoutsPainelPostgres } from './painel/layout.js';
 import { PresencasMemoria, PresencasPostgres } from './presenca/presenca.js';
 import Anthropic from '@anthropic-ai/sdk';
@@ -265,7 +266,10 @@ const armazemNotificacoes = pool ? new ArmazemNotificacoesPostgres(pool) : new A
 // Histórico da tela Ligações (efetuadas pelo app; recebidas/perdidas pelo evento CALL do WhatsApp).
 const armazemChamadas = pool ? new ArmazemChamadasPostgres(pool) : new ArmazemChamadasMemoria();
 const chavesPush = new ChavesPush(armazemNotificacoes, cofre);
+/* conversa-extra: silenciar e arquivar conversas, por pessoa (o push respeita o silêncio) */
+const pessoais = pool ? new ConversasPessoaisPostgres(pool) : new ConversasPessoaisMemoria();
 const notificador = new Notificador({
+  silenciaram: (conversaId, agora) => pessoais.silenciaramAgora(conversaId, agora),
   armazem: armazemNotificacoes,
   contas,
   repo,
@@ -621,6 +625,7 @@ const app = criarServidor({
   whatsappSaude,
   chamadas: { armazem: armazemChamadas, empresaId: cfg.SINTONIA_EMPRESA_ID },
   leituras: pool ? new LeiturasPostgres(pool) : new LeiturasMemoria(),
+  pessoais,
   layoutsPainel: pool ? new LayoutsPainelPostgres(pool) : new LayoutsPainelMemoria(),
   ...(pool ? { poolReunioes: pool, poolRotina: pool } : {}),
   presencas,

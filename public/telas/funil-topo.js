@@ -713,7 +713,7 @@
       const { c: cartao, col } = x;
       if (k === 'etapa') { const e = el('span', { class: 'ft-etapa' }, el('i'), el('span', { text: col.etapa.nome })); e.style.setProperty('--cor', col.etapa.cor); return e; }
       if (k === 'valor') return el('span', { style: 'font-weight:750;font-variant-numeric:tabular-nums', text: cartao.valor != null ? ctx.dinheiro(cartao.valor) : '—' });
-      if (k === 'responsavel') return cartao.modo === 'ia' ? el('span', { text: 'IA' }) : el('span', { text: cartao.dona?.nome || 'Sem responsável' });
+      if (k === 'responsavel') return cartao.modo === 'ia' ? el('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 20 }) : null, document.createTextNode(window.SintoniaSerenaSelo ? 'Serena (IA)' : 'IA')) /* conversa-extra */ : el('span', { text: cartao.dona?.nome || 'Sem responsável' });
       if (k === 'origem') return ctx.origemEl(cartao);
       if (k === 'telefone') return el('span', { text: s.ui.formatarTel(cartao.telefone) });
       if (k === 'tags') return el('span', { style: 'display:inline-flex;gap:4px' }, ...(cartao.tags || []).slice(0, 3).map(ctx.tagEl));
@@ -774,7 +774,7 @@
     const texto = (k, cartao, col) => {
       if (k === 'etapa') return col.etapa.nome;
       if (k === 'valor') return cartao.valor != null ? ctx.dinheiro(cartao.valor) : '';
-      if (k === 'responsavel') return cartao.modo === 'ia' ? 'IA' : cartao.dona?.nome || '';
+      if (k === 'responsavel') return cartao.modo === 'ia' ? 'Serena (IA)' : cartao.dona?.nome || '';
       if (k === 'telefone') return s.ui.formatarTel(cartao.telefone);
       if (k === 'tags') return (cartao.tags || []).map((t) => t.nome).join(', ');
       if (k === 'situacao') return cartao.ultima ? `${cartao.ultima.autor === 'cliente' ? 'Cliente' : 'Equipe'} ${ctx.haTexto(cartao.ultima.em)}` : '';

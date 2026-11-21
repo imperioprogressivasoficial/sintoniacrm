@@ -313,6 +313,19 @@
     if (cartao.modo === 'ia') return 'IA';
     return cartao.dona ? cartao.dona.nome || 'Equipe' : 'Sem atendente';
   }
+  /* conversa-extra: a linha "quem atende · ..." com a foto da Serena no lugar do "IA" */
+  const QUEM = {};
+  function comQuem(ctx, tag, cartao, partes, props = {}) {
+    const n = ctx.ui.el(tag, props);
+    partes.map((p) => (p === QUEM ? QUEM : p)).filter(Boolean).forEach((p, i) => {
+      if (i) n.append(document.createTextNode(' · '));
+      if (p === QUEM && cartao.modo === 'ia' && window.SintoniaSerenaSelo) {
+        const f = window.SintoniaSerenaSelo({ tam: 15 }); f.style.margin = '-2px 4px 0 0';
+        n.append(f, document.createTextNode('Serena'));
+      } else n.append(document.createTextNode(p === QUEM ? quemAtende(cartao) : p));
+    });
+    return n;
+  }
 
   // ---------- pedaços ----------
   function passos(ctx, col) {
@@ -349,7 +362,7 @@
         el('div', {}, el('span', { class: 'fc-selo ' + sl.cor, title: 'Tempo nesta etapa', text: sl.texto }),
           el('button', { class: 'fc-mini', type: 'button', 'aria-label': `Mais opções de ${nome}`, title: 'Mover para…, ficha e valor', html: IC.pontos, onclick: () => ctx.menuCartao(cartao.conversaId) }))),
       el('div', { class: 'fc-g1' }, av,
-        el('div', {}, el('b', { text: nome }), el('small', { text: [quemAtende(cartao), UNIDADE[cartao.unidade] || ''].filter(Boolean).join(' · ') })),
+        el('div', {}, el('b', { text: nome }), comQuem(ctx, 'small', cartao, [QUEM, UNIDADE[cartao.unidade] || ''])),
         valorEl(ctx, cartao)),
       passos(ctx, col),
       balao,
@@ -372,12 +385,12 @@
       const chip = el('span', { class: 'fc-chip', text: col.etapa.nome });
       chip.style.setProperty('--cor', col.etapa.cor || '#3aa0ff');
       b.append(el('span', { class: 'fc-l0' }, av,
-        el('span', {}, el('b', { text: nome }), el('small', { text: [quemAtende(cartao), cartao.valor == null ? '' : ctx.dinheiro(cartao.valor)].filter(Boolean).join(' · ') })), chip));
+        el('span', {}, el('b', { text: nome }), comQuem(ctx, 'small', cartao, [QUEM, cartao.valor == null ? '' : ctx.dinheiro(cartao.valor)])), chip));
     } else {
       b.append(el('span', { class: 'fc-p0' }, el('b', { text: nome }), valorEl(ctx, cartao)));
     }
     b.append(passos(ctx, col),
-      el('span', { class: 'fc-p2' }, el('span', { text: comChip ? situacao(ctx, cartao) : quemAtende(cartao) }), el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto })));
+      el('span', { class: 'fc-p2' }, comChip ? el('span', { text: situacao(ctx, cartao) }) : comQuem(ctx, 'span', cartao, [QUEM]), el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto })));
     return b;
   }
   function situacao(ctx, cartao) {
@@ -583,7 +596,7 @@
         el('div', {}, el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto }),
           el('button', { class: 'fc-mini', type: 'button', 'aria-label': `Mais opções de ${nome}`, html: IC.pontos, onclick: (e) => { e.stopPropagation(); ctx.menuCartao(cartao.conversaId); } }))),
       el('div', { class: 'fc-c1' }, av,
-        el('div', {}, el('b', { text: nome }), el('small', { text: [tel, quemAtende(cartao)].filter(Boolean).join(' · ') })),
+        el('div', {}, el('b', { text: nome }), comQuem(ctx, 'small', cartao, [tel, QUEM])),
         valorEl(ctx, cartao)),
       u ? el('div', { class: 'fc-msg' }, el('small', { text: `${quem} · ${ctx.haTexto(u.em)}` }), el('p', { text: u.texto || '(mídia)' }))
         : el('div', { class: 'fc-msg nada', text: 'Sem mensagens ainda' }),

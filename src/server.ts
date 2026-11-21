@@ -8,6 +8,7 @@ import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
 import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
+import { camposPessoais, registrarConversasPessoais, type ConversasPessoais } from './conversa/pessoal.js'; /* conversa-extra */
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
 import { registrarReunioes } from './reunioes/reunioes.js';
 import { registrarRotina } from './rotina/rotina.js';
@@ -82,6 +83,8 @@ export interface DependenciasServidor {
   whatsappSaude?: SaudeWhatsApp;
   /** Até onde cada pessoa leu cada conversa ("não lida" por atendente). */
   leituras?: Leituras;
+  /** conversa-extra: silenciar e arquivar, por pessoa (src/conversa/pessoal.ts). */
+  pessoais?: ConversasPessoais;
   /** Dashboard personalizado de cada pessoa (ordem, blocos e métricas). */
   layoutsPainel?: LayoutsPainel;
   /** Banco para o link de agendamento e os scripts de venda (só com Postgres). */
@@ -330,12 +333,15 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const marcadas = d.leituras && req.usuario ? await d.leituras.marcadasNaoLidas(req.usuario.id) : new Set<string>();
     const origens = d.origens ? await d.origens(lista.map((c) => c.id)).catch(() => ({}) as Record<string, never>) : undefined;
     const finalizadas = d.finalizadas ? await d.finalizadas(lista.map((c) => c.id)).catch(() => new Map<string, Date>()) : new Map<string, Date>();
+    /* conversa-extra: silenciada e arquivada para esta pessoa */
+    const pessoais = d.pessoais && req.usuario ? await d.pessoais.doUsuario(req.usuario.id).catch(() => undefined) : undefined;
+    const agoraLista = new Date();
     return lista
       .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
       .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
       .map((c) => {
         const m = ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ...(pessoais ? camposPessoais(pessoais.get(c.id), c, agoraLista) : {}), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
   });
 
@@ -549,6 +555,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Fotos, áudios, vídeos e documentos ----------
+  if (d.pessoais) registrarConversasPessoais(app, { pessoais: d.pessoais, visiveis: async (req) => (await d.repo.listarConversas()).filter(visivelPara(req)) }); /* conversa-extra */
   if (d.contatos) registrarContatos(app, { contatos: d.contatos.armazem, empresaId: d.contatos.empresaId, conversaVisivel, renomear: (id, nome) => d.sintonia.renomearCliente(id, nome) });
   registrarRotasMidia(app, { sintonia: d.sintonia, repo: d.repo, midias: d.midias, agora: d.agora, conversaVisivel, quemDe: (req) => req.usuario });
 

@@ -1722,6 +1722,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
+    if (window.SintoniaConversaExtra && !window.SintoniaConversaExtra.passa(c)) return false; /* conversa-extra: arquivadas ficam em "Arquivadas" */
     return true;
   });
   // Ícone de origem ao lado do nome só quando a origem é conhecida (sem "?" repetido em toda linha).
@@ -1759,14 +1760,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const caixa = $('itens');
     contarRadar();
     const lista = filtradas();
+    const cxTopo = window.SintoniaConversaExtra?.topoLista?.(); /* conversa-extra: linha "Arquivadas (N)" no topo (ou o aviso dentro do arquivo) */
     if (!lista.length) {
-      caixa.replaceChildren(); linhasFz.clear();
+      caixa.replaceChildren(...(cxTopo ? [cxTopo] : [])); linhasFz.clear();
       const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
       if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Configurações › Conexões. Para mostrar o sistema, use Configurações › Dados de demonstração.' }));
       else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
     }
-    const hoje = new Date().toDateString(); const desejadas = []; const vistas = new Set();
+    const hoje = new Date().toDateString(); const desejadas = cxTopo ? [cxTopo] : []; const vistas = new Set();
     for (const c of lista) {
       const ass = hoje + '|' + assinaturaLinha(c, estado.selecao);
       const velha = linhasFz.get(c.id);
@@ -1785,6 +1787,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const tsHora = horaLista(u ? u.em : c.atualizadaEm); const tsSelo = window.SintoniaTelas?.esperaSelo;
       if (tsSelo) { const ch = tsSelo.chegou(c, tsHora); if (ch) l2.append(ch); }
       else if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
+      if (c.silenciada && window.SintoniaConversaExtra) l2.append(window.SintoniaConversaExtra.sino(c)); /* conversa-extra: sino cortado */
       if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       const linha = (el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
@@ -2852,7 +2855,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function atualizar() {
     try { const p = pedidoLista || api('/api/conversas'); pedidoLista = null; estado.conversas = await p; } catch { return; }
     if (!estado.conversasDoServidor) { estado.conversasDoServidor = true; setTimeout(guardarLista, 1500); }
-    const n = estado.conversas.filter(naoLida).length;
+    const n = estado.conversas.filter((c) => naoLida(c) && !c.arquivada).length; /* conversa-extra: arquivadas não contam no número do menu */
     $('contador').hidden = !n; $('contador').textContent = String(n);
     $('lt-qtd').hidden = !n; $('lt-qtd').textContent = String(n);
     $('qtd-nao-lidas').textContent = n ? String(n) : '';
@@ -3592,7 +3595,9 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <!-- whatsapp-estavel: faixa "WhatsApp desconectado" em Conversas -->
 <script src="/telas/whatsapp-saude.js" defer></script>
 <script src="/telas/equipe.js" defer></script><!-- equipe: Conversas de equipe (chat interno) -->
-<script src="/telas/conversa-ux.js" defer></script><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/conversa-ux.js" defer></script>
+<script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
+<script src="/telas/conversa-extra.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)

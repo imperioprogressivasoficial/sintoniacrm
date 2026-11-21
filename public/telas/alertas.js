@@ -167,6 +167,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const lista = ui.estado.conversas || [];
     let novas = 0;
     for (const c of lista) {
+      if (c.silenciada) { vistas.set(c.id, c.ultimaMensagemCliente ? new Date(c.ultimaMensagemCliente).getTime() : 0); continue; } /* conversa-extra: silenciada = sem som nem vibração */
       const t = c.ultimaMensagemCliente ? new Date(c.ultimaMensagemCliente).getTime() : 0;
       const antes = vistas.get(c.id);
       if (!primeira && t && (antes === undefined ? Date.now() - t < 60_000 : t > antes)) novas++;
@@ -253,9 +254,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   function talvezAlarme() {
-    if (!esp.itens.length || silenciado() || silencioNp || !pe().alarme) return;
-    const nivel = Math.max(...esp.itens.map((x) => x.nivel));
-    const cada = Math.min(...esp.itens.map((x) => x.repetirSeg || 45)) * 1000;
+    const itens = esp.itens.filter((x) => !window.SintoniaConversaExtra?.silenciada?.(x.conversaId)); /* conversa-extra: conversa silenciada não toca o alarme */
+    if (!itens.length || silenciado() || silencioNp || !pe().alarme) return;
+    const nivel = Math.max(...itens.map((x) => x.nivel));
+    const cada = Math.min(...itens.map((x) => x.repetirSeg || 45)) * 1000;
     if (Date.now() - esp.ultimoAlarme < cada) return;
     esp.ultimoAlarme = Date.now();
     tocarAlarme(nivel);

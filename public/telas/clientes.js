@@ -152,7 +152,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   };
   const iconeOrigem = (c) => (c.origem && c.origem.icone) || window.SintoniaRastreio?.selo?.(c.id)?.icone || 'desconhecido';
   const nomeOrigem = (c) => ORIGENS[iconeOrigem(c)] || 'Sem origem';
-  const atendente = (c) => (c.modo === 'ia' ? 'IA' : c.responsavelNome || '—');
+  const atendente = (c) => (c.modo === 'ia' ? 'Serena (IA)' : c.responsavelNome || '—');
   const gestor = () => { const u = s.ui; return !u.estado.eu || u.ehGestor(u.estado.eu); };
   const podeImportar = () => { const eu = s.ui.estado.eu; return !eu || (gestor() && (eu.permissoes ? eu.permissoes.importar_leads !== false : true)); };
   const contatos = (n) => (n === 1 ? '1 contato' : `${Number(n || 0).toLocaleString('pt-BR')} contatos`);
@@ -349,7 +349,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             el('td', {}, tagsEl(c, true)),
             el('td', {}, el('span', { class: 'ct-pilula', text: u.NOME_ETAPA[c.etapa] || c.etapa || '—' })),
             el('td', {}, el('span', { class: 'ct-origem' }, window.SintoniaRastreio ? window.SintoniaRastreio.iconeEl(c.origem || c.id) : null, el('span', { text: nomeOrigem(c) }))),
-            el('td', {}, c.modo === 'ia' ? el('span', { class: 'ct-pilula ct-ia', text: 'IA' }) : el('span', { class: 'ct-sub', text: atendente(c) })),
+            el('td', {}, c.modo === 'ia' ? (window.SintoniaSerenaSelo ? el('span', { class: 'ct-sub', style: 'display:inline-flex;align-items:center;gap:6px' }, window.SintoniaSerenaSelo({ tam: 20 }), document.createTextNode('Serena')) : el('span', { class: 'ct-pilula ct-ia', text: 'IA' })) /* conversa-extra */ : el('span', { class: 'ct-sub', text: atendente(c) })),
             el('td', { class: 'ct-sub', text: data(c.criadaEm) }),
             el('td', { class: 'ct-sub', text: u.horaLista(ultimoContato(c)) || '—' }));
           tr.addEventListener('click', () => (nSel ? alternar(c, !s.selecao.has(c.id)) : u.abrir(c.id)));

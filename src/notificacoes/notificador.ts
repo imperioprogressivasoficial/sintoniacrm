@@ -28,6 +28,8 @@ export interface OpcoesNotificador {
   esperaMin?: number;
   /** A conversa está com bot ou follow-up conduzindo? (aí não há alerta de espera). */
   automacaoAtiva?: (conversaId: string) => Promise<boolean>;
+  /** conversa-extra: quem silenciou a conversa agora (sem push, sem vibração para essas pessoas). */
+  silenciaram?: (conversaId: string, agora: Date) => Promise<Set<string>>;
 }
 
 /** Item da faixa "clientes esperando" do app. */
@@ -388,6 +390,12 @@ export class Notificador {
     if (!this.o.push) return 0;
     const p = prefs ?? (await this.prefsDe(n.usuarioId));
     if (!p.push || emNaoPerturbe(p, this.agora())) return 0;
+    // conversa-extra: conversa silenciada por esta pessoa = nada de push dela (o aviso continua no sino).
+    // Lembrete de ligação foi a própria pessoa que pediu: esse continua tocando.
+    if (n.conversaId && n.tipo !== 'lembrete_ligacao' && this.o.silenciaram) {
+      const quem = await this.o.silenciaram(n.conversaId, this.agora()).catch(() => new Set<string>());
+      if (quem.has(n.usuarioId)) return 0;
+    }
     const inscricoes = await this.o.armazem.inscricoes(n.usuarioId);
     if (!inscricoes.length) return 0;
     const chaves = await this.o.push.chaves.obter();

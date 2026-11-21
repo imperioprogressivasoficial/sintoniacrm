@@ -310,6 +310,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (acao === 'ficha') return abrirEDepois(c.id, () => ui.abrirFicha?.());
     if (acao === 'ia') return abrirEDepois(c.id, () => window.SintoniaConversa?.abrirMenuIa?.());
     if (acao === 'agendar') return ui.agendar?.(c.id);
+    if (String(acao).startsWith('cx-')) return window.SintoniaConversaExtra?.fazer?.(acao, c); /* conversa-extra: silenciar e arquivar */
   }
   async function alternarLida(c) {
     const ficaLida = naoLida(c);
@@ -367,6 +368,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       { acao: 'atribuir', svg: SVG.atribuir, texto: 'Atribuir a alguém' },
       T.rotina?.novaTarefa && { acao: 'tarefa', svg: SVG.tarefa, texto: 'Criar tarefa' },
       T.nps?.finalizarNaConversa && { acao: 'finalizar', svg: SVG.finalizar, texto: 'Finalizar atendimento' },
+      ...(window.SintoniaConversaExtra?.acoes?.(c) || []), /* conversa-extra */
       { acao: 'abrir', svg: SVG.abrir, texto: 'Abrir conversa', forte: true },
     ].filter(Boolean);
   }
@@ -382,7 +384,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       opcao(SVG.atribuir, 'Atribuir a alguém', c.responsavelNome ? `Hoje: ${c.responsavelNome}` : 'Passar para outra pessoa da equipe', ir('atribuir')),
       T.rotina?.novaTarefa ? opcao(SVG.tarefa, 'Criar tarefa', 'Lembrete com prazo ligado a esta conversa', ir('tarefa')) : null,
       ui.agendar ? opcao(SVG.agendar, 'Agendar', 'Marcar um horário para a cliente', ir('agendar')) : null,
-      T.nps?.finalizarNaConversa ? opcao(SVG.finalizar, 'Finalizar atendimento', 'Registra o motivo e manda a pesquisa', ir('finalizar')) : null));
+      T.nps?.finalizarNaConversa ? opcao(SVG.finalizar, 'Finalizar atendimento', 'Registra o motivo e manda a pesquisa', ir('finalizar')) : null,
+      ...(window.SintoniaConversaExtra?.acoes?.(c) || []).map((o) => opcao(o.svg, o.texto, o.sub, ir(o.acao))))); /* conversa-extra: silenciar e arquivar */
   }
 
   async function abrirMover(c) {
