@@ -226,6 +226,34 @@ export class EvolutionAdmin {
     return saida;
   }
 
+  /**
+   * Resgate de UMA conversa: as últimas mensagens guardadas na Evolution para esse telefone, procurando pelo número
+   * (com e sem o 9 do celular brasileiro) e pelos códigos "@lid" que o WhatsApp usa no lugar do número.
+   */
+  async mensagensDoContato(nome: string, telefone: string, quantas = 200): Promise<unknown[]> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const dig = telefone.replace(/\D/g, '');
+    const variantes = new Set([dig]);
+    const br = /^55(\d{2})(\d{8,9})$/.exec(dig);
+    if (br && br[1] && br[2]) { const ddd = br[1]; const n = br[2]; variantes.add(n.length === 9 && n.startsWith('9') ? `55${ddd}${n.slice(1)}` : `55${ddd}9${n}`); }
+    const jids = new Set([...variantes].map((v) => `${v}@s.whatsapp.net`));
+    const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {}, 60_000).catch(() => []);
+    for (const c of (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>) {
+      const jid = typeof c.remoteJid === 'string' ? c.remoteJid : '';
+      if (!jid.endsWith('@lid')) continue;
+      const k = ((c.lastMessage as Record<string, unknown> | undefined)?.key ?? {}) as Record<string, unknown>;
+      const alt = String(k.remoteJidAlt ?? k.senderPn ?? c.remoteJidAlt ?? '').replace(/\D/g, '');
+      if (alt && variantes.has(alt)) jids.add(jid);
+    }
+    const saida: unknown[] = [];
+    for (const remoteJid of jids) {
+      const r = await this.chamar<Record<string, unknown>>('POST', `/chat/findMessages/${encodeURIComponent(nome)}`, { where: { key: { remoteJid } }, page: 1, offset: quantas }, 30_000).catch(() => null);
+      const msgs = (r?.messages as Record<string, unknown> | undefined)?.records ?? r?.records ?? (Array.isArray(r) ? r : []);
+      if (Array.isArray(msgs)) saida.push(...msgs);
+    }
+    return saida;
+  }
+
   /** O código de 8 letras em vigor (a Evolution troca de tempos em tempos enquanto espera). */
   async codigoAtual(nome: string): Promise<string | null> {
     if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');

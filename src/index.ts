@@ -103,6 +103,7 @@ import { Radar } from './radar/radar.js';
 import { ArmazemRadarMemoria, ArmazemRadarPostgres } from './radar/armazem.js';
 import { juizClaude } from './radar/juiz.js';
 import { registrarRadar } from './radar/rotas.js';
+import { registrarResgate } from './resgate/resgate.js';
 /* equipe: conversas de equipe (chat interno da empresa, sem WhatsApp) */
 import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
 import { ChatEquipe } from './equipe/chat.js';
@@ -802,6 +803,18 @@ registrarDemo(app, demo);
 registrarFollowup(app, { followup, repo });
 registrarNps(app, { nps, repo, automacoes });
 registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
+// Resgatar mensagens: busca de novo na Evolution o que não apareceu (uma conversa ou todas), sem IA nem avisos.
+registrarResgate(app, {
+  repo,
+  admin: () => {
+    const url = conexoes.get('evolutionUrl');
+    const chave = conexoes.get('evolutionApiKey');
+    return url && chave ? new EvolutionAdmin(url, chave) : undefined;
+  },
+  canais: () => canaisEvolution(conexoes.numeros()).map((c) => c.canalId),
+  importar: (m) => sintonia.importarHistorico(m),
+  log,
+});
 /* equipe: conversas de equipe (src/equipe) — direta, grupos e o "Geral"; aviso pelo push que já existe. */
 registrarChatEquipe(app, {
   chat: new ChatEquipe({ armazem: pool ? new ArmazemEquipePostgres(pool) : new ArmazemEquipeMemoria(), contas, repo, presencas, avisar: avisoPorPush(notificador), log }),
