@@ -18,7 +18,13 @@
   @keyframes px-gira{to{transform:rotate(360deg)}}
   .px-alvo{transition:none}
   .px-alvo.px-volta{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-  @media (prefers-reduced-motion:reduce){.px-ind.px-girando svg{animation:none}}`;
+  @media (prefers-reduced-motion:reduce){.px-ind.px-girando svg{animation:none}}
+  /* fluidez2: véu do espaço que abre em cima da tela puxada: degradê da cor do painel + desfoque, sem linha dividindo */
+  .px-veu{position:fixed;z-index:59;left:0;right:0;top:0;height:0;pointer-events:none;opacity:0;
+    background:linear-gradient(to bottom,transparent 0,var(--px-cor,transparent) 100%);
+    -webkit-backdrop-filter:blur(14px) saturate(1.15);backdrop-filter:blur(14px) saturate(1.15);
+    -webkit-mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 44px),transparent 100%);mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 44px),transparent 100%)}
+  .px-veu.solto{transition:height .35s cubic-bezier(.2,.8,.2,1),opacity .3s}`;
   document.head.appendChild(css);
 
   const ind = document.createElement('div');
@@ -26,8 +32,24 @@
   ind.setAttribute('aria-hidden', 'true');
   ind.innerHTML = '<svg viewBox="0 0 26 26"><defs><linearGradient id="px-brilho" x1="0" x2="1"><stop offset="0" stop-color="#0ffcbe"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient></defs><circle cx="13" cy="13" r="10" transform="rotate(-90 13 13)"/></svg>';
   const arco = ind.querySelector('circle');
-  addEventListener('DOMContentLoaded', () => document.body.appendChild(ind));
-  if (document.body) document.body.appendChild(ind);
+  const veu = document.createElement('div'); /* fluidez2 */
+  veu.className = 'px-veu';
+  veu.setAttribute('aria-hidden', 'true');
+  const pendurar = () => { document.body.appendChild(veu); document.body.appendChild(ind); };
+  addEventListener('DOMContentLoaded', pendurar);
+  if (document.body) pendurar();
+  /** fluidez2: cor do painel no topo da tela puxada (o véu termina nela, então o espaço aberto "derrete" no painel). */
+  const corDoTopo = (el) => {
+    try {
+      const r = el.getBoundingClientRect();
+      for (const n of document.elementsFromPoint(innerWidth / 2, Math.max(0, r.top) + 6)) {
+        if (!el.contains(n) && n !== el) break;
+        const c = getComputedStyle(n).backgroundColor;
+        if (c && !/rgba\(.*,\s*0\)$/.test(c) && c !== 'transparent') return c;
+      }
+    } catch {}
+    return 'transparent';
+  };
 
   let y0 = null, x0 = 0, d = 0, alvo = null, ocupado = false, decidido = false;
 
@@ -55,12 +77,15 @@
     ind.style.transform = `translateY(${-44 + k * 52}px) rotate(${p * 270}deg) scale(${0.6 + k * 0.4})`;
     arco.style.strokeDashoffset = String(63 - k * 50);
     if (alvo) alvo.style.transform = `translateY(${Math.min(d, MAX) * 0.55}px)`;
+    veu.style.opacity = String(Math.min(1, p * 2));
+    veu.style.height = `${Math.round(Math.min(d, MAX) * 0.55 + 44)}px`;
   };
   const limpar = () => {
     ind.classList.add('solto');
     ind.classList.remove('px-girando');
     ind.style.opacity = '0';
     ind.style.transform = 'translateY(-44px) scale(.6)';
+    veu.classList.add('solto'); veu.style.opacity = '0'; veu.style.height = '0px';
     if (alvo) { alvo.classList.add('px-volta'); alvo.style.transform = ''; const a = alvo; setTimeout(() => a.classList.remove('px-volta', 'px-alvo'), 380); }
     alvo = null;
   };
@@ -80,6 +105,7 @@
       if (Math.abs(dx) > Math.abs(dy) || dy < 0) { y0 = null; alvo = null; return; } // gesto de lado ou para cima: não é nosso
       if (dy < 8) return;
       decidido = true; ind.classList.remove('solto'); alvo?.classList.add('px-alvo');
+      veu.classList.remove('solto'); if (alvo) veu.style.setProperty('--px-cor', corDoTopo(alvo));
     }
     d = Math.max(0, dy - 8) * (1 - Math.min(0.5, dy / 900));
     if (e.cancelable) e.preventDefault();
