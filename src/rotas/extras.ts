@@ -245,6 +245,8 @@ export interface DependenciasExtras {
   comConversa?: <T>(id: string, fn: (c: Conversa) => Promise<T>) => Promise<T | undefined>;
   /** Origem de cada conversa (rastreamento): filtro e coluna do exportar. */
   origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
+  /** produtos-lead: produtos vinculados de cada conversa (coluna "Produtos" do exportar). */
+  produtos?: (ids: string[]) => Promise<Map<string, string>>;
   agora?: () => Date;
 }
 
@@ -253,7 +255,7 @@ export function montarExtras(d: DependenciasExtras): { relatorios: RelatoriosCla
     ? new ArmazemLeadsPostgres(d.pool)
     : new ArmazemLeadsMemoria(d.repo as RepositorioMemoria, d.contatos as ContatosMemoria, d.armazemTags);
   const agora = d.agora ?? (() => new Date());
-  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, origens: d.origens, agora });
+  const leads = new LeadsClasse({ repo: d.repo, armazem, contatos: d.contatos, empresaId: d.empresaId, tags: d.tags, funis: d.funis, canalDa: d.canalDa, comConversa: d.comConversa, origens: d.origens, produtos: d.produtos, agora });
   const relatorios = new RelatoriosClasse({ repo: d.repo, empresaId: d.empresaId, tags: d.tags, contatos: d.contatos, leads: armazem });
   return { relatorios, leads, armazem };
 }

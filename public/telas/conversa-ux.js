@@ -373,6 +373,7 @@
     const radar = $('cux-radar'); if (radar) radar.hidden = !$('topo-radar');
     const agendar = $('cux-agendar'); if (agendar) agendar.hidden = Boolean($('topo-agendar')?.hidden);
     historico();
+    window.SintoniaProdutosLead?.ficha?.(c); /* produtos-lead: cartão "Produtos e serviços" */
   }
   function historico() {
     const lista = $('cux-tempo'); if (!lista) return;

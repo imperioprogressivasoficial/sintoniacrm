@@ -1338,14 +1338,18 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const obs = el('textarea', { rows: '3', maxlength: '4000', placeholder: 'Preferências, histórico, cuidados…', 'aria-label': 'Observações', disabled: '' });
     const obsInfo = el('small');
     const tags = el('div', { class: 'fn-tags-fi' });
+    const produtosCaixa = el('div'); /* produtos-lead: produtos e serviços do lead */
     const rodape = el('div', { class: 'fn-fi-rodape' });
     d.append(
       el('div', { class: 'fn-fi-topo' }, rotuloTopo, el('button', { class: 'fn-redondo', type: 'button', 'aria-label': 'Fechar', title: 'Fechar', html: SVG.fechar, onclick: fechar })),
       el('div', { class: 'fn-fi-corpo' }, resumo, trilha,
         el('div', { class: 'fn-campo' }, el('span', { text: 'Responsável' }), donaCaixa),
         el('label', { class: 'fn-campo' }, el('span', { text: 'Observações da ficha' }), obs, obsInfo),
-        el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags)),
+        el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags),
+        window.SintoniaProdutosLead ? el('div', { class: 'fn-campo' }, el('span', { text: 'Produtos e serviços' }), produtosCaixa) : null),
       rodape);
+    /* produtos-lead: o valor do cartão acompanha a soma dos produtos */
+    window.SintoniaProdutosLead?.montar(produtosCaixa, conversaId, { aoMudar: (r) => { const a = acharCartao(conversaId); if (a && r && 'valor' in r && a.cartao.valor !== r.valor) { a.cartao.valor = r.valor; s.cartaoEls.delete(conversaId); desenharQuadro(); } } });
     let ultimoObs = '';
     const salvarObs = async () => {
       if (obs.disabled || obs.value === ultimoObs) return;

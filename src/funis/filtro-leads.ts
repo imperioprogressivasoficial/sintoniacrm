@@ -41,8 +41,12 @@ export const FiltroLeads = z.object({
   conversa: z.enum(['com', 'sem', 'nao_lidas']).optional(),
   /** Campos personalizados da ficha: `exato` compara o valor inteiro; senão, "contém". */
   campos: z.array(z.object({ id: Uuid, valor: z.string().trim().min(1).max(200), exato: z.boolean().default(false) })).max(10).default([]),
-  /** Produtos e serviços (quando o cadastro existir e estiver ligado aos leads). */
+  /** Produtos e serviços vinculados ao lead (Empresa › Produtos e serviços): tem qualquer um deles. */
   produtos: z.array(Uuid).max(30).default([]),
+  /** produtos-lead: categorias do cadastro: tem algum produto de qualquer uma delas. */
+  categorias: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
+  /** produtos-lead: "propriedade vinculada" = empresa ligada ao contato (chave de Clientes › Empresas: "cnpj:…" ou "nome:…"). */
+  empresas: z.array(z.string().trim().min(3).max(200)).max(20).default([]),
 });
 export type FiltroLeads = z.infer<typeof FiltroLeads>;
 
@@ -66,7 +70,7 @@ export function filtroVazio(f: FiltroLeads | undefined): boolean {
   return (
     !f.meus && !f.situacao && !f.tarefas && !f.excluidos && !f.tags.length && !f.etapas.length && !f.donas.length && !f.nome &&
     !f.criadaDe && !f.criadaAte && !f.atualizadaDe && !f.atualizadaAte && f.valorMin === undefined && f.valorMax === undefined &&
-    !f.semRespostaHoras && !f.conversa && !f.campos.length && !f.produtos.length
+    !f.semRespostaHoras && !f.conversa && !f.campos.length && !f.produtos.length && !f.categorias.length && !f.empresas.length
   );
 }
 
@@ -84,6 +88,8 @@ export interface FiltroResolvido extends FiltroLeads {
   usuarioId?: string;
   /** Conversas que têm os produtos escolhidos (null = não filtra por produto). */
   comProdutos?: string[] | null;
+  /** produtos-lead: telefones dos contatos ligados às empresas escolhidas (null = não filtra por empresa). */
+  comTelefones?: string[] | null;
 }
 
 /**
@@ -151,6 +157,7 @@ export function sqlFiltroLeads(f: FiltroResolvido, params: unknown[], agora: Dat
     partes.push(`exists (select 1 from sintonia.contatos k where k.empresa_id = c.empresa_id and k.telefone = c.telefone and (k.campos ->> ${id}) ilike ${v})`);
   }
   if (f.comProdutos) partes.push(f.comProdutos.length ? `c.id = any(${p(f.comProdutos)}::uuid[])` : 'false');
+  if (f.comTelefones) partes.push(f.comTelefones.length ? `c.telefone = any(${p(f.comTelefones)}::text[])` : 'false');
   return partes.join(' and ');
 }
 
@@ -185,5 +192,6 @@ export function passaFiltroLeads(
   if (f.tarefas === 'com') return false; // sem Rotina na memória: ninguém tem tarefa
   if (f.campos.length) return false; // sem ficha na memória
   if (f.comProdutos && !f.comProdutos.includes(c.id)) return false;
+  if (f.comTelefones && !f.comTelefones.includes(c.telefone)) return false;
   return true;
 }

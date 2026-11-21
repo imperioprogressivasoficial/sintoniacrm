@@ -17,6 +17,8 @@ export interface OpcoesAgente {
   esforco: Esforco;
   /** Limite de idas e vindas com ferramentas por resposta. */
   maxPassos?: number;
+  /** produtos-lead: produtos e serviços vinculados ao lead (texto curto ou null). Vai no contexto da conversa. */
+  produtosDoLead?: (c: Conversa) => Promise<string | null>;
 }
 
 export interface PedidoAgente {
@@ -78,7 +80,7 @@ export class Agente {
       ...(p.tagsDisponiveis?.length ? [ferramentaMarcarTag(p.tagsDisponiveis)] : []),
     ];
     const system = await this.systemAtual();
-    const messages = this.montarMensagens(p);
+    const messages = await this.montarMensagens(p);
     const maxPassos = this.opcoes.maxPassos ?? 8;
 
     for (let passo = 0; passo < maxPassos; passo++) {
@@ -137,10 +139,12 @@ export class Agente {
     };
   }
 
-  private montarMensagens(p: PedidoAgente): Anthropic.Beta.Messages.BetaMessageParam[] {
+  private async montarMensagens(p: PedidoAgente): Promise<Anthropic.Beta.Messages.BetaMessageParam[]> {
     const turnos = historicoParaTurnos(p.mensagens);
     const contexto = contextoDaConversa(p.conversa, p.agora);
     const extra: string[] = [contexto];
+    const produtos = this.opcoes.produtosDoLead ? await this.opcoes.produtosDoLead(p.conversa).catch(() => null) : null;
+    if (produtos) extra.push(`<produtos_do_lead>${produtos}</produtos_do_lead>`);
     if (p.tipoAtivo) {
       extra.push(
         `<instrucao_da_loja>${INSTRUCAO_ATIVA[p.tipoAtivo]}</instrucao_da_loja>\nEsta instrução é da loja, não da cliente. Escreva a mensagem que será enviada à cliente.`,

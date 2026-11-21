@@ -28,6 +28,8 @@ export interface OpcoesAnalises {
   armazemComercial: ArmazemComercial;
   origens?: OrigensConversa;
   contas?: Contas;
+  /** produtos-lead: receita por produto/serviço vinculado aos leads que compraram no período. */
+  produtosVinculados?: (empresaId: string, conversaIds: string[]) => Promise<Array<{ nome: string; tipo: string; categoria: string | null; leads: number; quantidade: number; receita: number }>>;
   /** Empresa quando não há login (uso local / testes). */
   empresaId: string;
   agora: () => Date;
@@ -36,7 +38,7 @@ export interface OpcoesAnalises {
 export const TIPOS_ANALISE = ['vendas', 'horarios', 'funil', 'clientes'] as const;
 export type TipoAnalise = (typeof TIPOS_ANALISE)[number];
 export const TABELAS: Record<TipoAnalise, readonly string[]> = {
-  vendas: ['dias', 'atendentes', 'servicos', 'origens', 'unidades'],
+  vendas: ['dias', 'atendentes', 'servicos', 'produtos', 'origens', 'unidades'],
   horarios: ['leads', 'mensagens', 'agendamentos'],
   funil: ['etapas', 'paradas', 'perdas'],
   clientes: ['resumo', 'fieis', 'sumidas'],
@@ -104,7 +106,8 @@ export function registrarAnalises(app: FastifyInstance, o: OpcoesAnalises): void
         leads: leads.map((l) => ({ conversaId: l.conversaId, origem: origens.get(l.conversaId)! })),
         nomes: new Map(equipe.map((p) => [p.id, p.nome])),
       });
-      return { ...base, ...r, unidades: r.unidades.map((u) => ({ ...u, nome: UNIDADES[u.unidade as keyof typeof UNIDADES]?.nome ?? u.unidade })) };
+      const produtos = o.produtosVinculados ? await o.produtosVinculados(empresaId, vendas.map((v) => v.conversaId)).catch(() => []) : [];
+      return { ...base, ...r, produtos, unidades: r.unidades.map((u) => ({ ...u, nome: UNIDADES[u.unidade as keyof typeof UNIDADES]?.nome ?? u.unidade })) };
     }
     if (tipo === 'horarios') return { ...base, ...analisarHorarios(await o.fonte.grades(inicio, fim, escopo, at)) };
     if (tipo === 'funil') {
@@ -172,6 +175,11 @@ export function tabelaCsv(tipo: TipoAnalise, tabela: string, r: Record<string, u
     if (tabela === 'dias') return { cab: ['Dia', 'Vendas', 'Receita (R$)'], linhas: x.dias.map((d: any) => [br(d.dia), d.vendas, d.receita]) };
     if (tabela === 'atendentes') return { cab: cols('Quem vendeu'), linhas: x.atendentes.map((a: any) => lin(a.nome, a)) };
     if (tabela === 'servicos') return { cab: cols('Serviço'), linhas: x.servicos.map((a: any) => lin(a.nome, a)) };
+    if (tabela === 'produtos')
+      return {
+        cab: ['Produto ou serviço vinculado', 'Tipo', 'Categoria', 'Leads que compraram', 'Quantidade', 'Receita (R$)'],
+        linhas: (x.produtos ?? []).map((a: any) => [a.nome, a.tipo === 'servico' ? 'Serviço' : 'Produto', a.categoria ?? '', a.leads, a.quantidade, a.receita]),
+      };
     if (tabela === 'unidades') return { cab: cols('Unidade'), linhas: x.unidades.map((a: any) => lin(a.nome, a)) };
     return {
       cab: ['Origem', 'Leads no período', 'Leads que compraram', 'Conversão (%)', 'Vendas', 'Receita (R$)', 'Ticket médio (R$)'],
