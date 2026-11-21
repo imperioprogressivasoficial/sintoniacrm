@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 12:58 UTC (21/11, 09h58 na Bahia)
-commit: 8f874e9
-pacote sha256: 086cab534472b2ffbdc8aa457201a1b130353c554eb25fbc70985965ece16143
+data: 2026-11-21 13:35 UTC (21/11, 10h35 na Bahia)
+commit: e87c484
+pacote sha256: 0ab1fc12481a0b5c5c0e7f399d0a8ac474ee75acd2fc692ecd86a97e8af49695
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-8f874e9.b64); pode apagar depois.
-observação: em cima do dbb8693. Entra: contato-nome (nome do perfil do WhatsApp nas conversas sem nome, rotina de nomes a cada 6 h, telefone +55 (71) 9xxxx-xxxx em todas as telas, nomes longos com reticências).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-e87c484.b64); pode apagar depois.
+observação: em cima do 8f874e9. Entram: sem-pagamento (sem planos/Asaas, cadastro só por convite, /privacidade /termos /suporte, excluir conta), ligacoes-modos (660), banco-seguranca (630/631, cabeçalhos, CSP só relatório, auditoria, LGPD por API), relatorio-dia (650, envio desligado). gerar-deploy agora tira comentários (limite de 8192 letras da Hostinger).
