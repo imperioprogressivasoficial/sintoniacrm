@@ -10,6 +10,8 @@ import { ArmazemComercialMemoria, ArmazemComercialPostgres, type ArmazemComercia
 import { configPadrao } from '../src/comercial/calculo.js';
 import { ArmazemPerfisMemoria, ArmazemPerfisPostgres, assinar, registrarConta, trocarEmailMemoria, trocarEmailPostgres, type ArmazemPerfis, type TrocarEmail } from '../src/conta/conta.js';
 import { ArmazemCadastroMemoria, ArmazemCadastroPostgres, cnpjValido, type ArmazemCadastro } from '../src/empresa/cadastro.js';
+import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa } from '../src/empresa/empresa.js';
+import Fastify from 'fastify';
 import { idDeUnidade, registrarCadastro } from '../src/empresa/cadastro-rotas.js';
 import { precosDoCadastro } from '../src/empresa/precos-comercial.js';
 import { criarServidor } from '../src/server.js';
@@ -170,6 +172,18 @@ for (const a of ambientes) {
       expect(logo.headers['content-type']).toBe('image/png');
       expect(Buffer.compare(logo.rawPayload, PNG)).toBe(0);
       expect((await m.como(m.gente.outra, 'GET', '/api/empresa/logo')).statusCode).toBe(204);
+    });
+
+    it('gravar os dados antes de a empresa existir no banco não troca o nome dela pelo id', async () => {
+      const p = await a.criar();
+      const pg = p.cadastro instanceof ArmazemCadastroPostgres ? await poolDeTeste() : null;
+      const empresa = new Empresa(pg ? new ArmazemEmpresaPostgres(pg) : new ArmazemEmpresaMemoria(), 'imperio', 'Império Progressivas', { cacheMs: 0 });
+      const app = Fastify();
+      registrarCadastro(app, { armazem: p.cadastro, empresaId: 'imperio', empresa, unidadesPadrao: [], idsFixos: [] });
+      const r = await app.inject({ method: 'PATCH', url: '/api/empresa/cadastro', payload: { dados: { segmento: 'Clínica' } } });
+      expect(r.json()).toMatchObject({ nome: 'Império Progressivas', dados: { segmento: 'Clínica' } });
+      expect((await empresa.dados()).nome).toBe('Império Progressivas');
+      await app.close();
     });
 
     it('unidades: nascem com as que o sistema conhecia, a equipe lê, a direção cadastra, renomeia e desativa', async () => {

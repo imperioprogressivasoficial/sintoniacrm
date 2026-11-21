@@ -539,6 +539,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
     const extras = window.SintoniaTelas.alertas ? await window.SintoniaTelas.alertas.secoesPreferencias(p).catch(() => []) : [];
     corpo.append(secTipos, secPush, ...extras, secNp);
+    /* empresa-conta: Conta › Notificações monta as mesmas preferências dentro da tela (sem painel lateral) */
+    if (op.caixa) { op.caixa.replaceChildren(corpo); return; }
     const pagina = { id: 'nt-preferencias', titulo: 'Preferências', larga: true, montar: (c) => c.append(corpo) };
     if (op.empurrar && P().aberto()) P().empurrar(pagina); else P().abrir(pagina);
   }

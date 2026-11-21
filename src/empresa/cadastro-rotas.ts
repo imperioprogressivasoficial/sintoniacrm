@@ -205,6 +205,10 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
   // ------------------------------------------------------------ dados da empresa
   const nomeDaEmpresa = async (empresaId: string, salvo?: string) =>
     (empresaId === o.empresaId && o.empresa ? (await o.empresa.dados().catch(() => null))?.nome : undefined) ?? salvo ?? empresaId;
+  /** Antes de gravar: a empresa nasce com o nome certo (o armazém cria a linha com o id quando ela ainda não existe). */
+  const garantirEmpresa = async (empresaId: string) => {
+    if (empresaId === o.empresaId && o.empresa) await o.empresa.dados().catch(() => null);
+  };
   const cadastro = async (req: FastifyRequest) => {
     const empresaId = empresaDe(req);
     const r = await o.armazem.lerDados(empresaId);
@@ -223,6 +227,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
     exigeDirecao(req, 'Só a direção e a administração mudam os dados da empresa.');
     const b = validar(CadastroCorpo, req.body);
     const empresaId = empresaDe(req);
+    await garantirEmpresa(empresaId);
     if (b.dados) {
       const atual = (await o.armazem.lerDados(empresaId))?.dados ?? DadosEmpresa.parse({});
       await o.armazem.gravarDados(empresaId, validar(DadosEmpresa, { ...atual, ...b.dados }), quem(req));
@@ -240,6 +245,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
   });
   app.put('/api/empresa/logo', { bodyLimit: CORPO_FOTO + 1024 }, async (req) => {
     exigeDirecao(req, 'Só a direção e a administração trocam a logo.');
+    await garantirEmpresa(empresaDe(req));
     await o.armazem.gravarLogo(empresaDe(req), imagem(req.body));
     return { ok: true, logoEm: Date.now() };
   });
@@ -445,6 +451,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): void
     const empresaId = empresaDe(req);
     if (jaImportou.has(empresaId)) return;
     jaImportou.add(empresaId);
+    await garantirEmpresa(empresaId);
     if (await o.armazem.marcarImportacao(empresaId).catch(() => false)) await importar(empresaId, 'Sintonia (cópia do Comercial)').catch(() => 0);
   });
 
