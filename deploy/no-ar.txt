@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 03:20 UTC (21/11, 00h20 na Bahia)
-commit: 3437a6b
-pacote sha256: 810dee87f03ca992ce39b92a6c8394e43e7d97fde2f4f5e9850e4543b2bc20ca
+data: 2026-11-21 04:10 UTC (21/11, 01h10 na Bahia)
+commit: f4e93ae
+pacote sha256: bae5a113297e6b735d7c064a39a2fff8ad26bebd0786626d390fcc9e09a1eebb
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-3437a6b.b64); pode apagar depois.
-observação: em cima do e3a230e (passando pelo 94d5798). Entra: resgatar mensagens (src/resgate), rotas /app/<tela> + fontes (rotas-fontes), mensagens agendadas (470), conversa-ux (áudio mp3 via @ffmpeg-installer, ícones, ficha), topo do Pipeline (480), Empresa e Conta (490), Integrações API/webhooks/MCP (500).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f4e93ae.b64); pode apagar depois.
+observação: em cima do 3437a6b. Entra: auditoria (docs), conversa-extra (510: papel de parede, Serena no lugar de IA, silenciar, arquivar), produtos-lead (520).
