@@ -5,6 +5,9 @@ import { z } from 'zod';
 import { AutomacaoNova, type Gatilho, type Passo } from '../automacoes/esquema.js';
 import { DadosLink } from '../reunioes/reunioes.js';
 import { FazerSerena, type FontesFazer, type PodeFazer } from './fazer.js';
+import { LerSerena, type FontesLer } from './ler.js';
+import { MudarSerena, type FontesMudar, type PodeMudar } from './mudar.js';
+import type { Fonte } from './internet.js';
 
 /**
  * Serena faz coisas no CRM (tool use do Claude), sempre com prévia e confirmação:
@@ -17,7 +20,19 @@ import { FazerSerena, type FontesFazer, type PodeFazer } from './fazer.js';
  */
 
 /** serena-faz: envio, agendamento e mover são AÇÕES (cartão com Confirmar/Cancelar; src/serena/fazer.ts). */
-export type TipoArtefato = 'script' | 'automacao' | 'link' | 'etiqueta' | 'envio' | 'agendamento' | 'mover';
+export type TipoArtefato =
+  | 'script'
+  | 'automacao'
+  | 'link'
+  | 'etiqueta'
+  | 'envio'
+  | 'agendamento'
+  | 'mover'
+  /* serena-super: cartões só de mostrar (números, trechos de mensagens, botão de abrir) e as mudanças com Confirmar */
+  | 'numeros'
+  | 'mensagens'
+  | 'atalho'
+  | 'mudar';
 
 /** Um passo do fluxo já com nomes (para a prévia em cartões ligados). */
 export interface NoFluxo {
@@ -89,13 +104,37 @@ export class AcoesSerena {
   readonly artefatos: Artefato[] = [];
   /** serena-faz: mandar mensagem, agendar e mover (com Confirmar). Ausente = só cria coisas. */
   private readonly fazer?: FazerSerena;
+  /** serena-super: lê o CRM inteiro (mensagens, leads, documentos, números, agenda, equipe, internet). */
+  private readonly ler?: LerSerena;
+  /** serena-super: tarefas, etiquetas, transferir, agendar mensagem, treinamento, transmissão, pausa, pipelines. */
+  private readonly mudar?: MudarSerena;
+  /** serena-super: dá uma referência "cN" a uma cliente citada (a tela mostra o botão de abrir a conversa). */
+  ref?: (c: { conversaId: string; nome: string | null; unidade: string }) => string;
 
   constructor(
     private readonly fontes: FontesSerena,
     private readonly pode: PodeSerena,
     fazer?: { fontes: FontesFazer; pode: PodeFazer },
+    extra?: { ler?: FontesLer; mudar?: { fontes: FontesMudar; pode: PodeMudar } },
   ) {
     if (fazer) this.fazer = new FazerSerena(fazer.fontes, fazer.pode, (a) => this.guardar(a));
+    if (extra?.ler) this.ler = new LerSerena(extra.ler, (a) => this.guardar(a), () => this.ref);
+    if (extra?.mudar) this.mudar = new MudarSerena(extra.mudar.fontes, extra.mudar.pode, (a) => this.guardar(a));
+  }
+
+  /** serena-super: a Serena lê o CRM inteiro (o "CRM vivo")? */
+  get le(): boolean {
+    return Boolean(this.ler);
+  }
+
+  /** serena-super: links da internet usados nesta mensagem. */
+  get fontesWeb(): Fonte[] {
+    return this.ler?.fontesWeb ?? [];
+  }
+
+  /** serena-super: tem a pesquisa na internet? */
+  get internet(): boolean {
+    return Boolean(this.ler?.ferramentas().some((f) => f.name === 'pesquisar_internet'));
   }
 
   /** serena-faz: a Serena também faz (envia, agenda, move)? */
@@ -117,6 +156,8 @@ export class AcoesSerena {
       `Você pode criar no CRM, para esta pessoa: ${pode.join(', ') || 'nada por enquanto'}.`,
       nao.length ? `Esta pessoa NÃO pode criar ${nao.join(' nem ')} (só a gestão). Se pedir, explique com gentileza e sugira falar com a gerência.` : '',
       ...(this.fazer?.regras() ?? []),
+      ...(this.mudar?.regras() ?? []),
+      ...(this.ler?.regras() ?? []),
     ]
       .filter(Boolean)
       .join('\n');
@@ -230,12 +271,16 @@ Máximo de 40 passos no total. Mensagens curtas, no jeito de WhatsApp.`,
       });
     }
     if (this.fazer) f.push(...this.fazer.ferramentas());
+    if (this.mudar) f.push(...this.mudar.ferramentas());
+    if (this.ler) f.push(...this.ler.ferramentas());
     return f;
   }
 
   /** Executa uma ferramenta. Erro de conferência volta para a IA corrigir (is_error). */
   async executar(nome: string, entrada: unknown): Promise<ResultadoFerramenta> {
     if (this.fazer && FazerSerena.NOMES.has(nome)) return this.fazer.executar(nome, entrada);
+    if (this.mudar && MudarSerena.NOMES.has(nome)) return this.mudar.executar(nome, entrada);
+    if (this.ler && LerSerena.NOMES.has(nome)) return this.ler.executar(nome, entrada);
     try {
       switch (nome) {
         case 'consultar_crm':

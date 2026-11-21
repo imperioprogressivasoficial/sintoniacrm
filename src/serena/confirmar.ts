@@ -19,6 +19,7 @@ import { LIMITES } from '../transmissoes/tipos.js';
 import { unidadeDe } from '../unidades.js';
 import { dataISO } from '../util/tempo.js';
 import { LIMITE_DIRETO, LIMITE_ENVIO, LIMITE_MOVER, quandoCurto, type PodeFazer } from './fazer.js';
+import { aplicarMudanca } from './mudar.js';
 
 /**
  * serena-faz: o "Confirmar" dos cartões de ação da Serena (POST /api/serena/confirmar).
@@ -178,7 +179,7 @@ const ConfirmaMover = z.object({
   perda: z.object({ motivo: z.string().trim().min(1).max(60), detalhe: z.string().trim().max(300).nullish() }).nullish(),
   itens: z.array(z.object({ conversaId: Id })).min(1, 'A lista ficou vazia.').max(LIMITE_MOVER),
 });
-const Pedido = z.object({ tipo: z.enum(['envio', 'agendamento', 'mover']), dados: z.unknown() });
+const Pedido = z.object({ tipo: z.enum(['envio', 'agendamento', 'mover', 'mudar']), dados: z.unknown() });
 
 const erro = (msg: string, statusCode: number) => Object.assign(new Error(msg), { statusCode });
 
@@ -404,10 +405,41 @@ export function registrarSerenaFaz(app: FastifyInstance, o: OpcoesSerenaFaz): vo
     return { ok: true, movidas, falhas, resumo };
   }
 
+  // ------------------------------------------------------------ serena-super: o resto (tarefa, etiqueta, transferir…)
+  // Chama a rota da tela de sempre (só as da lista em src/serena/mudar.ts), com o login de quem confirmou:
+  // a permissão e as conferências da rota valem de novo.
+  async function confirmarMudanca(req: FastifyRequest, bruto: unknown) {
+    const chamar = async (metodo: string, url: string, corpo?: unknown) => {
+      const r = await app.inject({
+        method: metodo as 'GET',
+        url,
+        ...(corpo !== undefined ? { payload: corpo as Record<string, unknown> } : {}),
+        headers: { ...(req.headers.cookie ? { cookie: req.headers.cookie } : {}), 'user-agent': 'Serena (Confirmar)', 'x-serena': '1' },
+      });
+      let c: unknown = null;
+      try {
+        c = r.body ? r.json() : null;
+      } catch {
+        c = r.body;
+      }
+      return { status: r.statusCode, corpo: c };
+    };
+    const r = await aplicarMudanca(chamar, bruto);
+    for (const id of r.conversas) {
+      const c = await conversaVisivel(req, id);
+      if (c) await evento(req, c, { acao: r.acao });
+    }
+    // Na auditoria vai o que mudou (sem o texto inteiro do treinamento nem dado de cliente).
+    const detalhe = Object.fromEntries(Object.entries(r.params).map(([k, v]) => [k, typeof v === 'string' && v.length > 200 ? `${v.slice(0, 200)}…` : v]));
+    await auditar(req, `serena_${r.acao}`, r.conversas.length ? `${r.conversas.length} conversa${r.conversas.length === 1 ? '' : 's'}` : r.acao, detalhe);
+    return { ok: true, resumo: r.resumo, falhas: r.falhas.map((erro) => ({ nome: '', erro })) };
+  }
+
   app.post('/api/serena/confirmar', async (req) => {
     const b = Pedido.parse(req.body);
     if (b.tipo === 'envio') return confirmarEnvio(req, b.dados);
     if (b.tipo === 'agendamento') return confirmarAgenda(req, b.dados);
+    if (b.tipo === 'mudar') return confirmarMudanca(req, b.dados);
     return confirmarMover(req, b.dados);
   });
 }

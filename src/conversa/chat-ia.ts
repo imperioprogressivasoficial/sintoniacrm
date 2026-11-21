@@ -7,6 +7,7 @@ import { partesBahia } from '../util/tempo.js';
 import { ErroAssistente } from './assistente.js';
 import type { SugestaoLigacao } from '../app/ligacoes.js';
 import type { AcoesSerena, Artefato } from '../serena/acoes.js';
+import { LerSerena } from '../serena/ler.js';
 import { apresentacao, identidade } from '../empresa/identidade.js';
 
 /**
@@ -71,29 +72,45 @@ export interface ContextoChat {
  * serena-faz: o que a Serena da tela é. Antes dizia "não envia mensagens, não agenda e não move conversas";
  * o dono pediu o contrário: ela FAZ (como uma gerente de vendas que trabalha), sempre com prévia e confirmação,
  * e só não inventa preço, horário ou regra: segue o treinamento (regras, princípios e valores da empresa).
- * `faz` = as ferramentas de ação estão ligadas (cartões com Confirmar); sem elas, ela só conversa e escreve.
+ * serena-super: "a Serena é o próprio CRM, vivo": lê tudo o que a pessoa pode ver (mensagens, leads, números,
+ * relatórios, agenda, equipe, documentos, internet) e faz o que ela pedir sobre o CRM, com cartão e Confirmar.
+ * `faz` = as ferramentas de ação estão ligadas (cartões com Confirmar); `le` = as de leitura do CRM inteiro;
+ * `internet` = pesquisa na internet (só no chat interno). Sem nada disso, ela só conversa e escreve.
  */
-const INSTRUCOES = (faz: boolean) => `Você é a Serena, a gerente de vendas de IA da Sintonia, o CRM de WhatsApp da ${apresentacao()}. Quem fala com você é alguém da equipe da empresa (atendente, gerente ou direção), nunca uma cliente.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}
+const INSTRUCOES = (faz: boolean, le = false, internet = false) => `Você é a Serena, ${le ? 'o próprio CRM da Sintonia, vivo: a inteligência que conhece tudo o que está dentro dele e faz o que a pessoa pedir' : 'a gerente de vendas de IA da Sintonia'}, o CRM de WhatsApp da ${apresentacao()}. Quem fala com você é alguém da equipe da empresa (atendente, gerente ou direção), nunca uma cliente.${identidade().sobre ? `\nSobre a empresa (escrito por ela): ${identidade().sobre}` : ''}
 Regras:
 - Português do Brasil, tom simples, direto e gentil. Respostas curtas; use listas com "- " quando ajudar. Pode usar **negrito** com moderação. Sem títulos com #.
 - Siga o treinamento da empresa: a <base_de_conhecimento> (aba Treinamento da IA) e as <regras_da_empresa> trazem as regras, os princípios e os valores dela. Eles valem mais do que o seu jeito; nunca vá contra eles, nem para agradar quem pede.
 - Números, nomes, horários, preços e regras: só do <contexto>, do treinamento ou do que as ferramentas devolverem. Ao falar de preço ou duração, diga de onde veio (cadastro de Produtos e serviços ou agenda do salão). Se não estiver em nenhum desses lugares, diga claramente que não sabe e onde conferir. Nunca invente números, preços nem regras.
-- Quando citar uma cliente que aparece no contexto com "ref", ponha a referência logo depois do nome, assim: Fabiana Matos [[c3]]. Para listar clientes, use um item "- " por cliente com a referência e o motivo curto. Nunca invente referências.
+- Quando citar uma cliente que aparece no contexto ou numa ferramenta com "ref", ponha a referência logo depois do nome, assim: Fabiana Matos [[c3]] (vira um botão que abre a conversa). Para listar clientes, use um item "- " por cliente com a referência e o motivo curto. Nunca invente referências.
 - Você pode escrever mensagens prontas (ex.: chamar clientes sumidas, responder quem achou caro), no jeito de WhatsApp, curtas e calorosas, sem prometer preço ou horário que não esteja no contexto. Ponha a mensagem pronta sozinha num parágrafo, entre aspas ("assim").
 - Se a pessoa mandar uma imagem (por exemplo, o print de uma conversa), leia o que dá para ler e ajude com base nela.
 ${
+  le
+    ? `O que você lê na hora, sem pedir confirmação (só o que esta pessoa pode ver):
+- as mensagens de todas as conversas (buscar_mensagens: quem falou o quê, quando) e as clientes/leads por nome, telefone, etiqueta, etapa, origem e último contato (buscar_leads, buscar_clientes);
+- os números: Dashboard, relatório Dia a dia, Análises (vendas, horários, funil, origens, perdas), Comercial (metas, ranking, comissão), NPS e Atendimento (tempo de resposta) — ver_numeros. Quando ajudar, mostre num cartão com mostrar_numeros (barras ou tabela), só com os números que vieram;
+- a agenda do dia ou da semana por unidade (ver_agenda) e a equipe: quem está disponível, quem está sobrecarregada, a distribuição (ver_equipe);
+- documentos da empresa, treinamento, produtos e preços, scripts e respostas rápidas (buscar_documentos, ver_produtos);${internet ? `
+- a internet (pesquisar_internet), para o que não está no CRM. Nunca ponha nome, telefone, e-mail ou qualquer dado de cliente na pesquisa: pesquise só o assunto. Diga que veio da internet.` : ''}
+Para levar a pessoa até a tela certa, use mostrar_atalho (ou o "abrir" do cartão de números).
+`
+    : ''
+}${
   faz
     ? `O que você faz (sempre com prévia e confirmação):
 - mandar mensagem para clientes, uma ou várias (monta a lista e o texto; a pessoa confere e confirma);
 - agendar, remarcar e cancelar horários na agenda do salão (consulta os horários livres antes);
 - mover conversas no funil/pipeline (com o motivo quando é etapa de perda);
-- criar scripts de venda, fluxos de automação, links de agendamento e etiquetas;
+- criar scripts de venda, fluxos de automação, links de agendamento e etiquetas;${le ? `
+- criar tarefa para alguém (Rotina), marcar ou tirar etiqueta, transferir conversa, agendar mensagem, sugerir mudança no treinamento da IA (mostrando o antes e o depois), montar rascunho de transmissão, pausar ou religar a Serena (só a gestão) e criar ou renomear pipelines e etapas;` : ''}
 - ler preços e durações do cadastro e da agenda do salão.
-Como agir: entenda o pedido, consulte o que precisar (buscar_clientes, ver_funis, ver_produtos, consultar_horarios…) e chame a ferramenta "mostrar_…" certa. Ela vira um cartão com Confirmar e Cancelar: só a pessoa confirma. Nunca diga que já enviou, agendou, moveu ou salvou; diga que preparou e peça para conferir no cartão.
+Como agir: entenda o pedido, consulte o que precisar (${le ? 'buscar_leads, buscar_mensagens, ver_numeros, ' : ''}buscar_clientes, ver_funis, ver_produtos, consultar_horarios…) e chame a ferramenta "mostrar_…" certa. Ela vira um cartão com Confirmar e Cancelar: só a pessoa confirma. Nunca diga que já enviou, agendou, moveu, criou ou mudou; diga que preparou e peça para conferir no cartão.
 O que você não faz:
 - inventar preço, horário, regra ou qualquer dado;
 - agir sem a confirmação da pessoa;
-- mostrar ou mexer no que esta pessoa não pode ver (as listas já vêm só com o que ela vê) nem passar do que ela tem permissão (ver <o_que_voce_pode_criar>).`
+- mostrar ou mexer no que esta pessoa não pode ver (as listas já vêm só com o que ela vê) nem passar do que ela tem permissão (ver <o_que_voce_pode_criar>).${le ? `
+- fingir que faz o que ainda não tem ferramenta: diga com sinceridade que isso ainda não dá pelo chat e mostre onde fazer no app (mostrar_atalho). O que faltar pode ser pedido à equipe da Sintonia.` : ''}`
     : `Nesta tela ainda não dá para agir pelo chat: ajude com respostas, listas e mensagens prontas, e explique como fazer pelo app (Conversas, Agenda, CRM) quando pedirem para enviar, agendar ou mover.`
 }`;
 /** Quando a Serena pode criar coisas no CRM (ferramentas "mostrar_…"): sempre com prévia e confirmação. */
@@ -228,51 +245,152 @@ export function paraMensagensClaude(mensagens: MensagemChat[]): Array<{ role: 'u
   return [...saida.slice(0, -1), { role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: imagem.tipo, data: imagem.dados } }, { type: 'text', text: ultima.content }] }];
 }
 
-/** Rodadas de ferramenta por mensagem (consultar → mostrar → corrigir…). */
-export const LIMITE_RODADAS = 6;
+/** Rodadas de ferramenta por mensagem (consultar → mostrar → corrigir…). serena-super: 8 (o CRM vivo lê mais). */
+export const LIMITE_RODADAS = 8;
+
+/**
+ * serena-super: custo e segurança por mensagem da pessoa.
+ * - `maxTokens`: teto de cada resposta da IA; `orcamento`: soma da saída de todas as rodadas (para de chamar ferramentas
+ *   quando passa); `prazoMs`: tempo total (cada pedido à API leva o que sobra como timeout).
+ * - "Pensar mais": raciocínio mais fundo nesta mensagem (effort alto, com o resumo do raciocínio para "Ver raciocínio").
+ */
+export const LIMITES_CHAT = {
+  normal: { maxTokens: 8000, orcamento: 30_000, prazoMs: 100_000, esforco: 'low' as const },
+  pensarMais: { maxTokens: 16_000, orcamento: 64_000, prazoMs: 180_000, esforco: 'high' as const },
+};
+
+/** O que a tela mostra enquanto espera (linha a linha, se ela pediu progresso). */
+export interface Progresso {
+  etapa: 'pensando' | 'pesquisando' | 'consultando' | 'escrevendo';
+  texto: string;
+}
+
+export interface OpcoesChat {
+  modelo: string;
+  /** "Pensar mais" ligado nesta mensagem. */
+  pensarMais?: boolean;
+  aoProgresso?: (p: Progresso) => void;
+  /** Para os testes (o padrão vem de LIMITES_CHAT). */
+  prazoMs?: number;
+  agoraMs?: () => number;
+}
+
+export interface RespostaChat {
+  texto: string;
+  clientes?: Record<string, ClienteCitada>;
+  artefatos?: Artefato[];
+  /** serena-super: links da internet usados na resposta. */
+  fontes?: Array<{ titulo: string; url: string }>;
+  /** serena-super: resumo do raciocínio (só com "Pensar mais", se a API devolver). */
+  raciocinio?: string;
+  pensouMais?: boolean;
+}
+
+/** O corpo do pedido à API (separado para o teste conferir o que vai, sem chamar a API de verdade). */
+export function pedidoChat(o: {
+  modelo: string;
+  sistema: Anthropic.Beta.Messages.BetaTextBlockParam[];
+  mensagens: Anthropic.Beta.Messages.BetaMessageParam[];
+  ferramentas: Anthropic.Beta.Messages.BetaToolUnion[];
+  pensarMais: boolean;
+}): Anthropic.Beta.Messages.MessageCreateParamsNonStreaming {
+  const lim = o.pensarMais ? LIMITES_CHAT.pensarMais : LIMITES_CHAT.normal;
+  return {
+    model: o.modelo,
+    max_tokens: lim.maxTokens,
+    system: o.sistema,
+    messages: o.mensagens,
+    ...(o.ferramentas.length ? { tools: o.ferramentas } : {}),
+    // Pensar mais: o modelo pensa mais fundo e devolve um resumo do raciocínio (display "summarized").
+    ...(o.pensarMais ? { thinking: { type: 'adaptive' as const, display: 'summarized' as const } } : {}),
+    output_config: { effort: lim.esforco },
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+  };
+}
 
 export async function conversarComIa(
   claude: ClienteClaude,
-  opcoes: { modelo: string },
+  opcoes: OpcoesChat,
   mensagens: MensagemChat[],
   contexto: ContextoChat,
   acoes?: AcoesSerena,
-): Promise<{ texto: string; clientes?: Record<string, ClienteCitada>; artefatos?: Artefato[] }> {
+): Promise<RespostaChat> {
   type Msg = Anthropic.Beta.Messages.BetaMessageParam;
+  const pensarMais = Boolean(opcoes.pensarMais);
+  const lim = pensarMais ? LIMITES_CHAT.pensarMais : LIMITES_CHAT.normal;
+  const agoraMs = opcoes.agoraMs ?? (() => Date.now());
+  const fimEm = agoraMs() + (opcoes.prazoMs ?? lim.prazoMs);
+  const avisar = (p: Progresso) => {
+    try {
+      opcoes.aoProgresso?.(p);
+    } catch {
+      /* a tela fechou: segue */
+    }
+  };
   const msgs = paraMensagensClaude(mensagens) as Msg[];
+  // Referências das clientes (as do contexto e as que as ferramentas acharem): viram botão de abrir a conversa.
+  const refs = referencias(contexto);
+  const porConversa = new Map([...refs].map(([r, v]) => [v.conversaId, r]));
+  if (acoes)
+    acoes.ref = (c) => {
+      const ja = porConversa.get(c.conversaId);
+      if (ja) return ja;
+      const r = `c${refs.size + 1}`;
+      refs.set(r, { conversaId: c.conversaId, nome: c.nome, unidade: c.unidade });
+      porConversa.set(c.conversaId, r);
+      return r;
+    };
   const ferramentas = acoes?.ferramentas() ?? [];
-  const instrucoes = ferramentas.length ? `${INSTRUCOES(Boolean(acoes?.faz))}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES(false);
+  const instrucoes = ferramentas.length ? `${INSTRUCOES(Boolean(acoes?.faz), Boolean(acoes?.le), Boolean(acoes?.internet))}\n\n${INSTRUCOES_ACOES}` : INSTRUCOES(false);
   const regras = acoes ? `\n\n<o_que_voce_pode_criar>\n${acoes.regras()}\n</o_que_voce_pode_criar>` : '';
+  const sistema: Anthropic.Beta.Messages.BetaTextBlockParam[] = [
+    {
+      type: 'text',
+      text: `${instrucoes}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>${contexto.regrasEmpresa?.trim() ? `\n\n<regras_da_empresa observacao="do estúdio de agentes de IA">\n${contexto.regrasEmpresa.trim()}\n</regras_da_empresa>` : ''}`,
+      cache_control: { type: 'ephemeral' },
+    },
+    { type: 'text', text: `<contexto>\n${montarContexto(contexto)}\n</contexto>${regras}` },
+  ];
   const textos: string[] = [];
+  const raciocinio: string[] = [];
+  let gastos = 0;
+  let cortou: 'tempo' | 'orcamento' | null = null;
   for (let rodada = 0; ; rodada++) {
-    const resp = await claude.beta.messages.create({
-      model: opcoes.modelo,
-      max_tokens: 8000,
-      system: [
-        {
-          type: 'text',
-          text: `${instrucoes}\n\n<base_de_conhecimento>\n${contexto.baseConhecimento || '(vazia)'}\n</base_de_conhecimento>${contexto.regrasEmpresa?.trim() ? `\n\n<regras_da_empresa observacao="do estúdio de agentes de IA">\n${contexto.regrasEmpresa.trim()}\n</regras_da_empresa>` : ''}`,
-          cache_control: { type: 'ephemeral' },
-        },
-        { type: 'text', text: `<contexto>\n${montarContexto(contexto)}\n</contexto>${regras}` },
-      ],
-      messages: msgs,
-      ...(ferramentas.length ? { tools: ferramentas } : {}),
-      output_config: { effort: 'low' },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-    });
+    const resta = fimEm - agoraMs();
+    if (resta < 3000) {
+      cortou = 'tempo';
+      break;
+    }
+    avisar(rodada === 0 ? { etapa: 'pensando', texto: pensarMais ? 'Pensando com calma…' : 'Pensando…' } : { etapa: 'escrevendo', texto: 'Escrevendo…' });
+    const resp = await claude.beta.messages.create(pedidoChat({ modelo: opcoes.modelo, sistema, mensagens: msgs, ferramentas, pensarMais }), { timeout: resta, maxRetries: 1 });
     if (resp.stop_reason === 'refusal') throw new ErroAssistente('A IA não quis responder este pedido. Tente perguntar de outro jeito.', 422);
+    gastos += resp.usage?.output_tokens ?? 0;
+    for (const b of resp.content) if (b.type === 'thinking' && b.thinking?.trim()) raciocinio.push(b.thinking.trim());
     const texto = resp.content
       .filter((b): b is Anthropic.Beta.Messages.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
       .trim();
     if (texto) textos.push(texto);
+    // pause_turn: a API pausou no meio (ferramenta do servidor). Manda de volta e ela continua, sem mensagem nova.
+    if (resp.stop_reason === 'pause_turn' && rodada < LIMITE_RODADAS) {
+      msgs.push({ role: 'assistant', content: resp.content as Anthropic.Beta.Messages.BetaContentBlockParam[] });
+      continue;
+    }
     const usos = resp.content.filter((b): b is Anthropic.Beta.Messages.BetaToolUseBlock => b.type === 'tool_use');
     if (resp.stop_reason !== 'tool_use' || !usos.length || !acoes || rodada >= LIMITE_RODADAS) break;
+    if (gastos >= lim.orcamento) {
+      cortou = 'orcamento';
+      break;
+    }
     // Devolve a resposta inteira (pensamento e chamadas) e todos os resultados numa mensagem só.
     msgs.push({ role: 'assistant', content: resp.content as Anthropic.Beta.Messages.BetaContentBlockParam[] });
+    for (const u of usos) {
+      const rotulo = LerSerena.rotulo(u.name);
+      if (u.name === 'pesquisar_internet') avisar({ etapa: 'pesquisando', texto: 'Pesquisando na internet…' });
+      else if (rotulo) avisar({ etapa: 'consultando', texto: rotulo });
+    }
     const resultados = await Promise.all(
       usos.map(async (u) => {
         const r = await acoes.executar(u.name, u.input);
@@ -282,9 +400,25 @@ export async function conversarComIa(
     msgs.push({ role: 'user', content: resultados });
   }
   const artefatos = acoes?.artefatos.length ? [...acoes.artefatos] : undefined;
-  const acao = artefatos?.some((a) => a.tipo === 'envio' || a.tipo === 'agendamento' || a.tipo === 'mover');
-  const texto = textos.join('\n\n').trim() || (artefatos ? (acao ? 'Preparei abaixo. Confira e, se estiver certo, toque em Confirmar.' : 'Montei a prévia abaixo. Quer salvar ou ajustar alguma coisa?') : '');
-  if (!texto) throw new ErroAssistente('A IA não devolveu nada agora. Tente de novo.', 502);
-  const clientes = clientesCitadas(texto, referencias(contexto));
-  return { texto, ...(Object.keys(clientes).length ? { clientes } : {}), ...(artefatos ? { artefatos } : {}) };
+  const acao = artefatos?.some((a) => a.tipo === 'envio' || a.tipo === 'agendamento' || a.tipo === 'mover' || a.tipo === 'mudar');
+  const soMostra = artefatos?.every((a) => a.tipo === 'numeros' || a.tipo === 'mensagens' || a.tipo === 'atalho');
+  let texto = textos.join('\n\n').trim() || (artefatos ? (acao ? 'Preparei abaixo. Confira e, se estiver certo, toque em Confirmar.' : soMostra ? 'Olha o que encontrei:' : 'Montei a prévia abaixo. Quer salvar ou ajustar alguma coisa?') : '');
+  if (cortou === 'tempo') {
+    if (!texto && !artefatos) throw new ErroAssistente('A Serena demorou demais para responder. Tente de novo, talvez com um pedido mais curto.', 504);
+    texto += '\n\n(Parei aqui porque estava demorando muito. Se faltou algo, me peça de novo.)';
+  } else if (cortou === 'orcamento') {
+    texto += `${texto ? '\n\n' : ''}(Parei aqui para não gastar demais nesta mensagem. Se faltou algo, me peça a próxima parte.)`;
+  }
+  if (!texto.trim()) throw new ErroAssistente('A IA não devolveu nada agora. Tente de novo.', 502);
+  texto = texto.trim();
+  const clientes = clientesCitadas(texto, refs);
+  const fontes = acoes?.fontesWeb.length ? [...acoes.fontesWeb] : undefined;
+  return {
+    texto,
+    ...(Object.keys(clientes).length ? { clientes } : {}),
+    ...(artefatos ? { artefatos } : {}),
+    ...(fontes ? { fontes } : {}),
+    ...(raciocinio.length ? { raciocinio: raciocinio.join('\n\n').slice(0, 6000) } : {}),
+    ...(pensarMais ? { pensouMais: true } : {}),
+  };
 }

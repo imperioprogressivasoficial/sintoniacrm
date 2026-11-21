@@ -10,7 +10,11 @@ import { DadosResposta, ErroAtalhoRepetido, type ArmazemRespostas, type Resposta
 import { ErroTranscricao, type ArmazemTranscricoes, type Transcritor } from './transcricao.js';
 import { ACOES_IA, ajudarComIa, ErroAssistente } from './assistente.js';
 import { relatorioDaConversa } from './relatorio.js';
-import { conversarComIa, LIMITE_IMAGEM_B64, LIMITE_TEXTO, TIPOS_IMAGEM } from './chat-ia.js';
+import { conversarComIa, LIMITE_IMAGEM_B64, LIMITE_TEXTO, TIPOS_IMAGEM, type Progresso } from './chat-ia.js';
+import { PassThrough } from 'node:stream';
+import Anthropic from '@anthropic-ai/sdk';
+import type { Chamar } from '../serena/ler.js';
+import { pesquisarNaInternet } from '../serena/internet.js';
 import { quemLigar } from '../app/ligacoes.js';
 import { resumoSerena, type ControleSerena } from '../serena/resumo.js';
 import { AcoesSerena, type FontesSerena } from '../serena/acoes.js';
@@ -56,6 +60,11 @@ export interface OpcoesConversa {
   serenaFaz?: ServicosSerenaFaz;
   /** serena-faz: regras "sempre/nunca" dos agentes de IA (o treinamento também vale para a Serena da tela). */
   regrasIa?: () => Promise<string>;
+  /**
+   * serena-super: a Serena lê o CRM inteiro (mensagens, leads, números, agenda, equipe, documentos) pelas rotas de
+   * sempre, como a pessoa (padrão: ligado quando `serenaAcoes` existe). `internet`: pesquisa na internet (padrão: sim).
+   */
+  serenaSuper?: { ligada?: boolean; internet?: boolean };
 }
 
 // Unidade do cadastro (Empresa › Unidades); para conversa nova, só as ativas.
@@ -224,41 +233,94 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
       .array(z.object({ papel: z.enum(['usuario', 'ia']), texto: z.string().max(LIMITE_TEXTO * 3), imagem: Imagem.optional() }))
       .min(1)
       .max(200),
+    /** serena-super: "Pensar mais" ligado nesta mensagem. */
+    pensarMais: z.boolean().optional(),
   });
+  /** serena-super: chama uma rota da própria API como a pessoa que pergunta (mesmo login, mesmas permissões). */
+  const chamarComo =
+    (req: FastifyRequest): Chamar =>
+    async (metodo, url, corpo) => {
+      const r = await app.inject({
+        method: metodo,
+        url,
+        ...(corpo !== undefined ? { payload: corpo as Record<string, unknown> } : {}),
+        headers: { ...(req.headers.cookie ? { cookie: req.headers.cookie } : {}), 'user-agent': 'Serena (chat interno)', 'x-serena': '1' },
+      });
+      let c: unknown = null;
+      try {
+        c = r.body ? r.json() : null;
+      } catch {
+        c = r.body;
+      }
+      return { status: r.statusCode, corpo: c };
+    };
+  /** Erro da IA → mensagem clara para a tela. */
+  const traduzir = (e: unknown): Error => {
+    if (e instanceof ErroAssistente) return erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
+    if (e instanceof Anthropic.APIConnectionTimeoutError) return erro('A Serena demorou demais para responder. Tente de novo, talvez com um pedido mais curto.', 424);
+    const status = (e as { status?: number }).status;
+    if (status === 401) return erro('A chave da IA foi recusada. Confira em Conexões.', 501, { codigo: 'sem_chave' });
+    if (status === 429 || (status && status >= 500)) return erro('A IA está ocupada agora. Tente de novo em instantes.', 424);
+    return e instanceof Error ? e : new Error(String(e));
+  };
   // Serena (botão do meio): o mesmo chat; aceita um print/foto na última pergunta (por isso o corpo maior).
-  app.post('/api/ia/chat', { bodyLimit: 3 * 1024 * 1024 }, async (req) => {
+  // serena-super: com "accept: application/x-ndjson" a resposta chega aos poucos (uma linha por etapa:
+  // "Pensando…", "Pesquisando na internet…", "Vendo os números…") e a última linha traz a resposta.
+  app.post('/api/ia/chat', { bodyLimit: 3 * 1024 * 1024 }, async (req, reply) => {
     const b = PedidoChat.parse(req.body);
     const ultima = b.mensagens.at(-1)!;
     if (ultima.papel !== 'usuario' || (!ultima.texto.trim() && !ultima.imagem)) throw erro('Escreva sua pergunta.', 400);
     if (b.mensagens.slice(0, -1).some((m) => m.imagem)) throw erro('Só a última pergunta pode levar imagem.', 400);
     if (ultima.texto.length > LIMITE_TEXTO) throw erro(`A pergunta ficou longa demais (máximo ${LIMITE_TEXTO} letras).`, 400);
     if (!o.ia || !o.ia.ligada()) throw erro('A IA está desligada: configure a chave da IA (Anthropic) em Conexões.', 501, { codigo: 'sem_chave' });
+    const ia = o.ia;
     const ag = agora();
     const ve = (c: Conversa) => c.empresaId === o.empresaId && visivel(req, c);
     const p = partesBahia(ag);
     const inicioHoje = bahia(p.ano, p.mes, p.dia);
-    const [baseConhecimento, regrasEmpresa, hoje, todas, agenda, ligar] = await Promise.all([
-      o.ia.base().catch(() => ''),
-      o.regrasIa ? o.regrasIa().catch(() => '') : Promise.resolve(''),
-      iaHoje(o.repo, ag, ve),
-      o.repo.listarConversas(),
-      agendamentosEntre(o.repo, inicioHoje, new Date(inicioHoje.getTime() + 2 * DIA), { ...escopoDe(req.usuario), empresaId: o.empresaId }).catch(() => []),
-      quemLigar(o.repo, ag, ve).catch(() => undefined),
-    ]);
-    const esperando = todas.filter(ve).filter((c) => {
-      const cli = c.ultimaMensagemCliente?.getTime() ?? 0;
-      return cli > 0 && cli > Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
-    });
-    try {
+    const executar = async (aoProgresso?: (p: Progresso) => void) => {
+      const [baseConhecimento, regrasEmpresa, hoje, todas, agenda, ligar] = await Promise.all([
+        ia.base().catch(() => ''),
+        o.regrasIa ? o.regrasIa().catch(() => '') : Promise.resolve(''),
+        iaHoje(o.repo, ag, ve),
+        o.repo.listarConversas(),
+        agendamentosEntre(o.repo, inicioHoje, new Date(inicioHoje.getTime() + 2 * DIA), { ...escopoDe(req.usuario), empresaId: o.empresaId }).catch(() => []),
+        quemLigar(o.repo, ag, ve).catch(() => undefined),
+      ]);
+      const visiveis = todas.filter(ve);
+      const esperando = visiveis.filter((c) => {
+        const cli = c.ultimaMensagemCliente?.getTime() ?? 0;
+        return cli > 0 && cli > Math.max(c.ultimaMensagemEquipe?.getTime() ?? 0, c.ultimaMensagemIa?.getTime() ?? 0);
+      });
       // Ferramentas da Serena: só prévias; quem salva é a pessoa, pelas rotas de sempre (que conferem a permissão de novo).
       // serena-faz: e também as ações (enviar, agendar, mover), só com as conversas que a pessoa vê.
-      const fazer = o.serenaFaz
-        ? { fontes: { ...o.serenaFaz, conversas: async () => todas.filter(ve), agora: () => ag }, pode: podeFazerDe(req) }
+      const fazer = o.serenaFaz ? { fontes: { ...o.serenaFaz, conversas: async () => visiveis, agora: () => ag }, pode: podeFazerDe(req) } : undefined;
+      // serena-super: lê o CRM inteiro e muda o resto (tarefa, etiqueta, transferir…), sempre como esta pessoa.
+      const superLigada = Boolean(o.serenaAcoes) && o.serenaSuper?.ligada !== false;
+      const chamar = chamarComo(req);
+      const gestao = !req.usuario || ehGestor(req.usuario);
+      const extra = superLigada
+        ? {
+            ler: {
+              chamar,
+              conversas: async () => visiveis,
+              buscarMensagens: (q: Parameters<typeof o.repo.buscarMensagens>[0]) => o.repo.buscarMensagens({ ...q, escopo: { ...escopoDe(req.usuario), empresaId: o.empresaId } }),
+              treinamento: () => ia.base(),
+              agora: () => ag,
+              ...(o.serenaSuper?.internet !== false
+                ? {
+                    internet: (consulta: string) =>
+                      pesquisarNaInternet(ia.claude, { modelo: ia.modelo, consulta, nomesClientes: visiveis.map((c) => c.nome ?? '').filter(Boolean), agora: ag, pensarMais: b.pensarMais }),
+                  }
+                : {}),
+            },
+            mudar: { fontes: { chamar, conversas: async () => visiveis, agora: () => ag }, pode: { gestao, transmissoes: gestao && pode(req, 'transmissoes'), treinar: gestao } },
+          }
         : undefined;
       const acoes = o.serenaAcoes
-        ? new AcoesSerena(o.serenaAcoes(req.usuario?.empresaId ?? o.empresaId), { automacoes: pode(req, 'automacoes'), etiquetas: !req.usuario || ehGestor(req.usuario) }, fazer)
+        ? new AcoesSerena(o.serenaAcoes(req.usuario?.empresaId ?? o.empresaId), { automacoes: pode(req, 'automacoes'), etiquetas: gestao }, fazer, extra)
         : undefined;
-      return await conversarComIa(o.ia.claude, { modelo: o.ia.modelo }, b.mensagens, {
+      return conversarComIa(ia.claude, { modelo: ia.modelo, pensarMais: b.pensarMais, aoProgresso }, b.mensagens, {
         agora: ag,
         pessoa: req.usuario ? { nome: req.usuario.nome, papel: req.usuario.papel } : undefined,
         baseConhecimento,
@@ -268,13 +330,33 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
         ligar,
         regrasEmpresa,
       }, acoes);
-    } catch (e) {
-      if (e instanceof ErroAssistente) throw erro(e.message, e.statusCode >= 500 ? 424 : e.statusCode);
-      const status = (e as { status?: number }).status;
-      if (status === 401) throw erro('A chave da IA foi recusada. Confira em Conexões.', 501, { codigo: 'sem_chave' });
-      if (status === 429 || (status && status >= 500)) throw erro('A IA está ocupada agora. Tente de novo em instantes.', 424);
-      throw e;
+    };
+    if (!String(req.headers.accept ?? '').includes('application/x-ndjson')) {
+      try {
+        return await executar();
+      } catch (e) {
+        throw traduzir(e);
+      }
     }
+    // Aos poucos: cada linha é um JSON ({ progresso } … { fim, resposta } ou { erro, status }).
+    const saida = new PassThrough();
+    const linha = (v: unknown) => {
+      if (!saida.writableEnded) saida.write(`${JSON.stringify(v)}\n`);
+    };
+    reply.header('content-type', 'application/x-ndjson; charset=utf-8').header('cache-control', 'no-store').header('x-accel-buffering', 'no');
+    void (async () => {
+      try {
+        const r = await executar((pr) => linha({ progresso: pr }));
+        linha({ fim: true, resposta: r });
+      } catch (e) {
+        const x = traduzir(e) as Error & { statusCode?: number; codigo?: string };
+        const st = x.statusCode ?? 500;
+        linha({ erro: st >= 500 && st !== 501 && !x.statusCode ? 'Não deu certo agora. Tente de novo.' : x.message, status: st, ...(x.codigo ? { codigo: x.codigo } : {}) });
+      } finally {
+        saida.end();
+      }
+    })();
+    return reply.send(saida);
   });
 
   // ------------------------------------------------------------ nova conversa por número

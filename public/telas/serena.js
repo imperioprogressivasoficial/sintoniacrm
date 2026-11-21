@@ -58,6 +58,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     conversa: I('<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/>'),
     historico: I('<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4.5v4h4"/><path d="M12 8v4l2.5 1.5"/>'),
     pin: I('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3Z"/><path d="M12 13.5V20"/>'),
+    /* serena-super */
+    pensar: I('<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3Z"/>'),
+    globo: I('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5S9.5 6.1 12 3.5Z"/>'),
+    externo: I('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>'),
+    direita: I('<path d="m9 6 6 6-6 6"/>', 'stroke-width="2"'),
     lixo: I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'),
     fechar: I('<path d="M6 6l12 12M18 6 6 18"/>', 'stroke-width="2"'),
     copiar: I('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/>'),
@@ -404,6 +409,67 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   html[data-tema="escuro"] .srn-art-aviso { color: #f5c842; }
   .srn-art-erro { font-size: 13px; color: var(--srn-vermelho); font-weight: 600; }
 
+  /* ===== serena-super: "Pensar mais", "Pesquisando na internet…", fontes, raciocínio e os cartões do CRM vivo ===== */
+  .srn-opcoes { display: flex; gap: 6px; max-width: 720px; margin: 0 auto 6px; padding: 0 2px; }
+  .srn-pensar { all: unset; box-sizing: border-box; cursor: pointer; flex: none; height: 32px; padding: 0 12px 0 9px; background: var(--vidro-item); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--sub); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; overflow: hidden; }
+  .srn-pensar svg { width: 17px; height: 17px; }
+  .srn-pensar[aria-pressed="true"] { color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); box-shadow: none; }
+  html[data-tema="escuro"] .srn-pensar[aria-pressed="true"] { color: #08243f; background: linear-gradient(135deg, #0ffcbe, #3aa0ff); }
+  .srn-espera { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; border-radius: 18px; }
+  .srn-espera .srn-digitando { padding: 4px 2px; background: none; box-shadow: none; }
+  .srn-espera b { font-size: 13.5px; font-weight: 600; color: var(--sub); }
+  .srn-espera.web b { color: var(--srn-azul); }
+  .srn-espera .globo { width: 18px; height: 18px; color: var(--srn-azul); display: grid; } .srn-espera .globo svg { width: 18px; height: 18px; }
+  .srn-selo-pensou { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; color: var(--srn-azul); margin: 0 0 4px; }
+  .srn-selo-pensou svg { width: 13px; height: 13px; }
+  .srn-raciocinio { margin: 8px 0 2px; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--linha); }
+  .srn-raciocinio summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .srn-raciocinio summary::-webkit-details-marker { display: none; }
+  .srn-raciocinio summary svg { width: 14px; height: 14px; transition: transform .2s; } .srn-raciocinio[open] summary svg { transform: rotate(90deg); }
+  .srn-raciocinio div { padding: 0 12px 10px; font-size: 13px; line-height: 1.5; color: var(--sub); white-space: pre-wrap; max-height: 260px; overflow: auto; }
+  .srn-fontes { margin: 10px 0 2px; display: grid; gap: 6px; }
+  .srn-fontes > small { font-size: 11.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--sub); }
+  .srn-fontes ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .srn-fontes a { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--srn-azul); background: var(--srn-acao); text-decoration: none; }
+  .srn-fontes a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; min-width: 0; }
+  .srn-fontes a em { font-style: normal; font-weight: 500; color: var(--sub); white-space: nowrap; flex: none; }
+  .srn-fontes li { max-width: 100%; min-width: 0; }
+  @media (max-width: 520px) { .srn-fontes a span { max-width: 220px; } .srn-fontes a em { display: none; } }
+  .srn-fontes a svg { width: 13px; height: 13px; flex: none; }
+  .srn-barras { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .srn-barras li { display: grid; gap: 4px; }
+  .srn-barras .lin { display: flex; justify-content: space-between; gap: 10px; font-size: 13.2px; } .srn-barras .lin b { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .srn-barras .lin span { color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srn-barras .trilha { height: 8px; border-radius: 99px; background: rgba(16,110,190,.10); overflow: hidden; }
+  html[data-tema="escuro"] .srn-barras .trilha { background: rgba(255,255,255,.08); }
+  .srn-barras .trilha i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #106ebe, #3aa0ff); }
+  html[data-tema="escuro"] .srn-barras .trilha i { background: linear-gradient(90deg, #0ffcbe, #3aa0ff); }
+  .srn-barras small { font-size: 12px; color: var(--sub); }
+  .srn-tabela { width: 100%; border-collapse: collapse; font-size: 13.2px; }
+  .srn-tabela td { padding: 7px 4px; border-top: 1px solid var(--linha); } .srn-tabela tr:first-child td { border-top: 0; }
+  .srn-tabela td:nth-child(2) { text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .srn-tabela td:nth-child(3) { color: var(--sub); font-size: 12px; text-align: right; }
+  .srn-destaques { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+  .srn-destaques div { padding: 10px 12px; border-radius: 14px; background: rgba(16,110,190,.06); display: grid; gap: 2px; }
+  html[data-tema="escuro"] .srn-destaques div { background: rgba(255,255,255,.05); }
+  .srn-destaques b { font-size: 21px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; } .srn-destaques span { font-size: 12.3px; color: var(--sub); }
+  .srn-trechos { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--linha); overflow: hidden; }
+  .srn-trechos li + li { border-top: 1px solid var(--linha); }
+  .srn-trechos button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; gap: 3px; padding: 9px 12px; position: relative; overflow: hidden; }
+  .srn-trechos button:hover, .srn-trechos button:focus-visible { background: var(--srn-acao); }
+  .srn-trechos .cab { display: flex; gap: 8px; align-items: baseline; font-size: 12.3px; color: var(--sub); } .srn-trechos .cab b { font-size: 13.6px; color: var(--texto); font-weight: 650; }
+  .srn-trechos .cab em { font-style: normal; margin-left: auto; white-space: nowrap; }
+  .srn-trechos q { font-size: 13.4px; line-height: 1.45; quotes: "“" "”"; }
+  .srn-trechos mark { background: rgba(15,252,190,.35); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .srn-antes-depois { display: grid; gap: 8px; }
+  .srn-antes-depois .lado { display: grid; gap: 4px; }
+  .srn-antes-depois .lado > small { font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--sub); }
+  .srn-antes-depois .lado.novo > small { color: #0a8f7a; } html[data-tema="escuro"] .srn-antes-depois .lado.novo > small { color: #0ffcbe; }
+  .srn-antes-depois pre { margin: 0; white-space: pre-wrap; font: inherit; font-size: 13px; line-height: 1.5; max-height: 200px; overflow: auto; padding: 9px 11px; border-radius: 12px; background: rgba(8,36,63,.04); }
+  .srn-antes-depois .lado:not(.novo) pre { opacity: .75; }
+  .srn-antes-depois .lado.novo pre { box-shadow: inset 2px 0 0 #0ffcbe; }
+  html[data-tema="escuro"] .srn-antes-depois pre { background: rgba(255,255,255,.05); }
+
   `;
 
   // ---------- histórico neste aparelho (por pessoa) ----------
@@ -434,6 +500,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   let atualId = null; // conversa aberta (null = início)
   let resumo = null, resumoEm = 0, resumoPedido = null, resumoFalhou = false;
   let enviando = false, falha = null, anexo = null, reconhecedor = null;
+  /* serena-super: "Pensar mais" (lembrado por pessoa neste aparelho) e o que ela está fazendo enquanto espera */
+  let progresso = null;
+  const chavePensar = () => `sintonia.serena.pensar.${estado.eu?.id || 'local'}`;
+  const lerPensar = () => { try { return localStorage.getItem(chavePensar()) === '1'; } catch { return false; } };
+  const gravarPensar = (v) => { try { localStorage.setItem(chavePensar(), v ? '1' : '0'); } catch { /* sem armazenamento */ } };
   let montado = false, pessoaCarregada = null;
   const R = {}; // elementos
 
@@ -563,7 +634,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     R.btMic = el('button', { type: 'button', class: 'srn-ic', 'aria-label': 'Falar em vez de digitar', html: SVG.mic, onclick: ditar });
     R.btEnviar = el('button', { type: 'button', class: 'srn-env', 'aria-label': 'Enviar', html: SVG.enviar, onclick: () => mandar() });
     R.anexo = el('div', { class: 'srn-anexo srn-vidro', hidden: '' });
+    /* serena-super: "Pensar mais" ao lado do campo (vale para a próxima mensagem; fica lembrado neste aparelho) */
+    R.btPensar = el('button', { type: 'button', class: 'srn-pensar', 'aria-pressed': 'false', title: 'Pensar mais: a Serena raciocina com mais calma (demora um pouco mais)', onclick: () => { const v = R.btPensar.getAttribute('aria-pressed') !== 'true'; R.btPensar.setAttribute('aria-pressed', String(v)); gravarPensar(v); toast(v ? 'Pensar mais ligado: ela vai raciocinar com mais calma.' : 'Pensar mais desligado.'); } },
+      el('span', { html: SVG.pensar, style: 'display:grid' }), el('span', { class: 'tx', text: 'Pensar mais' }));
     R.compor = el('div', { class: 'srn-compor srn-vidro' }, R.btMais, R.campo, R.btMic, R.btEnviar);
+    R.opcoes = el('div', { class: 'srn-opcoes' }, R.btPensar);
     R.arquivos = {
       camera: el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: '' }),
       fotos: el('input', { type: 'file', accept: 'image/*', hidden: '' }),
@@ -576,7 +651,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       /* serena-chave: chave pequena "Ligada / Pausada" ao lado do título (no lugar do espaço vazio que equilibrava o topo) */
       R.cab = el('header', { class: 'srn-cab' }, R.btMenu, window.SintoniaSerenaChave?.chave ? window.SintoniaSerenaChave.chave({ tamanho: 'pequena' }) : el('span', { class: 'srn-bt srn-vazio', 'aria-hidden': 'true', style: 'visibility:hidden;pointer-events:none' }), R.titulo, window.SintoniaBotaoTema ? window.SintoniaBotaoTema('srn-bt srn-tema') : null, R.btNova),
       R.faixa, R.miolo,
-      el('div', { class: 'srn-baixo' }, R.anexo, R.compor), ...Object.values(R.arquivos), R.veu);
+      el('div', { class: 'srn-baixo' }, R.anexo, R.opcoes, R.compor), ...Object.values(R.arquivos), R.veu);
 
     R.veuPop = el('div', { class: 'srn-veu-pop', hidden: '', onclick: fecharPops });
     R.seletor = el('div', { class: 'srn-pop', role: 'menu', hidden: '', 'aria-label': 'Escolher' });
@@ -675,6 +750,23 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   // ---------- conversa ----------
   function fotoP(pensando) { return el('span', { class: 'srn-foto p' + (pensando ? ' pensando' : '') }, el('img', { src: FOTO, alt: '', width: '28', height: '28', decoding: 'async' })); }
+  /* serena-super: enquanto espera, diz o que ela está fazendo ("Pensando…", "Pesquisando na internet…") */
+  function espera() {
+    const web = progresso?.etapa === 'pesquisando';
+    return el('div', { class: 'srn-espera srn-vidro' + (web ? ' web' : ''), role: 'status' },
+      web ? el('span', { class: 'globo', html: SVG.globo }) : null,
+      el('span', { class: 'srn-digitando' }, el('i'), el('i'), el('i')),
+      el('b', { text: progresso?.texto || 'Pensando…' }));
+  }
+  const dominio = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+  function listaFontes(fontes) {
+    const ol = el('ol');
+    for (const f of fontes.slice(0, 6)) {
+      if (!/^https?:\/\//i.test(String(f.url || ''))) continue;
+      ol.append(el('li', {}, el('a', { href: f.url, target: '_blank', rel: 'noopener noreferrer nofollow', title: f.url }, el('span', { html: SVG.externo, style: 'display:grid' }), el('span', { text: f.titulo || dominio(f.url) }), el('em', { text: dominio(f.url) }))));
+    }
+    return el('div', { class: 'srn-fontes' }, el('small', { text: 'Fontes da internet' }), ol);
+  }
   function bolhaIa(m, nova) {
     const corpo = el('div', { class: 'corpo' }, formatar(m.texto, m.clientes || {}));
     const rasc = rascunhosDe(m.texto);
@@ -685,6 +777,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       acoes.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => mandar('Deixe a mensagem mais curta.') }, el('span', { html: SVG.encurtar, style: 'display:grid' }), document.createTextNode('Mais curta')));
     }
     if (Array.isArray(m.artefatos)) for (const a of m.artefatos) { const c = cartaoArtefato(m, a); if (c) corpo.append(c); }
+    /* serena-super: pensou mais, o resumo do raciocínio e as fontes da internet */
+    if (m.pensouMais) corpo.prepend(el('div', { class: 'srn-selo-pensou' }, el('span', { html: SVG.pensar, style: 'display:grid' }), document.createTextNode('Pensou mais')));
+    if (m.raciocinio) corpo.append(el('details', { class: 'srn-raciocinio' }, el('summary', {}, el('span', { html: SVG.direita, style: 'display:grid' }), document.createTextNode('Ver raciocínio')), el('div', { text: m.raciocinio })));
+    if (Array.isArray(m.fontes) && m.fontes.length) corpo.append(listaFontes(m.fontes));
     if (!m.local) corpo.append(acoes);
     return el('div', { class: 'srn-m ia' + (nova ? ' srn-entra-msg' : ''), role: 'article', 'aria-label': 'Serena' }, fotoP(false), corpo);
   }
@@ -698,6 +794,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     envio: { rotulo: 'Mensagem para clientes', acao: true, ic: '<path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/>' },
     agendamento: { rotulo: 'Agenda', acao: true, ic: '<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M12 13v3l2 1"/>' },
     mover: { rotulo: 'Mover no funil', acao: true, ic: '<path d="M4 7h11M11 3l4 4-4 4"/><path d="M20 17H9M13 13l-4 4 4 4"/>' },
+    /* serena-super: cartões só de mostrar e as mudanças (Confirmar) */
+    numeros: { rotulo: 'Números', so: true, ic: '<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>' },
+    mensagens: { rotulo: 'Busca nas mensagens', so: true, ic: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>' },
+    atalho: { rotulo: 'Atalho', so: true, ic: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>' },
+    mudar: { rotulo: 'Mudança no CRM', acao: true, ic: '<path d="M12 20h8"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>' },
+  };
+  /* serena-super: nome e ícone de cada mudança */
+  const MUDAR = {
+    tarefa: { rotulo: 'Tarefa', ic: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>' },
+    etiqueta: { rotulo: 'Etiqueta', ic: '<path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.4 1.4 0 0 1 0 2l-6.7 6.7a1.4 1.4 0 0 1-2 0Z"/><circle cx="8" cy="8" r="1.4"/>' },
+    transferir: { rotulo: 'Transferir conversa', ic: '<path d="M4 7h11M11 3l4 4-4 4"/><circle cx="18" cy="17" r="3"/><path d="M4 17h8"/>' },
+    mensagem_agendada: { rotulo: 'Mensagem agendada', ic: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>' },
+    treinamento: { rotulo: 'Treinamento da IA', ic: '<path d="M4 6.5 12 3l8 3.5-8 3.5Z"/><path d="M7 8.5v5c0 1.7 2.2 3 5 3s5-1.3 5-3v-5"/>' },
+    transmissao: { rotulo: 'Transmissão (rascunho)', ic: '<path d="M4 10v4h3l5 4V6L7 10Z"/><path d="M16 9a4 4 0 0 1 0 6"/>' },
+    pausa_serena: { rotulo: 'Serena', ic: '<rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/>' },
+    funil: { rotulo: 'Pipeline', ic: '<path d="M4 5h16l-6 7v6l-4 2v-8Z"/>' },
   };
   const IC_NO = {
     gatilho: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6Z"/>',
@@ -790,7 +902,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function cartaoArtefato(m, a) {
     const tipo = ART[a.tipo];
     if (!tipo) return null;
-    if (tipo.acao) return cartaoAcao(m, a, tipo);
+    if (tipo.so) return cartaoMostra(a, tipo);
+    if (tipo.acao) return cartaoAcao(m, a, a.tipo === 'mudar' ? { ...tipo, ...(MUDAR[a.dados?.acao] || {}) } : tipo);
     const salvo = a.estado === 'salvo';
     const pe = el('div', { class: 'srn-art-pe' });
     if (!salvo) {
@@ -809,10 +922,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /** O que a IA lê das mensagens anteriores: o cartão (e se foi salvo) vem antes do texto, para não ser cortado. */
   function textoParaIa(m) {
     if (m.papel !== 'ia' || !Array.isArray(m.artefatos) || !m.artefatos.length) return m.texto;
-    const situacao = (a) => ART[a.tipo]?.acao
+    const situacao = (a) => ART[a.tipo]?.so ? 'mostrado à pessoa' : ART[a.tipo]?.acao
       ? (a.estado === 'feito' ? `a pessoa CONFIRMOU e foi feito: ${a.resultado || ''}` : a.estado === 'cancelado' ? 'a pessoa CANCELOU (nada foi feito)' : 'ainda NÃO confirmado (nada foi feito)')
       : (a.estado === 'salvo' ? 'a pessoa SALVOU' : 'ainda NÃO salvo');
-    const notas = m.artefatos.map((a) => `[cartão ${ART[a.tipo]?.rotulo || a.tipo} "${a.titulo}": ${situacao(a)}] ${JSON.stringify(a.dados || {}).slice(0, 2500)}`);
+    const notas = m.artefatos.map((a) => `[cartão ${ART[a.tipo]?.rotulo || a.tipo} "${a.titulo}": ${situacao(a)}] ${JSON.stringify(a.dados || {}).slice(0, ART[a.tipo]?.so ? 1200 : 2500)}`);
     return `${notas.join('\n')}\n\n${m.texto}`.slice(0, 11000);
   }
 
@@ -885,6 +998,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (d.perda) corpo.append(el('div', { class: 'srn-art-dica' }, el('b', { text: 'Motivo da perda: ' }), document.createTextNode(`${d.perda.motivoNome}${d.perda.detalhe ? ` — ${d.perda.detalhe}` : ''}`)));
       corpo.append(listaQuem(d.itens || [], viva, (it) => { d.itens = d.itens.filter((x) => x !== it); a.titulo = d.itens.length === 1 ? `Mover ${d.itens[0].nome} para "${d.etapa}"` : `Mover ${d.itens.length} conversas para "${d.etapa}"`; const t = corpo.closest('.srn-art')?.querySelector('.srn-art-tit b'); if (t) t.textContent = a.titulo; gravarHistorico(); }, (it) => it.unidade));
     }
+    else if (a.tipo === 'mudar') {
+      /* serena-super: linhas (rótulo: valor) e, no treinamento, o antes e o depois */
+      const linhas = (d.linhas || []).filter((l) => l && l.valor);
+      if (linhas.length) corpo.append(el('dl', { class: 'srn-art-linhas' }, ...linhas.map((l) => linha(l.rotulo, l.valor))));
+      if (d.depois != null) corpo.append(el('div', { class: 'srn-antes-depois' },
+        d.antes != null ? el('div', { class: 'lado' }, el('small', { text: 'Como está' }), el('pre', { text: d.antes || '(vazio)' })) : null,
+        el('div', { class: 'lado novo' }, el('small', { text: d.antes != null ? 'Como fica' : 'Texto novo' }), el('pre', { text: d.depois }))));
+    }
     if (a.estado === 'feito') corpo.append(el('div', { class: 'srn-art-feito' }, el('span', { html: I(IC_OK), style: 'display:grid' }), el('span', { text: a.resultado || 'Feito ✓' })));
     if (a.aviso) corpo.append(el('div', { class: 'srn-art-aviso', text: a.aviso }));
     return corpo;
@@ -893,6 +1014,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const d = a.dados || {};
     if (a.tipo === 'envio') return { texto: d.texto || '', assunto: d.assunto || null, itens: (d.itens || []).map((i) => ({ conversaId: i.conversaId, ...(i.texto ? { texto: i.texto } : {}) })) };
     if (a.tipo === 'agendamento') { const { resumo, ...resto } = d; return resto; }
+    if (a.tipo === 'mudar') return { acao: d.acao, params: d.params || {} };
     return { funilId: d.funilId, etapaId: d.etapaId, perda: d.perda ? { motivo: d.perda.motivo, detalhe: d.perda.detalhe || null } : null, itens: (d.itens || []).map((i) => ({ conversaId: i.conversaId })) };
   }
   async function confirmarAcao(a, bt, erroEl) {
@@ -917,19 +1039,76 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const pe = el('div', { class: 'srn-art-pe' });
     const erroEl = el('div', { class: 'srn-art-erro', role: 'alert' });
     if (viva) {
-      const rotulo = a.tipo === 'envio' ? ((d.itens || []).length > 1 ? `Confirmar e enviar (${d.itens.length})` : 'Confirmar e enviar') : a.tipo === 'mover' ? 'Confirmar e mover' : d.acao === 'cancelar' ? 'Confirmar cancelamento' : 'Confirmar';
+      const rotulo = a.tipo === 'mudar' ? (d.botao || 'Confirmar') : a.tipo === 'envio' ? ((d.itens || []).length > 1 ? `Confirmar e enviar (${d.itens.length})` : 'Confirmar e enviar') : a.tipo === 'mover' ? 'Confirmar e mover' : d.acao === 'cancelar' ? 'Confirmar cancelamento' : 'Confirmar';
       const bt = el('button', { type: 'button', class: 'srn-acao forte' }, icone(IC_OK), document.createTextNode(rotulo));
       bt.addEventListener('click', () => confirmarAcao(a, bt, erroEl));
       pe.append(bt, el('button', { type: 'button', class: 'srn-acao', onclick: () => { a.estado = 'cancelado'; gravarHistorico(); ultimoQtd = 1e9; desenharMiolo(); } }, icone(IC_X), document.createTextNode('Cancelar')));
     }
+    if (a.tipo === 'mudar' && d.abrir) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => { fecharMenu(); ui.mostrar(d.abrir); } }, icone(SVG_EXT), document.createTextNode('Abrir no CRM')));
+    if (a.tipo === 'mudar' && d.params?.conversaId) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => abrirConversa(d.params.conversaId) }, icone('<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/>'), document.createTextNode('Abrir conversa')));
     if (a.tipo === 'agendamento' && d.conversaId) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => abrirConversa(d.conversaId) }, icone('<path d="M6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5h-7L6.5 20.5V17A2.5 2.5 0 0 1 4 14.5v-8A2.5 2.5 0 0 1 6.5 4Z"/>'), document.createTextNode('Abrir conversa')));
-    const sub = a.tipo === 'agendamento' ? ({ agendar: 'Agendar', remarcar: 'Remarcar', cancelar: 'Cancelar horário' }[d.acao] || tipo.rotulo) : tipo.rotulo;
+    const sub = a.tipo === 'mudar' ? tipo.rotulo : a.tipo === 'agendamento' ? ({ agendar: 'Agendar', remarcar: 'Remarcar', cancelar: 'Cancelar horário' }[d.acao] || tipo.rotulo) : tipo.rotulo;
     const selo = a.estado === 'feito' ? ['Feito ✓', ' ok'] : a.estado === 'cancelado' ? ['Cancelado', ' nao'] : ['Confira', ''];
     return el('section', { class: 'srn-art acao srn-vidro', 'aria-label': `${sub}: ${a.titulo}` },
       el('div', { class: 'srn-art-cab' }, el('span', { class: 'srn-art-ic', html: I(tipo.ic) }),
         el('span', { class: 'srn-art-tit' }, el('small', { text: sub }), el('b', { text: a.titulo })),
         el('span', { class: 'srn-art-selo' + selo[1], text: selo[0] })),
       corpoAcao(a, viva), viva ? el('div', { style: 'padding:0 14px' }, erroEl) : null, pe.childNodes.length ? pe : null);
+  }
+  /* ===== serena-super: cartões só de mostrar (números, trechos das mensagens, atalho). Texto sempre por textContent. ===== */
+  const SVG_EXT = '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>';
+  const numeroBr = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  function comDestaque(texto, termo) {
+    const frag = document.createDocumentFragment();
+    const t = String(texto || '');
+    const n = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const i = termo ? n(t).indexOf(n(String(termo))) : -1;
+    if (i < 0) { frag.append(document.createTextNode(t)); return frag; }
+    frag.append(document.createTextNode(t.slice(0, i)), el('mark', { text: t.slice(i, i + String(termo).length) }), document.createTextNode(t.slice(i + String(termo).length)));
+    return frag;
+  }
+  function corpoNumeros(d) {
+    const itens = Array.isArray(d.itens) ? d.itens : [];
+    const txt = (i) => i.texto || numeroBr(i.valor);
+    if (d.formato === 'destaques') return el('div', { class: 'srn-destaques' }, ...itens.map((i) => el('div', {}, el('b', { text: txt(i) }), el('span', { text: i.rotulo }), i.extra ? el('span', { text: i.extra }) : null)));
+    if (d.formato === 'tabela') return el('table', { class: 'srn-tabela' }, el('tbody', {}, ...itens.map((i) => el('tr', {}, el('td', { text: i.rotulo }), el('td', { text: txt(i) }), el('td', { text: i.extra || '' })))));
+    const max = Math.max(...itens.map((i) => Math.abs(Number(i.valor) || 0)), 0) || 1;
+    return el('ul', { class: 'srn-barras' }, ...itens.map((i) => {
+      const barra = el('i'); barra.style.width = `${Math.max(2, Math.round((Math.abs(Number(i.valor) || 0) / max) * 100))}%`;
+      return el('li', {}, el('div', { class: 'lin' }, el('span', { text: i.rotulo }), el('b', { text: txt(i) })), el('div', { class: 'trilha' }, barra), i.extra ? el('small', { text: i.extra }) : null);
+    }));
+  }
+  function cartaoMostra(a, tipo) {
+    const d = a.dados || {};
+    const corpo = el('div', { class: 'srn-art-corpo' });
+    const pe = el('div', { class: 'srn-art-pe' });
+    let sub = tipo.rotulo;
+    if (a.tipo === 'numeros') {
+      if (d.subtitulo) sub = d.subtitulo;
+      corpo.append(corpoNumeros(d));
+      if (d.abrir) pe.append(el('button', { type: 'button', class: 'srn-acao', onclick: () => { fecharMenu(); ui.mostrar(d.abrir); } }, icone(SVG_EXT), document.createTextNode(d.abrirNome ? `Abrir ${d.abrirNome}` : 'Abrir no CRM')));
+    } else if (a.tipo === 'mensagens') {
+      const itens = Array.isArray(d.itens) ? d.itens : [];
+      sub = itens.length ? `${itens.length} ${itens.length === 1 ? 'trecho' : 'trechos'} · toque para abrir a conversa` : 'Nada encontrado';
+      if (!itens.length) corpo.append(el('div', { class: 'srn-art-dica', text: `Nenhuma mensagem com “${d.busca || ''}” nas conversas que você vê.` }));
+      else {
+        const ul = el('ul', { class: 'srn-trechos' });
+        const QUEM = { cliente: 'cliente', equipe: 'equipe', ia: 'Serena' };
+        for (const i of itens.slice(0, 30)) {
+          ul.append(el('li', {}, el('button', { type: 'button', onclick: () => abrirConversa(i.conversaId), 'aria-label': `Abrir a conversa com ${i.nome}` },
+            el('span', { class: 'cab' }, el('b', { text: i.nome }), document.createTextNode(`${i.unidade} · ${i.autor === 'equipe' && i.autorNome ? i.autorNome : QUEM[i.autor] || ''}`), el('em', { text: i.quando || '' })),
+            el('q', {}, comDestaque(i.trecho, d.busca)))));
+        }
+        corpo.append(ul);
+      }
+    } else if (a.tipo === 'atalho') {
+      if (d.conversaId) pe.append(el('button', { type: 'button', class: 'srn-acao forte', onclick: () => abrirConversa(d.conversaId) }, icone(SVG_EXT), document.createTextNode(d.rotulo || 'Abrir conversa')));
+      else if (d.vista) pe.append(el('button', { type: 'button', class: 'srn-acao forte', onclick: () => { fecharMenu(); ui.mostrar(d.vista); } }, icone(SVG_EXT), document.createTextNode(d.rotulo || 'Abrir no CRM')));
+      return el('section', { class: 'srn-art srn-vidro', 'aria-label': a.titulo }, el('div', { class: 'srn-art-cab' }, el('span', { class: 'srn-art-ic', html: I(tipo.ic) }), el('span', { class: 'srn-art-tit' }, el('small', { text: 'Atalho' }), el('b', { text: a.titulo }))), pe);
+    }
+    return el('section', { class: 'srn-art srn-vidro', 'aria-label': `${tipo.rotulo}: ${a.titulo}` },
+      el('div', { class: 'srn-art-cab' }, el('span', { class: 'srn-art-ic', html: I(tipo.ic) }), el('span', { class: 'srn-art-tit' }, el('small', { text: sub }), el('b', { text: a.titulo }))),
+      corpo, pe.childNodes.length ? pe : null);
   }
   /* serena-acoes: fim */
   function bolhaEu(m, nova) {
@@ -946,7 +1125,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const novas = msgs.length > ultimoQtd ? ultimoQtd : msgs.length;
     R.coluna.replaceChildren(...msgs.map((m, i) => (m.papel === 'usuario' ? bolhaEu(m, i >= novas) : bolhaIa(m, i >= novas))));
     ultimoQtd = msgs.length;
-    if (enviando) R.coluna.append(el('div', { class: 'srn-m ia srn-entra-msg', 'aria-label': 'A Serena está escrevendo' }, fotoP(true), el('div', { class: 'srn-digitando srn-vidro' }, el('i'), el('i'), el('i'))));
+    if (enviando) R.coluna.append(el('div', { class: 'srn-m ia srn-entra-msg', 'aria-label': progresso?.texto || 'A Serena está escrevendo' }, fotoP(true), espera()));
     if (falha?.semChave) {
       R.coluna.append(el('p', { class: 'srn-aviso srn-entra-msg' }, document.createTextNode('A Serena ainda está desligada: falta configurar a chave da IA (Anthropic) em Conexões. '), ehAdmin() ? el('a', { href: '/conexoes', text: 'Abrir Conexões' }) : document.createTextNode('Peça para a administração.')));
     } else if (falha) {
@@ -955,6 +1134,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     requestAnimationFrame(() => { R.miolo.scrollTop = R.miolo.scrollHeight; });
   }
   function desenharMiolo() {
+    if (R.btPensar) R.btPensar.setAttribute('aria-pressed', String(lerPensar()));
     const c = atual();
     if (c && c.msgs.length) desenharConversa(); else { ultimoQtd = 0; if (falha || enviando) desenharConversa(); else desenharInicio(); }
     desenharCabecalho();
@@ -994,19 +1174,53 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     pedir(imagem);
     desenharGaveta();
   }
+  /* serena-super: pede aos poucos (uma linha por etapa: "Pensando…", "Pesquisando na internet…") e lê a resposta no fim.
+     Se o servidor mandar a resposta inteira de uma vez (JSON), também serve. */
+  async function chatAosPoucos(corpo) {
+    const r = await fetch('/api/ia/chat', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/x-ndjson' }, body: JSON.stringify(corpo) });
+    if (r.status === 401) { location.href = '/entrar'; throw new Error('sem sessão'); }
+    const tipo = r.headers.get('content-type') || '';
+    if (!tipo.includes('ndjson') || !r.body) {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw Object.assign(new Error(j.erro || 'Algo deu errado'), { status: r.status, codigo: j.codigo });
+      return j;
+    }
+    const leitor = r.body.getReader();
+    const dec = new TextDecoder();
+    let resto = '', resposta = null;
+    const linha = (t) => {
+      if (!t.trim()) return;
+      let v; try { v = JSON.parse(t); } catch { return; }
+      if (v.progresso) { progresso = v.progresso; if (R.raiz?.isConnected) { const b = R.coluna.querySelector('.srn-espera'); if (b) b.replaceWith(espera()); } }
+      else if (v.erro) throw Object.assign(new Error(v.erro), { status: v.status, codigo: v.codigo });
+      else if (v.fim) resposta = v.resposta;
+    };
+    for (;;) {
+      const { value, done } = await leitor.read();
+      if (done) break;
+      resto += dec.decode(value, { stream: true });
+      const partes = resto.split('\n'); resto = partes.pop();
+      for (const p of partes) linha(p);
+    }
+    linha(resto + dec.decode());
+    if (!resposta) throw new Error('A resposta não chegou inteira. Tente de novo.');
+    return resposta;
+  }
   async function pedir(imagem) {
     const c = atual(); if (!c) return;
-    enviando = true; falha = null; desenharMiolo();
+    const pensarMais = lerPensar();
+    enviando = true; falha = null; progresso = { etapa: 'pensando', texto: pensarMais ? 'Pensando com calma…' : 'Pensando…' }; desenharMiolo();
     const mensagens = c.msgs.filter((m) => !m.local).slice(-20).map((m) => ({ papel: m.papel, texto: textoParaIa(m) }));
     if (imagem && mensagens.length) mensagens[mensagens.length - 1].imagem = imagem;
     try {
-      const r = await post('/api/ia/chat', { mensagens });
-      c.msgs.push({ papel: 'ia', texto: String(r.texto || ''), ...(r.clientes ? { clientes: r.clientes } : {}), ...(Array.isArray(r.artefatos) && r.artefatos.length ? { artefatos: r.artefatos.map((a) => ({ ...a, estado: 'previa' })) } : {}) });
+      const r = await chatAosPoucos({ mensagens, ...(pensarMais ? { pensarMais: true } : {}) });
+      c.msgs.push({ papel: 'ia', texto: String(r.texto || ''), ...(r.clientes ? { clientes: r.clientes } : {}), ...(Array.isArray(r.artefatos) && r.artefatos.length ? { artefatos: r.artefatos.map((a) => ({ ...a, estado: 'previa' })) } : {}),
+        ...(Array.isArray(r.fontes) && r.fontes.length ? { fontes: r.fontes } : {}), ...(r.raciocinio ? { raciocinio: String(r.raciocinio) } : {}), ...(r.pensouMais ? { pensouMais: true } : {}) });
       c.em = Date.now(); gravarHistorico();
     } catch (x) {
-      falha = { texto: x.message || 'Não deu certo agora.', semChave: x.status === 501 || /chave da IA/i.test(x.message || '') };
+      falha = { texto: x.message || 'Não deu certo agora.', semChave: x.codigo === 'sem_chave' || x.status === 501 || /chave da IA/i.test(x.message || '') };
     } finally {
-      enviando = false;
+      enviando = false; progresso = null;
       if (R.raiz?.isConnected) { desenharMiolo(); desenharGaveta(); }
     }
   }
