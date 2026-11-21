@@ -29,7 +29,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.className = 'serena-selo' + (o.classe ? ' ' + o.classe : '');
     const titulo = o.titulo || 'A Serena (IA) está atendendo';
     s.title = titulo; s.setAttribute('role', 'img'); s.setAttribute('aria-label', titulo);
-    s.style.cssText = 'display:inline-block;flex:none;border-radius:50%;overflow:hidden;vertical-align:middle;line-height:0;background:#0d2240;box-shadow:0 0 0 1.5px rgba(15,252,190,.65)' + (o.tam ? `;width:${o.tam}px;height:${o.tam}px` : '');
+    /* brilho-cortado: o anel menta é desenhado por dentro (outline com recuo), então não é cortado quando o selo
+       fica dentro de um texto com reticências (overflow: hidden), como no Pipeline */
+    s.style.cssText = 'display:inline-block;flex:none;border-radius:50%;overflow:hidden;vertical-align:middle;line-height:0;background:#0d2240;outline:1.5px solid rgba(15,252,190,.65);outline-offset:-1.5px' + (o.tam ? `;width:${o.tam}px;height:${o.tam}px` : '');
     const i = new Image(); i.src = FOTO; i.alt = ''; i.decoding = 'async'; i.draggable = false;
     i.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;border-radius:50%';
     s.append(i);
