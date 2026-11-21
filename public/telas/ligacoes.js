@@ -157,7 +157,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (ehCelular()) {
       const a = document.createElement('a'); a.href = `tel:${telE164(telefone)}`; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove();
       const r = await registrar();
-      if (r && (r.conversaId || conversaId)) setTimeout(() => ui.abrirRegistroLigacao?.(r.conversaId || conversaId, nome || telFmt(telefone), r.id), 900);
+      if (r && (r.conversaId || conversaId)) setTimeout(() => ui.abrirRegistroLigacao?.(r.conversaId || conversaId, window.SintoniaFone.rotulo(nome, telefone), r.id), 900);
       return;
     }
     const el = ui.el;
@@ -170,7 +170,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('a', { class: 'botao leve', href: `https://wa.me/${String(telE164(telefone)).replace(/\D/g, '')}`, target: '_blank', rel: 'noopener', text: 'Abrir no WhatsApp' }),
           el('button', { class: 'botao', type: 'button', html: SVG.tel, onclick: async () => {
             const r = await registrar(); P().fechar();
-            if (r && (r.conversaId || conversaId)) setTimeout(() => ui.abrirRegistroLigacao?.(r.conversaId || conversaId, nome || telFmt(telefone), r.id), 300);
+            if (r && (r.conversaId || conversaId)) setTimeout(() => ui.abrirRegistroLigacao?.(r.conversaId || conversaId, window.SintoniaFone.rotulo(nome, telefone), r.id), 300);
             else if (r) ui.toast('Ligação registrada ✓');
           } }, document.createTextNode('Liguei')))));
     } };
@@ -219,9 +219,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ui = s.ui, el = ui.el;
     return el('div', { class: 'lg-linha', role: 'button', tabindex: '0', onclick: () => ui.abrir(c.id) },
       ui.avatar({ id: c.id, nome: c.nome, telefone: c.telefone }),
-      el('span', { class: 'lg-txt' }, el('b', { text: c.nome || telFmt(c.telefone) }), el('small', { text: `${telFmt(c.telefone)}${c.unidade ? ' · ' + (ui.UNIDADE[c.unidade] || c.unidade) : ''}` })),
+      el('span', { class: 'lg-txt' }, el('b', { text: window.SintoniaFone.rotulo(c.nome, c.telefone) }), el('small', { text: `${telFmt(c.telefone)}${c.unidade ? ' · ' + (ui.UNIDADE[c.unidade] || c.unidade) : ''}` })),
       aoTirar ? el('button', { class: 'lg-ligar', type: 'button', title: 'Tirar dos favoritos', 'aria-label': 'Tirar dos favoritos', html: SVG.estrelaCheia, onclick: (e) => { e.stopPropagation(); aoTirar(); } }) : null,
-      el('button', { class: 'lg-ligar', type: 'button', title: 'Ligar', 'aria-label': `Ligar para ${c.nome || telFmt(c.telefone)}`, html: SVG.tel, onclick: (e) => { e.stopPropagation(); ligar({ conversaId: c.id, telefone: c.telefone, nome: c.nome }); } }));
+      el('button', { class: 'lg-ligar', type: 'button', title: 'Ligar', 'aria-label': `Ligar para ${window.SintoniaFone.rotulo(c.nome, c.telefone)}`, html: SVG.tel, onclick: (e) => { e.stopPropagation(); ligar({ conversaId: c.id, telefone: c.telefone, nome: c.nome }); } }));
   }
 
   // ---------- programar (inclui o antigo "Ligar hoje" do CRM) ----------
@@ -278,7 +278,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   function linhaChamada(x) {
     const ui = s.ui, el = ui.el;
-    const nome = x.cliente || telFmt(x.telefone);
+    const nome = window.SintoniaFone.rotulo(x.cliente, x.telefone);
     const dir = { efetuada: ['Efetuada', SVG.saiu], recebida: ['Recebida', SVG.chegou], perdida: ['Perdida', SVG.chegou] }[x.direcao] || ['', ''];
     const RES = { atendeu: 'atendeu', nao_atendeu: 'não atendeu', agendou: 'agendou', caixa_postal: 'caixa postal' };
     const extra = [RES[x.resultado], x.unidade ? (ui.UNIDADE[x.unidade] || x.unidade) : null, x.atendente].filter(Boolean).join(' · ');

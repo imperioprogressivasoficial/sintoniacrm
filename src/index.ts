@@ -131,6 +131,7 @@ import { registrarRadar } from './radar/rotas.js';
 import { ArmazemRodizioMemoria, ArmazemRodizioPostgres, Rodizio } from './rodizio/rodizio.js'; // automacao-vendas
 import { registrarRodizio } from './rodizio/rotas.js'; // automacao-vendas
 import { registrarResgate } from './resgate/resgate.js';
+import { NomesWhatsapp } from './contatos/nomes-whatsapp.js';
 /* equipe: conversas de equipe (chat interno da empresa, sem WhatsApp) */
 import { ArmazemEquipeMemoria, ArmazemEquipePostgres } from './equipe/armazem.js';
 import { ChatEquipe } from './equipe/chat.js';
@@ -1183,6 +1184,19 @@ registrarFollowup(app, { followup, repo });
 registrarNps(app, { nps, repo, automacoes });
 registrarRadar(app, { radar, repo, iaLigada: () => iaLigada });
 registrarRodizio(app, { rodizio }); // automacao-vendas
+/* contato-nome: conversas só com o número ganham o nome do perfil do WhatsApp (ao subir, a cada 6 h e no "Sincronizar WhatsApp"). */
+const nomesWhatsapp = new NomesWhatsapp({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  admin: () => {
+    const url = conexoes.get('evolutionUrl');
+    const chave = conexoes.get('evolutionApiKey');
+    return url && chave ? new EvolutionAdmin(url, chave) : undefined;
+  },
+  canais: () => canaisEvolution(conexoes.numeros()).map((c) => c.canalId),
+  semNome: (empresaId, limite) => repo.conversasSemNome(empresaId, limite),
+  aplicar: (id, nome) => sintonia.nomeDoWhatsapp(id, nome),
+  log,
+});
 // Resgatar mensagens: busca de novo na Evolution o que não apareceu (uma conversa ou todas), sem IA nem avisos.
 registrarResgate(app, {
   repo,
@@ -1193,6 +1207,7 @@ registrarResgate(app, {
   },
   canais: () => canaisEvolution(conexoes.numeros()).map((c) => c.canalId),
   importar: (m) => sintonia.importarHistorico(m),
+  depois: () => nomesWhatsapp.rodar(), // contato-nome
   log,
 });
 /* integracoes: tela Integrações (/api/integracoes), API v1, MCP, /desenvolvedores e /openapi.json */
@@ -1259,6 +1274,7 @@ const relogioReserva = setInterval(() => void rodadaReserva(), 5_000);
 void rodadaReserva();
 
 trabalhador.iniciar();
+nomesWhatsapp.iniciar(); // contato-nome: primeira rodada uns segundos depois de subir, sem segurar a subida
 importadorHistorico?.avisar(); // robustez: histórico que ficou pela metade antes de reiniciar continua agora
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
@@ -1274,6 +1290,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     clearInterval(relogioWebhooks);
     clearInterval(relogioReserva);
     whatsappSaude.parar();
+    nomesWhatsapp.parar();
     if (emailTick) clearInterval(emailTick);
     if (emailImap) clearInterval(emailImap);
     await app.close().catch(() => {});

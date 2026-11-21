@@ -852,7 +852,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const cache = s.cartaoEls.get(cartao.conversaId);
     if (cache && cache.assinatura === assinatura) return cache.no;
     const { el, nomeDe } = s.ui;
-    const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
+    const nome = nomeDe({ nome: cartao.nome, telefone: cartao.telefone });
     const mais = el('button', { class: 'fn-mais', type: 'button', title: 'Mais opções', 'aria-label': `Mais opções de ${nome}`, html: SVG.pontos, onclick: (e) => { e.stopPropagation(); menuCartao(cartao.conversaId); } });
     // Quem atende: selo "IA" quando a IA responde sozinha; senão, a foto ou as iniciais da atendente.
     const atende = cartao.modo === 'ia'
@@ -1147,7 +1147,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     // crm-topo: lixeira do pipeline (recuperável pelo filtro "Excluídos")
     if (s.filtro?.excluidos) outros.push({ nome: 'Recuperar lead', info: 'Volta para o quadro, na mesma etapa', icone: SVG.voltar, acao: () => lixeira([conversaId], false) });
     else outros.push({ nome: 'Excluir lead', info: 'Sai do quadro; dá para recuperar em Filtrar › Excluídos', icone: SVG.lixo, perigo: true, acao: () => lixeira([conversaId], true) });
-    folha('Mover para…', cartao.nome || s.ui.formatarTel(cartao.telefone), [etapas, outros]);
+    folha('Mover para…', window.SintoniaFone.rotulo(cartao.nome, cartao.telefone), [etapas, outros]);
   }
 
   /** crm-topo: manda para a lixeira (ou recupera). Nada é apagado: a conversa e a ficha continuam. */
@@ -1230,7 +1230,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         etapa.style.setProperty('--cor', a.etapa.cor);
         const linha = el('div', { class: 'fn-achado', role: 'option', 'aria-selected': String(i === sel), onmousedown: (e) => e.preventDefault(), onclick: () => { fechar(); pular(a.conversaId, a.etapa.id, a); } },
           s.ui.avatar({ id: a.conversaId, nome: a.nome, telefone: a.telefone }),
-          el('span', { class: 'fn-achado-txt' }, el('b', { text: a.nome || s.ui.formatarTel(a.telefone) }), etapa), atende,
+          el('span', { class: 'fn-achado-txt' }, el('b', { text: window.SintoniaFone.rotulo(a.nome, a.telefone) }), etapa), atende,
           el('button', { type: 'button', class: 'fn-ficha-bt', text: 'Abrir ficha', onmousedown: (e) => e.preventDefault(), onclick: (e) => { e.stopPropagation(); fechar(); abrirFicha(a.conversaId); } }));
         return linha;
       }) : [el('div', { class: 'fn-sem', text: 'Nenhum cliente encontrado' })]));
@@ -1385,7 +1385,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!achado) return;
       const { col, cartao } = achado;
       const f = funil();
-      const nome = cartao.nome || nomeDe({ telefone: cartao.telefone });
+      const nome = nomeDe({ nome: cartao.nome, telefone: cartao.telefone });
       rotuloTopo.replaceChildren('Cliente · ', el('b', { text: f ? f.nome : '' }));
       pintar(resumo, col.etapa.cor);
       resumo.replaceChildren(

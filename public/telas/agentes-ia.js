@@ -634,7 +634,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
               : porTel.size ? el('div', { class: 'agx-lista' }, ...[...porTel.entries()].slice(0, 40).map(([tel, fatos]) => {
                 const c = nomeConversa(tel);
                 return el('button', { class: 'agx-item', type: 'button', style: 'all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--linha)', onclick: () => { if (c) ui.abrir(c.id); } },
-                  el('div', { class: 'agx-txt' }, el('b', { text: c ? (c.nome || ui.formatarTel(tel)) : ui.formatarTel(tel) }), el('span', { text: fatos.map((f) => `${nomeMem[f.chave] || f.chave}: ${f.valor}`).join('\n') })));
+                  el('div', { class: 'agx-txt' }, el('b', { text: window.SintoniaFone.rotulo(c?.nome, tel) }), el('span', { text: fatos.map((f) => `${nomeMem[f.chave] || f.chave}: ${f.valor}`).join('\n') })));
               })) : el('p', { class: 'agx-sub', text: 'Ainda vazia. Ligue “Memória por cliente” no agente.' })))));
   }
 
@@ -662,7 +662,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const mostrarPlano = (r) => {
       const p = r.plano;
       const itens = el('div', { class: 'agx-plano-itens' }, ...p.itens.slice(0, 100).map((i) => el('button', { class: 'agx-item', type: 'button', style: 'all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--linha)', onclick: () => ui.abrir(i.conversaId) },
-        el('div', { class: 'agx-txt' }, el('b', { text: i.nome || ui.formatarTel(i.telefone) }), el('span', { text: [ui.UNIDADE[i.unidade] || i.unidade, ui.NOME_ETAPA[i.etapa] || i.etapa, i.motivo].filter(Boolean).join(' · ') })))));
+        el('div', { class: 'agx-txt' }, el('b', { text: window.SintoniaFone.rotulo(i.nome, i.telefone) }), el('span', { text: [ui.UNIDADE[i.unidade] || i.unidade, ui.NOME_ETAPA[i.etapa] || i.etapa, i.motivo].filter(Boolean).join(' · ') })))));
       const listar = p.acao.tipo === 'listar';
       const acoes = el('div', { class: 'agx-pilulas', style: 'justify-content:flex-end' });
       if (!listar && p.itens.length) {

@@ -418,7 +418,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             return el('button', { class: 'item', type: 'button', onclick: () => ui.abrir(c.conversaId) },
               ui.avatar({ id: c.conversaId, nome: c.nome, telefone: c.telefone }),
               el('div', { class: 'corpo' },
-                el('div', { class: 'l1' }, el('span', { class: 'nome', text: c.nome || ui.formatarTel(c.telefone) }), el('span', { class: 'hora' + (c.haMin != null && c.haMin < 5 ? ' nova' : ''), text: haQuanto(c.haMin) })),
+                el('div', { class: 'l1' }, el('span', { class: 'nome', text: window.SintoniaFone.rotulo(c.nome, c.telefone) }), el('span', { class: 'hora' + (c.haMin != null && c.haMin < 5 ? ' nova' : ''), text: haQuanto(c.haMin) })),
                 el('div', { class: 'l2' }, el('span', { class: 'previa', text: previa })),
                 el('div', { class: 'iax-unid', text: [c.unidadeNome || ui.UNIDADE[c.unidade], ui.NOME_ETAPA[c.etapa]].filter(Boolean).join(' · ') })));
           }))

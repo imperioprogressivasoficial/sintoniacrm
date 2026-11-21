@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
 import { digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import { nomeEhReal, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
 
@@ -138,7 +139,26 @@ export class RepositorioPostgres implements Repositorio {
       [randomUUID(), d.empresaId, d.unidade, d.canalId, d.telefone, d.nome ?? null, d.agora],
     );
     const l = rows[0]!;
-    return { conversa: paraConversa(l), nova: l.nova };
+    const conversa = paraConversa(l);
+    // contato-nome: a conversa estava só com o número (ou vazia, ou símbolos) e chegou um nome de verdade: usa o nome.
+    // Nome de verdade (pode ter sido digitado pela equipe) nunca é trocado. Só grava se ninguém mexeu no meio.
+    const novo = l.nova ? undefined : nomeParaTrocar(conversa.nome, d.nome);
+    if (novo) {
+      const r = await this.pool.query('update sintonia.conversas set nome = $2 where id = $1 and nome is not distinct from $3', [conversa.id, novo, l.nome]);
+      if (r.rowCount) conversa.nome = novo;
+    }
+    return { conversa, nova: l.nova };
+  }
+
+  async conversasSemNome(empresaId: string, limite: number) {
+    // contato-nome: candidatas a receber o nome do WhatsApp (sem letra no nome). A conferência final é em nomeEhReal.
+    const { rows } = await this.pool.query<{ id: string; telefone: string; nome: string | null }>(
+      `select id, telefone, nome from sintonia.conversas
+        where empresa_id = $1 and telefone ~ '^[0-9]+$' and (nome is null or nome !~ '[[:alpha:]]')
+        order by atualizada_em desc limit $2`,
+      [empresaId, limite],
+    );
+    return rows.filter((r) => !nomeEhReal(r.nome)).map((r) => ({ id: r.id, telefone: r.telefone, nome: r.nome ?? undefined }));
   }
 
   async salvarConversa(c: Conversa) {

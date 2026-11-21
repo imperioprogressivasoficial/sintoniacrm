@@ -64,10 +64,51 @@ export function chaveTelefone(t: string | null | undefined): string {
   return n.ok ? n.telefone : String(t ?? '').replace(/\D/g, '');
 }
 
-/** "+55 (71) 98812-4471" para mostrar. */
-export function formatarTelefoneBR(t: string): string {
-  const d = t.replace(/\D/g, '');
-  if (d.length === 13) return `+55 (${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
-  if (d.length === 12) return `+55 (${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
-  return t;
+// Códigos de país (DDI) de 1 e 2 dígitos; os demais têm 3. Serve só para agrupar o número na hora de mostrar.
+const DDI_1 = new Set(['1', '7']);
+const DDI_2 = new Set([
+  '20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49', '51', '52', '53', '54', '55',
+  '56', '57', '58', '60', '61', '62', '63', '64', '65', '66', '81', '82', '84', '86', '90', '91', '92', '93', '94', '95', '98',
+]);
+
+/** Agrupa os dígitos de 3 em 3, sem deixar um dígito sozinho no fim ("912 345 678", "791 112 3456"). */
+function agrupar(d: string): string {
+  if (d.length <= 4) return d;
+  const g: string[] = [];
+  let i = 0;
+  while (d.length - i > 4) {
+    g.push(d.slice(i, i + 3));
+    i += 3;
+  }
+  g.push(d.slice(i));
+  return g.join(' ');
+}
+
+/**
+ * Telefone para mostrar, no padrão do dono (21/11): sempre +55, DDD entre parênteses e traço no número.
+ * - celular: "+55 (71) 99220-0365"; fixo (8 dígitos): "+55 (71) 3333-4444";
+ * - aceita com ou sem 55, com ou sem o 9º dígito, com máscara ou não;
+ * - de outro país: "+<DDI> " e o resto agrupado ("+351 912 345 678", "+1 (415) 555-2671").
+ * Só para mostrar: no banco o número fica só com dígitos. Identificador de rede social ("ig:...") volta como veio.
+ */
+export function formatarTelefoneBR(t: string | number | null | undefined): string {
+  const texto = String(t ?? '').trim();
+  if (!texto || /[a-z]/i.test(texto)) return texto;
+  let d = texto.replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.length < 8) return texto;
+  const comMais = texto.startsWith('+');
+  // Sem o 55: 10 ou 11 dígitos com DDD do Brasil (celular com 9, ou fixo/celular antigo sem o 9).
+  if (!comMais && (d.length === 10 || d.length === 11) && DDDS.has(Number(d.slice(0, 2))) && (d.length === 10 || d[2] === '9')) d = '55' + d;
+  if (d.startsWith('55') && (d.length === 12 || d.length === 13) && DDDS.has(Number(d.slice(2, 4)))) {
+    const ddd = d.slice(2, 4);
+    let local = d.slice(4);
+    if (local.length === 8 && /^[6-9]/.test(local)) local = '9' + local; // celular antigo, sem o 9
+    if (local.length === 9) return `+55 (${ddd}) ${local.slice(0, 5)}-${local.slice(5)}`;
+    return `+55 (${ddd}) ${local.slice(0, 4)}-${local.slice(4)}`;
+  }
+  const cc = DDI_1.has(d.slice(0, 1)) ? d.slice(0, 1) : DDI_2.has(d.slice(0, 2)) ? d.slice(0, 2) : d.slice(0, 3);
+  const resto = d.slice(cc.length);
+  if (cc === '1' && resto.length === 10) return `+1 (${resto.slice(0, 3)}) ${resto.slice(3, 6)}-${resto.slice(6)}`;
+  return `+${cc} ${agrupar(resto)}`;
 }

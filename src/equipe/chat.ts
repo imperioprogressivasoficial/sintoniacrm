@@ -7,6 +7,7 @@ import type { Conversa } from '../domain.js';
 import { statusDe, type Presencas } from '../presenca/presenca.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { ArmazemEquipe, MensagemEquipe, Sala } from './armazem.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * Conversas de equipe: chat interno entre as pessoas da empresa (não passa pelo WhatsApp).
@@ -80,10 +81,6 @@ export interface PessoaChat {
   online: boolean;
 }
 
-const formatarTel = (t: string) => {
-  const d = t.replace(/^55/, '');
-  return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t;
-};
 const curto = (t: string, n = 120) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 const TXT_CONVERSA = 'Compartilhou uma conversa';
 
@@ -255,7 +252,7 @@ export class ChatEquipe {
     if (!cache.has(id)) cache.set(id, await this.o.repo.buscarConversa(id).catch(() => undefined));
     const c = cache.get(id);
     if (!c || c.empresaId !== eu.empresaId || !podeVer(eu, c)) return { bloqueada: true as const };
-    return { id: c.id, nome: c.nome || formatarTel(c.telefone), unidade: c.unidade };
+    return { id: c.id, nome: nomeOuTelefone(c.nome, c.telefone), unidade: c.unidade };
   }
 
   private async ver(eu: Usuario, ms: MensagemEquipe[]) {

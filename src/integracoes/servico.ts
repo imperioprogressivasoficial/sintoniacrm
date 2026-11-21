@@ -13,6 +13,7 @@ import type { Tags } from '../tags/tags.js';
 import { normalizarCelular } from '../util/telefone.js';
 import { resumoConversa, resumoMensagem } from './webhooks.js';
 import { idsUnidades, zUnidade } from '../unidades.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * O que a API pública (/api/v1) e o MCP (/mcp) fazem, num lugar só. Sempre na empresa da chave:
@@ -609,7 +610,7 @@ export class ServicoApi {
     const { rows } = await pool.query(
       `insert into sintonia.rotina_tarefas (id, empresa_id, titulo, descricao, vence_em, responsavel_id, criado_por, conversa_id, cliente_nome, prioridade)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *`,
-      [id, ctx.empresaId, d.titulo, d.descricao, d.venceEm, responsavelId, `api:${ctx.chaveId}`, c?.id ?? null, c ? c.nome || c.telefone : null, d.prioridade],
+      [id, ctx.empresaId, d.titulo, d.descricao, d.venceEm, responsavelId, `api:${ctx.chaveId}`, c?.id ?? null, c ? nomeOuTelefone(c.nome, c.telefone) : null, d.prioridade],
     );
     return this.tarefaParaApi(rows[0]);
   }

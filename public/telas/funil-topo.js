@@ -798,7 +798,7 @@
     todos.addEventListener('change', () => { if (todos.checked) linhas.forEach((x) => s.selecao.add(x.c.conversaId)); else s.selecao.clear(); desenharLista(ctx); });
     const corpo = linhas.map((x) => {
       const id = x.c.conversaId;
-      const nome = x.c.nome || s.ui.nomeDe({ telefone: x.c.telefone });
+      const nome = s.ui.nomeDe({ nome: x.c.nome, telefone: x.c.telefone });
       const marca = el('input', { type: 'checkbox', 'aria-label': `Escolher ${nome}` });
       marca.checked = s.selecao.has(id);
       marca.addEventListener('click', (e) => e.stopPropagation());
@@ -868,7 +868,7 @@
         return el('section', {},
           el('h2', {}, el('span', { text: col.etapa.nome }), el('small', { text: `${cartoes.length} lead${cartoes.length === 1 ? '' : 's'}${resto > 0 ? ` (mais ${resto} não carregados)` : ''}` })),
           cartoes.length ? el('table', {}, el('thead', {}, el('tr', {}, el('th', { text: 'Nome' }), ...colunas.map((k) => el('th', { text: nomeCampo.get(k) })))),
-            el('tbody', {}, ...cartoes.map((x) => el('tr', {}, el('td', { text: x.nome || s.ui.formatarTel(x.telefone) }), ...colunas.map((k) => el('td', { text: texto(k, x, col) })))))) : el('p', { text: '—' }));
+            el('tbody', {}, ...cartoes.map((x) => el('tr', {}, el('td', { text: window.SintoniaFone.rotulo(x.nome, x.telefone) }), ...colunas.map((k) => el('td', { text: texto(k, x, col) })))))) : el('p', { text: '—' }));
       }));
     document.body.append(folha);
     document.documentElement.classList.add('ft-imprimindo');

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { TipoEnvio } from '../engine/followups.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
+import { nomeEhReal, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Envio ativo programado, ou uma reavaliação de "quem responde". */
 export interface Tarefa {
@@ -112,6 +113,8 @@ export interface Repositorio {
     agora: Date;
   }): Promise<{ conversa: Conversa; nova: boolean }>;
   salvarConversa(c: Conversa): Promise<void>;
+  /** contato-nome: conversas sem nome de verdade (vazio, o número, símbolos), da mais recente para a mais antiga. */
+  conversasSemNome(empresaId: string, limite: number): Promise<Array<{ id: string; telefone: string; nome?: string }>>;
   /**
    * Conversas, da mais recente para a mais antiga. robustez: SEM o antigo corte de 500 (com mais clientes que isso,
    * a busca não achava cliente antiga e os números ficavam menores que a realidade). Use o filtro para não trazer
@@ -251,6 +254,11 @@ export class RepositorioMemoria implements Repositorio {
     for (const c of this.conversas.values()) {
       if (c.empresaId === d.empresaId && c.unidade === d.unidade && c.telefone === d.telefone) {
         if (d.nome && !c.nome) c.nome = d.nome;
+        else {
+          // contato-nome: só o número (ou símbolos) no nome e chegou um nome de verdade: usa o nome. Nome de verdade não muda.
+          const novo = nomeParaTrocar(c.nome, d.nome);
+          if (novo) c.nome = novo;
+        }
         return { conversa: { ...c }, nova: false };
       }
     }
@@ -273,6 +281,14 @@ export class RepositorioMemoria implements Repositorio {
 
   async salvarConversa(c: Conversa) {
     this.conversas.set(c.id, { ...c });
+  }
+
+  async conversasSemNome(empresaId: string, limite: number) {
+    return [...this.conversas.values()]
+      .filter((c) => c.empresaId === empresaId && /^\d+$/.test(c.telefone) && !nomeEhReal(c.nome))
+      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
+      .slice(0, limite)
+      .map((c) => ({ id: c.id, telefone: c.telefone, nome: c.nome }));
   }
 
   async listarConversas(filtro?: FiltroConversas) {

@@ -254,7 +254,7 @@
   }
 
   // ---------- contas ----------
-  const nomeDe = (ctx, c) => c.nome || (ctx.ui.formatarTel ? ctx.ui.formatarTel(c.telefone) : ctx.ui.nomeDe({ telefone: c.telefone }));
+  const nomeDe = (ctx, c) => window.SintoniaFone.rotulo(c.nome, c.telefone);
   const sistema = (ctx) => !!ctx.funil?.sistema;
   const colunas = (ctx) => ctx.q?.colunas || [];
   /** Etapas que contam como "em andamento" (o funil do sistema para no Agendada; os outros, todas menos a última). */
@@ -450,7 +450,7 @@
         return el('div', { class: 'fn-achado', role: 'option', tabindex: '0', onclick: () => { fechar(); ctx.pular(a.conversaId, a.etapa.id, a); },
           onkeydown: (e) => { if (e.key === 'Enter') { fechar(); ctx.pular(a.conversaId, a.etapa.id, a); } } },
         ctx.ui.avatar({ id: a.conversaId, nome: a.nome, telefone: a.telefone }),
-        el('span', { class: 'fn-achado-txt' }, el('b', { text: a.nome || ctx.ui.formatarTel(a.telefone) }), etapa));
+        el('span', { class: 'fn-achado-txt' }, el('b', { text: window.SintoniaFone.rotulo(a.nome, a.telefone) }), etapa));
       }) : [el('div', { class: 'fn-sem', text: 'Nenhum cliente encontrado' })]));
     };
     input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(buscar, 250); });

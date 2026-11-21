@@ -7,6 +7,8 @@
 <script>/* Sem zoom com os dedos nem com toque duplo: a ferramenta já se ajusta à tela. */(()=>{const nao=(e)=>e.preventDefault();['gesturestart','gesturechange','gestureend'].forEach((t)=>document.addEventListener(t,nao,{passive:false}));document.addEventListener('touchmove',(e)=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});})();</script>
 <!-- atualizando: durante uma publicação, mostra "Estamos atualizando melhorias" em vez de erro (antes de qualquer fetch). -->
 <script src="/telas/atualizando.js"></script>
+<!-- contato-nome: telefone no padrão "+55 (71) 99220-0365" em todas as telas (antes do resto, que já usa). -->
+<script src="/telas/fone.js"></script>
 <title>Sintonia CRM</title>
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#071d33" media="(prefers-color-scheme: dark)">
@@ -1701,8 +1703,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   addEventListener('sintonia:lista', () => { if (!estado.conversasDoServidor || !window.SintoniaListaServidor) return; estado.conversas = window.SintoniaListaServidor.juntar(); desenharLista(); }); /* robustez: chegou página mais antiga ou achado da busca */
   const avatares = new Map();
   const avatarDaLista = (c) => { let a = avatares.get(c.id); if (!a || (semFoto.has(c.id) && a.querySelector('img'))) { a = avatar(c); avatares.set(c.id, a); } return a; };
-  const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
-  const nomeDe = (c) => c.nome || formatarTel(c.telefone);
+  /* contato-nome: um só formato de telefone (public/telas/fone.js); nome que é só número/símbolos mostra o telefone formatado. */
+  const formatarTel = (t) => window.SintoniaFone ? window.SintoniaFone.formatar(t) : String(t || '');
+  const nomeDe = (c) => window.SintoniaFone ? window.SintoniaFone.rotulo(c.nome, c.telefone) : (c.nome || formatarTel(c.telefone));
   const hm = (d) => new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const diaChave = (d) => new Date(d).toDateString();
   const rotuloDia = (d) => { const x = new Date(d), h = new Date(); const ontem = new Date(h); ontem.setDate(h.getDate() - 1);
@@ -1786,7 +1789,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.quem === 'sem' && c.responsavelId) return false;
     if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
     if (estado.etapasFiltro.size && !estado.etapasFiltro.has(c.etapa)) return false;
-    if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca)) && !window.SintoniaListaServidor?.achou(c.id)) return false; /* robustez: achada pela busca do servidor (ex.: texto da mensagem) */
+    if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca)) && !(estado.busca.replace(/\D/g, '').length >= 3 && /^[\d\s()+\-.]+$/.test(estado.busca) && String(c.telefone || '').includes(estado.busca.replace(/\D/g, ''))) && !window.SintoniaListaServidor?.achou(c.id)) return false; /* contato-nome: "(71) 99220" também acha */ /* robustez: achada pela busca do servidor (ex.: texto da mensagem) */
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
     if (window.SintoniaConversaExtra && !window.SintoniaConversaExtra.passa(c)) return false; /* conversa-extra: arquivadas ficam em "Arquivadas" */
@@ -2841,10 +2844,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const c = estado.conversas.find((x) => x.id === s.conversaId) || { id: s.conversaId, nome: s.cliente, telefone: s.telefone };
       caixa.append(el('div', { class: 'item item-ligar' }, avatar(c),
         el('div', { class: 'corpo' },
-          el('div', { class: 'l1' }, el('span', { class: 'nome', text: s.cliente || formatarTel(s.telefone) }), el('span', { class: 'tag motivo-' + s.motivo, text: MOTIVO[s.motivo] })),
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe({ nome: s.cliente, telefone: s.telefone }) }), el('span', { class: 'tag motivo-' + s.motivo, text: MOTIVO[s.motivo] })),
           el('div', { class: 'l2' }, el('span', { class: 'previa', text: s.texto }))),
         el('div', { class: 'acoes-ligar' },
-          el('a', { class: 'icone redondo', href: 'tel:+' + s.telefone, title: 'Ligar', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>', onclick: () => setTimeout(() => abrirRegistroLigacao(s.conversaId, s.cliente || formatarTel(s.telefone)), 600) }),
+          el('a', { class: 'icone redondo', href: 'tel:+' + s.telefone, title: 'Ligar', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h3.5l1.7 4.3-2.2 1.4a11 11 0 0 0 6.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 0 1-1.6 1.5A16.5 16.5 0 0 1 3.5 5.6 1.5 1.5 0 0 1 5 4Z"/></svg>', onclick: () => setTimeout(() => abrirRegistroLigacao(s.conversaId, nomeDe({ nome: s.cliente, telefone: s.telefone })), 600) }),
           el('button', { class: 'icone redondo', title: 'Abrir conversa', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/></svg>', onclick: () => { mostrar('conversas'); abrir(s.conversaId); } }))));
     }
     if (r.hoje.length) {

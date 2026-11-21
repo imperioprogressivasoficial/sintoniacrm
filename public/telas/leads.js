@@ -133,7 +133,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   const fmtN = (n) => Number(n || 0).toLocaleString('pt-BR');
-  const fmtTel = (t) => { const d = String(t).replace(/\D/g, ''); return d.length === 13 ? `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}` : d.length === 12 ? `(${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}` : t; };
+  const fmtTel = (t) => window.SintoniaFone.formatar(t); /* contato-nome: padrão +55 (71) 99220-0365 */
   const dataBR = (d) => (d ? new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Bahia' }).format(new Date(d)) : '');
 
   // ---------- CSV / planilha colada ----------
@@ -284,7 +284,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     else {
       resultado.append(el('div', { class: 'ld-total' }, el('b', { text: fmtN(p.total) }), el('span', { text: p.total === 1 ? 'contato para exportar' : 'contatos para exportar' })));
       if (p.amostra.length) resultado.append(el('div', { class: 'ld-lista' }, ...p.amostra.slice(0, 5).map((l) => el('div', { class: 'ld-item' },
-        el('b', { text: l.nome || fmtTel(l.telefone) }), el('span', { class: 'ld-dir', text: l.etapa ? ui.NOME_ETAPA[l.etapa] || l.etapa : 'só ficha' }),
+        el('b', { text: window.SintoniaFone.rotulo(l.nome, l.telefone) }), el('span', { class: 'ld-dir', text: l.etapa ? ui.NOME_ETAPA[l.etapa] || l.etapa : 'só ficha' }),
         el('span', { text: `${fmtTel(l.telefone)}${l.email ? ' · ' + l.email : ''}` }), el('span', { class: 'ld-dir', text: dataBR(l.criadoEm) })))));
       const botao = el('a', { class: 'ld-botao', href: '/api/leads/exportar?' + consultaExp(), download: '', html: IC.baixar + '<span>Exportar CSV</span>', 'aria-disabled': String(!p.total) });
       resultado.append(el('div', { class: 'ld-acoes' }, botao), el('div', { class: 'ld-nota', text: 'Colunas: nome, telefone, e-mail, unidade, etapa, tags, dona, criado em, origem e os campos da ficha. Abre direto no Excel (UTF-8, separado por ponto e vírgula).' }));
@@ -414,7 +414,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             if (!principal) return;
             const outros = g.leads.map((l) => l.telefone).filter((t) => t !== principal);
             const p = g.leads.find((l) => l.telefone === principal);
-            if (!confirm(`Juntar ${outros.length === 1 ? 'o outro contato' : `os outros ${outros.length} contatos`} em ${p?.nome || fmtTel(principal)} (${fmtTel(principal)})? As conversas viram uma só e isso não tem volta.`)) return;
+            if (!confirm(`Juntar ${outros.length === 1 ? 'o outro contato' : `os outros ${outros.length} contatos`} em ${window.SintoniaFone.rotulo(p?.nome, principal)} (${fmtTel(principal)})? As conversas viram uma só e isso não tem volta.`)) return;
             acaoDuplicata('/api/leads/mesclar', { principal, outros }, 'Contatos mesclados ✓');
           } }),
           el('button', { class: 'ld-botao ld-leve', type: 'button', 'aria-disabled': String(s.ocupado), text: 'Não é duplicata', onclick: () => acaoDuplicata('/api/leads/nao-duplicata', { telefones: g.leads.map((l) => l.telefone) }, 'Marcado como pessoas diferentes') })));

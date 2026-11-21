@@ -21,6 +21,7 @@ import type { AplicadorCrmIa } from '../ai/crm-ia.js';
 import { partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
 import { PREFIXO_NOTA_IA, type Percepcao } from '../ai/prompt.js';
 import { dataISO, horaHHmm } from '../util/tempo.js';
+import { nomeDoWhatsapp, nomeOuTelefone, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Número de WhatsApp conectado: por qual canal e de qual unidade. */
 export interface NumeroConectado {
@@ -214,7 +215,8 @@ export class Sintonia {
       unidade: numero.unidade,
       canalId: numero.canalId,
       telefone: msg.telefone,
-      nome: msg.deMim ? undefined : msg.nome,
+      // contato-nome: nome do perfil do WhatsApp limpo (sem invisíveis, até 60 letras); número, pontos ou emojis sozinhos não contam.
+      nome: msg.deMim ? undefined : nomeDoWhatsapp(msg.nome),
       agora: this.agora(),
     });
 
@@ -338,7 +340,7 @@ export class Sintonia {
       if (!numero) continue;
       const criada = await this.d.repo.buscarOuCriarConversa({
         empresaId: this.d.empresaId, unidade: numero.unidade, canalId: numero.canalId, telefone: msg.telefone,
-        nome: msg.deMim ? undefined : msg.nome, agora: this.agora(),
+        nome: msg.deMim ? undefined : nomeDoWhatsapp(msg.nome), agora: this.agora(),
       });
       await this.mutar(criada.conversa.id, async (conversa) => {
         const mensagemId = randomUUID();
@@ -566,6 +568,21 @@ export class Sintonia {
       c.nome = nome ?? undefined;
       await this.d.repo.salvarConversa(c);
     });
+  }
+
+  /**
+   * contato-nome: nome do perfil do WhatsApp para uma conversa que ainda está sem nome de verdade (rotina que preenche os
+   * antigos). Nome de verdade (pode ter sido digitado pela equipe) nunca é trocado. Retorna true se trocou.
+   */
+  async nomeDoWhatsapp(conversaId: string, nome: string): Promise<boolean> {
+    const trocou = await this.mutar(conversaId, async (c) => {
+      const novo = nomeParaTrocar(c.nome, nome);
+      if (!novo) return false;
+      c.nome = novo;
+      await this.d.repo.salvarConversa(c);
+      return true;
+    });
+    return Boolean(trocou);
   }
 
   async mudarModo(conversaId: string, modo: ModoAtendimento): Promise<void> {
@@ -847,7 +864,7 @@ export class Sintonia {
         await this.mutar(conversaId, async (c) => {
           if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
           await this.d.repo.salvarConversa(c);
-          await this.d.avisarEquipe?.(`A IA não conseguiu responder ${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome}) depois de várias tentativas. Alguém da equipe pode responder?`, c)?.catch(() => undefined);
+          await this.d.avisarEquipe?.(`A IA não conseguiu responder ${nomeOuTelefone(c.nome, c.telefone)} (${unidadeDe(c.unidade).nome}) depois de várias tentativas. Alguém da equipe pode responder?`, c)?.catch(() => undefined);
         }).catch(() => undefined);
         return;
       }
@@ -1223,7 +1240,7 @@ export class Sintonia {
         if (!c.etiquetas.includes('precisa da equipe')) c.etiquetas.push('precisa da equipe');
         await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
         await this.evento('passou_para_humano', c, { motivo: a.motivo });
-        await this.d.avisarEquipe?.(`A IA passou a conversa com ${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome}) para a equipe. Motivo: ${a.motivo}`, c);
+        await this.d.avisarEquipe?.(`A IA passou a conversa com ${nomeOuTelefone(c.nome, c.telefone)} (${unidadeDe(c.unidade).nome}) para a equipe. Motivo: ${a.motivo}`, c);
       }
     }
   }
@@ -1231,7 +1248,7 @@ export class Sintonia {
   /** ia-completa: a IA remarcou ou cancelou na agenda: lembretes, funil, nota na conversa e aviso para a equipe. */
   private async aplicarMudancaDeAgenda(c: Conversa, a: Extract<AcaoAgente, { tipo: 'remarcou' | 'cancelou' }>): Promise<void> {
     await this.d.repo.cancelarTarefas(c.id, LEMBRETES);
-    const quem = `${c.nome ?? c.telefone} (${unidadeDe(c.unidade).nome})`;
+    const quem = `${nomeOuTelefone(c.nome, c.telefone)} (${unidadeDe(c.unidade).nome})`;
     const antigo = `${a.antigo.servico ?? 'horário'} de ${a.antigo.inicio.replace('T', ' ').slice(0, 16)}`;
     if (a.tipo === 'remarcou') {
       c.trinksClienteId = a.clienteTrinksId;

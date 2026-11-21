@@ -20,6 +20,8 @@ export interface OpcoesResgate {
   admin: () => EvolutionAdmin | undefined;
   canais: () => string[];
   importar: (m: MensagemRecebida[]) => Promise<{ conversas: number; mensagens: number; midias?: number }>;
+  /** contato-nome: no fim da sincronização (ex.: puxar o nome dos contatos). Falha só vai para o log. */
+  depois?: () => Promise<unknown>;
   log?: (msg: string, extra?: string) => void;
 }
 
@@ -48,6 +50,7 @@ export function registrarResgate(app: FastifyInstance, o: OpcoesResgate): { sinc
         }
         rodada.feitos++;
       }
+      if (o.depois) await o.depois().catch((e) => o.log?.('Resgate: falha ao puxar os nomes dos contatos', String(e)));
     } finally {
       rodada.rodando = false; rodada.fim = new Date();
     }

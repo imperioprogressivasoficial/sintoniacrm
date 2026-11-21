@@ -344,7 +344,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           const emp = empresaDe(c.telefone);
           const tr = el('tr', { tabindex: '0', 'aria-selected': String(s.selecao.has(c.id)), title: `Abrir a conversa com ${u.nomeDe(c)}` },
             el('td', {}, caixinha(c)),
-            el('td', {}, el('span', { class: 'ct-pessoa' }, u.avatar(c, 'p'), el('span', {}, el('b', { text: c.nome || u.formatarTel(c.telefone) }), emp ? el('small', { text: emp }) : null))),
+            el('td', {}, el('span', { class: 'ct-pessoa' }, u.avatar(c, 'p'), el('span', {}, el('b', { text: window.SintoniaFone.rotulo(c.nome, c.telefone) }), emp ? el('small', { text: emp }) : null))),
             el('td', { class: 'ct-sub', text: u.formatarTel(c.telefone) }),
             el('td', {}, tagsEl(c, true)),
             el('td', {}, el('span', { class: 'ct-pilula', text: u.NOME_ETAPA[c.etapa] || c.etapa || '—' })),
@@ -360,7 +360,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         const emp = empresaDe(c.telefone);
         const linha = el('div', { class: 'ct-c' + (s.modoSel ? ' ct-com-sel' : ''), role: 'button', tabindex: '0', 'aria-selected': String(s.selecao.has(c.id)) },
           s.modoSel ? caixinha(c) : null, u.avatar(c, 'p'),
-          el('b', { text: c.nome || u.formatarTel(c.telefone) }), el('span', { class: 'ct-hora', text: u.horaLista(ultimoContato(c)) || '' }),
+          el('b', { text: window.SintoniaFone.rotulo(c.nome, c.telefone) }), el('span', { class: 'ct-hora', text: u.horaLista(ultimoContato(c)) || '' }),
           el('small', { text: [u.NOME_ETAPA[c.etapa] || c.etapa, emp, nomeOrigem(c)].filter(Boolean).join(' · ') }),
           (c.tags || []).length ? tagsEl(c, false) : null);
         linha.addEventListener('click', () => (s.modoSel ? alternar(c, !s.selecao.has(c.id)) : u.abrir(c.id)));
@@ -392,7 +392,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const lista = s.empresas.filter((e) => !q || semAcento(e.nome).includes(q) || semAcento(e.razaoSocial).includes(q) || (qd.length >= 3 && String(e.cnpj || '').replace(/\D/g, '').includes(qd)) || e.contatos.some((c) => semAcento(c.nome).includes(q)));
     const iniciais = (n) => String(n || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
     const contato = (c) => el('button', { type: 'button', class: 'ct-emp-contato', 'aria-disabled': c.conversaId ? null : 'true', title: c.conversaId ? 'Abrir a conversa' : 'Contato sem conversa', onclick: () => c.conversaId && u.abrir(c.conversaId) },
-      el('span', { text: c.nome || u.formatarTel(c.telefone), style: 'font-weight:600' }), el('span', { class: 'ct-sub', text: c.cargo || '—' }), el('span', { class: 'ct-sub', text: u.formatarTel(c.telefone) }), el('span', { class: 'ct-sub', text: c.email || '' }));
+      el('span', { text: window.SintoniaFone.rotulo(c.nome, c.telefone), style: 'font-weight:600' }), el('span', { class: 'ct-sub', text: c.cargo || '—' }), el('span', { class: 'ct-sub', text: u.formatarTel(c.telefone) }), el('span', { class: 'ct-sub', text: c.email || '' }));
     let corpo;
     if (!s.empresas.length) corpo = el('div', { class: 'ct-cartao' }, el('div', { class: 'ct-vazio' }, el('b', { text: 'Nenhuma empresa ainda.' }), el('span', { text: 'Na ficha do contato, marque “Pessoa jurídica” e preencha a empresa (nome, CNPJ, cargo). Contatos da mesma empresa aparecem juntos aqui.' })));
     else if (!lista.length) corpo = el('div', { class: 'ct-cartao' }, el('div', { class: 'ct-vazio', text: 'Nenhuma empresa com essa busca.' }));
@@ -404,7 +404,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('td', {}, el('span', { class: 'ct-emp-nome' }, el('i', { class: 'ct-emp-ic', text: iniciais(e.nome), 'aria-hidden': 'true', style: 'font-style:normal' }), el('span', {}, el('b', { text: e.nome }), e.razaoSocial && e.razaoSocial !== e.nome ? el('small', { text: e.razaoSocial }) : null))),
           el('td', { class: 'ct-sub', text: e.cnpj || '—' }),
           el('td', { text: contatos(e.total) }),
-          el('td', {}, el('span', { class: 'ct-emp-pessoas' }, ...e.contatos.slice(0, 3).map((c) => el('span', { class: 'ct-pilula', text: c.nome || u.formatarTel(c.telefone) })), e.contatos.length > 3 ? el('span', { class: 'ct-tag-mais', text: `+${e.contatos.length - 3}` }) : null)),
+          el('td', {}, el('span', { class: 'ct-emp-pessoas' }, ...e.contatos.slice(0, 3).map((c) => el('span', { class: 'ct-pilula', text: window.SintoniaFone.rotulo(c.nome, c.telefone) })), e.contatos.length > 3 ? el('span', { class: 'ct-tag-mais', text: `+${e.contatos.length - 3}` }) : null)),
           el('td', { class: 'ct-sub', text: e.site || '' }));
         const alternar = () => { s.empAberta = aberta ? null : e.chave; desenhar(); };
         tr.addEventListener('click', alternar);

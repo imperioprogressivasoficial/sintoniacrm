@@ -10,6 +10,7 @@ import type { CargaPush, ChavesPush, EnviadorPush } from './push.js';
 import { avaliarEspera, EsquemaRegraEspera, regraDa, type PrazoEspera, type RegraEspera, type RegrasEspera } from './espera.js';
 import { completarPreferencias, emNaoPerturbe, esperaSilenciada, TIPOS_VISIVEIS, type Notificacao, type Preferencias, type TipoNotificacao } from './tipos.js';
 import type { UnidadeId } from '../domain.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * Transforma o que acontece (eventos do motor, das automações e da equipe) em notificações para
@@ -66,11 +67,8 @@ const FALHAS: Array<{ classe: string; teste: RegExp; titulo: string; texto: stri
 // "Número sem WhatsApp" é do contato, não do sistema: não vira aviso de falha.
 export const classificarFalha = (erro: string) => (/não tem WhatsApp/i.test(erro) ? undefined : FALHAS.find((f) => f.teste.test(erro)));
 
-const formatarTel = (t: string) => {
-  const d = t.replace(/^55/, '');
-  return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t;
-};
-const nomeDa = (c: Conversa) => c.nome || formatarTel(c.telefone);
+// contato-nome: nome de verdade, ou o telefone no padrão "+55 (71) 99220-0365".
+const nomeDa = (c: Conversa) => nomeOuTelefone(c.nome, c.telefone);
 const curto = (t: string, n = 140) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 
 export class Notificador {

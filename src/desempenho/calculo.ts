@@ -1,5 +1,6 @@
 import { normalizar, servicosMaisAgendados, valorDe, type ConfigComercial, type LinhaServico, type Venda } from '../comercial/calculo.js';
 import { dataISO, HORA, MIN, partesBahia } from '../util/tempo.js';
+import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
  * Desempenho do atendimento (visão do dono). Função pura: a fonte (fonte.ts) entrega mensagens, eventos e
@@ -244,7 +245,7 @@ export function calcularDesempenho(e: Entrada): Desempenho {
   const dentro = (d: Date) => d.getTime() >= t0 && d.getTime() < t1;
   const ids = new Identidades(e.pessoas, dados.eventos, dados.conversas.values());
   const conv = (id: string) => dados.conversas.get(id);
-  const nomeCliente = (id: string) => conv(id)?.nome || conv(id)?.telefone || 'Cliente';
+  const nomeCliente = (id: string) => { const c = conv(id); return c ? nomeOuTelefone(c.nome, c.telefone) : 'Cliente'; };
   const acum = new Map<string, Acum>();
   const de = (chave: string, nome?: string | null): Acum => {
     let a = acum.get(chave);
@@ -518,7 +519,7 @@ export function montarFila(conversas: ConvD[], agora: Date, filtro: { unidade?: 
     })
     .map((c) => ({
       conversaId: c.id,
-      cliente: c.nome || c.telefone,
+      cliente: nomeOuTelefone(c.nome, c.telefone),
       telefone: c.telefone,
       unidade: c.unidade,
       dona: c.responsavelNome,
