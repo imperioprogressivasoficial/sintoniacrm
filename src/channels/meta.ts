@@ -280,7 +280,9 @@ export class GraphMeta {
 
   /** Baixa uma url da Meta (arquivo de mídia) com o token. */
   async baixar(url: string): Promise<Response> {
-    const resp = await this.fetchFn(url, { headers: this.cabecalho(), signal: AbortSignal.timeout(60_000) });
+    // conversa-ux: o endereço de mídia da Meta (lookaside.fbsbx.com) pode devolver uma página HTML em vez do arquivo
+    // quando o pedido vem sem User-Agent; com ele, vem o arquivo.
+    const resp = await this.fetchFn(url, { headers: this.cabecalho({ 'user-agent': 'Sintonia/1.0 (+whatsapp-cloud-api)' }), signal: AbortSignal.timeout(60_000) });
     if (!resp.ok) throw await erroDa(resp, 'o arquivo');
     return resp;
   }
@@ -406,9 +408,13 @@ export class CanalMeta implements CanalWhatsApp {
     if (!info.url) throw new Error('Meta respondeu sem o endereço do arquivo');
     if (info.file_size && info.file_size > LIMITE_MIDIA) throw new ErroMidiaGrande(info.file_size);
     const resp = await this.graph.baixar(info.url);
+    // Página de erro no lugar do arquivo: não guarda (o baixador tenta de novo), senão o áudio fica "pronto" e mudo.
+    const tipoResp = (resp.headers.get('content-type') ?? '').toLowerCase();
+    if (/^(text\/html|application\/json)/.test(tipoResp)) throw new Error(`A Meta devolveu uma página (${tipoResp.split(';')[0]}) em vez do arquivo`);
     const conteudo = Buffer.from(await resp.arrayBuffer());
     if (conteudo.length > LIMITE_MIDIA) throw new ErroMidiaGrande(conteudo.length);
-    return { conteudo, ...(info.mime_type ? { mimetype: info.mime_type } : {}) };
+    const mimetype = info.mime_type || (tipoResp && tipoResp !== 'application/octet-stream' ? tipoResp : undefined);
+    return { conteudo, ...(mimetype ? { mimetype } : {}) };
   }
 
   /** Consulta o número na Graph API (botão "Testar"). */
