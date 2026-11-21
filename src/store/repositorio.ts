@@ -54,6 +54,8 @@ export type TipoEvento =
   | 'nps'
   /** Radar (src/radar): dados.acao = 'disparou' (motivo, origem, vigiar, donoId, iaResponde). */
   | 'radar'
+  /** ia-completa: a IA agiu no CRM/agenda (dados.acao: remarcou, cancelou, mover_funil, vincular_produto, tarefa_equipe, retorno, enviar_arquivo). */
+  | 'ia_acao'
   | 'falha';
 
 export interface Evento {

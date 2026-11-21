@@ -82,6 +82,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agentes-ia.js': { arquivo: 'telas/agentes-ia.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/ia-estado.js': { arquivo: 'telas/ia-estado.js', tipo: 'text/javascript; charset=utf-8' } /* ia-completa */,
   '/telas/conversa-extras.js': { arquivo: 'telas/conversa-extras.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/icones.js': { arquivo: 'telas/icones.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/conversa-ux.js': { arquivo: 'telas/conversa-ux.js', tipo: 'text/javascript; charset=utf-8' },

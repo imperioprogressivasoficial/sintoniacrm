@@ -179,7 +179,7 @@ describe('Base de conhecimento: semente e histórico', () => {
 
 describe.each(ambientes)('Testar a IA ($nome)', (amb) => {
   it('responde com a base atual, sem enviar nada nem gravar conversa', async () => {
-    const claude = claudeFalso([fim('Oi! A progressiva fica R$ 320.'), fim('Segunda resposta')]);
+    const claude = claudeFalso([fim('Oi! A progressiva fica linda em você.'), fim('Segunda resposta')]);
     let base: () => Promise<string> = async () => '';
     const agente = new Agente(claude, {} as Agenda, () => base(), { modelo: 'claude-opus-5-5', esforco: 'low' });
     const g = await montarGestao(amb, { iaLigada: () => true, simularIa: (p) => simularResposta(agente, 'imperio', { ...p, agora: quinta(14) }) });
@@ -188,7 +188,7 @@ describe.each(ambientes)('Testar a IA ($nome)', (amb) => {
     expect((await g.como(g.gente.carla, 'POST', '/api/ia/testar', { mensagem: 'Quanto custa?' })).statusCode).toBe(403);
     const r = await g.como(g.gente.gerenteNorte, 'POST', '/api/ia/testar', { mensagem: 'Quanto custa?' });
     expect(r.statusCode).toBe(200);
-    expect(r.json()).toEqual({ resposta: 'Oi! A progressiva fica R$ 320.', acoes: [], recusou: false });
+    expect(r.json()).toEqual({ resposta: 'Oi! A progressiva fica linda em você.', acoes: [], recusou: false });
     const pedido = claude.recebidos[0]!;
     expect(systemDe(pedido)).toContain('Curto e caloroso.');
     // Simulação: sem ferramentas de escrita e sem instrução de copiloto.

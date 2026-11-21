@@ -35,6 +35,20 @@ export function descreverAcao(a: AcaoAgente): { tipo: string; descricao: string 
       return { tipo: a.tipo, descricao: `Marcaria a tag "${a.nome}"` };
     case 'agendou':
       return { tipo: a.tipo, descricao: `Agendaria ${a.agendamento.servico}` };
+    case 'remarcou':
+      return { tipo: a.tipo, descricao: `Remarcaria ${a.antigo.servico ?? 'o horário'} para ${a.agendamento.inicio.toISOString()}` };
+    case 'cancelou':
+      return { tipo: a.tipo, descricao: `Cancelaria ${a.antigo.servico ?? 'o horário'} (${a.motivo})` };
+    case 'mover_funil':
+      return { tipo: a.tipo, descricao: `Moveria para "${a.etapa}" em "${a.funil}"${a.perda ? ` (perda: ${a.perda.motivo})` : ''}` };
+    case 'vincular_produto':
+      return { tipo: a.tipo, descricao: `Ligaria "${a.nome}" ao lead` };
+    case 'tarefa_equipe':
+      return { tipo: a.tipo, descricao: `Criaria a tarefa "${a.titulo}" para a equipe` };
+    case 'retorno':
+      return { tipo: a.tipo, descricao: `Combinaria retorno (${a.motivo})` };
+    case 'enviar_arquivo':
+      return { tipo: a.tipo, descricao: `Mandaria "${a.nome}"` };
   }
 }
 

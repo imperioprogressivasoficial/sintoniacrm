@@ -108,7 +108,7 @@ export class ControleIa {
         }
         try {
           const r = await this.d.executor.executar(a, p);
-          return { texto: r.texto, acoes: r.acoes, recusou: r.recusou };
+          return { texto: r.texto, acoes: r.acoes, recusou: r.recusou, ...(r.interrompida ? { interrompida: true } : {}) };
         } catch (e) {
           if (e instanceof SemChave) {
             this.log(`Agente ${a.nome} sem chave; respondendo com a IA padrão`);

@@ -8,6 +8,11 @@ import { ClienteTrinks } from './agenda/trinks.js';
 import { AgendasDasUnidades, unidadesAgenda } from './agenda/unidades-agenda.js';
 import { AgendaExterna } from './agenda/agenda-externa.js';
 import { Agente } from './ai/agente.js';
+/* ia-completa: a IA faz tudo (CRM, remarcar/cancelar, ouvir/ver), com travas de segurança e a tela de estado */
+import { ArmazemTarefasIaMemoria, ArmazemTarefasIaPostgres, montarCrmIa } from './ai/crm-ia.js';
+import { GuardaCusto } from './ai/guarda.js';
+import { registrarEstadoIa } from './ai/estado-ia.js';
+import { PercepcaoIa } from './app/percepcao.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
 import { ArmazemMemoria, ArmazemPostgres, Conexoes } from './conexoes/conexoes.js';
@@ -215,7 +220,13 @@ const planos = new Planos({
   fundadoras: (process.env.SINTONIA_PLANO_FUNDADOR ?? 'imperio').split(',').map((x) => x.trim()).filter(Boolean),
   log,
 });
-anotarUso = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
+/* ia-completa: limite de uso da IA por conversa por dia (SINTONIA_IA_LIMITE_CONVERSA; 0 = sem limite). */
+const guardaCusto = new GuardaCusto(Number(process.env.SINTONIA_IA_LIMITE_CONVERSA ?? 600_000) || 0);
+const anotarPlano = anotadorDe(planos, cfg.SINTONIA_EMPRESA_ID);
+anotarUso = (r) => {
+  anotarPlano(r);
+  guardaCusto.anotar(r.conversaId, r.uso);
+};
 porteiroIa = porteiroDe(planos, cfg.SINTONIA_EMPRESA_ID);
 
 // Empresa (nome e configuração da IA), tags e base de conhecimento: no banco, valendo sem reiniciar.
@@ -231,6 +242,8 @@ const agente = new Agente(claude, agendas, () => base.texto(), {
   esforco: cfg.SINTONIA_ESFORCO,
   /* produtos-lead: a IA sabe o que a equipe vinculou ao lead */
   produtosDoLead: (c) => produtosLead.textoParaIa(c),
+  /* ia-completa: pipelines, produtos e arquivos (lidos na hora; criados mais abaixo) */
+  crm: () => crmIa,
 });
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
@@ -395,6 +408,25 @@ const funis = new Funis({
 });
 /* perdas-saude: cada ida para uma etapa de perda fica registrada (com o motivo pedido na tela) */
 const perdas = new Perdas({ armazem: pool ? new ArmazemPerdasPostgres(pool) : new ArmazemPerdasMemoria(repo), funis, empresaId: cfg.SINTONIA_EMPRESA_ID, log });
+/* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços.
+   ia-completa: criados aqui (antes eram mais abaixo) porque a IA também lê produtos e liga produto ao lead. */
+const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
+/* produtos-lead: produtos e serviços vinculados ao lead (ficha, cartão do Pipeline, filtro, exportar, IA e Análises) */
+const produtosLead = new ProdutosLead({ armazem: pool ? new ArmazemProdutosLeadPostgres(pool) : new ArmazemProdutosLeadMemoria(), cadastro: armazemCadastro, valor: funis });
+/* ia-completa: o que a IA enxerga e mexe no CRM (pipelines, motivos de perda, produtos, tarefas da equipe, arquivos). */
+const crmIa = montarCrmIa({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  funis,
+  perdas,
+  cadastro: armazemCadastro,
+  produtosLead,
+  tarefas: pool ? new ArmazemTarefasIaPostgres(pool) : new ArmazemTarefasIaMemoria(),
+  responsavelPadrao: async () => {
+    const todos = (await contas.listarUsuarios(cfg.SINTONIA_EMPRESA_ID)).filter((u) => u.ativo);
+    const g = todos.find((u) => u.papel === 'gerente') ?? todos.find((u) => u.papel === 'direcao') ?? todos.find((u) => u.papel === 'admin');
+    return g ? { id: g.id, nome: g.nome } : undefined;
+  },
+});
 // E-mail marketing (só com banco). EMAIL_TRANSPORTE=arquivo:/pasta grava os e-mails em arquivos em vez de enviar (desenvolvimento).
 const transporteEmail = process.env.EMAIL_TRANSPORTE?.startsWith('arquivo:') ? transporteArquivo(process.env.EMAIL_TRANSPORTE.slice('arquivo:'.length)) : transporteReal;
 const email = pool ? new EmailMarketing({ pool, cofre, empresaId: cfg.SINTONIA_EMPRESA_ID, transporte: transporteEmail, urlPublica: process.env.SINTONIA_URL_PUBLICA, log }) : undefined;
@@ -529,6 +561,7 @@ const agentesIa = montarAgentesIa({
   tags: tagsParaAgentes(tags, repo),
   moverEtapa: moverEtapaPara({ funis, armazemTags, empresaId: cfg.SINTONIA_EMPRESA_ID, repo, comConversa: (id, fn) => sintonia.comConversa(id, fn) }),
   modeloComandos: cfg.SINTONIA_MODELO,
+  crm: () => crmIa /* ia-completa */,
   log,
 });
 // Correções da equipe às sugestões viram aprendizados para a gestão aprovar.
@@ -537,8 +570,17 @@ observarEventos(repo, (e) => void agentesIa.controle.aoEvento(e));
 /* robustez: fila própria da IA (src/app/fila-ia.ts): a mensagem aparece na tela na hora e a IA pensa por trás,
    com SINTONIA_PARALELO_IA conversas ao mesmo tempo. SINTONIA_FILA_IA=0 volta ao jeito antigo (pensa dentro da entrada). */
 const filaIa = process.env.SINTONIA_FILA_IA === '0' ? undefined : new FilaIa({ pensar: (id) => sintonia.pensar(id), paralelo: cfg.SINTONIA_PARALELO_IA, log });
+/* ia-completa: transcrição (usada pela tela da conversa e pela IA, que ouve os áudios antes de responder). */
+const transcricoes = pool ? new TranscricoesPostgres(pool) : new TranscricoesMemoria();
+const transcritor = new TranscritorComReserva(cfg.WHISPER_URL ? new TranscritorLocal(cfg.WHISPER_URL) : null, new TranscritorOpenAI(() => conexoes.get('openaiApiKey')), () => Boolean(conexoes.get('openaiApiKey')));
+const transcricaoLigada = () => Boolean(cfg.WHISPER_URL || conexoes.get('openaiApiKey'));
 const sintonia = new Sintonia({
   filaIa,
+  /* ia-completa: junta mensagens seguidas (só com a fila da IA, que pensa por trás); ouve áudio e vê foto; CRM; custo. */
+  juntarMs: filaIa ? Number(process.env.SINTONIA_JUNTAR_MS ?? 6000) : 0,
+  percepcao: new PercepcaoIa({ repo, transcricoes, transcritor, transcricaoLigada, log }),
+  crmIa,
+  guardaCusto,
   rastreio,
   ganchos,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
@@ -835,6 +877,19 @@ agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids), perdas });
 registrarPerdas(app, { perdas }); /* perdas-saude */
+/* ia-completa: "O que a IA faz" (Automações › Agente de IA): ferramentas por agente e o que falta para funcionar. */
+registrarEstadoIa(app, {
+  chaves: () => ({ anthropic: Boolean(conexoes.get('anthropicApiKey')), openai: Boolean(conexoes.get('openaiApiKey')) }),
+  pausadaAte: () => sintonia.iaPausadaAte(),
+  agendas,
+  whatsapp: () => idsUnidades().map((u) => ({ unidade: u, conectado: numeros.some((n) => n.unidade === u && ehReal(n)) })),
+  configIa: () => empresa.configIa(),
+  controle: () => agentesIa.armazem.controle(cfg.SINTONIA_EMPRESA_ID),
+  agentes: () => agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID),
+  transcricao: transcricaoLigada,
+  crm: true,
+  limiteConversaDia: guardaCusto.limitePorConversaDia,
+});
 registrarBots(app, { repo, bots });
 // Relatórios, Leads (importar/exportar/duplicatas) e Agenda.
 const extras = montarExtras({
@@ -858,9 +913,6 @@ const agendaExterna = new AgendaExterna({ roteador: agendas, log });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas, agendaExterna });
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
 /* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços */
-const armazemCadastro = pool ? new ArmazemCadastroPostgres(pool) : new ArmazemCadastroMemoria(async () => (await empresa.dados()).nome);
-/* produtos-lead: produtos e serviços vinculados ao lead (ficha, cartão do Pipeline, filtro, exportar, IA e Análises) */
-const produtosLead = new ProdutosLead({ armazem: pool ? new ArmazemProdutosLeadPostgres(pool) : new ArmazemProdutosLeadMemoria(), cadastro: armazemCadastro, valor: funis });
 registrarProdutosLead(app, { repo, servico: produtosLead, empresaId: cfg.SINTONIA_EMPRESA_ID });
 funis.ligarFiltros({
   conversasComProdutos: (f) => produtosLead.conversasComFiltro(cfg.SINTONIA_EMPRESA_ID, f),
@@ -1033,9 +1085,9 @@ registrarConversa(app, {
   sintonia,
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   respostas: armazemRespostas,
-  transcricoes: pool ? new TranscricoesPostgres(pool) : new TranscricoesMemoria(),
-  transcritor: new TranscritorComReserva(cfg.WHISPER_URL ? new TranscritorLocal(cfg.WHISPER_URL) : null, new TranscritorOpenAI(() => conexoes.get('openaiApiKey')), () => Boolean(conexoes.get('openaiApiKey'))),
-  transcricaoLigada: () => Boolean(cfg.WHISPER_URL || conexoes.get('openaiApiKey')),
+  transcricoes,
+  transcritor,
+  transcricaoLigada,
   ia: { claude, modelo: cfg.SINTONIA_MODELO, base: () => base.texto(), ligada: () => iaLigada },
   // Envia pelo número real da unidade; o de teste só vale enquanto nenhum número real estiver conectado.
   canalDa: canalDaUnidade,
