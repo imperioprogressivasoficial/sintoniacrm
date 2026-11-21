@@ -1081,6 +1081,12 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   .lt-aviso { box-shadow: none !important; }
   .topo-grupo::after { display: none !important; }
   .trilho .nav[aria-current="page"] { box-shadow: none !important; }
+  /* bolinhas menores (dono 21/11): cerca de 4 a 5 px a menos em todo lugar, celular e computador */
+  html .badge { min-width: 16px !important; height: 16px !important; font-size: 10.5px !important; padding: 0 5px !important; }
+  html .contador { min-width: 17px !important; height: 17px !important; font-size: 10.5px !important; padding: 0 5px !important; }
+  html .lt-qtd { min-width: 17px !important; height: 17px !important; font-size: 10.5px !important; padding: 0 5px !important; }
+  html .tp-qtd, html .cv-aba i, html .nt-bolinha { min-width: 15px !important; height: 15px !important; font-size: 9.5px !important; padding: 0 4px !important; }
+  @media (max-width: 760px) { html .badge { min-width: 17px !important; height: 17px !important; font-size: 11px !important; } }
 </style>
 <style id="cfg-capa-css">
   /* cfg-capa (dono 21/11): Configurações no celular = capa azul-marinho + busca + atalhos redondos + áreas */
