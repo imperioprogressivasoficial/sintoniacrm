@@ -818,6 +818,26 @@
   .atende.atende-ia.com-foto { overflow: hidden; background: none; } .atende.atende-ia.com-foto img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
   [data-tema="escuro"] .atende { color: #8fd0ff; } [data-tema="escuro"] .atende.atende-eu { color: #fff; } [data-tema="escuro"] .atende.atende-ia { color: var(--marca-menta); }
   .item .l1 .nome { min-width: 0; flex: 0 1 auto; } .item .l1 .hora { margin-left: auto; }
+  /* foto-atende: coluna da direita da linha da lista (modelo 2 "Abaixo do tempo", pedido do dono 21/11).
+     Tempo de espera em cima; embaixo, na mesma linha, a fotinho de 18 px de quem atende e o horário; a bolinha por último. */
+  #itens .item .corpo:has(> .lado) { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr; column-gap: 10px; row-gap: 2px; align-content: center; }
+  #itens .item .corpo > .l1 { grid-column: 1; grid-row: 1; }
+  #itens .item .corpo > .l2 { grid-column: 1; grid-row: 2; }
+  #itens .item .corpo > .lado { grid-column: 2; grid-row: 1 / span 2; align-self: start; display: grid; justify-items: end; align-content: start; gap: 3px; min-width: 0; }
+  #itens .item .lado > :first-child { min-height: 25px; } /* a 1ª linha da coluna fica na altura do nome */
+  /* só foto + horário (sem espera, sem bolinha): a coluna ocupa só a linha do nome e a prévia usa a largura toda */
+  #itens .item .corpo > .lado.so-fila { grid-row: 1; }
+  #itens .item .corpo:has(> .lado.so-fila) > .l2 { grid-column: 1 / -1; }
+  #itens .item .lado .fila, #itens .item .lado .lado-pe { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  #itens .item .lado .ts-selo { margin-left: 0; }
+  #itens .item .lado .fila .hora, #itens .item .lado .fila .ts-chegou { margin: 0; text-align: right; }
+  #itens .item .lado .badge { margin: 0; }
+  #itens .item .lado .cx-sino { margin-left: 0; }
+  #itens .item .lado .atende { width: 18px; min-width: 18px; height: 18px; padding: 0; margin: 0; font-size: 7.5px; letter-spacing: 0;
+    box-shadow: 0 0 0 1.5px var(--fundo), inset 0 0 0 1px color-mix(in srgb, var(--marca-azul) 35%, transparent); }
+  #itens .item .lado .atende.com-foto { overflow: hidden; background: var(--fundo); box-shadow: 0 0 0 1.5px var(--fundo); }
+  #itens .item .lado .atende > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+  #itens .item .lado .atende.atende-eu:not(.com-foto) { box-shadow: 0 0 0 1.5px var(--fundo); }
   .lt-raio svg { color: #f5b800 !important; filter: drop-shadow(0 0 6px rgba(245,184,0,.55)); }
   .link-campos { all: unset; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--marca-azul); padding: 4px 2px 10px; }
   [data-tema="escuro"] .link-campos { color: var(--marca-menta); }
@@ -1962,23 +1982,34 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       // Item limpo: foto, nome + ícone de origem, prévia, hora, não lidas e quem atende (sem etiquetas escritas).
-      const l2 = el('div', { class: 'l2' }, previa, quemAtende(c));
+      const l2 = el('div', { class: 'l2' }, previa); /* foto-atende: quem atende foi para a coluna da direita (.lado) */
       /* radar: no Radar, o que está vigiando (ou o que aconteceu); no Esperando, há quanto tempo. */
       if (estado.filtro === 'radar') { const m = window.SintoniaTelas?.radar?.etiqueta(c.id); if (m) l2.append(m); }
       /* espera-selo: o tempo esperando vira cronômetro no lugar do horário (abaixo); aqui fica o horário em que chegou. */
       const tsHora = horaLista(u ? u.em : c.atualizadaEm); const tsSelo = window.SintoniaTelas?.esperaSelo;
-      if (tsSelo) { const ch = tsSelo.chegou(c, tsHora); if (ch) l2.append(ch); }
-      else if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
-      if (c.silenciada && window.SintoniaConversaExtra) l2.append(window.SintoniaConversaExtra.sino(c)); /* conversa-extra: sino cortado */
-      if (nova) l2.append(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
+      /* foto-atende (modelo 2 "Abaixo do tempo", pedido do dono 21/11): coluna da direita com o tempo de espera em cima;
+         embaixo, na mesma linha, a fotinho de quem atende e o horário; a bolinha de não lidas por último.
+         Sem tempo de espera, a linha foto + horário fica no topo. */
+      let ladoTopo = null; let ladoHora;
+      if (tsSelo) { const h = tsSelo.hora(c, tsHora); const ch = tsSelo.chegou(c, tsHora); if (ch) { ladoTopo = h; ladoHora = ch; } else ladoHora = h; }
+      else {
+        ladoHora = el('span', { class: 'hora' + (nova ? ' nova' : ''), text: tsHora });
+        if (estado.filtro === 'aguardando' && esperando(c)) l2.append(el('em', { class: 'motivo-radar', text: esperaTxt(c) }));
+      }
+      const lado = el('div', { class: 'lado' }, ...(ladoTopo ? [ladoTopo] : []), el('span', { class: 'fila' }, quemAtende(c), ladoHora));
+      const ladoPe = [];
+      if (c.silenciada && window.SintoniaConversaExtra) ladoPe.push(window.SintoniaConversaExtra.sino(c)); /* conversa-extra: sino cortado */
+      if (nova) ladoPe.push(el('span', { class: 'badge' + (esperando(c) ? '' : ' cg-ponto'), text: esperando(c) ? '1' : '', 'aria-label': 'Não lida' })); /* conversas-gestos: marcada à mão = só a bolinha */
+      if (ladoPe.length) lado.append(el('span', { class: 'lado-pe' }, ...ladoPe));
+      if (lado.childElementCount === 1) lado.classList.add('so-fila'); /* só foto + horário: a prévia usa a largura toda */
       const sel = estado.selecao; const marcada = !!sel?.has(c.id);
       const linha = (el('button', { class: 'item' + (sel ? ' selecionando' : ''), 'data-id': c.id, 'aria-current': String(!sel && c.id === estado.aberta), 'aria-pressed': sel ? String(marcada) : undefined,
         onclick: () => { if (!sel) return abrir(c.id); marcada ? sel.delete(c.id) : sel.add(c.id); atualizarSelecao(); desenharLista(); } },
         ...(sel ? [el('i', { class: 'marca-sel' + (marcada ? ' on' : '') })] : []),
         avatarDaLista(c),
         el('div', { class: 'corpo' },
-          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : '', tsSelo ? tsSelo.hora(c, tsHora) : el('span', { class: 'hora' + (nova ? ' nova' : ''), text: tsHora })),
-          l2)));
+          el('div', { class: 'l1' }, el('span', { class: 'nome', text: nomeDe(c) }), origemConhecida(c) ? window.SintoniaRastreio.iconeEl(c.origem?.icone && c.origem.icone !== 'desconhecido' ? c.origem : c.id) : ''),
+          l2, lado)));
       linhasFz.set(c.id, { ass, el: linha }); desejadas.push(linha);
     }
     for (const id of [...linhasFz.keys()]) if (!vistas.has(id)) linhasFz.delete(id);
