@@ -6,6 +6,7 @@ import { Sintonia } from '../src/app/sintonia.js';
 import type { CanalWhatsApp } from '../src/channels/tipos.js';
 import { criarServidor } from '../src/server.js';
 import { RepositorioMemoria } from '../src/store/repositorio.js';
+import { ArmazemPerfisMemoria, registrarConta } from '../src/conta/conta.js';
 import { escolherCompressao } from '../src/web/compressao.js';
 import { mesmaEtag } from '../src/web/paginas.js';
 
@@ -22,6 +23,7 @@ async function montar() {
   const sintonia = new Sintonia({ empresaId: 'imperio', repo, numeros: [{ canalId: 'imperio-norte', unidade: 'norte', canal: new CanalFalso() }], agente: { executar: async () => ({ texto: '', acoes: [], recusou: false }) } });
   await contas.criarUsuario({ empresaId: 'imperio', nome: 'Carla Lima', email: 'carla@imperio.com', papel: 'admin', unidades: ['norte'], senhaHash: await gerarHash('Imperio2026xyz') });
   const app = criarServidor({ sintonia, repo, auth: { contas, agora: () => new Date('2026-11-20T15:00:00Z'), duracaoHoras: 12 } });
+  registrarConta(app, { contas, perfis: new ArmazemPerfisMemoria() });
   const r = await app.inject({ method: 'POST', url: '/api/auth/entrar', payload: { email: 'carla@imperio.com', senha: 'Imperio2026xyz' } });
   const cookie = String(r.headers['set-cookie']).split(';')[0]!;
   return { app, cookie, sintonia };
@@ -95,3 +97,31 @@ describe('fluidez2: guardar as telas no aparelho', () => {
     expect(mesmaEtag(undefined, '"a"')).toBe(false);
   });
 });
+
+describe('fluidez2: Ocultar dados dos clientes', () => {
+  it('a escolha fica na conta (preferencias.ocultarDados), começa desligada', async () => {
+    const { app, cookie } = await montar();
+    const como = (method: 'GET' | 'PATCH', payload?: unknown) => app.inject({ method, url: '/api/conta', headers: { cookie }, ...(payload ? { payload } : {}) });
+    const c0 = await como('GET');
+    expect(c0.statusCode).toBe(200);
+    expect(c0.json().preferencias.ocultarDados).toBe(false);
+    expect((await como('PATCH', { preferencias: { ocultarDados: 'sim' } })).statusCode).toBe(400);
+    expect((await como('PATCH', { preferencias: { ocultarDados: true } })).json().preferencias).toMatchObject({ ocultarDados: true, densidade: 'confortavel' });
+    expect((await como('PATCH', { preferencias: { densidade: 'compacta' } })).json().preferencias).toMatchObject({ ocultarDados: true, densidade: 'compacta' });
+    expect((await como('GET')).json().preferencias.ocultarDados).toBe(true);
+  });
+
+  it('o app carrega o modo privacidade e a ordem de chegada antes de tudo, e tem o atalho no ⋯ das Conversas', async () => {
+    const { app, cookie } = await montar();
+    const html = (await app.inject({ url: '/app', headers: { cookie } })).body;
+    const pos = (x: string) => html.indexOf(x);
+    expect(pos('/telas/prioridade.js?v=')).toBeGreaterThan(0);
+    expect(pos('/telas/privacidade.js?v=')).toBeGreaterThan(pos('/telas/fone.js?v='));
+    expect(pos('/telas/privacidade.js?v=')).toBeLessThan(pos('</head>'));
+    expect(html).toContain('data-acao="privacidade"');
+    const js = await app.inject({ url: '/telas/privacidade.js' });
+    expect(js.statusCode).toBe(200);
+    expect(js.body).toContain('html.privacidade');
+  });
+});
+

@@ -73,6 +73,8 @@ export const Preferencias = z
     /* capa-perfil */
     capa: z.enum(OPCOES_CAPA).catch(CAPA_PADRAO).default(CAPA_PADRAO),
     atalhos: ListaAtalhos.catch([...ATALHOS_PADRAO]).default([...ATALHOS_PADRAO]),
+    /** fluidez2: "Ocultar dados dos clientes" (nomes, números e fotos desfocados para mostrar a tela). */
+    ocultarDados: z.boolean().default(false).catch(false),
   })
   .prefault({});
 export type Preferencias = z.infer<typeof Preferencias>;
@@ -228,6 +230,7 @@ const PerfilCorpo = z.object({
       modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
       capa: z.enum(OPCOES_CAPA).optional(), // capa-perfil
       atalhos: ListaAtalhos.optional(), // capa-perfil
+      ocultarDados: z.boolean().optional(), // fluidez2: modo privacidade
       papelParede: z
         .object({
           claro: z.object({ cor: z.enum(CORES_PAPEL).optional(), desenho: z.boolean().optional() }).optional(),
