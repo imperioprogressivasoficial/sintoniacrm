@@ -1,6 +1,6 @@
 import type pg from 'pg';
 import { Sintonia } from '../src/app/sintonia.js';
-import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, type ArmazemAutomacoes } from '../src/automacoes/automacoes.js';
+import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, type ArmazemAutomacoes, type OpcoesAutomacoes } from '../src/automacoes/automacoes.js';
 import type { Contas, Papel, Usuario } from '../src/auth/contas.js';
 import { gerarHash } from '../src/auth/senha.js';
 import type { CanalWhatsApp } from '../src/channels/tipos.js';
@@ -40,7 +40,7 @@ interface Base {
 }
 
 /** Uma "instância do servidor": Sintonia, funis, automações e a API, sobre o mesmo banco. */
-function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNps = false, comPerdas = false) {
+function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNps = false, comPerdas = false, extrasAuto: Partial<OpcoesAutomacoes> = {}) {
   const agora = () => b.relogio.t;
   const canal = (tipo: CanalWhatsApp['tipo']): CanalWhatsApp => ({
     tipo,
@@ -59,7 +59,8 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNp
   let nps: Nps | undefined;
   const automacoes = new Automacoes({
     armazem: armazens.automacoes, repo: b.repo, empresaId: 'imperio', sintonia: () => sintonia, funis, tags, contas: b.contas, agora, maxEncadeamento,
-    ...(comNps ? { variaveis: () => nps!.variaveis() } : {}),
+    ...(comNps ? { variaveis: () => nps!.variaveis(), nps: () => nps } : {}),
+    ...extrasAuto, // etapa-entrada: tarefas e rodízio de mentira nos testes
   });
   const ganchosBase = ligarFunis({ tags, funis, automacoes });
   if (comNps) nps = new Nps({ empresaId: 'imperio', armazem: armazens.nps, repo: b.repo, sintonia: () => sintonia, automacoes: () => automacoes, agora });
@@ -98,7 +99,7 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNp
   return { sintonia, funis, automacoes, tags, app, nps, perdas };
 }
 
-export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean; perdas?: boolean } = {}) {
+export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean; perdas?: boolean; automacoes?: Partial<OpcoesAutomacoes> } = {}) {
   const { repo, contas, pool } = await amb.criar();
   const relogio = { t: opcoes.inicio ?? quinta(14) };
   const armazemTags = new ArmazemTagsMemoria(() => repo.listarConversas());
@@ -113,7 +114,7 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
   if (pool && opcoes.perdas) await pool.query('truncate sintonia.perdas, sintonia.perdas_config');
   if (pool && opcoes.nps) await pool.query('truncate sintonia.nps_config, sintonia.atendimentos_finalizados, sintonia.nps_pesquisas');
   const agente = opcoes.agente ?? new AgenteFalso();
-  let atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas);
+  let atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas, opcoes.automacoes);
   const sistema = await atual.funis.garantirSistema();
   const etapasSistema = new Map((await atual.funis.etapas(sistema.id)).map((e) => [e.chaveSistema!, e.id]));
 
@@ -199,7 +200,7 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     },
     /** "Reinício": nova Sintonia, novos funis e automações lendo do mesmo banco. */
     reiniciar() {
-      atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas);
+      atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas, opcoes.automacoes);
     },
     como,
     conversa,

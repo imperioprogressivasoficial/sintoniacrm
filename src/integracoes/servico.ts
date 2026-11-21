@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Sintonia } from '../app/sintonia.js';
 import type { Contas } from '../auth/contas.js';
 import { aplicarEdicao, contatoVazio, EdicaoContato, type ArmazemContatos, type Contato } from '../contatos/contatos.js';
-import { ETAPAS, type Conversa, type ModoAtendimento, type UnidadeId } from '../domain.js';
+import { ETAPAS, naEtapa, type Conversa, type ModoAtendimento, type UnidadeId } from '../domain.js';
 import type { Funis } from '../funis/funis.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { horariosLivres, instante, type LinkReuniao } from '../reunioes/reunioes.js';
@@ -297,6 +297,15 @@ export class ServicoApi {
     const telefone = this.telefoneValido(d.telefone);
     const { telefone: _t, unidade, ...edicao } = d;
     const r = await this.conversaDoNumero(ctx, telefone, d.nome ?? undefined, unidade);
+    if (r.nova) {
+      // etapa-entrada: lead criado pela API nasce na "Entrada de leads" (e já aparece no funil do sistema).
+      const c = (await this.o.repo.buscarConversa(r.conversa.id)) ?? r.conversa;
+      if (c.etapa === 'novo_lead') {
+        c.etapa = 'entrada';
+        await this.o.repo.salvarConversa(c);
+      }
+      await this.o.funis?.(ctx.empresaId)?.garantirNoSistema(c).catch(() => undefined);
+    }
     if (Object.values(edicao).some((v) => v !== undefined)) await this.salvarFicha(ctx, telefone, r.conversa.nome, edicao);
     return { criado: r.nova, contato: await this.contato(ctx, telefone) };
   }
@@ -330,7 +339,7 @@ export class ServicoApi {
     const tel = q.telefone ? q.telefone.replace(/\D/g, '') : '';
     const desde = q.atualizadaDesde ? new Date(q.atualizadaDesde) : undefined;
     const lista = (await this.conversasDa(ctx)).filter(
-      (c) => (!q.unidade || c.unidade === q.unidade) && (!q.etapa || c.etapa === q.etapa) && (!tel || c.telefone.includes(tel)) && (!desde || c.atualizadaEm >= desde),
+      (c) => (!q.unidade || c.unidade === q.unidade) && (!q.etapa || naEtapa(c.etapa, q.etapa)) && (!tel || c.telefone.includes(tel)) && (!desde || c.atualizadaEm >= desde),
     );
     const p = paginar(lista, (c) => c.atualizadaEm, (c) => c.id, q.limite, q.cursor);
     return { dados: await this.comTags(ctx, p.dados), proximoCursor: p.proximoCursor };

@@ -90,7 +90,7 @@ async function montar(respostas: Bloco[][], extra: { pool?: import('pg').Pool; s
 describe('Serena faz coisas no CRM (prévia + Salvar)', () => {
   it('monta um fluxo de automação com ids reais: consulta, mostra o cartão e não salva nada', async () => {
     const m = await montar([]);
-    const [lead, proposta] = m.funil.etapas as [{ id: string; nome: string }, { id: string; nome: string }];
+    const [lead, proposta] = m.funil.etapas.filter((e) => e.nome !== 'Entrada de leads') as [{ id: string; nome: string }, { id: string; nome: string }];
     const fluxo = {
       nome: 'Boas-vindas do lead',
       gatilho: { tipo: 'entrou_na_etapa', etapaId: lead.id },

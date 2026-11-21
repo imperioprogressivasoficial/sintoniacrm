@@ -229,6 +229,14 @@ export class Rodizio {
     else if (e.tipo === 'passou_para_humano') this.depois(e.conversaId, 'ia');
   }
 
+  /**
+   * etapa-entrada: passo "Distribuir no rodízio" das automações. Quem chama está com a trava da conversa: fica na fila
+   * e roda depois. Vale mesmo com a IA atendendo (a etapa pediu uma pessoa).
+   */
+  pedir(conversaId: string): void {
+    this.depois(conversaId, 'ia');
+  }
+
   private depois(conversaId: string, origem: 'nova' | 'ia'): void {
     this.fila = this.fila
       .then(() => this.distribuir(conversaId, origem))

@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { Cofre } from '../conexoes/cofre.js';
-import { ETAPAS, type Conversa } from '../domain.js';
+import { ETAPAS, expandirEtapas, type Conversa } from '../domain.js';
 import { existeUnidade, unidadeDe, unidadesDa, zIdUnidade } from '../unidades.js';
 import { bahia, partesBahia } from '../util/tempo.js';
 import { Conteudo, montarEmail, trocarVariaveis, type Variaveis } from './blocos.js';
@@ -376,7 +376,7 @@ export class EmailMarketing {
     const add = (v: unknown) => `$${params.push(v)}`;
     const naConversa: string[] = [];
     if (p.unidades.length) naConversa.push(`c.unidade = any(${add(p.unidades)}::text[])`);
-    if (p.etapas.length) naConversa.push(`c.etapa = any(${add(p.etapas)}::text[])`);
+    if (p.etapas.length) naConversa.push(`c.etapa = any(${add(expandirEtapas(p.etapas))}::text[])`); // etapa-entrada
     if (p.tags.length) naConversa.push(`exists (select 1 from sintonia.conversa_tags t where t.conversa_id = c.id and t.tag_id = any(${add(p.tags)}::uuid[]))`);
     const exigeConversa = naConversa.length > 0;
     const filtros: string[] = [`ct.empresa_id = $1`, `btrim(ct.email) ~* ${add(EMAIL_VALIDO)}`, `not exists (select 1 from sintonia.email_supressoes s where s.empresa_id = $1 and s.email = lower(btrim(ct.email)))`];

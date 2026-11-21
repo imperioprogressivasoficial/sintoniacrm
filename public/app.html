@@ -1684,7 +1684,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
 addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 (() => {
   const $ = (id) => document.getElementById(id);
-  const ETAPAS = [['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
+  /* etapa-entrada: a "Entrada de leads" vem primeiro (filtros e escolha de etapa) */
+  const ETAPAS = [['entrada','Entrada de leads'],['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
   const NOME_ETAPA = Object.fromEntries(ETAPAS);
   /* unidades: nomes das unidades vêm do cadastro (Empresa › Unidades, /api/unidades). Um único ponto para o app
      inteiro: UNIDADE[id] = nome e UNIDADES = lista na ordem do cadastro ({ id, nome, ativa }). As telas usam
@@ -3768,6 +3769,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/funil-modos.js" defer></script><!-- pipeline-modos: Foco · Lista · Colunas no computador -->
 <script src="/telas/automacoes.js" defer></script>
 <script src="/telas/bot.js" defer></script>
+<script src="/telas/etapa-acoes.js" defer></script><!-- etapa-entrada: Entrada de leads (cadeado) e a caixa de automações da etapa -->
 <script src="/telas/relatorios.js" defer></script>
 <script src="/telas/desempenho.js" defer></script>
 <script src="/telas/analises.js" defer></script><!-- analises -->

@@ -629,7 +629,16 @@
       acao.addEventListener('change', async () => {
         if (await ctx.tentar(() => s.ui.api(`/api/funis/${f.id}`, { method: 'PATCH', body: JSON.stringify({ acaoPrincipal: acao.value }) }), 'Botão principal salvo ✓')) ctx.recarregar();
       });
+      /* etapa-entrada: a "Entrada de leads" é fixa (sem renomear, recolorir, mover ou apagar) */
+      const Fixa = window.SintoniaEtapaFixa;
+      const fixa = (col) => Boolean(Fixa && Fixa.eh(col.etapa));
       const linhas = cols.map((col, i) => {
+        if (fixa(col)) {
+          const l = el('div', { class: 'ft-et ft-et-fixa' }, el('span', { class: 'ft-cor-bt', 'aria-hidden': 'true', style: 'cursor:default' }),
+            el('span', { style: 'flex:1;min-width:0;display:flex;align-items:center;font-weight:600' }, el('span', { text: col.etapa.nome }), Fixa.cadeado()), el('small', { text: `${col.total}` }));
+          l.style.setProperty('--cor', col.etapa.cor);
+          return l;
+        }
         const inp = el('input', { value: col.etapa.nome, maxlength: '30', 'aria-label': `Nome da etapa ${col.etapa.nome}` });
         inp.addEventListener('change', async () => {
           const v = inp.value.replace(/\s+/g, ' ').trim();
@@ -640,7 +649,7 @@
         const linha = el('div', { class: 'ft-et' },
           el('button', { class: 'ft-cor-bt', type: 'button', title: 'Mudar a cor', 'aria-label': `Mudar a cor de ${col.etapa.nome}`, onclick: () => ctx.editarEtapa(col) }),
           inp, el('small', { text: `${col.total}` }),
-          ic(IC.cima, 'Subir (mais à esquerda)', () => ctx.reordenar(col, -1), i === 0),
+          ic(IC.cima, 'Subir (mais à esquerda)', () => ctx.reordenar(col, -1), i === 0 || fixa(cols[i - 1])),
           ic(IC.baixo, 'Descer (mais à direita)', () => ctx.reordenar(col, 1), i === cols.length - 1),
           col.etapa.chaveSistema ? null : ic(IC.lixo, 'Apagar etapa', () => ctx.apagarEtapa(col), false, true));
         linha.style.setProperty('--cor', col.etapa.cor);
@@ -780,7 +789,7 @@
     const quando = (d) => (d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—');
     const celula = (k, x) => {
       const { c: cartao, col } = x;
-      if (k === 'etapa') { const e = el('span', { class: 'ft-etapa' }, el('i'), el('span', { text: col.etapa.nome }), miniPassos(ctx, col)); e.style.setProperty('--cor', col.etapa.cor); return e; }
+      if (k === 'etapa') { const e = el('span', { class: 'ft-etapa' }, el('i'), el('span', { text: col.etapa.nome }), window.SintoniaEtapaFixa?.eh(col.etapa) ? window.SintoniaEtapaFixa.cadeado() : null, miniPassos(ctx, col)); e.style.setProperty('--cor', col.etapa.cor); return e; } // etapa-entrada: cadeado
       if (k === 'valor') return el('span', { style: 'font-weight:750;font-variant-numeric:tabular-nums', text: cartao.valor != null ? ctx.dinheiro(cartao.valor) : '—' });
       if (k === 'responsavel') return cartao.modo === 'ia' ? el('span', { style: 'display:inline-flex;align-items:center;gap:6px' }, window.SintoniaSerenaSelo ? window.SintoniaSerenaSelo({ tam: 20 }) : null, document.createTextNode(window.SintoniaSerenaSelo ? 'Serena (IA)' : 'IA')) /* conversa-extra */ : el('span', { text: cartao.dona?.nome || 'Sem responsável' });
       if (k === 'origem') return ctx.origemEl(cartao);

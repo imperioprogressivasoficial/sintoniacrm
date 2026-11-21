@@ -428,6 +428,13 @@ export function descreverPassos(passos: Passo[], nomes: Map<string, string>): No
         return { tipo: p.tipo, titulo: 'Entrar numa transmissão' };
       case 'enviar_email':
         return { tipo: p.tipo, titulo: 'Enviar e-mail' };
+      /* etapa-entrada */
+      case 'criar_tarefa':
+        return { tipo: p.tipo, titulo: 'Tarefa para a equipe', detalhe: `${p.titulo} · ${p.em_minutos ? `prazo de ${tempo(p.em_minutos)}` : 'para agora'}` };
+      case 'distribuir_rodizio':
+        return { tipo: p.tipo, titulo: 'Distribuir no rodízio' };
+      case 'pesquisa_nps':
+        return { tipo: p.tipo, titulo: 'Pesquisa de satisfação' };
       case 'condicao': {
         const se =
           p.se === 'cliente_respondeu' ? 'O contato respondeu?' : p.se === 'tem_tag' ? `Tem a etiqueta ${n(p.valor ?? '')}?` : p.se === 'modo' ? `Quem atende é ${MODO[p.valor as keyof typeof MODO] ?? p.valor}?` : 'Está no horário da loja?';

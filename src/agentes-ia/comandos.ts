@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import type { ClienteClaudeParse } from '../ai/copiloto.js';
-import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento } from '../domain.js';
+import { ETAPAS, expandirEtapas, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { bahia, DIA, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemAgentesIa } from './armazem.js';
@@ -226,7 +226,7 @@ Se o pedido pedir algo fora disso (apagar, enviar mensagem, mudar preço), devol
     const agora = this.agora();
     let lista = (await this.d.repo.listarConversas()).filter((c) => c.empresaId === this.d.empresaId && visivel(c));
     if (f.unidade) lista = lista.filter((c) => c.unidade === f.unidade);
-    if (f.etapas.length) lista = lista.filter((c) => f.etapas.includes(c.etapa));
+    if (f.etapas.length) lista = lista.filter((c) => expandirEtapas(f.etapas).includes(c.etapa)); // etapa-entrada
     if (f.modo) lista = lista.filter((c) => c.modo === f.modo);
     if (f.naoAgendou) lista = lista.filter((c) => c.etapa !== 'agendada' && c.etapa !== 'compareceu');
     const motivo = new Map<string, string[]>();

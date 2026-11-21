@@ -121,7 +121,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /* clientes-tags: a tela agora mora em Clientes (abas Importar e Exportar); `embutido` tira o título e as abas daqui. */
   const s = { embutido: false, abas: ABAS, totalGeral: null, aba: lerAba(), caixa: null, ui: null, tags: [], campos: [], exp: { unidade: '', etapa: '', tag: '', origem: '', de: '', ate: '' }, previa: null, imp: novaImportacao(), dup: null, dupErro: null, ocupado: false };
   function lerAba() { try { const v = sessionStorage.getItem(CHAVE); return ABAS.some(([k]) => k === v) ? v : 'exportar'; } catch { return 'exportar'; } }
-  function novaImportacao() { return { passo: 'fonte', texto: '', nomeArquivo: '', cab: [], linhas: [], mapa: [], unidade: '', etapa: 'novo_lead', tagId: '', ddd: '71', conversa: true, previa: null, final: null, erro: '' }; }
+  function novaImportacao() { return { passo: 'fonte', texto: '', nomeArquivo: '', cab: [], linhas: [], mapa: [], unidade: '', etapa: 'entrada' /* etapa-entrada */, tagId: '', ddd: '71', conversa: true, previa: null, final: null, erro: '' }; }
 
   function estilo() {
     if (document.getElementById('estilo-leads')) return;

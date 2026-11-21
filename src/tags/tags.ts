@@ -623,7 +623,9 @@ export class Tags {
    */
   async dasConversas(conversaIds?: string[]): Promise<Map<string, TagResumo[]>> {
     const [todas, marcas] = await Promise.all([this.listar(), this.armazem.marcacoes(this.empresaId, conversaIds)]);
-    const lista = todas.filter((t) => !t.chaveSistema);
+    // etapa-entrada: a "Entrada de leads" dos outros funis também tem chave (entrada), mas não é do funil do sistema.
+    const funisSistema = new Set(todas.filter((t) => t.funilId && t.chaveSistema && t.chaveSistema !== 'entrada').map((t) => t.funilId));
+    const lista = todas.filter((t) => !t.chaveSistema || (t.chaveSistema === 'entrada' && !funisSistema.has(t.funilId)));
     const porId = new Map(lista.map((t, i) => [t.id, { t, i }]));
     const r = new Map<string, TagResumo[]>();
     for (const [c, ids] of marcas) {

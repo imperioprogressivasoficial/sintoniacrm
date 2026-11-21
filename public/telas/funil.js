@@ -687,6 +687,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       c.col = col;
       pintar(c.raiz, col.etapa.cor || '#8B8D98');
       c.nome.textContent = col.etapa.nome;
+      /* etapa-entrada: cadeado na "Entrada de leads" (etapa fixa) */
+      if (window.SintoniaEtapaFixa?.eh(col.etapa)) c.nome.append(window.SintoniaEtapaFixa.cadeado());
       const vis = col.cartoes.filter(passaCliente);
       c.total.textContent = String(s.dona || vis.length !== col.cartoes.length ? vis.length : col.total);
       c.total.title = s.dona ? `${vis.length} desta dona entre as carregadas` : `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`;
@@ -1305,11 +1307,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!col) return;
     const i = s.q.colunas.indexOf(col);
     const n = s.q.colunas.length;
+    /* etapa-entrada: a "Entrada de leads" não renomeia, não muda de lugar e ninguém passa à frente dela */
+    const fixa = (c) => Boolean(c && window.SintoniaEtapaFixa?.eh(c.etapa));
+    if (fixa(col)) {
+      folha(col.etapa.nome, `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa · etapa fixa`, [[
+        { nome: 'Automações desta etapa', icone: SVG.raio, acao: () => abrirRaio(col) },
+        ...(T() ? [{ nome: 'Nova transmissão para esta etapa', info: 'Com os filtros ligados', icone: SVG.aviao, acao: () => T().novaTransmissao(ctx, col) }] : []),
+      ]]);
+      return;
+    }
     folha(col.etapa.nome, `${col.total} cliente${col.total === 1 ? '' : 's'} nesta etapa`, [[
       { nome: 'Renomear e mudar a cor', icone: SVG.lapis, acao: () => editarEtapa(col) },
       { nome: 'Automações desta etapa', icone: SVG.raio, acao: () => abrirRaio(col) },
       ...(T() ? [{ nome: 'Nova transmissão para esta etapa', info: 'Com os filtros ligados', icone: SVG.aviao, acao: () => T().novaTransmissao(ctx, col) }] : []),
-      { nome: 'Mover para a esquerda', icone: SVG.esquerda, desligado: i <= 0, acao: () => reordenar(col, -1) },
+      { nome: 'Mover para a esquerda', icone: SVG.esquerda, desligado: i <= 0 || fixa(s.q.colunas[i - 1]), acao: () => reordenar(col, -1) },
       { nome: 'Mover para a direita', icone: SVG.direita, desligado: i >= n - 1, acao: () => reordenar(col, 1) },
     ], col.etapa.chaveSistema ? [] : [
       { nome: 'Apagar etapa', icone: SVG.lixo, perigo: true, acao: () => apagarEtapa(col) },
@@ -1323,6 +1334,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const aoMudar = async () => { await carregarAutos(true); desenharQuadro(); };
     const f = funil();
     const autos = autosDaEtapa(col.etapa.id);
+    /* etapa-entrada: caixa nova com as automações/bots da etapa e a grade de opções (/telas/etapa-acoes.js) */
+    if (window.SintoniaTelas.etapaAcoes) { window.SintoniaTelas.etapaAcoes.abrir({ funil: f, etapa: col.etapa, aoMudar }); return; }
     const abrirAutomacao = () => {
       if (!autos.length) A.abrirEditor({ funilId: f && !f.sistema ? f.id : null, gatilho: { tipo: 'entrou_na_etapa', etapaId: col.etapa.id }, nome: `Ao entrar em ${col.etapa.nome}`, aoSalvar: aoMudar });
       else A.abrirDaEtapa({ funilId: f && !f.sistema ? f.id : null, etapaId: col.etapa.id, etapaNome: col.etapa.nome, aoMudar });
@@ -1536,6 +1549,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }
   }
   async function editarEtapa(col) {
+    if (window.SintoniaEtapaFixa?.eh(col.etapa)) { s.ui.toast('A “Entrada de leads” é uma etapa fixa: o nome e a cor não mudam.'); return; } // etapa-entrada
     await cores();
     const r = await pedir({ titulo: 'Etapa', campos: [{ nome: 'nome', rotulo: 'Nome', valor: col.etapa.nome, max: 30 }, { nome: 'cor', rotulo: 'Cor', tipo: 'cor', valor: col.etapa.cor }] });
     if (!r) return;
@@ -1549,6 +1563,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const ids = s.q.colunas.map((c) => c.etapa.id);
     const i = ids.indexOf(col.etapa.id), j = i + passo;
     if (i < 0 || j < 0 || j >= ids.length) return;
+    // etapa-entrada: a "Entrada de leads" fica sempre em primeiro
+    const fixaEm = (k) => window.SintoniaEtapaFixa?.eh(s.q.colunas[k]?.etapa);
+    if (fixaEm(i) || fixaEm(j)) { s.ui.toast('A “Entrada de leads” fica sempre em primeiro.'); return; }
     [ids[i], ids[j]] = [ids[j], ids[i]];
     const antes = s.q.colunas.slice();
     s.q.colunas = ids.map((id) => antes.find((c) => c.etapa.id === id));
