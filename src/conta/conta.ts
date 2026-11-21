@@ -3,7 +3,10 @@ import type pg from 'pg';
 import { z } from 'zod';
 import { NOME_PAPEL } from '../auth/acesso.js';
 import type { Contas, ContasMemoria } from '../auth/contas.js';
-import { conferirSenha } from '../auth/senha.js';
+import { randomBytes } from 'node:crypto';
+import { COOKIE } from '../auth/rotas.js';
+import { conferirSenha, gerarHash } from '../auth/senha.js';
+import type { Usuario } from '../auth/contas.js';
 
 /**
  * Conta da pessoa logada (abre pelo nome/foto no rodapé do menu): perfil (nome, e-mail, telefone,
@@ -163,7 +166,14 @@ export interface OpcoesConta {
   contas: Contas;
   perfis: ArmazemPerfis;
   trocarEmail?: TrocarEmail;
+  /** sem-pagamento: depois de a pessoa excluir a própria conta (registro na auditoria, por exemplo). */
+  aoExcluir?: (u: Usuario) => Promise<void>;
 }
+
+/** sem-pagamento: como a conta excluída aparece no histórico da empresa. */
+export const NOME_EXCLUIDO = 'Usuário excluído';
+/** E-mail que ninguém usa (o e-mail é único): libera o e-mail real para um convite novo no futuro. */
+export const emailExcluido = (id: string) => `excluido-${id}@excluido.invalid`;
 
 const erro = (statusCode: number, msg: string) => Object.assign(new Error(msg), { statusCode });
 /** Valida o corpo e devolve a primeira mensagem do problema (em português quando o campo tem uma). */
@@ -250,6 +260,32 @@ export function registrarConta(app: FastifyInstance, o: OpcoesConta): void {
     if (!(await o.trocarEmail(u.id, b.data.email))) throw erro(409, 'Esse e-mail já é usado por outro login.');
     req.usuario = { ...u, email: b.data.email };
     return conta(req);
+  });
+
+  /* sem-pagamento: excluir a própria conta (App Store, diretriz 5.1.1(v)). Pede que a pessoa digite EXCLUIR.
+     Desativa o login, encerra todas as sessões e apaga os dados pessoais (nome, e-mail, telefone, foto, assinatura e
+     preferências). O histórico da empresa (conversas, vendas, agenda) fica, ligado a "Usuário excluído".
+     A única pessoa com acesso de administração não pode se excluir: a empresa ficaria sem ninguém para administrar. */
+  const Excluir = z.object({ confirmacao: z.string().max(40) });
+  app.post('/api/conta/excluir', async (req, reply) => {
+    const u = eu(req);
+    const b = Excluir.safeParse(req.body ?? {});
+    if (!b.success || b.data.confirmacao.trim().toUpperCase() !== 'EXCLUIR') throw erro(400, 'Para confirmar, digite EXCLUIR.');
+    if (u.papel === 'admin') {
+      const outros = (await o.contas.listarUsuarios(u.empresaId)).filter((x) => x.id !== u.id && x.ativo && x.papel === 'admin');
+      if (!outros.length) {
+        throw erro(409, 'Você é a única pessoa com acesso de administração desta empresa. Antes de excluir a sua conta, dê o acesso de administração para outra pessoa em Atendentes e acessos.');
+      }
+    }
+    await o.contas.atualizarUsuario(u.id, { ativo: false, nome: NOME_EXCLUIDO, email: emailExcluido(u.id) });
+    // Senha aleatória que ninguém conhece: mesmo reativado por engano, ninguém entra com a senha antiga.
+    await o.contas.definirSenha(u.id, await gerarHash(randomBytes(24).toString('base64url')));
+    await o.contas.salvarFotoDe(u.id, null, new Date());
+    await o.perfis.gravar(u.id, { telefone: '', assinatura: Assinatura.parse({}), preferencias: Preferencias.parse({}) });
+    await o.contas.encerrarSessoesDe(u.id);
+    await o.aoExcluir?.(u).catch(() => undefined);
+    reply.header('set-cookie', `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+    return { ok: true, mensagem: 'Sua conta foi excluída. Seus dados pessoais foram apagados.' };
   });
 
   // Assinatura nas mensagens que a pessoa manda pela conversa (só quem ligou em Conta › Perfil).

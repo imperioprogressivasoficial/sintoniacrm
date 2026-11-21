@@ -1,6 +1,7 @@
 {
   "name": "Sintonia",
   "short_name": "Sintonia",
+  "lang": "pt-BR",
   "description": "CRM de WhatsApp com IA",
   "start_url": "/app",
   "display": "standalone",

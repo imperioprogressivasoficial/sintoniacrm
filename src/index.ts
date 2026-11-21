@@ -113,10 +113,8 @@ import type { BloqueioConta } from './auth/limite-login.js';
 import type { Usuario } from './auth/contas.js';
 import { ArmazemPlanosMemoria, ArmazemPlanosPostgres } from './planos/armazem.js';
 import { anotadorDe, comPorteiro, medirCliente, porteiroDe, type Anotar, type PorteiroCliente } from './planos/medidor.js';
-import { PagamentoAsaas, PagamentoEscolhido, registrarAsaas } from './planos/asaas.js';
 import { Planos } from './planos/porteiro.js';
-import { registrarPlanos } from './planos/rotas.js';
-import { estadoDaIa } from './planos/estado-ia.js';
+import { contatoDoAmbiente, registrarPublico } from './publico/publico.js'; /* sem-pagamento */
 import { Followup } from './followup/followup.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres } from './followup/armazem.js';
 import { registrarFollowup } from './followup/rotas.js';
@@ -1038,26 +1036,12 @@ const painelSaude = new PainelSaude({
   ...(pool ? { pool: () => ({ total: pool!.totalCount, livres: pool!.idleCount, esperando: pool!.waitingCount }) } : {}),
 });
 registrarSaude(app, { painel: painelSaude });
-// Plano e uso da IA (Configurações › Plano e uso da IA): cota, uso, pedidos e o comparativo IA × atendente.
-// Pagamento: Asaas quando a chave está salva em Conexões › Pagamentos; sem chave, só registra o pedido (manual).
-const asaas = new PagamentoAsaas({ conexoes, nomeEmpresa: async () => (await empresa.dados()).nome, log });
-const pagamento = new PagamentoEscolhido(asaas);
-registrarAsaas(app, { asaas, conexoes, planos, agora: () => new Date(), log, urlPublica: process.env.SINTONIA_URL_PUBLICA });
-registrarPlanos(app, {
-  planos,
-  pagamento,
-  empresaId: cfg.SINTONIA_EMPRESA_ID,
-  agora: () => new Date(),
-  fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
-  armazemComercial,
-  contas,
-  estadoIa: async () =>
-    estadoDaIa({
-      chaveGeral: (p) => (p === 'openai' ? Boolean(conexoes.get('openaiApiKey')) : iaLigada),
-      agentes: await agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID),
-      modoPadrao: (await empresa.configIa()).modoPadrao,
-    }),
-});
+/* sem-pagamento: nada se compra pelo app (App Store). Plano, créditos, pedidos, comparativo de custo e o Asaas
+   ficam desligados (as rotas respondem 410; as tabelas continuam no banco). A medição de uso da IA e o porteiro
+   (acima) continuam valendo por dentro. Cadastro pela própria pessoa: recusado (contas só pela administração).
+   Contato público (WhatsApp de vendas): SINTONIA_WHATSAPP_VENDAS. Para religar a cobrança no futuro, volte a chamar
+   registrarAsaas e registrarPlanos (src/planos/asaas.ts e src/planos/rotas.ts) no lugar de registrarPublico. */
+registrarPublico(app, { contato: contatoDoAmbiente() });
 // Links rastreados (/l/:codigo), origem na ficha, selos e API de Conversões.
 registrarGrupos(app, { grupos, armazem: armazemGrupos, empresaId: cfg.SINTONIA_EMPRESA_ID });
 registrarRastreio(app, {

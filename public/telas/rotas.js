@@ -23,7 +23,7 @@
     automacoes: 'fluxos', bot: 'chatbot', ia: 'agente-ia',
     relatorios: 'relatorios', desempenho: 'desempenho', analises: 'analises', comercial: 'comercial',
     transmissoes: 'transmissoes', email: 'email-marketing', links: 'rastreamento', criativos: 'criativos',
-    acessos: 'acessos', empresa: 'empresa', planos: 'plano', equipe: 'equipe', configuracoes: 'configuracoes',
+    acessos: 'acessos', empresa: 'empresa', equipe: 'equipe', configuracoes: 'configuracoes', /* sem-pagamento: saiu planos (/app/plano) */
     conta: 'conta', agendadas: 'mensagens-agendadas', integracoes: 'integracoes', distribuicao: 'distribuicao-e-prazos', /* automacao-vendas */ // telas que chegaram junto (empresa-conta, msg-agendada, integracoes)
   };
   const VISTA = {};

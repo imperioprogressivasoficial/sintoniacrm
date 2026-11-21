@@ -96,6 +96,13 @@ try {
   // SINTONIA_SEGREDO (chave das conexões salvas) fica sempre com o endereço original do banco, mesmo se o nome mudar.
   // Com o app em duas redes, "db" ficaria ambíguo (o Espaço Rainha também tem um "db"): o banco ganha o nome sintonia-db.
   const hostBanco = comEvolution ? 'sintonia-db' : 'db';
+  /* sem-pagamento: WhatsApp de vendas e e-mail de suporte (páginas públicas: vendas, login, suporte, privacidade, termos).
+     Vazios por padrão: sem número, os botões levam para o e-mail ou para a página /suporte. Exemplo:
+       SINTONIA_WHATSAPP_VENDAS=5571999998888 SINTONIA_EMAIL_SUPORTE=contato@empresa.com node scripts/gerar-deploy.mjs */
+  const whatsappVendas = (process.env.SINTONIA_WHATSAPP_VENDAS ?? '').replace(/\D/g, '');
+  if (whatsappVendas && !/^\d{10,15}$/.test(whatsappVendas)) throw new Error('SINTONIA_WHATSAPP_VENDAS: use só números, com DDD (ex.: 5571999998888)');
+  const emailSuporte = (process.env.SINTONIA_EMAIL_SUPORTE ?? '').trim();
+  if (emailSuporte && !/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(emailSuporte)) throw new Error('SINTONIA_EMAIL_SUPORTE inválido');
 
   process.stdout.write(`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
@@ -143,6 +150,8 @@ ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
       SINTONIA_URL_PUBLICA: https://${DOMINIO}
+      SINTONIA_WHATSAPP_VENDAS: "${whatsappVendas}"
+      SINTONIA_EMAIL_SUPORTE: "${emailSuporte}"
 ${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node

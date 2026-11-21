@@ -1,7 +1,8 @@
 /* empresa-conta: Conta da pessoa logada (abre pelo nome/foto no rodapé do menu, #lt-eu, e pelo perfil no Mais do celular).
- * Abas: Perfil, Área de trabalho, Notificações, Faturamento, E-mail e Integrações (API, webhooks, MCP — tela do agente
+ * Abas: Perfil, Área de trabalho, Notificações, Privacidade, E-mail e Integrações (API, webhooks, MCP — tela do agente
  * "integracoes": window.SintoniaTelas.integracoes.desenhar(caixa, ui), se existir). Dados: /api/conta (src/conta/conta.ts),
- * foto em /api/equipe/:id/foto, senha em /api/auth/senha, notificações em telas/notificacoes.js, plano em /api/planos.
+ * foto em /api/equipe/:id/foto, senha em /api/auth/senha, notificações em telas/notificacoes.js,
+ * excluir a conta em /api/conta/excluir (sem-pagamento: a aba Faturamento saiu; entrou Privacidade, pedida pela App Store).
  * Usa as peças de window.SintoniaEC (telas/empresa.js). Registra window.SintoniaTelas.conta = { desenhar(caixa, ui), irAba(aba) }. */
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
@@ -15,12 +16,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ct-bolha { justify-self: end; max-width: 85%; padding: 8px 11px 6px; border-radius: 14px 14px 4px 14px; background: #d9fdd3; color: #0b1b12; font-size: 14px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
   html[data-tema="escuro"] .ct-bolha { background: #005c4b; color: #e9fff6; }
   .ct-bolha b { font-weight: 700; } .ct-bolha i { font-style: italic; }
-  .ct-fatura { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 2px; border-top: 1px solid var(--ec-borda); font-size: 14px; }
-  .ct-fatura:first-child { border-top: 0; }
-  .ct-fatura small { color: var(--sub); font-size: 12.5px; }
-  .ct-barra { height: 9px; border-radius: 999px; background: var(--ec-campo); overflow: hidden; }
-  .ct-barra i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #106ebe, #3aa0ff); }
-  .ct-barra i.alto { background: linear-gradient(90deg, #f59e0b, #dc2626); }
+  /* sem-pagamento: aba Privacidade (links legais e excluir a conta) */
+  .ct-links { display: grid; gap: 8px; }
+  .ct-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; color: var(--texto); text-decoration: none; background: var(--ec-campo); font-weight: 600; font-size: 14.5px; }
+  .ct-link small { display: block; font-weight: 400; color: var(--sub); font-size: 12.5px; }
+  .ct-link > span { flex: 1; min-width: 0; }
+  .ct-link svg { width: 18px; height: 18px; flex: none; color: var(--sub); }
+  .ct-link:focus-visible { outline: 2px solid #106ebe; outline-offset: 2px; }
+  .ct-perigo { box-shadow: inset 0 0 0 1.5px rgba(220, 38, 38, .35), var(--ec-sombra) !important; }
+  .ct-confirma { font: inherit; font-size: 16px; letter-spacing: .08em; text-transform: uppercase; }
   .ct-nt .nt-pref-corpo { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); align-items: start; }
   .ct-nt .nt-secao { background: var(--ec-cartao); box-shadow: inset 0 0 0 1px var(--ec-borda), var(--ec-sombra); border-radius: 22px; padding: 10px; }
   /* densidade compacta (Conta › Área de trabalho): lista de conversas e telas mais juntas */
@@ -36,7 +40,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['perfil', 'Perfil', 'equipe'],
     ['trabalho', 'Área de trabalho', 'geral'],
     ['notificacoes', 'Notificações', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>'],
-    ['faturamento', 'Faturamento', 'plano'],
+    ['privacidade', 'Privacidade', 'acesso'], /* sem-pagamento: no lugar de Faturamento */
     ['email', 'Configuração de e-mail', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>'],
     ['integracoes', 'Integrações', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M13.5 6l-3 12"/></svg>'],
   ];
@@ -48,7 +52,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const iniciais = (n) => String(n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
   const souDirecao = () => ['admin', 'direcao'].includes(ui?.estado?.eu?.papel);
 
-  function irAba(a) { if (ABAS.some(([id]) => id === a)) aba = a; }
+  function irAba(a) { if (a === 'faturamento') a = 'privacidade'; if (ABAS.some(([id]) => id === a)) aba = a; }
 
   async function desenhar(c, u) {
     ui = u; caixa = c; EC = window.SintoniaEC; if (!EC) { c.textContent = 'Carregando…'; return; }
@@ -65,7 +69,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       EC.abas(ABAS, aba, (a) => { aba = a; desenhar(caixa, ui); }),
       corpo));
     if (!conta) { corpo.append(el('p', { class: 'ec-erro', text: 'Não deu para carregar a sua conta agora.' })); return; }
-    const telas = { perfil: telaPerfil, trabalho: telaTrabalho, notificacoes: telaNotificacoes, faturamento: telaFaturamento, email: telaEmail, integracoes: telaIntegracoes };
+    const telas = { perfil: telaPerfil, trabalho: telaTrabalho, notificacoes: telaNotificacoes, privacidade: telaPrivacidade, email: telaEmail, integracoes: telaIntegracoes };
     try { await telas[aba](corpo); } catch (x) { encher(corpo, el('p', { class: 'ec-erro', text: x.message || 'Não deu para carregar agora.' })); }
   }
   const redesenhar = () => caixa && desenhar(caixa, ui);
@@ -177,7 +181,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     previa();
     const secAss = cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c3-1 4-6 6-6s1 5 3 5 2-3 4-3 2 2 5 2"/><path d="M3 21h18"/></svg>', 'Assinatura das mensagens',
       el('p', { class: 'ec-sub', text: 'Quando ligada, as mensagens que você manda para clientes pela conversa saem com o seu nome. A IA não usa a sua assinatura.' }),
-      opcao('Assinar minhas mensagens', null, chave(a.ligada, (v) => { a.ligada = v; previa(); }, 'Assinar minhas mensagens')),
+      opcao('Pôr meu nome nas mensagens', null, chave(a.ligada, (v) => { a.ligada = v; previa(); }, 'Pôr meu nome nas mensagens')),
       el('div', { class: 'ec-form' }, campo('Nome na assinatura', texto, { dica: 'Vazio: o seu primeiro nome.' }), el('span', { class: 'ec-campo' }, document.createTextNode('Onde vai'), posicao)),
       el('div', { class: 'ct-previa' }, el('span', { class: 'ec-sub', text: 'Como a cliente vê' }), bolha),
       erroA, el('div', { class: 'ec-acoes ec-fim' }, salvarA));
@@ -211,7 +215,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const tela = el('select', { class: 'ec-sel', 'aria-label': 'Tela inicial' }, ...TELAS.map(([v, n]) => el('option', { value: v, text: n })));
     tela.value = p.telaInicial;
     tela.addEventListener('change', () => salvarPref({ telaInicial: tela.value }, 'Tela inicial salva ✓'));
-    const idioma = el('select', { class: 'ec-sel', 'aria-label': 'Idioma' }, el('option', { value: 'pt-BR', text: 'Português (Brasil)' }), el('option', { value: 'en', text: 'English (em breve)', disabled: '' }), el('option', { value: 'es', text: 'Español (em breve)', disabled: '' }));
+    const idioma = el('select', { class: 'ec-sel', 'aria-label': 'Idioma' }, el('option', { value: 'pt-BR', text: 'Português (Brasil)' })); /* sem-pagamento: sem opções "em breve" */
     idioma.value = p.idioma;
     const bolinha = window.Sintonia?.acessoRapido?.ligada?.() ?? true;
     encher(corpo, el('div', { class: 'ec-grade ec-2' },
@@ -221,7 +225,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('p', { class: 'ec-sub', text: 'Vale em todos os aparelhos em que você entrar.' })),
       cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 3l9 8M5 10v10h14V10"/></svg>', 'Ao abrir a Sintonia',
         opcao('Tela inicial', 'A primeira tela quando você abre o app.', tela),
-        opcao('Idioma', 'Outros idiomas chegam numa próxima versão.', idioma)),
+        opcao('Idioma', 'A Sintonia está em português do Brasil.', idioma)),
       window.SintoniaPapelParede ? window.SintoniaPapelParede.cartao(EC) : null, /* conversa-extra: papel de parede das conversas */
       /* Personalizar Dashboard (pedido do dono 21/11: saiu do topo do Dashboard no celular e veio para cá) */
       window.SintoniaTelas?.painel?.personalizar ? cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>', 'Dashboard',
@@ -244,45 +248,54 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     await nt.preferencias({ caixa: caixaNt });
   }
 
-  // ------------------------------------------------------------ faturamento
-  async function telaFaturamento(corpo) {
-    const { cartao, botao, vazio, brl } = EC;
-    if (!souDirecao()) {
-      encher(corpo, el('section', { class: 'ec-c' }, vazio('plano', 'O faturamento fica com a administração', 'Plano, uso da IA e faturas da empresa são vistos pela administração e pela direção.')));
-      return;
-    }
-    const d = await ui.api('/api/planos');
-    const p = d.plano || {};
-    const tok = (n) => Number(n || 0).toLocaleString('pt-BR');
-    const NOME_PLANO = { essencial: 'Essencial', gratis: 'Essencial', expediente: 'Colaborador de IA', empresarial: 'Empresarial', fundador: 'Fundador' };
-    const TIPO = { mudar_plano: 'Mudança de plano', adicional_fora: 'Adicional', recarga: 'Créditos de IA' };
-    const STATUS = { pendente: ['Aguardando pagamento', 'aviso'], pago: ['Pago', 'bom'], cancelado: ['Cancelado', ''] };
-    const limites = (d.limites || []).filter((l) => l.limite != null);
-    const secPlano = cartao('plano', 'Plano atual',
-      el('div', { class: 'ec-grande', text: p.nome || '—' }), el('p', { class: 'ec-sub', text: p.precoTexto || '' }),
-      p.descricao ? el('p', { class: 'ec-sub', text: p.descricao }) : null,
+  // ------------------------------------------------------------ privacidade (sem-pagamento: App Store 5.1.1)
+  const SETA_FORA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>';
+  function telaPrivacidade(corpo) {
+    const { cartao, botao } = EC;
+    const link = (href, titulo, sub) => { const a = el('a', { class: 'ct-link', href, target: '_blank', rel: 'noopener' }, el('span', {}, document.createTextNode(titulo), el('small', { text: sub }))); a.insertAdjacentHTML('beforeend', SETA_FORA); return a; };
+    const secLinks = cartao('doc', 'Privacidade e termos',
+      el('p', { class: 'ec-sub', text: 'Como a Sintonia usa e protege os dados, as regras de uso e como falar com a gente.' }),
+      el('div', { class: 'ct-links' },
+        link('/privacidade', 'Política de privacidade', 'Que dados usamos, para quê e os seus direitos (LGPD)'),
+        link('/termos', 'Termos de uso', 'As regras para usar a Sintonia'),
+        link('/suporte', 'Suporte', 'WhatsApp, e-mail e recado para a nossa equipe')));
+    const secDados = cartao('equipe', 'Seus dados',
       el('div', { class: 'ec-linhas' },
-        el('div', { class: 'ec-linha' }, el('span', { text: 'Situação' }), el('span', { class: 'ec-pil ' + (d.assinatura?.status === 'ativa' || d.assinatura?.status === 'ativo' ? 'bom' : ''), text: d.assinatura?.status ? String(d.assinatura.status).replace(/_/g, ' ') : '—' })),
-        el('div', { class: 'ec-linha' }, el('span', { text: 'Cobrança' }), el('b', { text: d.pagamento?.ativo ? `Automática (${d.pagamento.provedor})` : 'Manual (sem cobrança automática ligada)' }))),
-      el('div', { class: 'ec-acoes' }, botao('Ver plano e uso da IA', () => ui.mostrar('planos'), 'azul', 'seta')));
-    const secUso = cartao('geral', 'Uso da IA no mês',
-      d.ilimitado ? el('p', { class: 'ec-sub', text: 'Conta fundadora: a IA trabalha sem limite de uso.' }) : null,
-      ...limites.map((l) => { const pct = Math.min(100, l.pct || 0); const b = el('div', { class: 'ct-barra', role: 'meter', 'aria-label': l.nome, 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct) }, el('i', { class: pct >= 80 ? 'alto' : '' })); b.firstChild.style.width = pct + '%'; return el('div', { style: 'display:grid;gap:5px' }, el('div', { class: 'ec-linha', style: 'border:0;padding:0' }, el('span', { text: l.nome }), el('small', { class: 'ec-sub', text: `${tok(l.usados)} de ${tok(l.limite)} tokens` })), b); }),
-      el('div', { class: 'ec-linhas' },
-        el('div', { class: 'ec-linha' }, el('span', { text: 'Conversas com IA' }), el('b', { text: tok(d.uso?.conversas) })),
-        el('div', { class: 'ec-linha' }, el('span', { text: 'Custo estimado da IA' }), el('b', { text: brl(d.uso?.custoReais || 0) })),
-        p.ia && !d.ilimitado ? el('div', { class: 'ec-linha' }, el('span', { text: 'Saldo de créditos' }), el('b', { text: `${tok(d.creditos?.saldo)} tokens` })) : null));
-    const pedidos = d.pedidos || [];
-    const secFaturas = cartao('doc', 'Faturas e pedidos', { largo: true },
-      pedidos.length ? el('div', {}, ...pedidos.map((x) => {
-        const [st, cls] = STATUS[x.status] || [x.status, ''];
-        const valor = typeof x.dados?.valor === 'number' ? brl(x.dados.valor) : '';
-        const link = typeof x.dados?.linkPagamento === 'string' ? x.dados.linkPagamento : typeof x.dados?.url === 'string' ? x.dados.url : null;
-        return el('div', { class: 'ct-fatura' },
-          el('span', {}, el('b', { text: `${TIPO[x.tipo] || x.tipo}${x.dados?.plano ? `: ${NOME_PLANO[x.dados.plano] || x.dados.plano}` : ''}` }), document.createElement('br'), el('small', { text: `${new Date(x.criadoEm).toLocaleDateString('pt-BR')}${x.por ? ' · ' + x.por : ''}${valor ? ' · ' + valor : ''}` })),
-          el('span', { style: 'display:grid;gap:4px;justify-items:end' }, el('span', { class: 'ec-pil ' + cls, text: st }), link && x.status === 'pendente' && /^https:\/\//.test(link) ? el('a', { class: 'ec-bt mini', href: link, target: '_blank', rel: 'noopener', text: 'Pagar' }) : null));
-      })) : EC.vazio('doc', 'Nenhuma fatura ainda', 'Quando houver mudança de plano ou compra de créditos, os pedidos e faturas aparecem aqui. Notas fiscais ainda não são emitidas pela Sintonia.'));
-    encher(corpo, el('div', { class: 'ec-grade ec-2' }, secPlano, secUso, secFaturas));
+        el('div', { class: 'ec-linha' }, el('span', { text: 'Nome' }), el('b', { text: conta.nome })),
+        el('div', { class: 'ec-linha' }, el('span', { text: 'E-mail de login' }), el('b', { text: conta.email })),
+        el('div', { class: 'ec-linha' }, el('span', { text: 'Telefone' }), el('b', { text: conta.telefone || 'Não informado' }))),
+      el('p', { class: 'ec-sub', text: 'Para mudar, vá em Perfil. Para pedir uma cópia dos seus dados, fale com o Suporte.' }),
+      el('div', { class: 'ec-acoes' }, botao('Ir para Perfil', () => { aba = 'perfil'; redesenhar(); }, 'mini')));
+    const secExcluir = cartao('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>', 'Excluir minha conta',
+      el('p', { class: 'ec-sub', text: 'Seu acesso é desligado e os seus dados pessoais são apagados: nome, e-mail, telefone, foto e preferências. As conversas e vendas da empresa continuam, aparecendo como "Usuário excluído". Não dá para desfazer.' }),
+      el('div', { class: 'ec-acoes' }, botao('Excluir minha conta', excluirConta, 'perigo')));
+    secExcluir.classList.add('ct-perigo');
+    encher(corpo, el('div', { class: 'ec-grade ec-2' }, secLinks, el('div', { style: 'display:grid;gap:16px;min-width:0' }, secDados, secExcluir)));
+  }
+  function excluirConta() {
+    EC.janela('Excluir minha conta', (form, fechar) => {
+      const campo = EC.entrada({ class: 'ec-in ct-confirma', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', maxlength: '20', placeholder: 'EXCLUIR', 'aria-label': 'Digite EXCLUIR para confirmar' });
+      const erro = el('p', { class: 'ec-erro', role: 'alert' });
+      form.append(
+        el('p', { text: 'Tem certeza? Seu acesso à Sintonia é desligado na hora e os seus dados pessoais são apagados. Isso não pode ser desfeito.' }),
+        el('p', { class: 'ec-sub', text: 'Se você é a única pessoa com acesso de administração da empresa, passe esse acesso para outra pessoa antes.' }),
+        EC.campo('Para confirmar, digite EXCLUIR', campo, { cheio: true }), erro);
+      const ok = EC.botao('Excluir de vez', async () => {
+        erro.textContent = '';
+        if (campo.value.trim().toUpperCase() !== 'EXCLUIR') { erro.textContent = 'Digite EXCLUIR para confirmar.'; campo.focus(); return; }
+        ok.disabled = true;
+        try {
+          await ui.api('/api/conta/excluir', { method: 'POST', body: JSON.stringify({ confirmacao: campo.value.trim() }) });
+          try { localStorage.removeItem('sintonia.fz.lista'); } catch {}
+          fechar();
+          location.href = '/entrar?conta=excluida';
+        } catch (x) { erro.textContent = x.message || 'Não deu para excluir agora. Tente de novo.'; ok.disabled = false; }
+      }, 'perigo');
+      campo.addEventListener('input', () => { ok.disabled = campo.value.trim().toUpperCase() !== 'EXCLUIR'; });
+      ok.disabled = true;
+      setTimeout(() => campo.focus(), 50);
+      return [EC.botao('Cancelar', fechar), ok];
+    });
   }
 
   // ------------------------------------------------------------ e-mail
@@ -318,7 +331,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const tela = window.SintoniaTelas?.integracoes;
     if (tela?.desenhar) { await tela.desenhar(caixaInt, ui); return; }
     encher(caixaInt, el('section', { class: 'ec-c' }, EC.vazio('<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M13.5 6l-3 12"/></svg>',
-      'Integrações (API, webhooks, MCP) — em breve', 'Chaves de API, webhooks para avisar outros sistemas e conexão MCP para assistentes de IA chegam aqui numa próxima versão.')));
+      'Integrações (API, webhooks, MCP)', 'Não deu para abrir as integrações agora. Feche e abra a tela de novo.')));
   }
 
   // ------------------------------------------------------------ preferências valendo no app

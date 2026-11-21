@@ -24,6 +24,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="stylesheet" href="/estilo.css">
 <link rel="stylesheet" href="/abertura.css">
+<style>/* sem-pagamento */
+.lado-form { align-content: center; gap: 14px; }
+.sem-acesso { text-align: center; }
+.links-legais { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; font-size: 13px; color: var(--cinza); }
+.links-legais a { color: var(--cinza); }
+#aviso-conta { max-width: 420px; }
+</style>
 </head>
 <body>
 <div class="tela-login">
@@ -51,7 +58,10 @@
       <div id="aviso-entrar" role="status" aria-live="polite"></div>
       <button class="botao botao-azul" type="submit">Entrar</button>
       <p class="miudo"><a href="/esqueci-senha" id="link-esqueci">Esqueci minha senha</a></p>
+      <!-- sem-pagamento: ninguém cria conta sozinho; o acesso é liberado pela equipe Sintonia (WhatsApp) -->
+      <p class="miudo sem-acesso">Não tem acesso? <a data-whats href="/suporte" data-sem-whats="Fale com a gente" data-whats-texto="Olá! Quero acesso à Sintonia."><span data-whats-rotulo>Fale com a gente no WhatsApp</span></a></p>
     </form>
+    <nav class="links-legais" aria-label="Informações"><a href="/privacidade">Privacidade</a><span aria-hidden="true">·</span><a href="/termos">Termos de uso</a><span aria-hidden="true">·</span><a href="/suporte">Suporte</a></nav>
   </section>
 </div>
 
@@ -60,6 +70,18 @@
   <div class="ab-brilho" aria-hidden="true"><img src="/simbolo-escuro.png" alt="" width="104" height="104" decoding="async"></div><span class="ab-nome" aria-hidden="true">sintonia<i>.</i></span>
   <p class="ab-texto">Abrindo suas conversas<small>Só um instante</small></p>
 </div>
+<script src="/contato-publico.js" defer></script>
+<script>
+(() => {
+  /* sem-pagamento: quem acabou de excluir a conta cai aqui com ?conta=excluida */
+  try {
+    if (new URLSearchParams(location.search).get('conta') === 'excluida') {
+      const a = document.getElementById('aviso-entrar');
+      a.className = 'aviso ok'; a.textContent = 'Sua conta foi excluída e os seus dados pessoais foram apagados.';
+    }
+  } catch {}
+})();
+</script>
 <script>
 (() => {
   const form = document.getElementById('form-entrar');
