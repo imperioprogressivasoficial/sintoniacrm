@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
-import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento, type UnidadeId } from '../domain.js';
+import { COR_ENTRADA, ETAPA_ENTRADA, ETAPAS, NOME_ENTRADA, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento, type UnidadeId } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { sqlEscopo } from '../painel/escopo-sql.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -606,6 +606,7 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
 
 /** Cor de cada etapa do sistema (paleta das tags). */
 const COR_SISTEMA: Record<Etapa, string> = {
+  entrada: COR_ENTRADA,
   novo_lead: '#0090FF',
   em_conversa: '#12A594',
   interessada: '#D4A017',
@@ -644,7 +645,10 @@ function validarNomeFunil(bruto: string): string {
   return nome;
 }
 
-const ordenarEtapas = <T extends Tag>(l: T[]) => l.sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
+/** etapa-entrada: a "Entrada de leads" (chave 'entrada') vem sempre primeiro, em qualquer funil. */
+export const ehEntrada = (e: Pick<Tag, 'chaveSistema'>) => e.chaveSistema === ETAPA_ENTRADA;
+const ordenarEtapas = <T extends Tag>(l: T[]) =>
+  l.sort((a, b) => Number(ehEntrada(b)) - Number(ehEntrada(a)) || a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'));
 
 export class Funis implements DelegadoEtapas {
   readonly empresaId: string;
@@ -654,6 +658,8 @@ export class Funis implements DelegadoEtapas {
   private readonly aoApagarFunil: Array<(funilId: string) => Promise<void>> = [];
   /** Funil do sistema e suas etapas por chave (as chaves nunca mudam; os nomes são lidos de novo). */
   private sistemaCache?: { funil: Funil; porChave: Map<Etapa, string> };
+  /** etapa-entrada: funis que já têm a "Entrada de leads" conferida. */
+  private readonly comEntrada = new Set<string>();
 
   constructor(private readonly o: OpcoesFunis) {
     this.empresaId = o.empresaId;
@@ -714,6 +720,50 @@ export class Funis implements DelegadoEtapas {
     return funil;
   }
 
+  /**
+   * etapa-entrada: todo funil tem a etapa fixa "Entrada de leads" (bolinha cinza, sempre a primeira). O do sistema
+   * ganha a dele em garantirSistema (é uma das ETAPAS); os outros, aqui. Idempotente (a migração 720 já cria nos que existiam).
+   */
+  private async garantirEntradas(funis: Funil[]): Promise<void> {
+    const faltam = funis.filter((f) => !f.sistema && !this.comEntrada.has(f.id));
+    if (!faltam.length) return;
+    const tags = await this.o.armazemTags.listar(this.empresaId);
+    for (const f of faltam) {
+      if (!tags.some((t) => t.funilId === f.id && ehEntrada(t))) {
+        try {
+          await this.o.armazemTags.criar({ id: randomUUID(), empresaId: this.empresaId, nome: NOME_ENTRADA, cor: COR_ENTRADA, ordem: -1, criadaPor: 'sistema', criadaEm: this.agora(), funilId: f.id, chaveSistema: ETAPA_ENTRADA });
+        } catch (e) {
+          // Outra etapa já tem esse nome, ou outro processo criou ao mesmo tempo: fica como está.
+          if (!(e instanceof ErroTag && e.statusCode === 409)) throw e;
+        }
+      }
+      this.comEntrada.add(f.id);
+    }
+  }
+
+  /**
+   * etapa-entrada: a loja (equipe ou IA) respondeu. Nos funis criados pela empresa, quem está na "Entrada de leads"
+   * vai para a etapa seguinte. (No funil do sistema quem cuida é o motor: conversa.etapa sai de 'entrada'.)
+   * Chamado sob a trava da conversa.
+   */
+  async lojaRespondeu(c: Conversa, por: string): Promise<number> {
+    if (c.empresaId !== this.empresaId) return 0;
+    const marcas = await this.o.armazemTags.etapasDaConversa(c.id);
+    if (!marcas.length) return 0;
+    const todas = await this.o.armazemTags.listar(this.empresaId);
+    let n = 0;
+    for (const m of marcas) {
+      const atual = todas.find((t) => t.id === m.tagId);
+      if (!atual || !ehEntrada(atual)) continue;
+      const funil = await this.o.armazem.buscar(m.funilId);
+      if (!funil || funil.sistema) continue;
+      const proxima = ordenarEtapas(todas.filter((t) => t.funilId === funil.id)).find((t) => !ehEntrada(t));
+      if (!proxima) continue;
+      if ((await this.moverSobTrava(c, funil.id, proxima.id, { nome: por, id: null }, true)).mudou) n++;
+    }
+    return n;
+  }
+
   /** Põe toda conversa no funil do sistema, na etapa em que ela está (conversa.etapa manda). Rode ao subir. */
   async sincronizarSistema(): Promise<number> {
     const f = await this.garantirSistema();
@@ -739,14 +789,21 @@ export class Funis implements DelegadoEtapas {
     const { funil, porChave } = this.sistemaCache!;
     const atual = (await this.o.armazemTags.etapasDaConversa(c.id)).find((m) => m.funilId === funil.id);
     const tagId = porChave.get(c.etapa);
-    if (tagId && atual?.tagId !== tagId) await this.o.armazemTags.marcarEtapa(c.id, tagId, funil.id, 'sincronia', this.agora());
+    if (!tagId || atual?.tagId === tagId) return;
+    const r = await this.o.armazemTags.marcarEtapa(c.id, tagId, funil.id, 'sincronia', this.agora());
+    // etapa-entrada: lead novo chegando na "Entrada de leads" dispara as automações dela ("entrou na etapa").
+    if (r.mudou && !atual && c.etapa === ETAPA_ENTRADA) {
+      await this.registrarMovimento({ conversa: c, funil, de: null, para: tagId, por: { nome: 'Sintonia', id: null }, automatico: true });
+    }
   }
 
   // ---------- funis e etapas ----------
 
   async listar(): Promise<Funil[]> {
     await this.garantirSistema();
-    return (await this.o.armazem.listar(this.empresaId)).sort(
+    const funis = await this.o.armazem.listar(this.empresaId);
+    await this.garantirEntradas(funis);
+    return funis.sort(
       (a, b) => Number(b.sistema) - Number(a.sistema) || a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'),
     );
   }
@@ -784,8 +841,10 @@ export class Funis implements DelegadoEtapas {
     const lista = await this.listar();
     if (lista.length >= LIMITE_FUNIS) throw new ErroFunil(`Limite de ${LIMITE_FUNIS} funis.`, 400);
     if ((dados.etapas?.length ?? 0) > LIMITE_ETAPAS) throw new ErroFunil(`Um funil pode ter até ${LIMITE_ETAPAS} etapas.`, 400);
-    // Valida tudo antes de gravar qualquer coisa.
-    const etapas = (dados.etapas ?? []).map((e) => ({ nome: validarNome(e.nome), cor: e.cor ? validarCor(e.cor) : undefined }));
+    // Valida tudo antes de gravar qualquer coisa. etapa-entrada: a "Entrada de leads" já vem sozinha (não repete).
+    const etapas = (dados.etapas ?? [])
+      .map((e) => ({ nome: validarNome(e.nome), cor: e.cor ? validarCor(e.cor) : undefined }))
+      .filter((e) => e.nome.toLowerCase() !== NOME_ENTRADA.toLowerCase());
     const nomes = new Set<string>();
     for (const e of etapas) {
       if (nomes.has(e.nome.toLowerCase())) throw new ErroFunil(`Etapa "${e.nome}" repetida.`, 400);
@@ -802,6 +861,7 @@ export class Funis implements DelegadoEtapas {
       acaoPrincipal: null,
     };
     await this.o.armazem.criar(f);
+    await this.garantirEntradas([f]);
     for (const e of etapas) await this.criarEtapa(f.id, e, por);
     return f;
   }
@@ -828,7 +888,7 @@ export class Funis implements DelegadoEtapas {
 
   async criarEtapa(funilId: string, dados: { nome: string; cor?: string }, por: string): Promise<EtapaFunil> {
     await this.exigir(funilId);
-    const etapas = await this.etapas(funilId);
+    const etapas = (await this.etapas(funilId)).filter((e) => !ehEntrada(e));
     if (etapas.length >= LIMITE_ETAPAS) throw new ErroFunil(`Um funil pode ter até ${LIMITE_ETAPAS} etapas.`, 400);
     const t: EtapaFunil = {
       id: randomUUID(),
@@ -845,9 +905,15 @@ export class Funis implements DelegadoEtapas {
     return t;
   }
 
-  /** Renomear e recolorir (vale também para as etapas do sistema). */
+  /** Renomear e recolorir (vale também para as etapas do sistema; a "Entrada de leads" é fixa). */
   async alterarEtapa(funilId: string, etapaId: string, campos: { nome?: string; cor?: string }): Promise<EtapaFunil> {
-    await this.exigirEtapa(funilId, etapaId);
+    const atual = await this.exigirEtapa(funilId, etapaId);
+    if (ehEntrada(atual)) {
+      const mudaNome = campos.nome !== undefined && campos.nome.replace(/\s+/g, ' ').trim() !== atual.nome;
+      const mudaCor = campos.cor !== undefined && campos.cor.toLowerCase() !== atual.cor.toLowerCase();
+      if (mudaNome || mudaCor) throw new ErroFunil('A "Entrada de leads" é uma etapa fixa: o nome e a cor não mudam.', 409);
+      return atual;
+    }
     await this.o.armazemTags.atualizar(etapaId, {
       nome: campos.nome !== undefined ? validarNome(campos.nome) : undefined,
       cor: campos.cor !== undefined ? validarCor(campos.cor) : undefined,
@@ -860,7 +926,9 @@ export class Funis implements DelegadoEtapas {
     const lista = await this.etapas(funilId);
     const conhecidas = new Set(lista.map((t) => t.id));
     if (ids.some((x) => !conhecidas.has(x))) throw new ErroFunil('Etapa não encontrada neste funil.', 404);
-    const final = [...new Set(ids), ...lista.map((t) => t.id).filter((x) => !ids.includes(x))];
+    // etapa-entrada: a "Entrada de leads" fica sempre em primeiro, digam o que disserem.
+    const entrada = lista.filter(ehEntrada).map((t) => t.id);
+    const final = [...entrada, ...[...new Set(ids), ...lista.map((t) => t.id).filter((x) => !ids.includes(x))].filter((x) => !entrada.includes(x))];
     for (const [i, id] of final.entries()) {
       if (lista.find((t) => t.id === id)!.ordem !== i) await this.o.armazemTags.atualizar(id, { ordem: i });
     }
@@ -873,6 +941,7 @@ export class Funis implements DelegadoEtapas {
    */
   async apagarEtapa(funilId: string, etapaId: string, moverPara: string | undefined, por: string): Promise<number> {
     const etapa = await this.exigirEtapa(funilId, etapaId);
+    if (ehEntrada(etapa)) throw new ErroFunil('A "Entrada de leads" é uma etapa fixa: não pode ser apagada.', 409);
     if (etapa.chaveSistema) throw new ErroFunil('As etapas do funil do sistema podem ser renomeadas, mas não apagadas.', 409);
     const nelas = (await this.o.armazemTags.etapasDoFunil(funilId)).filter((m) => m.tagId === etapaId).length;
     let movidas = 0;
@@ -917,7 +986,7 @@ export class Funis implements DelegadoEtapas {
     let etapasOk: string[] | null = f.etapas.length ? f.etapas.filter((id) => etapas.some((e) => e.id === id)) : null;
     if (f.situacao) {
       const perdida = (e: EtapaFunil) => ehEtapaDePerda(funil, e);
-      const naoPerdidas = etapas.filter((e) => !perdida(e));
+      const naoPerdidas = etapas.filter((e) => !perdida(e) && !ehEntrada(e));
       const ganho = funil.sistema ? etapas.filter((e) => e.chaveSistema === 'compareceu') : naoPerdidas.length > 1 ? [naoPerdidas.at(-1)!] : [];
       const daSituacao = (f.situacao === 'ganhos' ? ganho : etapas.filter(perdida)).map((e) => e.id);
       etapasOk = etapasOk ? etapasOk.filter((id) => daSituacao.includes(id)) : daSituacao;

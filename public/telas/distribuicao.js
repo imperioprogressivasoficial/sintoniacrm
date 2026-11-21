@@ -80,7 +80,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     prazo: ic('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5"/>'),
   };
   // Etapas fixas do funil "Atendimento" (o motor e a IA movem a conversa por elas).
-  const ETAPAS = [['novo_lead', 'Novo lead'], ['em_conversa', 'Em conversa'], ['interessada', 'Interessada'], ['agendada', 'Agendada'], ['compareceu', 'Compareceu'], ['manutencao', 'Manutenção'], ['perdida', 'Perdida']];
+  const ETAPAS = [['entrada', 'Entrada de leads'] /* etapa-entrada */, ['novo_lead', 'Novo lead'], ['em_conversa', 'Em conversa'], ['interessada', 'Interessada'], ['agendada', 'Agendada'], ['compareceu', 'Compareceu'], ['manutencao', 'Manutenção'], ['perdida', 'Perdida']];
   const PAPEL = { atendente: 'Atendente', recepcionista: 'Recepção', gerente: 'Gerente', direcao: 'Direção', admin: 'Administração' };
 
   const estado = { caixa: null, rodizio: null, regras: null };

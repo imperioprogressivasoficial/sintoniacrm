@@ -17,6 +17,8 @@ export const QUANDO_AGENDOU = ['qualquer', 'ia', 'equipe', 'online', 'confirmou'
 export type QuandoAgendou = (typeof QUANDO_AGENDOU)[number];
 
 const id = z.string().trim().min(1).max(100);
+/** etapa-entrada: prioridade da tarefa criada por automação (igual à da Rotina). */
+export const PRIORIDADES = ['baixa', 'normal', 'alta'] as const;
 
 export const Gatilho = z.discriminatedUnion('tipo', [
   /** A conversa entrou nesta etapa (por qualquer caminho: pessoa, IA, motor ou outra automação). */
@@ -72,6 +74,10 @@ export type Passo =
   | { tipo: 'lembrete_ligacao'; em_minutos: number; texto?: string }
   | { tipo: 'enviar_transmissao'; transmissaoId: string }
   | { tipo: 'enviar_email'; modeloId: string }
+  /* etapa-entrada: passos que usam o que já existe (Rotina, Rodízio, Pesquisa de satisfação). */
+  | { tipo: 'criar_tarefa'; titulo: string; em_minutos: number; prioridade: (typeof PRIORIDADES)[number] }
+  | { tipo: 'distribuir_rodizio' }
+  | { tipo: 'pesquisa_nps' }
   | {
       tipo: 'condicao';
       se: 'cliente_respondeu' | 'tem_tag' | 'modo' | 'horario_loja';
@@ -99,6 +105,12 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('enviar_transmissao'), transmissaoId: id }),
     /** E-mail marketing: manda o modelo salvo para o e-mail da ficha (entra na fila, com ritmo e descadastro). */
     z.object({ tipo: z.literal('enviar_email'), modeloId: id }),
+    /** etapa-entrada: tarefa para a equipe (Atendimento › Rotina), para a dona da conversa (sem dona: a gestão). Prazo em minutos. */
+    z.object({ tipo: z.literal('criar_tarefa'), titulo: z.string().trim().min(2).max(120), em_minutos: z.number().int().min(0).max(30 * 24 * 60).default(0), prioridade: z.enum(PRIORIDADES).default('normal') }),
+    /** etapa-entrada: passa a conversa para a próxima pessoa do rodízio de leads da unidade (Atendimento › Rodízio precisa estar ligado). */
+    z.object({ tipo: z.literal('distribuir_rodizio') }),
+    /** etapa-entrada: manda a pergunta da pesquisa de satisfação (Automações › Pesquisa de satisfação precisa estar ligada). */
+    z.object({ tipo: z.literal('pesquisa_nps') }),
     z.object({
       tipo: z.literal('condicao'),
       se: z.enum(['cliente_respondeu', 'tem_tag', 'modo', 'horario_loja']),

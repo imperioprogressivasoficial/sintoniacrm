@@ -6,7 +6,7 @@ import type { CanalMeta } from '../channels/meta.js';
 import { ehCanalTeste } from '../channels/teste.js';
 import type { EnvioResultado, StatusRecebido } from '../channels/tipos.js';
 import type { ArmazemContatos } from '../contatos/contatos.js';
-import type { Conversa, ModoAtendimento } from '../domain.js';
+import { expandirEtapas, type Conversa, type ModoAtendimento } from '../domain.js';
 import type { MovimentoEtapa } from '../funis/funis.js';
 import type { Leads, RelatorioImportacao } from '../leads/leads.js';
 import { textoDoAnexo } from '../midia.js';
@@ -335,7 +335,7 @@ export class Transmissoes {
           and not exists (select 1 from sintonia.conversa_tags x where x.conversa_id = c.id and x.tag_id::text = any($4::text[]))
           and (cardinality($5::text[]) = 0 or c.etapa = any($5::text[]))
           and (cardinality($11::uuid[]) = 0 or c.id = any($11::uuid[]))`,
-      [this.empresaId, unidade, p.tags, p.semTags, p.etapas, p.excluirRecebeuDias, p.excluirConversaAberta, excetoCampanha, agora, p.tagsTodas, p.conversas],
+      [this.empresaId, unidade, p.tags, p.semTags, expandirEtapas(p.etapas) /* etapa-entrada */, p.excluirRecebeuDias, p.excluirConversaAberta, excetoCampanha, agora, p.tagsTodas, p.conversas],
     );
     return rows;
   }

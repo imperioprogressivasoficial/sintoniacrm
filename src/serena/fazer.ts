@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { ETAPAS, NOME_ETAPA, type Conversa } from '../domain.js';
+import { ETAPAS, naEtapa, NOME_ETAPA, type Conversa } from '../domain.js';
 import { agendaDaUnidade, horariosLivres } from '../agenda/agendar.js';
 import { NOMES_SISTEMA, type FonteAgenda } from '../agenda/sistema.js';
 import type { ServicosCrmIa } from '../ai/crm-ia.js';
@@ -411,7 +411,7 @@ export class FazerSerena {
         if (b.parada_dias_min != null && dias < b.parada_dias_min) return false;
         if (b.parada_dias_max != null && dias > b.parada_dias_max) return false;
         if (b.ultima_de && ultimaDe(c) !== b.ultima_de) return false;
-        if (b.etapa && c.etapa !== b.etapa) return false;
+        if (b.etapa && !naEtapa(c.etapa, b.etapa)) return false; // etapa-entrada
         if (b.unidade && c.unidade !== b.unidade) return false;
         if (termo && !sem(c.nome ?? '').includes(termo) && !(digitos.length >= 4 && c.telefone.includes(digitos))) return false;
         return true;

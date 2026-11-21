@@ -14,21 +14,21 @@ describe.each(ambientes)('Funil do sistema "Atendimento" ($nome)', (amb) => {
     const lista = (await como(gente.carla, 'GET', '/api/funis')).json() as FunilJson[];
     expect(lista).toHaveLength(1);
     expect(lista[0]).toMatchObject({ id: sistema.id, nome: 'Atendimento', sistema: true });
-    expect(lista[0]!.etapas.map((e) => e.chaveSistema)).toEqual(['novo_lead', 'em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao', 'perdida']);
+    expect(lista[0]!.etapas.map((e) => e.chaveSistema)).toEqual(['entrada', 'novo_lead', 'em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao', 'perdida']); // etapa-entrada: a Entrada de leads vem antes
     expect(lista[0]!.etapas.map((e) => e.nome)).toContain('Manutenção');
     // garantirSistema é idempotente.
     await funis.garantirSistema();
     expect(((await como(gente.admin, 'GET', '/api/funis')).json() as FunilJson[]).length).toBe(1);
 
-    // Cliente escreve: o motor põe em "Em conversa" e a IA (sugestão) classifica "Interessada".
+    // Cliente escreve: nasce na "Entrada de leads"; a IA (sugestão, não enviou nada) classifica "Interessada" direto.
     const c = await conversa('norte', 'Marina');
     expect((await repo.buscarConversa(c.id))!.etapa).toBe('interessada');
     const daConversa = (await como(gente.carla, 'GET', `/api/conversas/${c.id}/funis`)).json() as Array<{ funilId: string; etapa: { id: string; chaveSistema: string } }>;
     expect(daConversa[0]!.etapa).toMatchObject({ id: etapasSistema.get('interessada'), chaveSistema: 'interessada' });
     const ev = (await repo.eventosEntre(quinta(0), quinta(23))).filter((e) => e.tipo === 'etapa_movida');
     expect(ev.map((e) => [e.dados!.de, e.dados!.para, e.dados!.por, e.dados!.automatico])).toEqual([
-      [etapasSistema.get('novo_lead'), etapasSistema.get('em_conversa'), 'Sintonia', true],
-      [etapasSistema.get('em_conversa'), etapasSistema.get('interessada'), 'IA', true],
+      [null, etapasSistema.get('entrada'), 'Sintonia', true], // etapa-entrada: chegou (dispara as automações da Entrada)
+      [etapasSistema.get('entrada'), etapasSistema.get('interessada'), 'IA', true],
     ]);
     // Contagem por etapa (visível).
     const contada = ((await como(gente.carla, 'GET', '/api/funis')).json() as FunilJson[])[0]!;
@@ -40,14 +40,15 @@ describe.each(ambientes)('Funil do sistema "Atendimento" ($nome)', (amb) => {
     const agente = new AgenteFalso(() => ({ texto: 'Oi!', acoes: [{ tipo: 'etapa', etapa: 'perdida', motivo: 'x' }], recusou: false }));
     const { como, gente, conversa, escreve, repo, sistema, etapasSistema } = await montarFunis(amb);
     const c = await conversa('norte', 'Marina');
-    expect((await repo.buscarConversa(c.id))!.etapa).toBe('em_conversa');
+    // etapa-entrada: ninguém respondeu ainda, fica na "Entrada de leads".
+    expect((await repo.buscarConversa(c.id))!.etapa).toBe('entrada');
 
     const r = await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${sistema.id}`, { etapaId: etapasSistema.get('agendada') });
     expect(r.statusCode).toBe(200);
     expect(r.json()).toMatchObject({ ok: true, mudou: true, etapa: 'agendada' });
     expect((await repo.buscarConversa(c.id))!.etapa).toBe('agendada');
     const mudou = (await repo.eventosEntre(quinta(0), quinta(23))).filter((e) => e.tipo === 'etapa_mudou').at(-1)!;
-    expect(mudou.dados).toMatchObject({ de: 'em_conversa', para: 'agendada', motivo: 'manual', por: 'Carla Lima', porId: gente.carla.id });
+    expect(mudou.dados).toMatchObject({ de: 'entrada', para: 'agendada', motivo: 'manual', por: 'Carla Lima', porId: gente.carla.id });
 
     // A cliente volta a falar e a IA tenta "Perdida": Agendada é protegida, nada muda (nem a tag).
     agente.resposta = () => ({ texto: 'Oi!', acoes: [{ tipo: 'etapa', etapa: 'perdida', motivo: 'x' }], recusou: false });
@@ -67,7 +68,7 @@ describe.each(ambientes)('Funil do sistema "Atendimento" ($nome)', (amb) => {
     expect((await como(gente.carla, 'GET', `/api/conversas/${c.id}`)).json().conversa.tags).toEqual([]);
     // Cada movimento uma vez só: sem laço.
     const movidas = (await repo.eventosEntre(quinta(0), quinta(23))).filter((e) => e.tipo === 'etapa_movida').map((e) => e.dados!.para);
-    expect(movidas).toEqual([etapasSistema.get('em_conversa'), etapasSistema.get('agendada'), etapasSistema.get('perdida')]);
+    expect(movidas).toEqual([etapasSistema.get('entrada'), etapasSistema.get('agendada'), etapasSistema.get('perdida')]);
   });
 
   it('etapas do sistema: renomeia e recolore, mas não apaga; o funil do sistema não apaga', async () => {
@@ -102,7 +103,8 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
     const novo = await como(gente.gerenteNorte, 'POST', '/api/funis', { nome: 'Pós-venda', etapas: [{ nome: 'Avaliar' }, { nome: 'Retorno', cor: '#30A46C' }, { nome: 'Fiel' }] });
     expect(novo.statusCode).toBe(201);
     const pos = novo.json() as FunilJson;
-    expect(pos.etapas.map((e) => e.nome)).toEqual(['Avaliar', 'Retorno', 'Fiel']);
+    // etapa-entrada: todo funil nasce com a "Entrada de leads" em primeiro.
+    expect(pos.etapas.map((e) => e.nome)).toEqual(['Entrada de leads', 'Avaliar', 'Retorno', 'Fiel']);
     expect((await como(gente.admin, 'POST', '/api/funis', { nome: 'pós-venda' })).statusCode).toBe(409);
     expect((await como(gente.admin, 'POST', '/api/funis', { nome: '  ' })).statusCode).toBe(400);
     expect((await como(gente.admin, 'POST', '/api/funis', { nome: 'X', etapas: [{ nome: 'A' }, { nome: 'a' }] })).statusCode).toBe(400);
@@ -116,11 +118,11 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
 
     // Renomear funil e etapa; reordenar.
     expect((await como(gente.admin, 'PATCH', `/api/funis/${pos.id}`, { nome: 'Pós-atendimento' })).json()).toMatchObject({ nome: 'Pós-atendimento' });
-    const [avaliar, retorno, fiel] = pos.etapas;
+    const [, avaliar, retorno, fiel] = pos.etapas;
     expect((await como(gente.admin, 'PATCH', `/api/funis/${pos.id}/etapas/${retorno!.id}`, { nome: 'Voltar' })).json()).toMatchObject({ nome: 'Voltar' });
     const ord = (await como(gente.admin, 'POST', `/api/funis/${pos.id}/etapas/ordem`, { ids: [fiel!.id, avaliar!.id] })).json() as Etapa[];
-    expect(ord.map((e) => e.nome)).toEqual(['Fiel', 'Avaliar', 'Voltar', 'Sumiu']);
-    expect((await como(gente.admin, 'POST', `/api/funis/${pos.id}/etapas/ordem`, { ids: [campanha.etapas[0]!.id] })).statusCode).toBe(404);
+    expect(ord.map((e) => e.nome)).toEqual(['Entrada de leads', 'Fiel', 'Avaliar', 'Voltar', 'Sumiu']);
+    expect((await como(gente.admin, 'POST', `/api/funis/${pos.id}/etapas/ordem`, { ids: [campanha.etapas[1]!.id] })).statusCode).toBe(404);
 
     // GET /api/tags continua só com as soltas.
     expect(((await como(gente.admin, 'GET', '/api/tags')).json() as Array<{ nome: string }>).map((t) => t.nome)).toEqual(['Avaliar']);
@@ -134,14 +136,14 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
     const r = await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${pos.id}`, { etapaId: retorno!.id });
     expect(r.json()).toMatchObject({ mudou: true });
     // Em dois funis ao mesmo tempo (uma etapa em cada) + o do sistema.
-    await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${campanha.id}`, { etapaId: campanha.etapas[1]!.id });
+    await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${campanha.id}`, { etapaId: campanha.etapas[2]!.id });
     const nos = (await como(gente.carla, 'GET', `/api/conversas/${c.id}/funis`)).json() as Array<{ funilNome: string; etapa: { nome: string } | null }>;
-    expect(nos.map((x) => `${x.funilNome}:${x.etapa?.nome ?? '-'}`)).toEqual(['Atendimento:Em conversa', 'Pós-atendimento:Voltar', 'Campanha:Fechou']);
+    expect(nos.map((x) => `${x.funilNome}:${x.etapa?.nome ?? '-'}`)).toEqual(['Atendimento:Entrada de leads', 'Pós-atendimento:Voltar', 'Campanha:Fechou']);
     // As etapas dos funis da empresa aparecem nas tags da conversa (com funilId).
     const tagsConversa = (await como(gente.carla, 'GET', `/api/conversas/${c.id}`)).json().conversa.tags as Array<{ nome: string; funilId?: string }>;
     expect(tagsConversa.map((t) => `${t.nome}:${t.funilId ? 'etapa' : 'solta'}`).sort()).toEqual(['Fechou:etapa', 'Voltar:etapa']);
     // Mover etapa de outro funil: 404. Tirar do funil: etapaId null.
-    expect((await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${pos.id}`, { etapaId: campanha.etapas[0]!.id })).statusCode).toBe(404);
+    expect((await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${pos.id}`, { etapaId: campanha.etapas[1]!.id })).statusCode).toBe(404);
     expect((await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${campanha.id}`, { etapaId: null })).json()).toMatchObject({ mudou: true });
     // Desmarcar a etapa pela rota de tags também tira do funil.
     expect((await como(gente.carla, 'DELETE', `/api/conversas/${c.id}/tags/${retorno!.id}`)).json()).toEqual({ tags: [] });
@@ -169,7 +171,7 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
   it('quadro: colunas com cartões paginados, filtros e só o que a pessoa vê', async () => {
     const { como, gente, conversa, sintonia, avancar, sistema, etapasSistema } = await montarFunis(amb);
     const f = (await como(gente.admin, 'POST', '/api/funis', { nome: 'Vendas', etapas: [{ nome: 'Lead' }, { nome: 'Proposta' }] })).json() as FunilJson;
-    const [lead, proposta] = f.etapas;
+    const [, lead, proposta] = f.etapas;
     const ids: string[] = [];
     for (let i = 0; i < 7; i++) {
       avancar(1);
@@ -185,11 +187,12 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
 
     const q = (await como(gente.admin, 'GET', `/api/funis/${f.id}/quadro?limite=3`)).json() as { colunas: Coluna[] };
     expect(q.colunas.map((c) => [c.etapa.nome, c.total, c.cartoes.length, c.mais])).toEqual([
+      ['Entrada de leads', 0, 0, false],
       ['Lead', 7, 3, true],
       ['Proposta', 1, 1, false],
     ]);
     // Mais recentes primeiro; cartão com tags soltas, última mensagem e "desde".
-    const primeiro = q.colunas[0]!.cartoes[0]!;
+    const primeiro = q.colunas[1]!.cartoes[0]!; // [0] = Entrada de leads (vazia)
     expect(primeiro).toMatchObject({ conversaId: ids[6], nome: 'Cliente 6', tags: [{ nome: 'VIP' }], ultima: { texto: 'Oi, quanto custa?' } });
     expect(new Date(primeiro.desde).getTime()).toBe(quinta(14, 7).getTime());
     // Próxima página de uma coluna só.
@@ -201,16 +204,16 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
     // Visibilidade: Carla (norte, sem a da Bia), Rita (sumaré), gerente norte.
     const total = async (u: (typeof gente)[keyof typeof gente], extra = '') =>
       ((await como(u, 'GET', `/api/funis/${f.id}/quadro${extra}`)).json() as { colunas: Coluna[] }).colunas.map((c) => c.total);
-    expect(await total(gente.carla)).toEqual([6, 0]);
-    expect(await total(gente.rita)).toEqual([0, 1]);
-    expect(await total(gente.gerenteNorte)).toEqual([7, 0]);
+    expect(await total(gente.carla)).toEqual([0, 6, 0]);
+    expect(await total(gente.rita)).toEqual([0, 0, 1]);
+    expect(await total(gente.gerenteNorte)).toEqual([0, 7, 0]);
     // Filtros: unidade e busca (nome ou telefone).
-    expect(await total(gente.admin, '?unidade=sumare')).toEqual([0, 1]);
-    expect(await total(gente.admin, '?busca=cliente%205')).toEqual([1, 0]);
-    expect(await total(gente.admin, `?busca=${s.telefone.slice(-6)}`)).toEqual([0, 1]);
+    expect(await total(gente.admin, '?unidade=sumare')).toEqual([0, 0, 1]);
+    expect(await total(gente.admin, '?busca=cliente%205')).toEqual([0, 1, 0]);
+    expect(await total(gente.admin, `?busca=${s.telefone.slice(-6)}`)).toEqual([0, 0, 1]);
     // O quadro do sistema funciona igual.
     const qs = (await como(gente.carla, 'GET', `/api/funis/${sistema.id}/quadro`)).json() as { colunas: Coluna[] };
-    expect(qs.colunas.find((c) => c.etapa.id === etapasSistema.get('em_conversa'))!.total).toBe(6);
+    expect(qs.colunas.find((c) => c.etapa.id === etapasSistema.get('entrada'))!.total).toBe(6);
   });
 });
 

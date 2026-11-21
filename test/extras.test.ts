@@ -158,6 +158,10 @@ for (const amb of ambientes) {
       // Conferência para quem cadastra à mão.
       expect((await g.como(g.gente.carla, 'GET', '/api/leads/conferir?telefone=7188881111')).json().duplicata).toEqual({ telefone: '5571988881111', motivo: 'telefone' });
       expect(previa.linhas.find((l: { linha: number }) => l.linha === 6)).toMatchObject({ situacao: 'recusado' });
+      // etapa-entrada: sem escolher a etapa, o lead importado nasce na "Entrada de leads".
+      const semEtapa = (await g.como(g.gente.admin, 'POST', '/api/leads/importar', { unidade: 'norte', linhas: [{ nome: 'Lia Nova', telefone: '71 93333-4444' }], dddPadrao: '71', criarConversa: true })).json();
+      expect(semEtapa).toMatchObject({ criados: 1, conversasCriadas: 1 });
+      expect((await g.repo.listarConversas()).find((c) => c.telefone === '5571933334444')).toMatchObject({ etapa: 'entrada', modo: 'humano' });
     });
 
     it('exporta CSV para o Excel (BOM, ponto e vírgula) com filtros e campos personalizados', async () => {
@@ -172,7 +176,7 @@ for (const amb of ambientes) {
       expect(r.headers['content-type']).toContain('text/csv');
       expect(r.headers['content-disposition']).toContain('attachment; filename="leads-imperio-2026-11-05.csv"');
       expect(r.body.startsWith('\uFEFFNome;Telefone;E-mail;Unidade;Etapa;Tags;Dona;Criado em;Tipo de cabelo\r\n')).toBe(true);
-      expect(r.body).toContain('Marina;5571988130001;marina@x.com;Salvador Norte Shopping;Em conversa;VIP;;05/11/2026 10:00;Cacheado');
+      expect(r.body).toContain('Marina;5571988130001;marina@x.com;Salvador Norte Shopping;Entrada de leads;VIP;;05/11/2026 10:00;Cacheado');
       expect(r.body.split('\r\n').filter(Boolean)).toHaveLength(3);
       const soNorte = (await g.como(g.gente.admin, 'GET', `/api/leads/exportar?unidade=norte&tag=${vip.id}`)).body;
       expect(soNorte.split('\r\n').filter(Boolean)).toHaveLength(2);

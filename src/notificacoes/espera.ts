@@ -64,7 +64,8 @@ export const semNenhumaResposta = (c: Pick<Conversa, 'ultimaMensagemEquipe' | 'u
  */
 export function prazoDa(regra: RegraEspera, c: Pick<Conversa, 'etapa' | 'ultimaMensagemEquipe' | 'ultimaMensagemIa'>): PrazoEspera {
   const escalar = Math.max(1, regra.forteMin - regra.avisoMin);
-  const daEtapa = c.etapa ? regra.etapas?.[c.etapa as Etapa] : undefined;
+  // etapa-entrada: sem prazo próprio, a "Entrada de leads" usa o prazo de "Novo lead".
+  const daEtapa = c.etapa ? (regra.etapas?.[c.etapa as Etapa] ?? (c.etapa === 'entrada' ? regra.etapas?.novo_lead : undefined)) : undefined;
   if (regra.primeiraMin && semNenhumaResposta(c)) return { avisoMin: regra.primeiraMin, forteMin: regra.primeiraMin + escalar, origem: 'primeira', rotulo: 'primeira resposta' };
   if (daEtapa) return { avisoMin: daEtapa, forteMin: daEtapa + escalar, origem: 'etapa', rotulo: `etapa ${NOME_ETAPA[c.etapa as Etapa] ?? c.etapa}` };
   return { avisoMin: regra.avisoMin, forteMin: regra.forteMin, origem: 'padrao', rotulo: '' };

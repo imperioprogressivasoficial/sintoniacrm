@@ -535,6 +535,17 @@ export interface OpcoesAutomacoes {
   calendario?: CalendarioAutomacoes;
   /** Variáveis da empresa para as mensagens (ex.: {link_avaliacao} da pesquisa de satisfação). */
   variaveis?: () => Promise<Record<string, string>>;
+  /** etapa-entrada: passo "criar_tarefa" (Atendimento › Rotina, o mesmo caminho da IA). Pode ser preenchida depois. */
+  tarefas?: () => TarefasParaAutomacoes | undefined;
+  /** etapa-entrada: passo "distribuir_rodizio" (src/rodizio). Pode ser preenchida depois. */
+  rodizio?: () => { pedir(conversaId: string): void } | undefined;
+  /** etapa-entrada: passo "pesquisa_nps" (src/nps). Pode ser preenchida depois. */
+  nps?: () => { enviarDeAutomacao(c: Conversa): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }> } | undefined;
+}
+
+/** etapa-entrada: tarefa para a equipe (src/ai/crm-ia.ts: criarTarefa). Sem dona na conversa, vai para a gestão. */
+export interface TarefasParaAutomacoes {
+  criarTarefa(c: Conversa, t: { titulo: string; descricao: string; venceEm: Date | null; prioridade: 'baixa' | 'normal' | 'alta' }): Promise<{ responsavel: string }>;
 }
 
 /** O que o e-mail marketing oferece às automações (src/email). */
@@ -1183,6 +1194,52 @@ export class Automacoes {
         this.anotar(e, p.tipo, true, r.detalhe);
         return { seguir: true };
       }
+      case 'criar_tarefa': {
+        const t = this.o.tarefas?.();
+        if (!t) return { parar: 'erro', motivo: 'As tarefas da equipe não estão ligadas neste servidor.' };
+        const titulo = preencher(p.titulo, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome });
+        if (e.teste) {
+          this.anotar(e, p.tipo, true, `Criaria a tarefa "${titulo}" (no teste não cria).`);
+          return { seguir: true };
+        }
+        const vence = new Date(agora.getTime() + p.em_minutos * MIN);
+        try {
+          const r = await t.criarTarefa(c, { titulo, descricao: `Criada pela automação "${a.nome}".`, venceEm: vence, prioridade: p.prioridade });
+          await evento('tarefa', { titulo });
+          this.anotar(e, p.tipo, true, `Tarefa "${titulo}" para ${r.responsavel} (vence ${dataISO(vence)} ${horaHHmm(vence)}).`);
+        } catch (x) {
+          this.anotar(e, p.tipo, false, `Tarefa não criada: ${(x as Error).message}`);
+        }
+        return { seguir: true };
+      }
+      case 'distribuir_rodizio': {
+        const r = this.o.rodizio?.();
+        if (!r) return { parar: 'erro', motivo: 'O rodízio de leads não está ligado neste servidor.' };
+        if (e.teste) {
+          this.anotar(e, p.tipo, true, 'Pediria ao rodízio uma pessoa para a conversa (no teste não pede).');
+          return { seguir: true };
+        }
+        if (c.responsavelId) {
+          this.anotar(e, p.tipo, true, `Pulado: a conversa já é de ${c.responsavelNome ?? 'alguém'}.`);
+          return { seguir: true };
+        }
+        // O rodízio pega a trava da conversa: só fica pedido aqui e roda logo depois, por trás.
+        r.pedir(c.id);
+        this.anotar(e, p.tipo, true, 'Pedido ao rodízio de leads (vale se o rodízio da unidade estiver ligado e houver alguém disponível).');
+        return { seguir: true };
+      }
+      case 'pesquisa_nps': {
+        const n = this.o.nps?.();
+        if (!n) return { parar: 'erro', motivo: 'A pesquisa de satisfação não está ligada neste servidor.' };
+        if (e.teste) {
+          this.anotar(e, p.tipo, true, 'Mandaria a pesquisa de satisfação (no teste não manda).');
+          return { seguir: true };
+        }
+        const r = await n.enviarDeAutomacao(c);
+        if (r.ok) await evento('pesquisa_nps', {});
+        this.anotar(e, p.tipo, r.ok, r.ok ? r.detalhe : r.motivo);
+        return { seguir: true };
+      }
       case 'condicao': {
         let vale: boolean;
         if (p.se === 'cliente_respondeu') vale = (c.ultimaMensagemCliente?.getTime() ?? 0) > e.criadaEm.getTime();
@@ -1218,6 +1275,10 @@ export function ligarFunis(o: { tags: Tags; funis: Funis; automacoes?: Automacoe
     },
     equipeRespondeu: async (c) => {
       await automacoes?.equipeRespondeu(c);
+    },
+    /* etapa-entrada: nos funis da empresa, a 1ª resposta da loja tira da "Entrada de leads". */
+    lojaRespondeu: async (c, por) => {
+      await funis.lojaRespondeu(c, por === 'ia' ? 'IA' : 'Equipe');
     },
     objetivoIa: async (c) => automacoes?.objetivoIa(c),
   };

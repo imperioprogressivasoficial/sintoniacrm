@@ -66,7 +66,7 @@ describe.each(ambientes)('Motivo de perda obrigatório ($nome)', (amb) => {
     const r = (await como(gente.admin, 'GET', '/api/analises/perdas?periodo=hoje')).json();
     expect(r.totais).toMatchObject({ perdas: 3, manuais: 3, automaticas: 0, semMotivo: 0 });
     expect(r.motivos.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Foi para a concorrência', 2], ['Outro', 1]]);
-    expect(r.etapas.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Proposta', 2], ['Em conversa', 1]]);
+    expect(r.etapas.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Proposta', 2], ['Entrada de leads', 1]]); // etapa-entrada: a Cris ainda não tinha resposta
     const carla = r.atendentes.find((a: { id: string }) => a.id === gente.carla.id);
     expect(carla).toMatchObject({ nome: 'Carla Lima', total: 1, principal: { nome: 'Foi para a concorrência' } });
     expect(r.origens[0]).toMatchObject({ nome: 'WhatsApp', total: 3 });

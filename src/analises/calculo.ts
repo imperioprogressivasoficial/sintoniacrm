@@ -226,7 +226,7 @@ export interface EntradaFunil {
 }
 
 /** Etapas em que a cliente "fica parada" esperando a loja agir (as outras são de chegada). */
-export const ETAPAS_ABERTAS: Etapa[] = ['novo_lead', 'em_conversa', 'interessada', 'agendada'];
+export const ETAPAS_ABERTAS: Etapa[] = ['entrada', 'novo_lead', 'em_conversa', 'interessada', 'agendada'];
 
 export const MOTIVO_PERDA: Record<string, string> = {
   manual: 'Marcada pela equipe',

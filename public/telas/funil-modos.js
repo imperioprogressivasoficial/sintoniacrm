@@ -425,7 +425,7 @@
     const depois = () => { st.aberto = seguinte; st.entrada = 'fm-entra-d'; };
 
     const av = s.ui.avatar({ id: cartao.conversaId, nome: cartao.nome, telefone: cartao.telefone });
-    const chip = el('span', { class: 'fm-chip' }, el('i'), el('span', { text: col.etapa.nome }));
+    const chip = el('span', { class: 'fm-chip' }, el('i'), el('span', { text: col.etapa.nome }), window.SintoniaEtapaFixa?.eh(col.etapa) ? window.SintoniaEtapaFixa.cadeado() : null); // etapa-entrada
     const carta = el('article', { class: 'fm-carta' + (st.entrada ? ' ' + st.entrada : ''), tabindex: '0', 'data-id': cartao.conversaId, 'aria-label': `${nome}, ${col.etapa.nome}. Enter abre a conversa` });
     carta.style.setProperty('--cor', col.etapa.cor || '#3aa0ff');
     carta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === carta) s.ui.abrir(cartao.conversaId); });
@@ -539,7 +539,7 @@
     for (const col of cols) {
       const b = el('button', { class: 'fm-etapa', type: 'button', 'aria-pressed': String(filtro === col), title: `Só ${col.etapa.nome}`,
         onclick: () => trocar(ctx, 'foco', { etapa: filtro === col ? null : col.etapa.id }) },
-      el('i'), el('span', { text: col.etapa.nome }), el('small', { text: String(col.total) }));
+      el('i'), el('span', { text: col.etapa.nome }), window.SintoniaEtapaFixa?.eh(col.etapa) ? window.SintoniaEtapaFixa.cadeado() : null, el('small', { text: String(col.total) })); // etapa-entrada: cadeado
       b.style.setProperty('--cor', col.etapa.cor || '#3aa0ff');
       chips.push(b);
     }

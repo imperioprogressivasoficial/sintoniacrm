@@ -137,6 +137,8 @@ export interface GanchosSintonia {
   mensagemCliente?(c: Conversa, m: { texto: string; idExterno: string; primeira: boolean }): Promise<void>;
   /** Alguém da equipe respondeu (pelo CRM ou pelo celular da loja). */
   equipeRespondeu?(c: Conversa): Promise<void>;
+  /** etapa-entrada: a loja respondeu (equipe ou a própria IA; mensagens de automação não contam). Tira da "Entrada de leads". */
+  lojaRespondeu?(c: Conversa, por: 'equipe' | 'ia'): Promise<void>;
   /** Objetivo do "fluxo de IA" em vigor para a conversa: vai como instrução extra para a IA. */
   objetivoIa?(c: Conversa): Promise<string | undefined>;
   /** Um bot (src/bot) está conduzindo a conversa: a IA não responde nem sugere (o bot responde primeiro). */
@@ -279,6 +281,8 @@ export class Sintonia {
         await this.d.repo.salvarConversa(conversa);
         await this.d.repo.cancelarTarefas(conversa.id, ['reavaliar', ...FOLLOWUPS]);
         await this.programarFollowups(conversa, agora);
+        await this.primeiraResposta(conversa, 'equipe');
+        await this.d.repo.salvarConversa(conversa);
         await this.evento('equipe_respondeu', conversa);
         await this.gancho('equipeRespondeu', () => this.d.ganchos?.equipeRespondeu?.(conversa));
         return false;
@@ -295,6 +299,8 @@ export class Sintonia {
         return true;
       }
 
+      // etapa-entrada: lead novo (a cliente escreveu primeiro) nasce na "Entrada de leads".
+      if (criada.nova && conversa.etapa === 'novo_lead') conversa.etapa = 'entrada';
       // automacao-vendas: origem "cliente" = a cliente escreveu primeiro (o rodízio de leads só distribui estas).
       if (criada.nova) await this.evento('conversa_nova', conversa, { origem: 'cliente' });
       await this.gancho('rastreio', () => this.d.rastreio?.aoMensagem(conversa, msg));
@@ -577,6 +583,7 @@ export class Sintonia {
   private async depoisDoEnvioDaEquipe(c: Conversa, agora: Date, atendente: string, espera: number | undefined, regras: RegrasAtendimento, quem?: Quem): Promise<void> {
     Object.assign(c, equipeAtuou(c, agora, regras), { ultimaMensagemEquipe: agora, atualizadaEm: agora });
     if (quem) await this.donaPelaPrimeiraResposta(c, quem);
+    await this.primeiraResposta(c, 'equipe');
     await this.d.repo.salvarConversa(c);
     if (quem) await this.d.repo.pararDigitando(c.id, quem.id);
     await this.d.repo.cancelarTarefas(c.id, ['reavaliar', ...FOLLOWUPS]);
@@ -1043,6 +1050,7 @@ export class Sintonia {
           if (enviadas.n > 0) {
             depois.ultimaMensagemIa = enviadoEm;
             depois.atualizadaEm = enviadoEm;
+            await this.primeiraResposta(depois, 'ia');
           }
           if (decisao.assumiu) depois.modo = 'ia';
           await this.aplicarAcoes(depois, r.acoes, 'ia');
@@ -1051,6 +1059,7 @@ export class Sintonia {
         }
         depois.ultimaMensagemIa = enviadoEm;
         depois.atualizadaEm = enviadoEm;
+        await this.primeiraResposta(depois, 'ia');
         if (decisao.assumiu) {
           depois.modo = 'ia';
           await this.evento('ia_assumiu', depois, { motivo: decisao.motivo });
@@ -1136,6 +1145,7 @@ export class Sintonia {
       if (e.n > 0) {
         d.ultimaMensagemIa = em;
         d.atualizadaEm = em;
+        await this.primeiraResposta(d, 'ia');
         await this.d.repo.salvarConversa(d);
       }
       if (e.erro) {
@@ -1240,6 +1250,7 @@ export class Sintonia {
     const e = await this.enviarPartes(c, partirParaWhatsApp(r.texto), enviadoEm);
     if (!e.n && e.erro) throw e.erro;
     c.ultimaMensagemIa = enviadoEm;
+    await this.primeiraResposta(c, 'ia');
     await this.aplicarAcoes(c, r.acoes, 'ia');
     if (t.tipo === 'followup_3d') await this.moverFunil(c, { tipo: 'followups_esgotados' });
     await this.d.repo.salvarConversa(c);
@@ -1385,6 +1396,16 @@ export class Sintonia {
     if (!this.d.tagsIa) return undefined;
     const nomes = await this.d.tagsIa.nomes().catch(() => []);
     return nomes.length ? nomes : undefined;
+  }
+
+  /**
+   * etapa-entrada: a loja respondeu (equipe ou a IA). Quem está na "Entrada de leads" vai para "Novo lead" (ou "Em conversa",
+   * se a cliente já tinha escrito: a regra de sempre). Nos funis da empresa, a Entrada passa para a etapa seguinte (gancho).
+   * Mensagens de automação, bot e pesquisa (enviarAutomatico) não contam. Quem chama grava a conversa.
+   */
+  private async primeiraResposta(c: Conversa, por: 'equipe' | 'ia'): Promise<void> {
+    if (c.etapa === 'entrada') await this.moverFunil(c, { tipo: 'primeira_resposta', clienteEscreveu: Boolean(c.ultimaMensagemCliente) }, por === 'ia' ? 'primeira_resposta_ia' : 'primeira_resposta_equipe');
+    await this.gancho('lojaRespondeu', () => this.d.ganchos?.lojaRespondeu?.(c, por));
   }
 
   private async moverFunil(c: Conversa, ev: EventoFunil, motivo?: string): Promise<void> {

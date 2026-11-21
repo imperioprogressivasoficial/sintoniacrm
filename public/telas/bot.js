@@ -537,6 +537,27 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
 
   /** Novo bot: sempre em branco (sem-exemplos: os modelos prontos saíram). `gatilho` = Início já escolhido (ex.: pela etapa). */
+  /**
+   * etapa-entrada: o bot pode nascer com blocos já ligados (ex.: Início → Agente de IA → Fim), vazios: a pessoa preenche.
+   * o.blocos = tipos do catálogo, na ordem.
+   */
+  function rascunhoInicial(o) {
+    const nos = [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: o.gatilho || { tipo: 'manual' } }];
+    const ligacoes = [];
+    const SAIDA = { inicio: 'proximo', agente_ia: 'concluiu', webhook: 'ok', mensagem: 'proximo', esperar: 'proximo' };
+    let ant = nos[0];
+    for (const [i, tipo] of (o.blocos || []).filter((t) => INFO[t] && t !== 'inicio').concat(o.blocos?.length ? ['fim'] : []).entries()) {
+      const n = { id: `b${i + 1}`, tipo, x: 0, y: (i + 1) * 170 };
+      if (tipo === 'agente_ia') Object.assign(n, { objetivo: '', saida: { tipo: 'agendou' }, dias: 3 });
+      if (tipo === 'webhook') n.url = '';
+      nos.push(n);
+      const saida = SAIDA[ant.tipo];
+      if (saida) ligacoes.push({ id: `l${i + 1}`, de: ant.id, saida, para: n.id });
+      ant = n;
+    }
+    return { nos, ligacoes };
+  }
+
   async function novoBot(o = {}) {
     const ui = UI(); const { el } = ui;
     estilo();
@@ -547,7 +568,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (!nome.value.trim()) { nome.focus(); ui.toast('Dê um nome ao bot.'); return; }
       criar.disabled = true;
       try {
-        const corpo = { nome: nome.value.trim(), rascunho: { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: o.gatilho || { tipo: 'manual' } }], ligacoes: [] } };
+        const corpo = { nome: nome.value.trim(), rascunho: rascunhoInicial(o) };
         const f = await ui.post('/api/bots', corpo);
         d.close();
         abrirEditor(f.id, o.aoMudar || (() => { if (s.caixa && UI().estado.vista === 'bot') desenhar(s.caixa, UI()); }));
@@ -556,7 +577,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     nome.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); criar.click(); } });
     d.append(el('div', { class: 'bt-dlg-topo' }, el('h2', { text: 'Novo bot' }), el('button', { class: 'bt-redondo', type: 'button', 'aria-label': 'Fechar', html: SVG.fechar, onclick: () => d.close() })),
       el('div', { class: 'bt-dlg-corpo' }, campo('Nome do bot', nome),
-        el('span', { class: 'bt-dica', text: o.gatilho ? `Começa: ${fraseGatilho(o.gatilho)}. Você monta o resto no editor.` : 'O bot começa só com o Início; você monta o resto no editor.' }),
+        el('span', { class: 'bt-dica', text: o.dica || (o.gatilho ? `Começa: ${fraseGatilho(o.gatilho)}. Você monta o resto no editor.` : 'O bot começa só com o Início; você monta o resto no editor.') }),
         el('div', { class: 'bt-linha', style: 'justify-content:flex-end' }, criar)));
     d.addEventListener('close', () => d.remove());
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });

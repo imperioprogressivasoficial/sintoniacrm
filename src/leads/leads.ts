@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa, type UnidadeId } from '../domain.js';
+import { ETAPAS, naEtapa, NOME_ETAPA, type Conversa, type Etapa, type UnidadeId } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { contatoVazio, validarCampos, type ArmazemContatos, type CampoContato, type Contato } from '../contatos/contatos.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -108,7 +108,8 @@ export type LinhaImportacao = z.infer<typeof LinhaImportacao>;
 export const PedidoImportacao = z.object({
   linhas: z.array(LinhaImportacao).min(1).max(5000),
   unidade: zUnidade({ ativa: true }),
-  etapa: z.enum(ETAPAS).default('novo_lead'),
+  /* etapa-entrada: lead importado nasce na "Entrada de leads" (dá para escolher outra etapa). */
+  etapa: z.enum(ETAPAS).default('entrada'),
   tagId: z.string().min(1).optional(),
   /** Cria também a conversa (sem mensagem) para o lead aparecer no CRM e no funil. */
   criarConversa: z.boolean().default(true),
@@ -191,7 +192,7 @@ function valorDoCampo(def: CampoContato, v: unknown): unknown {
   return s;
 }
 
-const RANK_ETAPA: Record<Etapa, number> = { perdida: 0, novo_lead: 1, em_conversa: 2, interessada: 3, agendada: 4, compareceu: 5, manutencao: 6 };
+const RANK_ETAPA: Record<Etapa, number> = { perdida: 0, entrada: 0.5, novo_lead: 1, em_conversa: 2, interessada: 3, agendada: 4, compareceu: 5, manutencao: 6 };
 
 // ------------------------------------------------------------------ duplicatas (resposta da API)
 
@@ -252,7 +253,7 @@ export class Leads {
       if (!noEscopo(escopo, c)) continue;
       if (so && !so.has(c.id)) continue;
       if (f.unidade && c.unidade !== f.unidade) continue;
-      if (f.etapa && c.etapa !== f.etapa) continue;
+      if (f.etapa && !naEtapa(c.etapa, f.etapa)) continue; // etapa-entrada
       const tags = b.tags.get(c.id) ?? [];
       if (f.tagId && !tags.some((t) => t.id === f.tagId)) continue;
       if (!dentro(c.criadaEm)) continue;

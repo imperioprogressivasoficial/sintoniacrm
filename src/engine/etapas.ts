@@ -7,6 +7,8 @@ import type { Etapa } from '../domain.js';
  */
 export type EventoFunil =
   | { tipo: 'mensagem_cliente' }
+  /** etapa-entrada: a loja (equipe ou IA) respondeu. Tira da "Entrada de leads". */
+  | { tipo: 'primeira_resposta'; clienteEscreveu: boolean }
   | { tipo: 'ia_classificou'; etapa: Etapa }
   | { tipo: 'agendamento_criado' }
   | { tipo: 'agendamento_cancelado' }
@@ -24,9 +26,15 @@ const PROTEGIDAS: readonly Etapa[] = ['agendada', 'compareceu'];
 export function proximaEtapa(atual: Etapa, evento: EventoFunil): Etapa {
   switch (evento.tipo) {
     case 'mensagem_cliente':
+      // etapa-entrada: na "Entrada de leads" a cliente pode escrever quanto quiser; sai só quando a loja responder.
+      if (atual === 'entrada') return atual;
       // Cliente que volta a falar sai de "Novo lead", "Perdida" ou "Manutenção" para conversa ativa.
       if (atual === 'novo_lead' || atual === 'perdida' || atual === 'manutencao') return 'em_conversa';
       return atual;
+    case 'primeira_resposta':
+      // etapa-entrada: vai para "Novo lead"; se a cliente já tinha escrito, vale a regra de sempre (Em conversa).
+      if (atual !== 'entrada') return atual;
+      return evento.clienteEscreveu ? 'em_conversa' : 'novo_lead';
     case 'ia_classificou':
       if (!ETAPAS_DA_IA.includes(evento.etapa)) return atual;
       if (PROTEGIDAS.includes(atual)) return atual;

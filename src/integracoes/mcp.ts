@@ -39,7 +39,7 @@ export const FERRAMENTAS: Ferramenta[] = [
     descricao: 'Conversas mais recentes da empresa, com etapa, tags e quem atende. Filtre por etapa ou unidade.',
     entrada: z.object({
       limite: z.number().int().min(1).max(50).default(20),
-      etapa: z.enum(['novo_lead', 'em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao', 'perdida']).optional(),
+      etapa: z.enum(['entrada', 'novo_lead', 'em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao', 'perdida']).optional(),
       cursor: z.string().optional().describe('proximoCursor da chamada anterior.'),
     }),
     executar: (ctx, a, s) => s.listarConversas(ctx, { limite: Number(a.limite ?? 20), etapa: a.etapa as never, cursor: a.cursor as string | undefined }),

@@ -56,7 +56,7 @@ describe.skipIf(!pg)('CRM em escala (postgres)', () => {
     expect(q.colunas).toHaveLength(etapas.length);
     let soma = 0;
     for (const c of q.colunas) {
-      const e = esperado.get(c.etapa.id)!;
+      const e = esperado.get(c.etapa.id) ?? { n: 0, paradas: 0 }; // etapa-entrada: a Entrada de leads pode estar vazia
       expect(c.total).toBe(e.n);
       expect(c.paradas).toBe(e.paradas);
       expect(c.cartoes.length).toBe(Math.min(25, e.n));
@@ -118,7 +118,7 @@ describe.each(ambientes)('Busca e valor do CRM ($nome)', (amb) => {
     await m.conversa('norte', 'Mariana');
     const r = (await m.como(m.gente.admin, 'GET', `/api/funis/${m.sistema.id}/buscar?q=ana`)).json() as Array<{ conversaId: string; nome: string; etapa: { nome: string } }>;
     expect(r.map((x) => x.nome)).toEqual(['Ana Paula', 'Mariana']); // quem começa com "ana" vem primeiro
-    expect(r[0]!.etapa.nome).toBe('Em conversa');
+    expect(r[0]!.etapa.nome).toBe('Entrada de leads'); // etapa-entrada: ninguém respondeu ainda
     expect((await m.como(m.gente.admin, 'GET', `/api/funis/${m.sistema.id}/buscar?q=a`)).json()).toEqual([]); // 1 letra: nada
     await m.como(m.gente.admin, 'PUT', `/api/conversas/${ana.id}/valor`, { valor: 180.5 });
     expect((await m.como(m.gente.admin, 'GET', `/api/conversas/${ana.id}/valor`)).json()).toEqual({ valor: 180.5 });

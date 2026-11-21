@@ -49,6 +49,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['mudar_modo', '🔁', 'Mudar quem responde', 'IA, Sugestões ou Minha resposta'],
     ['lembrete_ligacao', '📞', 'Lembrete de ligação', 'Aparece em “Ligar hoje”'],
     ['enviar_email', '✉️', 'Enviar e-mail', 'Manda um modelo do E-mail marketing'],
+    /* etapa-entrada: passos que usam a Rotina, o Rodízio e a Pesquisa de satisfação */
+    ['criar_tarefa', '✅', 'Tarefa para a equipe', 'Cria uma tarefa na Rotina de quem atende'],
+    ['distribuir_rodizio', '🔄', 'Distribuir no rodízio', 'Passa para a próxima pessoa da vez'],
+    ['pesquisa_nps', '⭐', 'Pesquisa de satisfação', 'Manda a pergunta da nota de 0 a 10'],
     ['condicao', '🔀', 'Se… senão…', 'Faz uma coisa ou outra'],
   ];
   const NOME_PASSO = Object.fromEntries(PASSOS.map(([t, i, n]) => [t, [i, n]]));
@@ -301,6 +305,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'atribuir': return `passar para ${pessoaNome(p.usuarioId)}${p.unidade ? ` (só ${UNIDADES[p.unidade]})` : ''}`;
       case 'lembrete_ligacao': return `lembrete de ligação ${p.em_minutos ? `em ${duracao(p.em_minutos)}` : 'na hora'}`;
       case 'enviar_email': return `enviar o e-mail ${aspas(s.base?.modelosEmail?.find((m) => m.id === p.modeloId)?.nome || 'modelo')}`;
+      case 'criar_tarefa': return p.titulo ? `criar a tarefa ${aspas(curto(p.titulo, 50))}` : 'criar tarefa para a equipe';
+      case 'distribuir_rodizio': return 'distribuir no rodízio';
+      case 'pesquisa_nps': return 'mandar a pesquisa de satisfação';
       case 'condicao': {
         const c = CONDICOES.find(([k]) => k === p.se)?.[1] || '';
         const v = p.se === 'tem_tag' ? ` ${aspas(tagNome(p.valor))}` : p.se === 'modo' ? ` ${MODOS[p.valor] || ''}` : '';
@@ -510,6 +517,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     atribuir: () => ({ tipo: 'atribuir', usuarioId: null }),
     lembrete_ligacao: () => ({ tipo: 'lembrete_ligacao', em_minutos: 0, texto: '' }),
     enviar_email: () => ({ tipo: 'enviar_email', modeloId: s.base?.modelosEmail?.[0]?.id || '' }),
+    criar_tarefa: () => ({ tipo: 'criar_tarefa', titulo: '', em_minutos: 60, prioridade: 'normal' }),
+    distribuir_rodizio: () => ({ tipo: 'distribuir_rodizio' }),
+    pesquisa_nps: () => ({ tipo: 'pesquisa_nps' }),
     condicao: () => ({ tipo: 'condicao', se: 'cliente_respondeu', entao: [], senao: [] }),
   };
   const NOVO_GATILHO = {
@@ -539,6 +549,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'atribuir': { const r = { tipo: p.tipo, usuarioId: p.usuarioId || null }; if (p.unidade) r.unidade = p.unidade; return r; }
       case 'lembrete_ligacao': { const r = { tipo: p.tipo, em_minutos: Math.max(0, Math.round(Number(p.em_minutos) || 0)) }; if (String(p.texto || '').trim()) r.texto = String(p.texto).trim(); return r; }
       case 'enviar_email': return { tipo: p.tipo, modeloId: p.modeloId };
+      case 'criar_tarefa': return { tipo: p.tipo, titulo: String(p.titulo || '').trim(), em_minutos: Math.min(43200, Math.max(0, Math.round(Number(p.em_minutos) || 0))), prioridade: ['baixa', 'normal', 'alta'].includes(p.prioridade) ? p.prioridade : 'normal' };
+      case 'distribuir_rodizio': case 'pesquisa_nps': return { tipo: p.tipo };
       case 'condicao': { const r = { tipo: p.tipo, se: p.se, entao: (p.entao || []).map(limparPasso), senao: (p.senao || []).map(limparPasso) }; if (p.se === 'tem_tag' || p.se === 'modo') r.valor = p.valor; return r; }
       default: return p;
     }
@@ -576,6 +588,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       if (p.tipo === 'enviar_mensagem' && !String(p.texto || '').trim()) erro = `${qual}: escreva a mensagem.`;
       else if (p.tipo === 'fluxo_ia' && String(p.objetivo || '').trim().length < 3) erro = `${qual}: escreva o objetivo da IA.`;
       else if (p.tipo === 'mover_etapa' && !p.etapaId) erro = `${qual}: escolha a etapa.`;
+      else if (p.tipo === 'criar_tarefa' && String(p.titulo || '').trim().length < 2) erro = `${qual}: escreva o que a equipe precisa fazer.`;
       else if (p.tipo === 'enviar_email' && !p.modeloId) erro = `${qual}: escolha o modelo de e-mail (crie em E-mail marketing › Modelos).`;
       else if ((p.tipo === 'marcar_tag' || p.tipo === 'desmarcar_tag') && !p.tagId) erro = `${qual}: escolha a tag.`;
       else if (p.tipo === 'condicao') { if ((p.se === 'tem_tag' || p.se === 'modo') && !p.valor) erro = `${qual}: complete a condição.`; ver(p.entao || [], `${pre}${i + 1}.sim.`); ver(p.senao || [], `${pre}${i + 1}.não.`); }
@@ -597,6 +610,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         : { nome: opcoes.nome || '', funilId: opcoes.funilId || null, ligada: false, gatilho: null, passos: [NOVO_PASSO.enviar_mensagem()], opcoes: { parar_se_equipe_responder: true } },
       sujo: false, catalogo: null,
     };
+    /* etapa-entrada: a caixa da etapa abre o editor já com os passos do tipo escolhido (vazios: a pessoa escreve) */
+    if (!a && Array.isArray(opcoes.passosTipos)) {
+      ed.draft.passos = opcoes.passosTipos.filter((t) => NOVO_PASSO[t]).map((t) => NOVO_PASSO[t](ed));
+      if (!ed.draft.passos.length) ed.catalogo = 'raiz';
+    }
     if (!ed.draft.gatilho) ed.draft.gatilho = opcoes.gatilho ? copia(opcoes.gatilho) : NOVO_GATILHO.entrou_na_etapa(ed);
     // a etapa do gatilho manda no funil da automação (o servidor exige etapa do mesmo funil)
     const etG = s.base.etapas.get(ed.draft.gatilho.etapaId);
@@ -777,6 +795,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
             larga(el('p', { class: 'au-info', text: 'Vai para o e-mail da ficha, no ritmo da conta, com descadastro. Quem não tem e-mail ou se descadastrou é pulada. Crie modelos em E-mail marketing › Modelos.' })));
           break;
         }
+        /* etapa-entrada */
+        case 'criar_tarefa': {
+          const t = el('input', { maxlength: '120', value: p.titulo || '', placeholder: 'O que fazer (pode usar {primeiro_nome})', autocomplete: 'off' });
+          t.addEventListener('input', () => { p.titulo = t.value; marcarSujo(); });
+          campos.append(larga(rotulo('Tarefa', t)),
+            rotulo('Prazo (0 = agora)', duracaoCampo(p.em_minutos ?? 60, (m) => { p.em_minutos = Math.min(43200, m); marcarSujo(); }, { minimo: 0 })),
+            rotulo('Prioridade', selecao([['baixa', 'Baixa'], ['normal', 'Normal'], ['alta', 'Alta']], p.prioridade || 'normal', (v) => { p.prioridade = v; marcarSujo(); })),
+            larga(el('p', { class: 'au-info', text: 'Aparece em Atendimento › Rotina para a dona da conversa. Sem dona, vai para a gestão.' })));
+          break;
+        }
+        case 'distribuir_rodizio':
+          campos.append(larga(el('p', { class: 'au-info', text: 'Passa a conversa para a próxima pessoa da vez (Atendimento › Rodízio de leads precisa estar ligado na unidade). Quem já tem dona fica como está.' })));
+          break;
+        case 'pesquisa_nps':
+          campos.append(larga(el('p', { class: 'au-info', text: 'Manda a pergunta da Pesquisa de satisfação (Automações › Pesquisa de satisfação precisa estar ligada). A nota da cliente entra no resultado da pesquisa.' })));
+          break;
         case 'condicao': {
           const valorCaixa = el('div');
           const desenharValor = () => {

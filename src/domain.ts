@@ -19,6 +19,8 @@ export type ModoAtendimento =
   | 'humano';
 
 export const ETAPAS = [
+  /* etapa-entrada: etapa fixa de chegada (cinza). Todo lead novo nasce aqui e sai na 1ª resposta da loja (equipe ou IA). */
+  'entrada',
   'novo_lead',
   'em_conversa',
   'interessada',
@@ -30,6 +32,7 @@ export const ETAPAS = [
 export type Etapa = (typeof ETAPAS)[number];
 
 export const NOME_ETAPA: Record<Etapa, string> = {
+  entrada: 'Entrada de leads',
   novo_lead: 'Novo lead',
   em_conversa: 'Em conversa',
   interessada: 'Interessada',
@@ -38,6 +41,20 @@ export const NOME_ETAPA: Record<Etapa, string> = {
   manutencao: 'Manutenção',
   perdida: 'Perdida',
 };
+
+/** etapa-entrada: a etapa fixa de chegada (primeira em todo funil; não renomeia, não apaga, não sai do lugar). */
+export const ETAPA_ENTRADA = 'entrada' as const;
+/** etapa-entrada: nome e cor (bolinha cinza) da etapa fixa de chegada, iguais em todo funil. */
+export const NOME_ENTRADA = 'Entrada de leads';
+export const COR_ENTRADA = '#94a3b8';
+/** etapa-entrada: para as contas e os filtros, quem está na Entrada também é "Novo lead". */
+export const ETAPAS_NOVO_LEAD: readonly Etapa[] = ['entrada', 'novo_lead'];
+/** etapa-entrada: filtro por etapas com "Novo lead" escolhido pega também a Entrada de leads. */
+export function expandirEtapas<T extends string>(lista: readonly T[]): T[] {
+  return lista.includes('novo_lead' as T) && !lista.includes('entrada' as T) ? [...lista, 'entrada' as T] : [...lista];
+}
+/** etapa-entrada: a conversa está na etapa pedida (pedir "Novo lead" vale também para quem está na Entrada). */
+export const naEtapa = (etapaDaConversa: string, pedida: string) => etapaDaConversa === pedida || (pedida === 'novo_lead' && etapaDaConversa === 'entrada');
 
 /** Quem escreveu a mensagem. */
 export type Autor = 'cliente' | 'ia' | 'equipe' | 'sistema';

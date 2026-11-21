@@ -200,6 +200,43 @@ export class Nps {
     return { finalizacao: r.finalizacao, pesquisa: r.pesquisa, aviso: r.aviso };
   }
 
+  /**
+   * etapa-entrada: passo "Pesquisa de satisfação" das automações (ex.: ao entrar em "Compareceu"). Já está SOB a trava
+   * da conversa. Manda a pergunta e abre a pesquisa (sem finalização); a nota é lida como na pesquisa de sempre.
+   */
+  async enviarDeAutomacao(c: Conversa): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }> {
+    if (c.empresaId !== this.o.empresaId) return { ok: false, motivo: 'Conversa de outra empresa.' };
+    const cfg = await this.config();
+    if (!cfg.ligada || !cfg.pergunta) return { ok: false, motivo: 'A pesquisa de satisfação está desligada (Automações › Pesquisa de satisfação).' };
+    const agora = this.agora();
+    await this.o.armazem.fecharAbertas(c.id, 'expirada', 'outra pesquisa foi enviada');
+    const pesquisa: Pesquisa = {
+      id: randomUUID(),
+      empresaId: this.o.empresaId,
+      conversaId: c.id,
+      finalizacaoId: null,
+      unidade: c.unidade,
+      atendenteId: c.responsavelId ?? null,
+      atendenteNome: c.responsavelNome ?? null,
+      motivo: null,
+      estado: 'aguardando_nota',
+      enviadaEm: agora,
+      expiraEm: new Date(agora.getTime() + cfg.validadeHoras * HORA),
+      nota: null,
+      comentario: null,
+      respondidaEm: null,
+      detalhe: null,
+    };
+    try {
+      await this.o.sintonia().enviarAutomatico(c, this.texto(cfg.pergunta, c), AUTOR);
+    } catch (e) {
+      pesquisa.estado = 'nao_enviada';
+      pesquisa.detalhe = String((e as Error)?.message ?? e).slice(0, 300);
+    }
+    await this.o.armazem.salvarPesquisa(pesquisa);
+    return pesquisa.estado === 'nao_enviada' ? { ok: false, motivo: `A pesquisa não foi enviada: ${pesquisa.detalhe}` } : { ok: true, detalhe: 'Pesquisa de satisfação enviada.' };
+  }
+
   // ------------------------------------------------------------ resposta da cliente (sob a trava)
 
   /** Gancho mensagemCliente: lê a nota ou o comentário da pesquisa aberta. Já está SOB a trava da conversa. */

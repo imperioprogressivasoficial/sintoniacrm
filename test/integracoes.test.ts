@@ -319,6 +319,8 @@ for (const amb of ambientes) {
       expect(alterado.json().nome).toBe('Paula Lima');
       const conversaId = criado.json().contato.conversas[0].id as string;
       expect((await t.repo.buscarConversa(conversaId))!.nome).toBe('Paula Lima');
+      // etapa-entrada: lead criado pela API nasce na "Entrada de leads".
+      expect((await t.repo.buscarConversa(conversaId))!.etapa).toBe('entrada');
 
       const movido = await t.comChave(chave, 'POST', `/api/v1/conversas/${conversaId}/etapa`, { etapa: 'Interessada' });
       expect(movido.statusCode).toBe(200);

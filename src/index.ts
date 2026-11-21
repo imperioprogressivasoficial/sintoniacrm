@@ -468,6 +468,10 @@ const automacoes = new Automacoes({
   log,
   transmissoes: () => transmissoes,
   variaveis: () => nps.variaveis(), // {link_avaliacao} da pesquisa de satisfação
+  /* etapa-entrada: passos "tarefa para a equipe", "distribuir no rodízio" e "pesquisa de satisfação" */
+  tarefas: () => crmIa,
+  rodizio: () => rodizio,
+  nps: () => nps,
 });
 /* automacao-vendas: gatilho "agendou" (agendamento da IA ou da equipe, e a cliente confirmando o horário). */
 observarEventos(repo, (e) => void automacoes.aoEvento(e));
@@ -898,6 +902,12 @@ const app = criarServidor({
       await repo.registrarEvento({ tipo: 'conversa_nova', conversaId: conversa.id, unidade, em: agora, dados: { origem: 'cliente_teste' } });
       const inicial = await modoInicialAgentes(conversa, agora); /* serena-chave */
       await sintonia.mudarModo(conversa.id, inicial ?? (await modoNovo()));
+      /* etapa-entrada: como num número real, a cliente nova chega na "Entrada de leads". */
+      await sintonia.comConversa(conversa.id, async (c) => {
+        if (c.etapa !== 'novo_lead') return;
+        c.etapa = 'entrada';
+        await repo.salvarConversa(c);
+      });
     }
     // Mídia de teste: chega como se viesse do WhatsApp, já com o arquivo (o canal de teste não baixa nada).
     const tipo = midia ? tipoPeloMimetype(midia.mimetype) : undefined;

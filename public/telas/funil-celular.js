@@ -260,7 +260,7 @@
   /** Etapas que contam como "em andamento" (o funil do sistema para no Agendada; os outros, todas menos a última). */
   function abertas(ctx) {
     const cols = colunas(ctx);
-    if (sistema(ctx)) return cols.filter((c) => ['novo_lead', 'em_conversa', 'interessada', 'agendada'].includes(c.etapa.chaveSistema));
+    if (sistema(ctx)) return cols.filter((c) => ['entrada', 'novo_lead', 'em_conversa', 'interessada', 'agendada'].includes(c.etapa.chaveSistema)); // etapa-entrada
     return cols.length > 1 ? cols.slice(0, -1) : cols;
   }
   /** Etapa de ganho: Compareceu no funil do sistema; nos outros, a última coluna. */
@@ -552,7 +552,7 @@
     const cab = el('div', { class: 'fc-deck-cab' },
       filtro
         ? el('button', { class: 'fc-filtro', type: 'button', 'aria-label': `Mostrando só ${filtro.etapa.nome}. Tocar para ver todas`, onclick: () => { st.etapaFoco = null; st.aberto = null; redesenhar(true); } },
-          document.createTextNode(filtro.etapa.nome), el('span', { text: '✕', 'aria-hidden': 'true' }))
+          document.createTextNode(filtro.etapa.nome), window.SintoniaEtapaFixa?.eh(filtro.etapa) ? window.SintoniaEtapaFixa.cadeado() : null, el('span', { text: '✕', 'aria-hidden': 'true' }))
         : el('span', { class: 'fc-deck-tit', text: 'Todas as etapas' }),
       el('span', { class: 'fc-deck-nav' },
         el('button', { class: 'fc-seta', type: 'button', 'aria-label': 'Anterior', 'aria-disabled': pos === 0 ? 'true' : null, html: IC.esq, onclick: () => ir(-1) }),
@@ -658,7 +658,7 @@
       if (!itens.length) lista.append(el('p', { class: 'fc-vazio', text: 'Ninguém aqui.' }));
       if (col.mais) lista.append(el('button', { class: 'fc-carregar', type: 'button', text: 'Carregar mais', onclick: () => ctx.carregarMais(col) }));
       const sec = el('section', { class: 'fc-col', 'aria-label': col.etapa.nome },
-        el('header', {}, el('i'), el('b', { text: col.etapa.nome }), el('span', { text: `${col.total} · ${ctx.dinheiro(somaValor(vis))}` })),
+        el('header', {}, el('i'), el('b', { text: col.etapa.nome }, window.SintoniaEtapaFixa?.eh(col.etapa) ? window.SintoniaEtapaFixa.cadeado() : null), el('span', { text: `${col.total} · ${ctx.dinheiro(somaValor(vis))}` })), /* etapa-entrada: cadeado */
         lista,
         ctx.gestao ? el('button', { class: 'fc-add', type: 'button', text: '+ Adicionar', onclick: () => ctx.adicionarCliente(col) }) : null);
       sec.style.setProperty('--cor', col.etapa.cor || '#3aa0ff');

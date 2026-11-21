@@ -24,7 +24,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /** A partir desta largura da tela do Dashboard, duas colunas. */
   const LARGURA_DUAS = 940;
   /** Cores das etapas (só para gráficos). */
-  const COR_ETAPA = { novo_lead: '#7cc4ff', em_conversa: '#8CC7E0', interessada: '#5FA8CB', agendada: '#0ffcbe', compareceu: '#FFB199', manutencao: '#F5B800', perdida: '#7D8C99' };
+  const COR_ETAPA = { entrada: '#94a3b8' /* etapa-entrada */, novo_lead: '#7cc4ff', em_conversa: '#8CC7E0', interessada: '#5FA8CB', agendada: '#0ffcbe', compareceu: '#FFB199', manutencao: '#F5B800', perdida: '#7D8C99' };
   const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
@@ -1200,7 +1200,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('span', { class: 'pn-nome', text: nome(x) }), el('b', { text: fmtN(n) }), el('small', { text: total ? `${p}%` : '—' })));
     }
     return [el('div', { class: 'pn-total' }, el('b', { text: fmtN(total) }), el('span', { text: `${total === 1 ? 'conversa' : 'conversas'} no funil agora` })), pilha, lista,
-      total ? null : el('div', { class: 'pn-vazio', text: 'Ainda não há conversas no funil. Elas entram em “Novo lead” assim que a cliente chama.' })];
+      total ? null : el('div', { class: 'pn-vazio', text: 'Ainda não há conversas no funil. Elas entram em “Entrada de leads” assim que a cliente chama.' })];
   }
 
   // ---------- equipe (tabela) ----------
