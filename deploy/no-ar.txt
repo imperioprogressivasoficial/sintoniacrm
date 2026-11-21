@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 10:45 UTC (21/11, 07h45 na Bahia)
-commit: 6f90f0d
-pacote sha256: a1e46d3cd33b38631ec965b17a8e9299ff22fa60ec89b4b0e9127c540bae2709
+data: 2026-11-21 11:05 UTC (21/11, 08h05 na Bahia)
+commit: 6f59829
+pacote sha256: 10985ad459c355df33e767989a7adacdf8de46bfb1cd089a129333ed432d61f4
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-6f90f0d.b64); pode apagar depois.
-observação: em cima do 9102e3e. Entra: folha Atendimento e IA no modelo 2 (ia2 em conversa-extras.js) com atalho Mover de etapa.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-6f59829.b64); pode apagar depois.
+observação: em cima do 6f90f0d. Entra: automacao-vendas (570: rodízio de leads — desligado por padrão —, prazos por etapa com escalada, gatilhos sem_resposta/agendou/mensagem_recebida; tela Atendimento › Distribuição e prazos).
