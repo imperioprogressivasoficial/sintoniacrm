@@ -1052,6 +1052,46 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
   .topo-grupo::after { display: none !important; }
   .trilho .nav[aria-current="page"] { box-shadow: none !important; }
 </style>
+<style id="cfg-capa-css">
+  /* cfg-capa (dono 21/11): Configurações no celular = capa azul-marinho + busca + atalhos redondos + áreas */
+  @media (max-width: 760px) {
+    #v-configuracoes .painel:has(.cfg-nova) { padding-top: 0; }
+    .cfg-nova { display: block; }
+    .cfg-capa { margin: 0 -14px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 18px 46px; color: #fff;
+      background: linear-gradient(160deg, #0d2240 0%, #123a6b 58%, #106ebe 100%); }
+    .cfg-capa-barra { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-bottom: 10px; }
+    .cfg-capa-tit { font: 700 22px/1.1 var(--fonte-titulo, var(--fonte)); letter-spacing: -.01em; }
+    .cfg-capa .topo-grupo { background: rgba(255,255,255,.10) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14) !important; }
+    .cfg-capa .topo-grupo .icone.redondo { color: #fff !important; }
+    .cfg-capa .mais-perfil.cfg-perfil { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); color: #fff; margin-bottom: 12px; }
+    .cfg-capa .mais-perfil .mais-txt small { color: rgba(255,255,255,.72); }
+    .cfg-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cfg-chips span { font-size: 12px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.12); color: #e7f1ff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cfg-chips span:empty { display: none; }
+    .cfg-folha { position: relative; margin: -26px -14px 0; padding: 16px 14px 0; border-radius: 26px 26px 0 0; background: var(--fundo); }
+    .cfg-busca { display: flex; align-items: center; gap: 10px; height: 50px; border-radius: 16px; padding: 0 14px; background: color-mix(in srgb, #106ebe 7%, var(--fundo)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #106ebe 14%, transparent); margin-bottom: 18px; color: var(--sub); }
+    .cfg-busca svg { width: 19px; height: 19px; color: var(--azul, #106ebe); flex: none; }
+    .cfg-busca input { all: unset; flex: 1; min-width: 0; font-size: 16px; color: var(--texto); }
+    .cfg-busca input::placeholder { color: var(--sub); }
+    .cfg-atalhos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 20px; }
+    .cfg-at { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 7px; font-size: 12.5px; color: var(--texto); text-align: center; -webkit-tap-highlight-color: transparent; }
+    .cfg-at > span { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: var(--azul, #106ebe); background: color-mix(in srgb, #106ebe 9%, var(--fundo)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #106ebe 16%, transparent); }
+    .cfg-at > span svg { width: 23px; height: 23px; }
+    .cfg-sec { margin: 0 4px 6px; font-size: 13px; font-weight: 700; color: var(--texto); }
+    .cfg-areas { display: grid; }
+    .cfg-area { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; gap: 14px; padding: 13px 4px; border-bottom: 1px solid var(--linha); -webkit-tap-highlight-color: transparent; }
+    .cfg-area:active { background: var(--fz-toque, rgba(13,34,64,.06)); }
+    .cfg-area-ic { width: 24px; height: 24px; flex: none; color: var(--azul, #106ebe); display: grid; place-items: center; font-style: normal; }
+    .cfg-area-ic svg { width: 22px; height: 22px; }
+    .cfg-area .mais-txt b { font-size: 16px; font-weight: 500; display: block; }
+    .cfg-area .mais-txt small { font-size: 12.5px; color: var(--sub); }
+    .cfg-area .mais-seta { margin-left: auto; color: var(--sub); }
+    .cfg-resultado { margin-bottom: 14px; }
+    html[data-tema="escuro"] .cfg-busca, html[data-tema="escuro"] .cfg-at > span { background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+    html[data-tema="escuro"] .cfg-at > span { color: #6bb8ff; }
+    html[data-tema="escuro"] .cfg-capa { background: linear-gradient(160deg, #06142a 0%, #0c2a52 60%, #0d5aa0 100%); }
+  }
+</style>
 </head>
 <body>
 <div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo suas conversas">
@@ -3264,6 +3304,37 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const papelUnidade = [PAPEL[eu.papel] || eu.papel, nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : '')].filter(Boolean).join(' · ');
     const perfil = el('button', { class: 'mais-perfil', type: 'button', title: 'Minha conta', onclick: () => (window.SintoniaTelas?.conta ? (window.SintoniaTelas.conta.irAba('perfil'), mostrar('conta')) : abrirMinhaConta()) }, /* empresa-conta */ avatarPessoa(eu.nome, '', eu.id),
       el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: papelUnidade })), el('span', { class: 'mais-seta', html: IC.seta }));
+    /* cfg-capa (dono 21/11, modelos 6 + 10): no celular, capa azul-marinho com o perfil e a chave Disponível,
+       busca "O que você procura?", 4 atalhos redondos e as áreas numa lista que abre cada uma no painel. */
+    if (innerWidth <= 760) {
+      const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const fecharE = (fn) => () => { if (window.SintoniaPainel?.aberto?.()) window.SintoniaPainel.fechar(); setTimeout(fn, 60); };
+      const abrirArea = (g) => window.SintoniaPainel.abrir({ id: 'cfg-' + g.id, titulo: g.titulo, montar: (corpo) => corpo.append(el('div', { class: 'mais-lista' }, ...g.itens.map((it) => linhaItem({ ...it, acao: fecharE(it.acao) })))) });
+      const perfilCapa = el('button', { class: 'mais-perfil cfg-perfil', type: 'button', title: 'Minha conta', onclick: perfil.onclick || (() => (window.SintoniaTelas?.conta ? (window.SintoniaTelas.conta.irAba('perfil'), mostrar('conta')) : abrirMinhaConta())) },
+        avatarPessoa(eu.nome, '', eu.id), el('span', { class: 'mais-txt' }, el('b', { text: eu.nome }), el('small', { text: PAPEL[eu.papel] || eu.papel })));
+      const chips = el('div', { class: 'cfg-chips' }, el('span', { text: nomesUnidades(eu.unidades) || (adm ? 'Todas as unidades' : 'Sem unidade') }), el('span', { text: eu.email || '' }));
+      const capa = el('div', { class: 'cfg-capa' },
+        el('div', { class: 'cfg-capa-barra' }, el('span', { class: 'cfg-capa-tit', text: 'Configurações' }), window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),
+        perfilCapa, chips);
+      const campo = el('input', { type: 'search', placeholder: 'O que você procura?', 'aria-label': 'Buscar em Configurações', enterkeyhint: 'search' });
+      const caixaBusca = el('label', { class: 'cfg-busca' }, el('span', { html: IC.busca, 'aria-hidden': 'true' }), campo);
+      const ATALHOS = [['Agenda', IC.agenda, 'agenda'], ['Respostas', IC.respostas, 'respostas'], ['Rotina', I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), 'rotina'], ['Serena', IC.ia, 'serena']];
+      const atalhos = el('div', { class: 'cfg-atalhos' }, ...ATALHOS.map(([n, ic, v]) => el('button', { class: 'cfg-at', type: 'button', onclick: () => mostrar(v) }, el('span', { html: ic, 'aria-hidden': 'true' }), document.createTextNode(n))));
+      const areas = el('div', { class: 'cfg-areas' }, ...grupos.map((g) => el('button', { class: 'cfg-area', type: 'button', onclick: () => abrirArea(g) },
+        el('i', { class: 'cfg-area-ic', html: g.ic }), el('span', { class: 'mais-txt' }, el('b', { text: g.titulo }), el('small', { text: g.itens.length + (g.itens.length === 1 ? ' opção' : ' opções') })), el('span', { class: 'mais-seta', html: IC.seta }))));
+      const todos = [...grupos.flatMap((g) => g.itens.map((it) => ({ ...it, sub: it.sub || g.titulo }))), ...itensConta.map((it) => ({ ...it, sub: it.sub || 'Minha conta' }))];
+      const resultado = el('div', { class: 'mais-lista cfg-resultado', hidden: '' });
+      const nada = el('p', { class: 'mais-nada', text: 'Nada com esse nome.', hidden: '' });
+      const normais = el('div', {}, atalhos, el('p', { class: 'cfg-sec', text: 'Tudo da Sintonia' }), areas, el('div', { class: 'mais-lista', style: 'margin-top:18px' }, linhaItem(sair)));
+      campo.addEventListener('input', () => {
+        const q = semAcento(campo.value.trim());
+        normais.hidden = Boolean(q);
+        if (!q) { resultado.hidden = true; nada.hidden = true; return; }
+        const vistos = new Set(); const achou = todos.filter((it) => semAcento(`${it.nome} ${it.sub || ''}`).includes(q) && !vistos.has(it.nome) && vistos.add(it.nome));
+        resultado.replaceChildren(...achou.map(linhaItem)); resultado.hidden = !achou.length; nada.hidden = Boolean(achou.length);
+      });
+      $('configuracoes').replaceChildren(el('div', { class: 'mais cfg-nova' }, capa, el('div', { class: 'cfg-folha' }, caixaBusca, resultado, nada, normais)));
+    } else
     $('configuracoes').replaceChildren(el('div', { class: 'mais' },
       el('div', { class: 'mais-barra' }, btBusca, window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),
       el('h1', { class: 'titulo-grande', text: 'Configurações' }),
