@@ -60,7 +60,7 @@ for (const amb of ambientes) {
       expect(c1.agendamentos.passados).toBeGreaterThan(10);
       expect(c1.tags.reaproveitadas).toBe(1); // a VIP real
       expect(c1.atendentes).toBe(4);
-      expect(c1.automacoes).toBe(3);
+      expect(c1.automacoes).toBe(0); // sem-exemplos: nada de automação de exemplo em Fluxos
 
       const conversas = await g.repo.listarConversas();
       const demos = conversas.filter((c) => ehDemo(c.telefone));
@@ -77,8 +77,7 @@ for (const amb of ambientes) {
       // Nada pendente: tarefas, execuções de automação, push.
       const automacoes = await g.automacoes.listar();
       const demoAutos = automacoes.filter((a) => a.criadaPor === 'Demonstração');
-      expect(demoAutos.length).toBe(3);
-      expect(demoAutos.every((a) => !a.ligada)).toBe(true);
+      expect(demoAutos.length).toBe(0);
       if (g.pool) {
         expect((await g.pool.query(`select count(*)::int as n from sintonia.tarefas t join sintonia.conversas c on c.id = t.conversa_id where not t.feita and c.telefone like '${PREFIXO_TELEFONE_DEMO}%'`)).rows[0].n).toBe(0);
         expect((await g.pool.query('select count(*)::int as n from sintonia.automacao_execucoes')).rows[0].n).toBe(0);

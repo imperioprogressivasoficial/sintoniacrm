@@ -57,6 +57,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fu-salvar { position: sticky; bottom: 20px; z-index: 3; display: flex; justify-content: flex-end; }
   .fu-vars { font-size: 12px; color: var(--sub); }
   .fu-vars code { font-size: 11.5px; padding: 1px 5px; border-radius: 6px; background: var(--vidro-item); }
+  .fu-vazio { padding: 18px 14px; border-radius: 18px; border: 1.5px dashed var(--vidro-borda); text-align: center; color: var(--sub); display: grid; gap: 4px; font-size: 14px; line-height: 1.45; }
+  .fu-vazio b { color: var(--texto); font-size: 15px; }
   .fu-unidades { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
   .fu-abas { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); justify-self: start; }
   .fu-abas button { all: unset; cursor: pointer; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 650; color: var(--sub); display: inline-flex; align-items: center; }
@@ -169,7 +171,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const s = situacao[cad.id];
       const card = el('section', { class: 'fu-cartao' });
       const passos = el('div', { class: 'fu-passos' });
-      const desenharPassos = () => passos.replaceChildren(...cad.passos.map((p, k) => {
+      /* sem-exemplos: a cadência nasce vazia; a pessoa escreve as mensagens dela. */
+      const desenharPassos = () => passos.replaceChildren(...(cad.passos.length ? [] : [el('div', { class: 'fu-vazio' }, el('b', { text: 'Nenhuma mensagem ainda.' }), el('span', { text: 'Toque em + Mensagem para montar a sua.' }))]), ...cad.passos.map((p, k) => {
         const dias = p.esperaHoras >= 24 && p.esperaHoras % 24 === 0;
         const unidade = el('select', { 'aria-label': 'Unidade de tempo' }, el('option', { value: 'h', text: 'horas' }), el('option', { value: 'd', text: 'dias' }));
         unidade.value = dias ? 'd' : 'h';
@@ -186,18 +189,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         return el('div', { class: 'fu-passo' },
           el('div', { class: 'fu-linha' }, el('span', { class: 'fu-n', text: String(k + 1) }), el('span', { text: k === 0 ? 'Esperar' : 'Depois, esperar' }), qtd, unidade, el('span', { text: '→ mandar:' }),
             (() => { const t = cad.passos.slice(0, k + 1).reduce((n, x) => n + (Number(x.esperaHoras) || 0), 0); return t >= 24 && t % 24 === 0 ? el('span', { class: 'fu-dia', text: `(dia ${t / 24})`, style: 'opacity:.7' }) : null; })(),
-            cad.passos.length > 1 ? el('button', { class: 'fu-x', type: 'button', text: 'Remover', onclick: () => { cad.passos.splice(k, 1); desenharPassos(); } }) : null),
-          area(p.texto, (v) => { p.texto = v; }, `Mensagem do passo ${k + 1}`),
+            el('button', { class: 'fu-x', type: 'button', text: 'Remover', onclick: () => { cad.passos.splice(k, 1); if (!cad.passos.length) { cad.ligada = false; chaveCad.setAttribute('aria-checked', 'false'); } desenharPassos(); } })),
+          (() => { const t = area(p.texto, (v) => { p.texto = v; }, `Mensagem do passo ${k + 1}`); t.placeholder = 'Escreva a mensagem (use {primeiro_nome} para o nome da cliente)'; return t; })(),
           el('div', { class: 'fu-linha' }, el('label', {}, ia, el('span', { text: 'A IA escreve com este objetivo' })), objetivo),
           el('div', { class: 'fu-linha' }, el('label', {}, em, el('span', { text: 'Também por e-mail' })), modelo));
       }));
+      const chaveCad = chave(cad.ligada, (v) => {
+        if (v && !cad.passos.length) { chaveCad.setAttribute('aria-checked', 'false'); ui.toast('Escreva pelo menos uma mensagem antes de ligar.'); return; }
+        cad.ligada = v;
+      }, `Cadência ${s?.nome || cad.id}`);
       desenharPassos();
       card.append(
-        el('div', { class: 'fu-cab' }, el('div', {}, el('h2', { text: s?.nome || cad.id }), el('small', { text: s?.gatilho || '' })), chave(cad.ligada, (v) => { cad.ligada = v; }, `Cadência ${s?.nome || cad.id}`)),
+        el('div', { class: 'fu-cab' }, el('div', {}, el('h2', { text: s?.nome || cad.id }), el('small', { text: s?.gatilho || '' })), chaveCad),
         passos,
         el('div', { class: 'fu-acoes' },
-          cad.passos.length < 6 ? el('button', { class: 'fu-botao', type: 'button', text: '+ Passo', onclick: () => { cad.passos.push({ esperaHoras: 24, texto: '', ia: false, objetivo: '', email: false, emailModeloId: null }); desenharPassos(); } }) : null,
-          el('button', { class: 'fu-botao', type: 'button', text: 'Usar modelo pronto', onclick: () => { cad.passos = JSON.parse(JSON.stringify(s.modelo.passos)); cad.pararSeResponder = s.modelo.pararSeResponder; desenharPassos(); ui.toast('Modelo pronto aplicado. Salve para valer.'); } }),
+          (() => { const b = el('button', { class: 'fu-botao', type: 'button', text: '+ Mensagem', onclick: () => { if (cad.passos.length >= 6) return; cad.passos.push({ esperaHoras: 24, texto: '', ia: false, objetivo: '', email: false, emailModeloId: null }); desenharPassos(); b.hidden = cad.passos.length >= 6; passos.querySelector('.fu-passo:last-child textarea')?.focus(); } }); b.hidden = cad.passos.length >= 6; return b; })(),
+          /* sem-exemplos: saiu o botão do modelo pronto */
           el('label', { class: 'fu-linha' }, (() => { const c = el('input', { type: 'checkbox' }); c.checked = cad.pararSeResponder; c.onchange = () => { cad.pararSeResponder = c.checked; }; return c; })(), el('span', { text: 'Parar quando a cliente responder' }))),
         vars());
       tela.append(card);

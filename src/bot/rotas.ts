@@ -65,6 +65,7 @@ export function registrarBots(app: FastifyInstance, o: OpcoesRotasBots): void {
     }
   };
 
+  // sem-exemplos: devolve lista vazia (nenhum modelo pronto); a rota fica para tela antiga em cache não quebrar.
   app.get('/api/bots/modelos', async (req) => {
     exigeGestao(req);
     return bots.modelos();

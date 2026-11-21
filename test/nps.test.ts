@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { montarPosVenda, ParamsPosVenda } from '../src/automacoes/modelos.js';
 import { preencher } from '../src/automacoes/esquema.js';
-import { calcularNps, lerNota, normalizarConfigNps } from '../src/nps/tipos.js';
+import { calcularNps, configNpsPadrao, lerNota, normalizarConfigNps, TEXTOS_NPS } from '../src/nps/tipos.js';
 import { HORA } from '../src/util/tempo.js';
 import { ambientes, montarFunis } from './funis-ambiente.js';
 
@@ -45,10 +45,11 @@ describe('pesquisa de satisfação: leitura da nota', () => {
     expect(calcularNps([])).toMatchObject({ nps: null, total: 0 });
   });
 
-  it('configuração estragada volta ao padrão campo a campo', () => {
+  it('configuração estragada volta ao padrão campo a campo (e os textos nascem vazios: sem-exemplos)', () => {
+    expect(configNpsPadrao()).toMatchObject({ ligada: false, pergunta: '', textoComentario: '', agradecimento: '' });
     const c = normalizarConfigNps({ ligada: true, pergunta: '', validadeHoras: 'x', linkAvaliacao: 'javascript:alert(1)' });
     expect(c.ligada).toBe(true);
-    expect(c.pergunta).toContain('De 0 a 10');
+    expect(c.pergunta).toBe('');
     expect(c.validadeHoras).toBe(72);
     expect(c.linkAvaliacao).toBe('');
   });
@@ -75,7 +76,11 @@ describe.each(ambientes)('Finalizar atendimento e NPS ($nome)', (amb) => {
   async function preparar(ligada = true) {
     const m = await montarFunis(amb, { nps: true });
     if (ligada) {
-      const r = await m.como(m.gente.admin, 'PUT', '/api/nps/config', { ligada: true, linkAvaliacao: 'https://g.page/r/empresa/review' });
+      // sem-exemplos: os textos nascem vazios; sem a pergunta, não liga.
+      const sem = await m.como(m.gente.admin, 'PUT', '/api/nps/config', { ligada: true });
+      expect(sem.statusCode).toBe(400);
+      expect(sem.json().erro ?? sem.json().message).toContain('pergunta');
+      const r = await m.como(m.gente.admin, 'PUT', '/api/nps/config', { ligada: true, ...TEXTOS_NPS, linkAvaliacao: 'https://g.page/r/empresa/review' });
       expect(r.statusCode, r.body).toBe(200);
     }
     const textos = () => m.enviados.map((e) => e.texto);
@@ -215,17 +220,13 @@ describe.each(ambientes)('Finalizar atendimento e NPS ($nome)', (amb) => {
     expect(csv.body).toContain('Carla Lima');
   });
 
-  it('modelo pós-venda pronto: cria as automações ligadas e exige o link para pedir avaliação', async () => {
+  it('sem-exemplos: as rotas do pós-venda pronto saíram; o gerador ainda funciona de ponta a ponta (futura Ajuda)', async () => {
     const m = await preparar(false);
-    let r = await m.como(m.gente.admin, 'POST', '/api/automacoes/modelos/pos-venda', { diasRetorno: 30 });
-    expect(r.statusCode).toBe(400); // sem link de avaliação
-    r = await m.como(m.gente.admin, 'POST', '/api/automacoes/modelos/pos-venda', { diasRetorno: 30, linkAvaliacao: 'https://g.page/r/xyz/review' });
-    expect(r.statusCode, r.body).toBe(201);
-    const lista = (await m.como(m.gente.admin, 'GET', '/api/automacoes/modelos')).json() as { modelos: Array<{ id: string; criadas: Array<{ ligada: boolean }> }>; linkAvaliacao: string };
-    expect(lista.linkAvaliacao).toBe('https://g.page/r/xyz/review');
-    expect(lista.modelos[0]!.criadas).toHaveLength(2);
-    expect(lista.modelos[0]!.criadas.every((a) => a.ligada)).toBe(true);
-    expect((await m.como(m.gente.carla, 'GET', '/api/automacoes/modelos')).statusCode).toBe(403);
+    expect((await m.como(m.gente.admin, 'GET', '/api/automacoes/modelos')).statusCode).toBe(404);
+    expect((await m.como(m.gente.admin, 'POST', '/api/automacoes/modelos/pos-venda', { diasRetorno: 30 })).statusCode).toBe(404);
+    expect((await m.como(m.gente.admin, 'GET', '/api/automacoes')).json()).toEqual([]); // nada nasce sozinho
+    await m.como(m.gente.admin, 'PUT', '/api/nps/config', { linkAvaliacao: 'https://g.page/r/xyz/review' });
+    for (const a of montarPosVenda(ParamsPosVenda.parse({ diasRetorno: 30 }))) expect((await m.como(m.gente.admin, 'POST', '/api/automacoes', a)).statusCode).toBe(201);
 
     // Funciona de ponta a ponta: finalizou com venda → no dia seguinte, a mensagem de cuidados.
     const c = await m.conversa('norte', 'Clara');

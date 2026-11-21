@@ -1,6 +1,6 @@
 /* Tela "bot" da Sintonia: construtor visual de bots (fluxos em grafo, estilo Salesbot).
  * Registra window.SintoniaTelas.bot = { desenhar(caixa, ui), abrirEditor(id), escolherDaEtapa(opcoes), iniciarNaConversa(conversaId) }.
- * - desenhar: a lista de bots (com a aba Automações | Bots) e "Novo bot" (em branco ou de um modelo).
+ * - desenhar: a lista de bots (com a aba Automações | Bots) e "Novo bot" (sempre em branco: sem-exemplos, o dono monta os seus).
  * - abrirEditor: tela cheia com paleta, palco (arrastar, ligar, mover/zoom com mouse, trackpad e toque), painel do bloco,
  *   desfazer/refazer, validação visual, mini-mapa, salvar rascunho, publicar, ligar e testar numa conversa de teste
  *   mostrando o caminho percorrido. No celular há também a visão em lista.
@@ -359,10 +359,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'marcar_tag': case 'desmarcar_tag': n.tagId = s.base?.tags[0]?.id || ''; break;
       case 'atribuir': n.usuarioId = null; break;
       case 'mudar_modo': n.modo = 'humano'; break;
-      case 'lembrete': n.em_minutos = 0; n.texto = 'Ligar para {primeiro_nome}'; break;
-      case 'webhook': n.url = 'https://'; break;
+      case 'lembrete': n.em_minutos = 0; n.texto = ''; break; /* sem-exemplos: campo vazio (a dica fica no placeholder) */
+      case 'webhook': n.url = ''; break;
       case 'agente_ia': n.objetivo = ''; n.saida = { tipo: 'agendou' }; n.dias = 3; break;
-      case 'transferir': n.texto = 'Vou chamar uma atendente para continuar com você. 💛'; break;
+      case 'transferir': n.texto = ''; break;
     }
     return n;
   }
@@ -484,8 +484,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     let lista;
     try { [lista] = await Promise.all([ui.api('/api/bots'), base(true)]); } catch (x) { corpo.replaceChildren(el('p', { class: 'bt-dica', text: x.message })); return; }
     if (!lista.length) {
-      corpo.replaceChildren(el('div', { class: 'bt-vazio' }, el('b', { text: 'Nenhum bot ainda.' }), el('span', { text: 'Comece por um modelo pronto: boas-vindas com menu, fora do horário ou qualificação com agendamento pela IA.' }),
-        el('button', { class: 'bt-botao', type: 'button', onclick: () => novoBot() }, el('span', { text: 'Criar meu primeiro bot' }))));
+      /* sem-exemplos: tela vazia, sem modelo pronto */
+      corpo.replaceChildren(el('div', { class: 'bt-vazio' }, el('b', { text: 'Nenhum bot ainda.' }), el('span', { text: 'Toque em Criar bot para montar o seu.' }),
+        el('button', { class: 'bt-botao', type: 'button', onclick: () => novoBot() }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Criar bot' }))));
       return;
     }
     corpo.replaceChildren(...lista.map((f) => cartaoBot(f, () => desenhar(caixa, ui))));
@@ -535,41 +536,33 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'bt-l3' }, selo, f.rascunhoDiferente && f.versao ? el('span', { class: 'bt-selo aviso', text: 'Rascunho com mudanças' }) : null, el('span', { text: `${f.blocos} bloco${f.blocos === 1 ? '' : 's'}` }), f.publicadoEm ? el('span', { text: `publicado ${UI().quando(f.publicadoEm)}` }) : null));
   }
 
-  /** Novo bot: em branco ou de um modelo. `inicio` = gatilho já escolhido (ex.: pela etapa). */
+  /** Novo bot: sempre em branco (sem-exemplos: os modelos prontos saíram). `gatilho` = Início já escolhido (ex.: pela etapa). */
   async function novoBot(o = {}) {
     const ui = UI(); const { el } = ui;
     estilo();
-    let modelos = [];
-    try { [modelos] = await Promise.all([ui.api('/api/bots/modelos'), base()]); } catch (x) { ui.toast(x.message); return; }
-    let escolha = o.gatilho ? '' : modelos[0]?.id || '';
-    const nome = entradaTexto(o.nome || '', () => {}, { max: 80, placeholder: 'Ex.: Boas-vindas' });
+    try { await base(); } catch (x) { ui.toast(x.message); return; }
+    const nome = entradaTexto(o.nome || '', () => {}, { max: 80, placeholder: 'Nome do bot' });
     const d = el('dialog', { class: 'bt-dialogo' });
-    const grade = el('div', { class: 'bt-modelos' });
-    const desenharGrade = () => grade.replaceChildren(
-      ...[{ id: '', nome: 'Em branco', descricao: o.gatilho ? fraseGatilho(o.gatilho) : 'Só o Início; você monta o resto.' }, ...modelos].map((m) =>
-        el('button', { class: 'bt-modelo', type: 'button', 'aria-pressed': String(escolha === m.id), onclick: () => { escolha = m.id; if (!nome.value || nome.dataset.auto) { nome.value = m.id ? m.nome : ''; nome.dataset.auto = '1'; } desenharGrade(); } },
-          el('b', { text: m.nome }), el('span', { text: m.descricao }))));
-    desenharGrade();
-    if (!nome.value && escolha) { nome.value = modelos[0].nome; nome.dataset.auto = '1'; }
-    nome.addEventListener('input', () => { delete nome.dataset.auto; });
     const criar = el('button', { class: 'bt-botao', type: 'button', text: 'Criar e abrir', onclick: async () => {
       if (!nome.value.trim()) { nome.focus(); ui.toast('Dê um nome ao bot.'); return; }
       criar.disabled = true;
       try {
-        const corpo = { nome: nome.value.trim() };
-        if (escolha) corpo.modelo = escolha;
-        else corpo.rascunho = { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: o.gatilho || { tipo: 'manual' } }], ligacoes: [] };
+        const corpo = { nome: nome.value.trim(), rascunho: { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: o.gatilho || { tipo: 'manual' } }], ligacoes: [] } };
         const f = await ui.post('/api/bots', corpo);
         d.close();
         abrirEditor(f.id, o.aoMudar || (() => { if (s.caixa && UI().estado.vista === 'bot') desenhar(s.caixa, UI()); }));
       } catch (x) { ui.toast(x.message); criar.disabled = false; }
     } });
+    nome.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); criar.click(); } });
     d.append(el('div', { class: 'bt-dlg-topo' }, el('h2', { text: 'Novo bot' }), el('button', { class: 'bt-redondo', type: 'button', 'aria-label': 'Fechar', html: SVG.fechar, onclick: () => d.close() })),
-      el('div', { class: 'bt-dlg-corpo' }, campo('Nome do bot', nome), el('span', { class: 'bt-dica', text: 'Comece de um modelo pronto ou em branco:' }), grade, el('div', { class: 'bt-linha', style: 'justify-content:flex-end' }, criar)));
+      el('div', { class: 'bt-dlg-corpo' }, campo('Nome do bot', nome),
+        el('span', { class: 'bt-dica', text: o.gatilho ? `Começa: ${fraseGatilho(o.gatilho)}. Você monta o resto no editor.` : 'O bot começa só com o Início; você monta o resto no editor.' }),
+        el('div', { class: 'bt-linha', style: 'justify-content:flex-end' }, criar)));
     d.addEventListener('close', () => d.remove());
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     document.body.append(d);
     d.showModal();
+    nome.focus();
   }
 
   // ---------- raio ⚡ da etapa: automação simples ou bot ----------

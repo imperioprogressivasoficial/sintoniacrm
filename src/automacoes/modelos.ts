@@ -2,8 +2,9 @@ import { z } from 'zod';
 import type { AutomacaoNova, Passo } from './esquema.js';
 
 /**
- * Modelos prontos de automação (a pessoa só confere os textos e liga).
- * Textos neutros, para qualquer empresa; tudo continua editável depois no construtor.
+ * Modelos de automação (pós-venda: cuidados, retorno e pedido de avaliação).
+ * sem-exemplos (pedido do dono, 21/11): a tela e a API não oferecem mais modelos prontos; o dono monta as
+ * automações dele. Este gerador fica sem uso, guardado para a futura Ajuda ("Ajuda: um exemplo e o passo a passo").
  */
 
 export const TEXTOS_POS_VENDA = {

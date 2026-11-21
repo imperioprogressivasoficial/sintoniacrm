@@ -102,6 +102,9 @@ export class Nps {
   async salvarConfig(bruto: unknown, por: string): Promise<ConfigNps> {
     const atual = await this.config();
     const cfg = ConfigNps.parse({ ...atual, ...(bruto && typeof bruto === 'object' ? bruto : {}) });
+    // sem-exemplos: os textos nascem vazios; para ligar, a pessoa escreve a pergunta (e o pedido de comentário, se marcado).
+    if (cfg.ligada && !cfg.pergunta) throw new ErroNps('Escreva a pergunta da pesquisa antes de ligar.', 400);
+    if (cfg.ligada && cfg.pedirComentario && !cfg.textoComentario) throw new ErroNps('Escreva o pedido de comentário (ou desmarque “pedir um comentário”).', 400);
     await this.o.armazem.gravarConfig(this.o.empresaId, cfg, por);
     this.cache = undefined;
     return cfg;
@@ -141,8 +144,8 @@ export class Nps {
 
       let pesquisa: Pesquisa | null = null;
       let aviso: string | null = null;
-      const enviar = cfg.ligada && (d.enviarPesquisa ?? cfg.motivos.includes(d.motivo));
-      if (d.enviarPesquisa && !cfg.ligada) aviso = 'A pesquisa de satisfação está desligada (Automações › Prontos para usar).';
+      const enviar = cfg.ligada && Boolean(cfg.pergunta) && (d.enviarPesquisa ?? cfg.motivos.includes(d.motivo));
+      if (d.enviarPesquisa && !cfg.ligada) aviso = 'A pesquisa de satisfação está desligada (Automações › Pesquisa de satisfação).';
       if (enviar) {
         pesquisa = {
           id: randomUUID(),
@@ -217,7 +220,7 @@ export class Nps {
       p.nota = lida.nota;
       p.respondidaEm = agora;
       let resposta: string;
-      if (lida.comentario || !cfg.pedirComentario) {
+      if (lida.comentario || !cfg.pedirComentario || !cfg.textoComentario) {
         p.estado = 'respondida';
         p.comentario = lida.comentario;
         resposta = cfg.agradecimento;

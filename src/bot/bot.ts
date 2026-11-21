@@ -33,7 +33,6 @@ import {
   type OpcoesBot,
   type Problema,
 } from './esquema.js';
-import { modelosBot } from './modelos.js';
 
 /**
  * Motor dos bots (fluxos em grafo). Segue o mesmo jeito das automações (src/automacoes):
@@ -469,8 +468,9 @@ export class Bots {
 
   // ---------- cadastro ----------
 
-  modelos() {
-    return modelosBot().map((m) => ({ id: m.id, nome: m.nome, descricao: m.descricao, grafo: copia(m.grafo) }));
+  /** sem-exemplos: nenhum modelo pronto oferecido (os de src/bot/modelos.ts ficam para a futura Ajuda). */
+  modelos(): Array<{ id: string; nome: string; descricao: string; grafo: Grafo }> {
+    return [];
   }
 
   async listar(): Promise<Fluxo[]> {
@@ -485,12 +485,9 @@ export class Bots {
 
   async criar(bruto: unknown, por: string): Promise<Fluxo> {
     const d = FluxoNovo.parse(bruto);
-    let rascunho: Grafo = d.rascunho ?? { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'manual' } }], ligacoes: [] };
-    if (d.modelo) {
-      const m = modelosBot().find((x) => x.id === d.modelo);
-      if (!m) throw new ErroBot('Modelo não encontrado.', 404);
-      rascunho = Grafo.parse(copia(m.grafo));
-    }
+    const rascunho: Grafo = d.rascunho ?? { nos: [{ id: 'inicio', tipo: 'inicio', x: 0, y: 0, gatilho: { tipo: 'manual' } }], ligacoes: [] };
+    // sem-exemplos: bot novo nasce só com o Início (sem modelo pronto).
+    if (d.modelo) throw new ErroBot('Os modelos prontos saíram: crie o bot em branco e monte o seu.', 400);
     const agora = this.agora();
     const f: Fluxo = {
       id: randomUUID(),

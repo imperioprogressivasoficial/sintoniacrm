@@ -380,7 +380,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       ehGestao() ? el('button', { class: 'au-botao', type: 'button', onclick: () => abrirEditor({ funilId: s.filtro !== 'todas' && s.filtro !== 'geral' ? s.filtro : null, aoSalvar: () => desenhar(caixa, ui) }) }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Nova automação' })) : null));
     // Aba Automações | Bots (o construtor de bots fica em /telas/bot.js).
     if (window.SintoniaTelas.bot?.abasAutomacoes) tela.append(window.SintoniaTelas.bot.abasAutomacoes('automacoes'));
-    tela.append(el('p', { class: 'au-sub', text: 'O que a Sintonia faz sozinha. Ex.: quando a cliente entrar em “Proposta” → esperar 1 dia → mandar uma mensagem. O jeito mais rápido de criar é pelo raio ⚡ em cada etapa do CRM.' }));
+    tela.append(el('p', { class: 'au-sub', text: 'O que a Sintonia faz sozinha: um gatilho e os passos que vêm depois. Você também pode criar pelo raio ⚡ em cada etapa do CRM.' })); /* sem-exemplos: sem exemplo pronto no texto */
     if (!ehGestao()) { tela.append(el('div', { class: 'au-vazio' }, el('b', { text: 'Só a gestão mexe nas automações.' }), el('span', { text: 'Peça para a gerência criar ou mudar uma automação.' }))); return; }
     // Aba "Follow-up" (cadências e confirmação de agenda: /telas/followup.js).
     const fu = window.SintoniaTelas.followup;
@@ -396,16 +396,15 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         return;
       }
     }
-    // nps-posvenda: modelos prontos (pesquisa de satisfação, pós-venda, régua 1/3/7 dias).
-    if (window.SintoniaTelas.nps?.prontos) tela.append(window.SintoniaTelas.nps.prontos(ui, { aoMudar: () => desenhar(caixa, ui), abrirFollowup: fu ? () => { s.aba = 'followup'; desenhar(caixa, ui); } : null }));
-    /* ligacoes-modos: "Serena liga para reconfirmar" — desenhado e travado (Em breve), de public/telas/ligacoes.js */
-    if (window.SintoniaTelas.ligacoes?.cartaoSerena) tela.append(ui.el('div', { style: 'margin:14px 0' }, window.SintoniaTelas.ligacoes.cartaoSerena(ui)));
-    /* atendimento-extra: menu Automações › Modelos prontos rola até os "Prontos para usar". */
-    if (s.rolarModelos) { s.rolarModelos = false; requestAnimationFrame(() => tela.querySelector('.np-prontos')?.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })); }
+    /* sem-exemplos: saiu o bloco "Prontos para usar" (pós-venda e régua 1/3/7 dias prontos). A pesquisa de satisfação
+     * continua no menu Automações › Pesquisa de satisfação. */
     const corpo = el('div', { class: 'au-lista' }, el('p', { class: 'au-info', text: 'Carregando…' }));
     const filtros = el('div', { class: 'au-filtros', role: 'group', 'aria-label': 'Filtrar por funil' });
     const config = el('div', { class: 'au-config' });
     tela.append(filtros, corpo, config);
+    /* ligacoes-modos: "Serena liga para reconfirmar" — desenhado e travado (Em breve), de public/telas/ligacoes.js.
+     * sem-exemplos: vai para o fim, para a lista (ou o vazio com "Criar automação") aparecer primeiro. */
+    if (window.SintoniaTelas.ligacoes?.cartaoSerena) tela.append(ui.el('div', { style: 'margin:14px 0' }, window.SintoniaTelas.ligacoes.cartaoSerena(ui)));
     const numeros = el('div', { class: 'au-numeros', 'aria-label': 'Resumo das automações' });
     tela.querySelector('.au-cab')?.insertBefore(numeros, tela.querySelector('.au-cab .au-botao'));
     let lista;
@@ -423,9 +422,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const f = s.filtro;
       const vis = lista.filter((a) => f === 'todas' || (f === 'geral' ? !a.funilId : a.funilId === f || (!a.funilId && s.base.etapas.get(a.gatilho?.etapaId)?.funilId === f)));
       if (!vis.length) {
+        /* sem-exemplos: vazio simples e amigável, só o botão de criar */
         corpo.replaceChildren(el('div', { class: 'au-vazio' }, el('b', { text: lista.length ? 'Nenhuma automação aqui.' : 'Nenhuma automação ainda.' }),
-          el('span', { text: 'Comece por uma etapa do CRM: toque no raio ⚡ da coluna e diga o que fazer quando a cliente chegar lá.' }),
-          el('button', { class: 'au-botao', type: 'button', onclick: () => abrirEditor({ aoSalvar: () => desenhar(caixa, ui) }) }, el('span', { text: 'Criar automação' }))));
+          el('span', { text: 'Toque em Criar automação para montar a sua.' }),
+          el('button', { class: 'au-botao', type: 'button', onclick: () => abrirEditor({ funilId: f !== 'todas' && f !== 'geral' ? f : null, aoSalvar: () => desenhar(caixa, ui) }) }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Criar automação' }))));
         return;
       }
       corpo.replaceChildren(...vis.map((a) => cartaoAutomacao(a, () => desenhar(caixa, ui))));
@@ -901,11 +901,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return d;
   }
 
-  /* atendimento-extra: o menu Automações abre a aba certa (Fluxos, Follow-up ou os modelos prontos) e o endereço acompanha
-   * (/app/fluxos, /app/fluxos/follow-up, /app/fluxos/modelos — public/telas/rotas.js). */
+  /* atendimento-extra: o menu Automações abre a aba certa (Fluxos ou Follow-up) e o endereço acompanha
+   * (/app/fluxos, /app/fluxos/follow-up — public/telas/rotas.js). sem-exemplos: /app/fluxos/modelos cai em Fluxos. */
   function irAba(aba, mostrar = true) {
     s.aba = aba === 'followup' || aba === 'follow-up' ? 'followup' : 'automacoes';
-    s.rolarModelos = aba === 'modelos';
     if (mostrar) (s.ui || window.Sintonia?.ui)?.mostrar('automacoes');
   }
   const aba = () => (s.aba === 'followup' ? 'follow-up' : '');

@@ -3,7 +3,10 @@ import { unidadesDa } from '../unidades.js';
 import type { Grafo } from './esquema.js';
 
 /**
- * Modelos prontos de bot. A tela mostra a lista e cria um fluxo novo a partir de um deles (rascunho).
+ * Modelos de bot. sem-exemplos (pedido do dono, 21/11): a tela não mostra mais a lista e a API não cria bot a partir
+ * deles (Bots.modelos devolve vazio); o dono monta os bots dele. Ficam aqui, sem uso, para a futura Ajuda
+ * ("Ajuda: um exemplo e o passo a passo"). test/bot.test.ts continua conferindo que eles são válidos.
+ * Antes: a tela mostrava a lista e criava um fluxo novo a partir de um deles (rascunho).
  * Tudo em texto curto e caloroso. O nome da empresa e as unidades vêm do cadastro (Empresa › Dados e Unidades);
  * os serviços de exemplo seguem o segmento (salão de cabelo ganha progressiva/selagem; outra empresa, um menu neutro).
  * É só o ponto de partida: a pessoa edita o fluxo antes de ligar.

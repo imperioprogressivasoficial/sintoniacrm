@@ -7,7 +7,7 @@ import { EmailMarketing } from '../src/email/email.js';
 import { TransporteFalso } from '../src/email/transporte.js';
 import { ArmazemFollowupMemoria, ArmazemFollowupPostgres, type ArmazemFollowup } from '../src/followup/armazem.js';
 import { Followup, type EmailParaFollowup } from '../src/followup/followup.js';
-import { configPadrao, lerResposta, preencher } from '../src/followup/tipos.js';
+import { configPadrao, lerResposta, MODELOS_CADENCIA, preencher } from '../src/followup/tipos.js';
 import { observarEventos } from '../src/notificacoes/notificador.js';
 import { RepositorioPostgres } from '../src/store/postgres.js';
 import { RepositorioMemoria, type Repositorio } from '../src/store/repositorio.js';
@@ -94,6 +94,9 @@ async function montar(a: Ambiente, ajustar?: (cfg: ReturnType<typeof configPadra
     ganchos: { mensagemCliente: (c, m) => f.mensagemCliente(c, m) },
   });
   const cfg = configPadrao();
+  // sem-exemplos: a configuração nasce vazia; estes testes do motor usam as mensagens do modelo (como se a pessoa
+  // tivesse escrito essas). O teste "nasce vazio" fica em test/sem-exemplos.test.ts.
+  for (const c of cfg.cadencias) c.passos = structuredClone(MODELOS_CADENCIA[c.id].passos);
   ajustar?.(cfg);
   await f.salvarConfig(cfg, 'teste');
   let seq = 0;
@@ -160,6 +163,20 @@ for (const a of ambientes) {
       expect(await m.ir(new Date(QUINTA.getTime() + 7 * DIA + 3 * MIN))).toBe(1); // dia 7
       expect(m.canal.enviados).toHaveLength(4);
       expect(m.agente.pedidos.filter((p) => p.objetivo)).toHaveLength(0); // textos editáveis, sem IA
+    });
+
+    it('sem-exemplos: cadência ligada sem mensagens (gravada por fora) não começa nem quebra', async () => {
+      const m = await montar(a);
+      const cfg = await m.f.config();
+      const cad = cfg.cadencias.find((c) => c.id === 'sem_resposta')!;
+      cad.ligada = true;
+      cad.passos = [];
+      await m.armazem.gravarConfig('imperio', cfg, 'teste');
+      m.reiniciar();
+      await m.cliente('Oi, queria saber dos valores');
+      const c = await m.conversa();
+      expect((await m.f.seloDaConversa(c.id)).cadencia).toBeFalsy();
+      expect(await m.ir(new Date(QUINTA.getTime() + 2 * DIA))).toBe(0);
     });
 
     it('régua 1, 3 e 7 dias aplicada pelo modelo pronto para quando a cliente responde', async () => {
