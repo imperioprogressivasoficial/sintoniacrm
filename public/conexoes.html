@@ -462,33 +462,7 @@
     <div class="linha"><button class="botao" data-salvar="relatorioDestinos">Salvar</button><span class="res" id="res-relatorio" role="status"></span></div>
   </section>
 
-  <section id="pagamentos" aria-labelledby="t-pagamentos">
-    <h2 id="t-pagamentos"><span class="ic menta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg></span><span>Pagamentos (Asaas)<small>Cobrança do plano e dos créditos por Pix, boleto ou cartão</small></span><span class="estado" id="pg-estado" style="margin-left:auto">…</span></h2>
-    <p>Sem a chave, nada é cobrado: os pedidos do plano só ficam registrados. Com a chave, “Mudar de plano” e “Comprar créditos” geram um link de pagamento do Asaas, e o pedido é liberado sozinho quando o pagamento cai.</p>
-    <div class="campos">
-      <label>Chave da API do Asaas <span class="dica">Asaas › Integrações › Chaves de API</span><input id="asaasApiKey" type="password" autocomplete="off" placeholder="$aact_..."></label>
-      <label>Ambiente<select id="asaasSandbox" class="sel"><option value="">Produção (cobrança de verdade)</option><option value="1">Sandbox (só testes)</option></select></label>
-      <label>Nome na cobrança <span class="dica">vazio = nome da empresa</span><input id="cobrancaNome" autocomplete="off"></label>
-      <label>E-mail para a cobrança <span class="dica">opcional</span><input id="cobrancaEmail" type="email" autocomplete="off"></label>
-      <label>CPF ou CNPJ de quem paga <span class="dica">só os números</span><input id="cobrancaCpfCnpj" inputmode="numeric" autocomplete="off"></label>
-    </div>
-    <label>URL do webhook <span class="dica">cole no painel do Asaas</span>
-      <span class="copia"><input id="pg-url" readonly aria-label="URL do webhook do Asaas"><button class="botao leve mini" data-copiar="pg-url">Copiar</button></span>
-    </label>
-    <label>Token de autenticação do webhook <span class="dica">gerado pela Sintonia</span>
-      <span class="copia"><input id="pg-token" readonly aria-label="Token do webhook do Asaas"><button class="botao leve mini" data-copiar="pg-token">Copiar</button><button class="botao leve mini" type="button" id="pg-novo">Gerar outro</button></span>
-    </label>
-    <div class="linha"><button class="botao" data-salvar="asaasApiKey,asaasSandbox,cobrancaNome,cobrancaEmail,cobrancaCpfCnpj" data-pg-salvar>Salvar</button><button class="botao leve" type="button" id="pg-testar">Testar</button><span class="res" id="res-pagamentos" role="status"></span></div>
-    <details class="passos">
-      <summary>Passo a passo no Asaas</summary>
-      <ol>
-        <li>Crie a conta em <b>asaas.com</b> e envie os documentos pedidos (a conta precisa estar aprovada para cobrar).</li>
-        <li>Em <b>Integrações › Chaves de API</b>, gere uma chave e cole acima. Para testar antes, use uma conta do <b>sandbox</b> e escolha “Sandbox”.</li>
-        <li>Em <b>Integrações › Webhooks</b>, crie um webhook com a <b>URL</b> e o <b>Token de autenticação</b> acima, na versão <b>v3</b>, e marque os eventos <b>Pagamento confirmado</b> e <b>Pagamento recebido</b>.</li>
-        <li>Volte aqui e toque em <b>Testar</b>.</li>
-      </ol>
-    </details>
-  </section>
+  <!-- sem-pagamento: a seção Pagamentos saiu (nada se compra pelo app). -->
 
   <div class="grupo">Anúncios</div>
 
@@ -1046,38 +1020,6 @@
     carregarAgenda();
     carregarLojas(); carregarMeta();
   })();
-})();
-</script>
-<script>
-/* Pagamentos (Asaas): situação, URL e token do webhook e "Testar". */
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const api = async (url, opcoes = {}) => {
-    const r = await fetch(url, { ...opcoes, headers: opcoes.body ? { 'content-type': 'application/json' } : undefined });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.erro || 'Algo deu errado');
-    return j;
-  };
-  async function carregar() {
-    let d; try { d = await api('/api/conexoes/pagamentos'); } catch { return; }
-    $('pg-url').value = d.webhookUrl; $('pg-token').value = d.webhookToken;
-    const est = $('pg-estado');
-    est.className = 'estado' + (d.ativo ? (d.cpfCnpjOk ? ' ok' : ' aviso') : '');
-    est.textContent = !d.ativo ? 'Desligado' : !d.cpfCnpjOk ? 'Falta CPF/CNPJ' : d.ambiente === 'sandbox' ? 'Ligado (sandbox)' : 'Ligado';
-  }
-  document.querySelectorAll('[data-pg-salvar]').forEach((b) => b.addEventListener('click', () => setTimeout(carregar, 700)));
-  $('pg-testar').addEventListener('click', async (e) => {
-    const b = e.currentTarget; const res = $('res-pagamentos');
-    b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
-    try { const r = await api('/api/conexoes/pagamentos/testar', { method: 'POST', body: '{}' }); res.className = 'res ' + (r.ok ? 'ok' : 'erro'); res.textContent = r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro; }
-    catch (x) { res.className = 'res erro'; res.textContent = x.message; }
-    finally { b.removeAttribute('aria-busy'); }
-  });
-  $('pg-novo').addEventListener('click', async () => {
-    if (!confirm('Gerar outro token? O atual deixa de valer: cole o novo no webhook do Asaas.')) return;
-    try { await api('/api/conexoes/pagamentos/token', { method: 'POST', body: '{}' }); carregar(); } catch {}
-  });
-  carregar();
 })();
 </script>
 <script>

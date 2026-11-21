@@ -408,9 +408,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ------------------------------------------------------------ visão geral
   async function telaGeral(corpo) {
     encher(corpo, el('p', { class: 'ec-carregando', text: 'Carregando…' }));
-    const [uns, prods, docs, eq, sit, pl] = await Promise.all([
+    const [uns, prods, docs, eq, sit] = await Promise.all([ /* sem-pagamento: sem /api/planos */
       lerUnidades(true), ui.api('/api/produtos').catch(() => null), ui.api('/api/documentos').catch(() => null),
-      souGestao() ? ui.api('/api/equipe').catch(() => null) : null, ui.api('/api/situacao').catch(() => null), souDirecao() ? ui.api('/api/planos').catch(() => null) : null,
+      souGestao() ? ui.api('/api/equipe').catch(() => null) : null, ui.api('/api/situacao').catch(() => null),
     ]);
     const d = cadastro?.dados || {};
     const linha = (rot, valor, cls) => el('div', { class: 'ec-linha' }, el('span', { text: rot }), el('b', { class: cls || '', text: valor }));
@@ -442,12 +442,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('p', { class: 'ec-sub', text: ld.length ? `Último: ${ld[0].nome}` : 'Contrato, tabela de preços, catálogo em PDF: guarde aqui para a equipe achar.' }),
       el('div', { class: 'ec-acoes' }, botao('Abrir documentos', ir('documentos'), '', 'seta')));
     const s = sit || {};
-    const atalhos = cartao('conexao', 'Equipe, conexões e plano', { largo: true },
+    const atalhos = cartao('conexao', 'Equipe e conexões', { largo: true },
       el('div', { class: 'ec-atalhos' },
         souGestao() ? atalho('acesso', 'Atendentes e acessos', eq ? plural(pessoas.filter((p) => p.ativo).length, 'pessoa ativa', 'pessoas ativas') : 'Pessoas, perfis e permissões', () => ui.mostrar('acessos')) : null,
         souDirecao() ? atalho('conexao', 'Conexões', `WhatsApp: ${s.numerosReais ? `${s.numerosReais} conectado${s.numerosReais === 1 ? '' : 's'}` : 'nenhum'} · IA ${s.iaLigada ? 'ligada' : 'desligada'}`, () => { location.href = '/conexoes'; }) : null,
-        souDirecao() ? atalho('plano', 'Plano e uso da IA', pl?.plano ? `${pl.plano.nome} · ${pl.plano.precoTexto || ''}` : 'Plano, limites e créditos', () => ui.mostrar('planos')) : null,
-        atalho('equipe', 'Minha conta', 'Perfil, preferências e notificações', () => ui.mostrar('conta'))));
+        atalho('equipe', 'Minha conta', 'Perfil, preferências, privacidade e notificações', () => ui.mostrar('conta'))));
     encher(corpo, el('div', { class: 'ec-grade' }, secDados, secUn, secProd, secDocs, atalhos));
   }
   const atalho = (icone, titulo, sub, onclick) => el('button', { class: 'ec-atalho', type: 'button', onclick }, ico(icone), el('div', {}, el('b', { text: titulo }), el('small', { text: sub })));

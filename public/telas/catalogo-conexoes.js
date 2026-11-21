@@ -130,8 +130,8 @@
     const barra = document.createElement('div'); barra.id = 'cx-voltar-bar';
     barra.innerHTML = '<button type="button" class="cx-voltar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>Todas as conexões</button>';
     barra.querySelector('button').addEventListener('click', () => history.back());
-    const extras = document.createElement('div'); extras.className = 'cx-extras';
-    extras.innerHTML = '<span>Outras configurações:</span> <a href="#ia" data-sec="ia">Chave da IA (Serena)</a> · <a href="#transcricao" data-sec="transcricao">Transcrição de áudio</a> · <a href="#pagamentos" data-sec="pagamentos">Pagamentos</a>';
+    const extras = document.createElement('div'); extras.className = 'cx-extras'; /* sem-pagamento: sem Pagamentos */
+    extras.innerHTML = '<span>Outras configurações:</span> <a href="#ia" data-sec="ia">Chave da IA (Serena)</a> · <a href="#transcricao" data-sec="transcricao">Transcrição de áudio</a>';
     extras.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); abrirSecao(a.dataset.sec); }));
     sec.append(extras);
     main.prepend(sec, barra);

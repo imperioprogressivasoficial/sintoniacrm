@@ -216,7 +216,7 @@ describe('Essencial: a IA não age de jeito nenhum', () => {
     const r = await g.executar(pedido);
     expect(chamou).toBe(0);
     expect(r.texto).toBe('');
-    expect(r.acoes).toEqual([{ tipo: 'passar_para_humano', motivo: expect.stringContaining('Essencial') }]);
+    expect(r.acoes).toEqual([{ tipo: 'passar_para_humano', motivo: expect.stringContaining('não está liberada') }]); // sem-pagamento: texto sem falar em plano
     expect((p.armazem as ArmazemPlanosMemoria).bloq).toMatchObject([{ conversaId: 'c9', motivo: 'sem_plano' }]);
     // Sugestão (copiloto) e envio ativo: a IA só não age (não tira a conversa de ninguém).
     expect(await g.executar({ ...pedido, modo: 'sugerir' } as PedidoAgente)).toMatchObject({ texto: '', acoes: [] });
@@ -232,7 +232,7 @@ describe('Essencial: a IA não age de jeito nenhum', () => {
     const falso = { messages: { create: async () => (chamadas++, { model: 'm', usage: { input_tokens: 1, output_tokens: 1 } }) }, beta: { messages: { parse: async () => (chamadas++, { model: 'm', usage: { input_tokens: 1, output_tokens: 1 } }) } } };
     const cliente = medirCliente(falso, anotadorDe(p, EMP, () => seg(10)), porteiroDe(p, EMP, () => seg(10)));
     await expect(cliente.messages.create()).rejects.toBeInstanceOf(IaBloqueada);
-    await expect(cliente.beta.messages.parse()).rejects.toThrow(/Essencial/);
+    await expect(cliente.beta.messages.parse()).rejects.toThrow(/não está liberada/);
     expect(chamadas).toBe(0);
     await assinar(p, 'expediente');
     await cliente.messages.create();

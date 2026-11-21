@@ -11,13 +11,14 @@ import { bahia, HORA, partesBahia } from '../util/tempo.js';
  */
 
 export type MotivoBloqueio = 'sem_plano' | 'suspensa' | 'sem_credito';
-/** Textos dos motivos (inclui os antigos, que podem estar no histórico de bloqueios). */
+/** Textos dos motivos (inclui os antigos, que podem estar no histórico de bloqueios).
+ * sem-pagamento: sem falar em plano, assinatura ou créditos (a equipe vê estes textos). */
 export const TEXTO_MOTIVO: Record<string, string> = {
-  sem_plano: 'A empresa está no plano Essencial (CRM sem IA): a equipe atende.',
-  suspensa: 'A assinatura da IA está suspensa: a equipe atende.',
-  sem_credito: 'A IA atingiu o limite de uso e não há créditos: a equipe atende.',
-  fora_do_horario: 'Fora do horário do plano antigo: a equipe atendeu.',
-  sem_cota: 'A cota do mês acabou (plano antigo): a equipe atendeu.',
+  sem_plano: 'A IA não está liberada para esta empresa: a equipe atende.',
+  suspensa: 'A IA está pausada para esta empresa: a equipe atende.',
+  sem_credito: 'A IA atingiu o limite de uso por agora: a equipe atende.',
+  fora_do_horario: 'Fora do horário da IA: a equipe atendeu.',
+  sem_cota: 'A IA atingiu o limite do mês: a equipe atendeu.',
 };
 
 export type Decisao = { pode: true; ilimitado: boolean; usandoCreditos: boolean } | { pode: false; motivo: MotivoBloqueio; texto: string };

@@ -13,6 +13,13 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/convite': { arquivo: 'convite.html', tipo: 'text/html; charset=utf-8' },
   '/esqueci-senha': { arquivo: 'esqueci-senha.html', tipo: 'text/html; charset=utf-8' },
   '/nova-senha': { arquivo: 'nova-senha.html', tipo: 'text/html; charset=utf-8' },
+  /* sem-pagamento: páginas pedidas pela App Store (privacidade, termos, suporte) e o contato público (WhatsApp de vendas) */
+  '/privacidade': { arquivo: 'privacidade.html', tipo: 'text/html; charset=utf-8' },
+  '/termos': { arquivo: 'termos.html', tipo: 'text/html; charset=utf-8' },
+  '/suporte': { arquivo: 'suporte.html', tipo: 'text/html; charset=utf-8' },
+  '/legal.css': { arquivo: 'legal.css', tipo: 'text/css; charset=utf-8' },
+  '/contato-publico.js': { arquivo: 'contato-publico.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/sem-internet.js': { arquivo: 'telas/sem-internet.js', tipo: 'text/javascript; charset=utf-8' },
   // Tela de "abrindo o aplicativo" (login e primeira carga do /app).
   '/abertura.css': { arquivo: 'abertura.css', tipo: 'text/css; charset=utf-8' },
   '/app': { arquivo: 'app.html', tipo: 'text/html; charset=utf-8' },
@@ -124,7 +131,6 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/criativos.js': { arquivo: 'telas/criativos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/anuncios-conexao.js': { arquivo: 'telas/anuncios-conexao.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/comercial.js': { arquivo: 'telas/comercial.js', tipo: 'text/javascript; charset=utf-8' },
-  '/telas/planos.js': { arquivo: 'telas/planos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/desempenho.js': { arquivo: 'telas/desempenho.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/analises.js': { arquivo: 'telas/analises.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/perdas.js': { arquivo: 'telas/perdas.js', tipo: 'text/javascript; charset=utf-8' }, // perdas-saude
@@ -163,8 +169,6 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/ds.css': { arquivo: 'ds.css', tipo: 'text/css; charset=utf-8' },
   '/acesso-rapido.js': { arquivo: 'acesso-rapido.js', tipo: 'text/javascript; charset=utf-8' },
   '/painel-lateral.js': { arquivo: 'painel-lateral.js', tipo: 'text/javascript; charset=utf-8' },
-  // Calculadora de custo da IA (mesma fórmula na página de vendas e no app).
-  '/calculadora-ia.js': { arquivo: 'calculadora-ia.js', tipo: 'text/javascript; charset=utf-8' },
 };
 
 /** rotas-fontes: endereço de volta depois do login. Só aceita caminhos do próprio app (/app, /app/…, /conexoes):

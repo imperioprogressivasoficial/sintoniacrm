@@ -178,6 +178,15 @@ html.atz-ativo .toast{visibility:hidden!important}
     rodape.append(estado); /* sem o botão "Tentar agora" (pedido do dono 20/11): só "Verificando"; ele volta sozinho */
     cartao.append(h1, sub, term, barra, rodape);
     raiz.append(cod, cartao);
+    /* sem-pagamento: sem internet no aparelho, a tela diz isso (e não "atualizando"); volta ao normal quando conecta */
+    const ajustar = () => {
+      const off = navigator.onLine === false;
+      h1.replaceChildren(...(off ? ['Sem internet ', el('b', '', 'agora')] : ['Estamos atualizando ', el('b', '', 'melhorias')]));
+      sub.textContent = off ? 'Confira o Wi-Fi ou os dados móveis. Quando a conexão voltar, a Sintonia abre sozinha. Suas conversas estão guardadas.' : 'A Sintonia volta sozinha em instantes. Suas conversas estão guardadas e você não precisa fazer nada.';
+    };
+    ajustar();
+    addEventListener('offline', ajustar);
+    addEventListener('online', ajustar);
     return { raiz, term, estado, botao, sub, h1 };
   }
 

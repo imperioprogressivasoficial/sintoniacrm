@@ -60,7 +60,7 @@ function embrulharMessages<T extends object>(m: T, anotar: Anotar, porteiro?: Po
             ? porteiro()
                 .catch(() => ({ pode: true }) as Awaited<ReturnType<PorteiroCliente>>)
                 .then((d) => {
-                  if (!d.pode) throw new IaBloqueada(d.motivo ?? 'bloqueada', d.texto ?? 'A IA não está disponível no plano agora.');
+                  if (!d.pode) throw new IaBloqueada(d.motivo ?? 'bloqueada', d.texto ?? 'A IA não está disponível agora.');
                   return chamar();
                 })
             : chamar();

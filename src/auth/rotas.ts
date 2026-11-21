@@ -9,6 +9,7 @@ import { registrarUsuarios, type TelefonesEquipe } from './usuarios-rotas.js';
 import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
 import { LimiteLogin, mensagemBloqueio, type BloqueioConta } from './limite-login.js';
 import { diasDemonstracao, horarioValido, janelaDemonstracao } from '../vendas/demonstracao.js';
+import { ROTAS_PUBLICAS_SEM_PAGAMENTO } from '../publico/publico.js';
 
 export const COOKIE = 'sintonia_sessao';
 
@@ -42,7 +43,7 @@ export const VALIDADE_ESQUECI_MIN = 60;
 export const RESPOSTA_ESQUECI = 'Se houver uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora.';
 
 /** Rotas da API que não pedem login. */
-const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/auth/esqueci', '/api/auth/esqueci/canais', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao']);
+const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/auth/esqueci', '/api/auth/esqueci/canais', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao', /* sem-pagamento: contato público e a recusa de cadastro */ ...ROTAS_PUBLICAS_SEM_PAGAMENTO]);
 /** O que quem precisa trocar a senha (ou está fora do horário) ainda pode chamar. */
 const SEMPRE = new Set(['/api/auth/eu', '/api/auth/senha', '/api/auth/sair']);
 
