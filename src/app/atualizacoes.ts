@@ -81,7 +81,8 @@ export async function atualizacoesDeHoje(
   const p = partesBahia(agora);
   const inicio = bahia(p.ano, p.mes, p.dia);
   const eventos = await repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
-  const conversas = new Map((await repo.listarConversas()).map((c) => [c.id, c]));
+  // robustez: só as conversas dos eventos de hoje (antes: todas, com corte de 500 — as antigas ficavam sem nome).
+  const conversas = new Map((await repo.listarConversas({ ids: [...new Set(eventos.flatMap((e) => (e.conversaId ? [e.conversaId] : [])))] })).map((c) => [c.id, c]));
   const saida: Atualizacao[] = [];
   for (const e of eventos) {
     const c = e.conversaId ? conversas.get(e.conversaId) : undefined;

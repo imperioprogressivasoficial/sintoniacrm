@@ -288,7 +288,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     const u = req.usuario;
     const telefone = normalizarCelular(b.telefone);
     if (!telefone) throw erro('Número inválido. Use DDD + celular, por exemplo (71) 98812-4471.', 400);
-    const todas = (await o.repo.listarConversas()).filter((c) => c.empresaId === o.empresaId && c.telefone === telefone);
+    const todas = await o.repo.listarConversas({ empresaId: o.empresaId, telefone }); // robustez: direto no banco
     const minhas = todas.filter((c) => visivel(req, c)).sort((a, x) => x.atualizadaEm.getTime() - a.atualizadaEm.getTime());
     if (minhas.length && !b.unidade) return reply.code(200).send({ ok: true, id: minhas[0]!.id, nova: false, telefone });
     if (todas.length && !minhas.length) {
@@ -328,7 +328,7 @@ export function registrarConversa(app: FastifyInstance, o: OpcoesConversa): void
     if ('erro' in canal) throw erro(canal.erro, 400);
 
     // Já existe? Reaproveita (sem duplicar). Se for de outra pessoa, avisa em vez de mostrar.
-    const existente = (await o.repo.listarConversas()).find((c) => c.empresaId === o.empresaId && c.unidade === b.unidade && c.telefone === telefone);
+    const existente = (await o.repo.listarConversas({ empresaId: o.empresaId, telefone })).find((c) => c.unidade === b.unidade); // robustez: direto no banco
     if (existente && !visivel(req, existente)) {
       throw erro(`Essa cliente já conversa com ${existente.responsavelNome ?? 'outra pessoa'}. Peça para a gerente transferir para você.`, 409);
     }

@@ -11,7 +11,9 @@ export const JANELA_CONDUZINDO_MS = 2 * HORA;
 export async function iaHoje(repo: Repositorio, agora: Date, podeVer: (c: Conversa) => boolean = () => true) {
   const p = partesBahia(agora);
   const inicio = bahia(p.ano, p.mes, p.dia);
-  const [eventos, todas] = await Promise.all([repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)), repo.listarConversas()]);
+  // robustez: só as conversas dos eventos de hoje.
+  const eventos = await repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
+  const todas = await repo.listarConversas({ ids: [...new Set(eventos.flatMap((e) => (e.conversaId ? [e.conversaId] : [])))] });
   const conversas = new Map(todas.filter(podeVer).map((c) => [c.id, c]));
   const meus = eventos.filter((e) => e.conversaId && conversas.has(e.conversaId));
   const nome = (id?: string) => (id ? (conversas.get(id)?.nome ?? null) : null);

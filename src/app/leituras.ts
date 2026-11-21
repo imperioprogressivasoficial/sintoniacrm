@@ -2,7 +2,8 @@ import type pg from 'pg';
 
 /** Até onde cada pessoa leu cada conversa. "Não lida" = a cliente escreveu depois disso. */
 export interface Leituras {
-  doUsuario(usuarioId: string): Promise<Map<string, Date>>;
+  /** robustez: com `ids`, só dessas conversas (a página da lista), em vez de todas as que a pessoa já leu. */
+  doUsuario(usuarioId: string, ids?: string[]): Promise<Map<string, Date>>;
   /** Marca como lidas até `em`. Nunca volta atrás (um "lida" antigo não apaga um mais novo). */
   marcar(usuarioId: string, conversaIds: string[], em: Date): Promise<void>;
   /** Volta a conversa para não lida (o "marcar como não lida" do WhatsApp): fica com a bolinha até abrir. */
@@ -14,8 +15,10 @@ export interface Leituras {
 export class LeiturasMemoria implements Leituras {
   private readonly dados = new Map<string, Map<string, Date>>();
   private readonly marcadas = new Map<string, Set<string>>();
-  async doUsuario(u: string) {
-    return new Map(this.dados.get(u) ?? []);
+  async doUsuario(u: string, ids?: string[]) {
+    const m = new Map(this.dados.get(u) ?? []);
+    if (!ids) return m;
+    return new Map(ids.filter((id) => m.has(id)).map((id) => [id, m.get(id)!]));
   }
   async marcar(u: string, ids: string[], em: Date) {
     const m = this.dados.get(u) ?? new Map<string, Date>();
@@ -38,8 +41,11 @@ export class LeiturasMemoria implements Leituras {
 
 export class LeiturasPostgres implements Leituras {
   constructor(private readonly pool: pg.Pool) {}
-  async doUsuario(u: string) {
-    const { rows } = await this.pool.query<{ conversa_id: string; lida_ate: Date }>('select conversa_id, lida_ate from sintonia.leituras where usuario_id = $1', [u]);
+  async doUsuario(u: string, ids?: string[]) {
+    const { rows } = await this.pool.query<{ conversa_id: string; lida_ate: Date }>(
+      'select conversa_id, lida_ate from sintonia.leituras where usuario_id = $1 and ($2::uuid[] is null or conversa_id = any($2))',
+      [u, ids ?? null],
+    );
     return new Map(rows.map((r) => [r.conversa_id, r.lida_ate]));
   }
   async marcar(u: string, ids: string[], em: Date) {

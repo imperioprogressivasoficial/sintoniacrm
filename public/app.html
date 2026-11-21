@@ -1666,6 +1666,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   addEventListener('sintonia:fotos', () => { try { redesenharFotos(); } catch {} });
   addEventListener('sintonia:radar', () => { if (estado.conversas) desenharLista(); }); /* radar: lista muda quando o radar muda */
+  addEventListener('sintonia:lista', () => { if (!estado.conversasDoServidor || !window.SintoniaListaServidor) return; estado.conversas = window.SintoniaListaServidor.juntar(); desenharLista(); }); /* robustez: chegou página mais antiga ou achado da busca */
   const avatares = new Map();
   const avatarDaLista = (c) => { let a = avatares.get(c.id); if (!a || (semFoto.has(c.id) && a.querySelector('img'))) { a = avatar(c); avatares.set(c.id, a); } return a; };
   const formatarTel = (t) => { const d = String(t || '').replace(/^55/, ''); return d.length >= 10 ? `+55 ${d.slice(0,2)} ${d.slice(2, d.length - 4)}-${d.slice(-4)}` : t; };
@@ -1745,7 +1746,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.quem === 'sem' && c.responsavelId) return false;
     if (estado.unidadeFiltro && c.unidade !== estado.unidadeFiltro) return false;
     if (estado.etapasFiltro.size && !estado.etapasFiltro.has(c.etapa)) return false;
-    if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca))) return false;
+    if (estado.busca && !(`${c.nome || ''} ${c.telefone}`.toLowerCase().includes(estado.busca)) && !window.SintoniaListaServidor?.achou(c.id)) return false; /* robustez: achada pela busca do servidor (ex.: texto da mensagem) */
     if (estado.tagFiltro && !(c.tags || []).some((t) => t.id === estado.tagFiltro)) return false;
     if (window.SintoniaRastreio && !window.SintoniaRastreio.passa(c.id)) return false;
     if (window.SintoniaConversaExtra && !window.SintoniaConversaExtra.passa(c)) return false; /* conversa-extra: arquivadas ficam em "Arquivadas" */
@@ -2880,7 +2881,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   addEventListener('pagehide', guardarLista);
   let pedidoLista = null;
   async function atualizar() {
-    try { const p = pedidoLista || api('/api/conversas'); pedidoLista = null; estado.conversas = await p; } catch { return; }
+    try { const p = pedidoLista || api('/api/conversas'); pedidoLista = null; const l = await p; estado.conversas = window.SintoniaListaServidor ? window.SintoniaListaServidor.juntar(l) : l; } catch { return; } /* robustez: junta as páginas mais antigas e os achados da busca */
     if (!estado.conversasDoServidor) { estado.conversasDoServidor = true; setTimeout(guardarLista, 1500); }
     const n = estado.conversas.filter((c) => naoLida(c) && !c.arquivada).length; /* conversa-extra: arquivadas não contam no número do menu */
     $('contador').hidden = !n; $('contador').textContent = String(n);
@@ -3493,7 +3494,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     await atualizar();
     carregarTags();
     setInterval(() => window.SintoniaFotos.carregar(), 60000);
-    setInterval(atualizar, 4000);
+    /* robustez: com a aba escondida não pede a lista (volta a pedir na hora em que a aba aparece) */
+    setInterval(() => { if (document.visibilityState !== 'hidden') atualizar(); }, 4000);
+    addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') atualizar(); });
     setInterval(carregarTags, 30000);
   })();
 })();
@@ -3526,6 +3529,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <!-- conversas-gestos: arrastar a linha (não lida, radar, mais, mover) e segurar o dedo (prévia), como no WhatsApp -->
 <script src="/telas/conversas-gestos.js" defer></script>
 <script src="/telas/fluidez.js" defer></script>
+<script src="/telas/lista-servidor.js" defer></script><!-- robustez: busca no servidor e rolagem infinita da lista -->
 <!-- grupos: Conversas de grupo (só grupos do WhatsApp) e, no celular, a troca Conversas · Grupos · Equipe -->
 <script src="/telas/conversas-abas.js" defer></script>
 <script src="/telas/grupos.js" defer></script>

@@ -46,16 +46,20 @@ export class Trabalhador {
     if (this.rodando) return;
     this.rodando = true;
     this.parado = (async () => {
+      let falhasSeguidas = 0;
       while (this.rodando) {
         let n = 0;
         try {
           n = await this.rodada();
+          falhasSeguidas = 0;
         } catch (e) {
-          this.o.log?.('Falha ao ler a fila', String(e));
+          // robustez: banco fora → espera crescente (até 10 s) e um aviso a cada 10 falhas, em vez de 2 por segundo.
+          if (falhasSeguidas++ % 10 === 0) this.o.log?.('Falha ao ler a fila', String(e));
         }
         if (n === 0 && this.rodando) {
+          const espera = falhasSeguidas ? Math.min((this.o.esperaVaziaMs ?? 500) * 2 ** falhasSeguidas, 10_000) : (this.o.esperaVaziaMs ?? 500);
           await new Promise<void>((r) => {
-            const t = setTimeout(r, this.o.esperaVaziaMs ?? 500);
+            const t = setTimeout(r, espera);
             this.acordar = () => {
               clearTimeout(t);
               r();

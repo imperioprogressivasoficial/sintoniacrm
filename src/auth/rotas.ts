@@ -270,10 +270,15 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     if (!b.success) return reply.code(400).send({ erro: 'Confira o nome e o WhatsApp.' });
     if (b.data.site) return { ok: true };
     const t = agora().getTime();
-    if (contatos.excedeu(req.ip, t)) return reply.code(429).send({ erro: 'Recebemos seus contatos. Já já falamos com você.' });
-    contatos.registrar(req.ip, t);
+    // robustez: nunca dizer "recebemos" sem ter gravado.
+    if (contatos.excedeu(req.ip, t)) return reply.code(429).send({ erro: LIMITE_FORMULARIO });
     const { site: _, ...dados } = b.data;
-    await o.contas.registrarInteressado(dados);
+    try {
+      await o.contas.registrarInteressado(dados);
+    } catch {
+      return reply.code(503).send({ erro: SEM_GRAVAR });
+    }
+    contatos.registrar(req.ip, t);
     return { ok: true };
   });
 
@@ -281,6 +286,11 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
 }
 
 // ---------------------------------------------------------------- leads do pop-up da página de vendas
+
+/** robustez: resposta honesta quando o limite de envios por visitante estoura (nada foi gravado). */
+/** robustez: o banco não gravou (fora do ar): a pessoa sabe que precisa tentar de novo. */
+export const SEM_GRAVAR = 'Não conseguimos guardar seus dados agora. Tente de novo em alguns minutos.';
+export const LIMITE_FORMULARIO = 'Recebemos muitos envios deste endereço agora e seus dados ainda não foram enviados. Tente de novo em alguns minutos.';
 
 export const SETORES = ['Serviços', 'Saúde e estética', 'Varejo e e-commerce', 'Educação', 'Imobiliário', 'Indústria', 'Outro'] as const;
 export const FATURAMENTOS = ['até R$ 50 mil', 'R$ 50 mil a R$ 200 mil', 'R$ 200 mil a R$ 1 milhão', 'acima de R$ 1 milhão'] as const;
@@ -331,11 +341,17 @@ function registrarLeadsSite(app: FastifyInstance, contas: Contas, agora: () => D
     // Robô: finge que deu certo e não grava nada.
     if (b.data.site) return { ok: true, id: '0', token: 'x'.repeat(43) };
     const t = agora().getTime();
-    if (leads.excedeu(req.ip, t)) return reply.code(429).send({ erro: 'Recebemos seus dados. Já já falamos com você.' });
-    leads.registrar(req.ip, t);
+    // robustez: nunca dizer "recebemos" sem ter gravado.
+    if (leads.excedeu(req.ip, t)) return reply.code(429).send({ erro: LIMITE_FORMULARIO });
     const { site: _, ...dados } = b.data;
-    const { id, token } = await contas.registrarLeadSite({ ...dados, origem: dados.origem ?? 'pagina-vendas' });
-    return { ok: true, id, token };
+    let r: { id: string; token: string };
+    try {
+      r = await contas.registrarLeadSite({ ...dados, origem: dados.origem ?? 'pagina-vendas' });
+    } catch {
+      return reply.code(503).send({ erro: SEM_GRAVAR });
+    }
+    leads.registrar(req.ip, t);
+    return { ok: true, id: r.id, token: r.token };
   });
 
   app.post('/api/leads-site/demonstracao', async (req, reply) => {

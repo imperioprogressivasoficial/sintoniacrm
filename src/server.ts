@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { ErroEnvioWhatsApp, eventoEvolution, lerWebhookEvolution } from './channels/evolution.js';
 import type { SaudeWhatsApp } from './channels/whatsapp-saude.js';
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
@@ -18,7 +18,8 @@ import type { Agenda } from './ai/ferramentas.js';
 import type { FilaEntrada } from './fila/entrada.js';
 import type { MensagemRecebida, StatusRecebido } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
-import { podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
+import { exigir } from './auth/permissoes.js';
+import { escopoDe, podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
 import type { Conversa } from './domain.js';
 import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
@@ -50,7 +51,13 @@ export interface DependenciasServidor {
   sociais?: OpcoesWebhooksSociais;
   revisar?: (conversaId: string, rascunho: string) => Promise<Revisao>;
   /** Fila persistente: o webhook só grava e responde; os trabalhadores processam. */
-  fila?: { fila: FilaEntrada; avisar?: () => void };
+  fila?: {
+    fila: FilaEntrada;
+    avisar?: () => void;
+    /* robustez: situação da fila da IA e da reserva em disco (banco fora), para /saude. */
+    ia?: () => { esperando: number; pensando: number; feitas: number };
+    reserva?: () => Promise<number>;
+  };
   /** Agenda do salão (Trinks, Avec ou AppBarber, por unidade): habilita o botão "Agendar" dentro do CRM. */
   agenda?: Agenda;
   agora?: () => Date;
@@ -103,6 +110,8 @@ export interface DependenciasServidor {
   finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
+  /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
+  historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
 }
@@ -126,14 +135,27 @@ export interface OpcoesWebhookMeta {
 /** Identifica este início do servidor (muda a cada publicação/reinício). */
 const VERSAO_SERVIDOR = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+/**
+ * robustez: em quem confiar o cabeçalho X-Forwarded-For (o endereço real do visitante).
+ * Atrás do Traefik, sem isto, todo visitante parecia o mesmo (o endereço do Traefik) e os limites por visitante
+ * (formulário de vendas, "esqueci a senha", contato, demonstração) valiam para o mundo todo.
+ * Só os proxies da rede interna do Docker (e o próprio servidor) são confiáveis: quem chega direto da internet
+ * não consegue fingir outro endereço. SINTONIA_PROXY_CONFIAVEL="0" desliga; aceita lista de IPs/CIDR.
+ */
+export function proxyConfiavel(valor = process.env.SINTONIA_PROXY_CONFIAVEL): string | false {
+  if (valor === '0' || valor === 'nao') return false;
+  return valor?.trim() || 'loopback,uniquelocal';
+}
+
 export function criarServidor(d: DependenciasServidor): FastifyInstance {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: false, trustProxy: proxyConfiavel() });
   const log = d.log ?? (() => {});
 
   // Corpo bruto guardado para conferir a assinatura da Meta.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, corpo, feito) => {
     try {
-      (req as unknown as { corpoBruto: string }).corpoBruto = String(corpo);
+      // robustez: o webhook da Evolution (histórico de até 40 MB) não usa assinatura: não guarda uma segunda cópia do corpo.
+      if (!req.url.startsWith('/webhooks/evolution')) (req as unknown as { corpoBruto: string }).corpoBruto = String(corpo);
       feito(null, corpo ? JSON.parse(String(corpo)) : {});
     } catch (e) {
       // JSON quebrado é erro de quem mandou (400), não do servidor.
@@ -156,7 +178,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   const vistosMeta = new Map<string, Date>();
   /** Andamento do histórico do WhatsApp recebido depois de conectar (para a tela "Sincronizando"). */
   const progressoHistorico = new Map<string, { mensagens: number; conversas: number; em: Date }>();
-  if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
+  if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => d.historico?.progresso(id) ?? progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
 
   /**
    * Com fila: grava e responde (se a gravação falhar, o WhatsApp recebe erro e reenvia).
@@ -185,7 +207,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
         continue;
       }
       const canalId = ch.canalDaInstancia?.(a.instancia) ?? a.instancia;
-      const conversas = (await d.repo.listarConversas()).filter((c) => c.empresaId === ch.empresaId && c.telefone === a.telefone);
+      const conversas = await d.repo.listarConversas({ empresaId: ch.empresaId, telefone: a.telefone });
       const c = conversas.find((x) => x.canalId === canalId) ?? conversas[0];
       await ch.armazem.registrar({ empresaId: ch.empresaId, conversaId: c?.id ?? null, telefone: a.telefone, direcao, resultado: a.status, atendenteId: null, atendenteNome: null, unidade: c?.unidade ?? null, em: a.em ?? agora(), origem: 'whatsapp', idExterno: a.idExterno });
       n++;
@@ -193,7 +215,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return n;
   }
 
-  app.get('/saude', async () => ({ ok: true, fila: d.fila ? await d.fila.fila.situacao() : undefined }));
+  app.get('/saude', async () => ({
+    ok: true,
+    fila: d.fila ? await d.fila.fila.situacao() : undefined,
+    ...(d.fila?.ia ? { ia: d.fila.ia() } : {}),
+    ...(d.fila?.reserva ? { reservaEmDisco: await d.fila.reserva().catch(() => null) } : {}),
+  }));
 
   // ---------- WhatsApp não oficial (Evolution) ----------
   /** Token do cabeçalho x-sintonia-token, comparado em tempo constante. */
@@ -226,6 +253,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       d.whatsappSaude?.aoMensagem(instancia);
       /* grupos: o histórico dos grupos vai para Conversas de grupo */
       d.grupos?.aoWebhook(corpo).catch((e) => log('Falha ao importar histórico dos grupos', String(e)));
+      // robustez: grava em lotes no banco e responde; o importador passa para as conversas por trás e continua de onde
+      // parou se o app reiniciar (src/app/historico.ts). Se não der para gravar, responde erro: a Evolution manda de novo.
+      if (d.historico) {
+        const novas = await d.historico.receber(instancia, historico);
+        return { historico: historico.length, novas };
+      }
       const p = progressoHistorico.get(instancia) ?? { mensagens: 0, conversas: 0, em: new Date() };
       progressoHistorico.set(instancia, { ...p, em: new Date() });
       d.sintonia.importarHistorico(historico).then((r) => {
@@ -324,28 +357,61 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   };
 
   // ---------- API da tela do CRM ----------
-  // ?tag=<id> mostra só as conversas com essa tag. Cada conversa vem com as tags dela (id, nome, cor).
+  /*
+   * robustez: a lista de Conversas sai do banco já filtrada e paginada (sem o antigo corte de 500 conversas):
+   * - ?q= busca no servidor por nome, telefone ou texto das mensagens (acha cliente antiga);
+   * - ?limite= (padrão 300) e ?antes=<cursor> para a rolagem infinita; o cursor da próxima página vem no
+   *   cabeçalho x-sintonia-proximo (o corpo continua sendo a lista, como sempre);
+   * - ?tag=<id> mostra só as conversas com essa tag. Cada conversa vem com as tags dela (id, nome, cor);
+   * - ETag: o app pede a lista a cada 4 s; sem novidade, a resposta é 304 (sem corpo) e o navegador usa a que já tem.
+   */
+  const ListaQ = z.object({
+    tag: z.string().min(1).optional(),
+    q: z.string().trim().max(100).optional(),
+    limite: z.coerce.number().int().min(1).max(500).default(300),
+    antes: z.string().max(200).optional(),
+  });
+  const lerCursorLista = (c?: string): { em: Date; id: string } | undefined => {
+    if (!c) return undefined;
+    try {
+      const [em, id] = Buffer.from(c, 'base64url').toString('utf8').split('|');
+      const data = new Date(em ?? '');
+      if (Number.isNaN(data.getTime()) || !/^[0-9a-f-]{36}$/i.test(id ?? '')) return undefined;
+      return { em: data, id: id! };
+    } catch {
+      return undefined;
+    }
+  };
   app.get('/api/conversas', async (req, reply) => {
-    await cabecalhoNotificacoes(d.notificacoes, req, reply);
-    const { tag } = z.object({ tag: z.string().min(1).optional() }).parse(req.query);
-    const [todas, ultimas] = await Promise.all([d.repo.listarConversas(), d.repo.ultimasMensagens()]);
-    const lista = todas.filter(visivelPara(req));
-    const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(lista.map((c) => c.id)) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
-    const lidas = d.leituras && req.usuario ? await d.leituras.doUsuario(req.usuario.id) : new Map<string, Date>();
+    const sino = await cabecalhoNotificacoes(d.notificacoes, req, reply);
+    const q = ListaQ.parse(req.query);
+    const tagUuid = q.tag && /^[0-9a-f-]{36}$/i.test(q.tag) ? q.tag : undefined;
+    const pagina = await d.repo.paginaConversas({
+      escopo: escopoDe(req.usuario),
+      limite: q.limite,
+      antes: lerCursorLista(q.antes),
+      busca: q.q && q.q.length >= 2 ? q.q : undefined,
+      tagId: tagUuid,
+    });
+    const lista = pagina.conversas.filter(visivelPara(req));
+    const ids = lista.map((c) => c.id);
+    const tags = d.gestao?.tags ? await d.gestao.tags.dasConversas(ids) : new Map<string, Array<{ id: string; nome: string; cor: string }>>();
+    const lidas = d.leituras && req.usuario ? await d.leituras.doUsuario(req.usuario.id, ids) : new Map<string, Date>();
     /* conversas-gestos: "marcar como não lida" feito à mão (arrastar a linha ou segurar o dedo) */
     const marcadas = d.leituras && req.usuario ? await d.leituras.marcadasNaoLidas(req.usuario.id) : new Set<string>();
-    const origens = d.origens ? await d.origens(lista.map((c) => c.id)).catch(() => ({}) as Record<string, never>) : undefined;
-    const finalizadas = d.finalizadas ? await d.finalizadas(lista.map((c) => c.id)).catch(() => new Map<string, Date>()) : new Map<string, Date>();
+    const origens = d.origens ? await d.origens(ids).catch(() => ({}) as Record<string, never>) : undefined;
+    const finalizadas = d.finalizadas ? await d.finalizadas(ids).catch(() => new Map<string, Date>()) : new Map<string, Date>();
     /* conversa-extra: silenciada e arquivada para esta pessoa */
     const pessoais = d.pessoais && req.usuario ? await d.pessoais.doUsuario(req.usuario.id).catch(() => undefined) : undefined;
     const agoraLista = new Date();
-    return lista
-      .filter((c) => !tag || (tags.get(c.id) ?? []).some((t) => t.id === tag))
-      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
+    const saida = lista
+      .filter((c) => !q.tag || (tags.get(c.id) ?? []).some((t) => t.id === q.tag))
       .map((c) => {
-        const m = ultimas.get(c.id);
+        const m = pagina.ultimas.get(c.id);
         return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ...(pessoais ? camposPessoais(pessoais.get(c.id), c, agoraLista) : {}), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
       });
+    if (pagina.proximo) reply.header('x-sintonia-proximo', Buffer.from(`${pagina.proximo.em.toISOString()}|${pagina.proximo.id}`).toString('base64url'));
+    return responderComEtag(req, reply, saida, sino ? JSON.stringify(sino) : '');
   });
 
   // Lidas e não lidas por pessoa (menu ⋯ da lista: marcar tudo como lido, selecionar conversas).
@@ -353,21 +419,22 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.post('/api/conversas/lidas', async (req, reply) => {
     if (!d.leituras || !req.usuario) return reply.code(501).send({ erro: 'Leitura por pessoa indisponível' });
     const b = IdsLeitura.parse(req.body ?? {});
-    const visiveis = (await d.repo.listarConversas()).filter(visivelPara(req)).map((c) => c.id);
-    const ids = b.todas ? visiveis : (b.ids ?? []).filter((id) => visiveis.includes(id));
+    // robustez: só as conversas pedidas (ou todas do escopo de quem pede), direto no banco.
+    const visiveis = (await d.repo.listarConversas(b.todas ? { escopo: escopoDe(req.usuario) } : { ids: b.ids ?? [] })).filter(visivelPara(req)).map((c) => c.id);
+    const ids = visiveis;
     await d.leituras.marcar(req.usuario.id, ids, new Date());
     return { ok: true, marcadas: ids.length };
   });
   app.post('/api/conversas/nao-lidas', async (req, reply) => {
     if (!d.leituras || !req.usuario) return reply.code(501).send({ erro: 'Leitura por pessoa indisponível' });
     const b = IdsLeitura.parse(req.body ?? {});
-    const visiveis = new Set((await d.repo.listarConversas()).filter(visivelPara(req)).map((c) => c.id));
+    const visiveis = new Set((await d.repo.listarConversas({ ids: b.ids ?? [] })).filter(visivelPara(req)).map((c) => c.id));
     const ids = (b.ids ?? []).filter((id) => visiveis.has(id));
     await d.leituras.desmarcar(req.usuario.id, ids);
     return { ok: true, marcadas: ids.length };
   });
 
-  app.get('/api/conversas/:id', async (req) => {
+  app.get('/api/conversas/:id', async (req, reply) => {
     const conversa = await conversaVisivel(req);
     const id = conversa.id;
     const u = req.usuario;
@@ -380,7 +447,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       ? { assumir: podeAssumir(u, conversa) && conversa.responsavelId !== u.id, transferir: podeTransferir(u, conversa) }
       : { assumir: !conversa.responsavelId, transferir: true };
     const tags = d.gestao?.tags ? await d.gestao.tags.daConversa(id) : [];
-    return {
+    // robustez: ETag (o app pede a conversa aberta a cada 4 s; sem novidade, 304 sem corpo).
+    return responderComEtag(req, reply, {
       conversa: { ...conversa, tags },
       mensagens: await d.repo.mensagens(id, 200),
       sugestao: await d.repo.sugestao(id),
@@ -388,7 +456,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       permissoes,
       // API oficial: até quando dá para escrever livremente (depois, só modelo aprovado).
       janela: d.sintonia.janelaDa(conversa),
-    };
+    });
   });
 
   /* conversas-gestos: prévia da conversa (segurar o dedo na linha da lista). Só leitura: NÃO marca como lida. */
@@ -688,6 +756,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   app.post('/api/conversas/:id/agendar', async (req, reply) => {
     const b = Agendar.parse(req.body);
     const conversa = await conversaVisivel(req);
+    // robustez: a confirmação vai para a cliente pelo WhatsApp: precisa da permissão "Responder".
+    if (b.enviarConfirmacao) exigir(req, 'responder', 'Você não tem permissão para responder clientes. Agende sem enviar a confirmação ou fale com a gestão.');
     const atendente = nomeDe(req, b.atendente);
     // Anti-duplicidade antes de gravar no Trinks: se outra pessoa já está respondendo, nada é marcado.
     if (req.usuario) await d.sintonia.conferirVez(conversa.id, req.usuario);
@@ -736,4 +806,18 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   return app;
+}
+
+/**
+ * robustez: resposta JSON com ETag (o hash do conteúdo). Se o navegador já tem esta versão (If-None-Match), 304 sem
+ * corpo: o app que pede a lista a cada 4 s não baixa nem redesenha nada quando não mudou. `extra` entra no hash
+ * (ex.: o resumo do sino, que vai no cabeçalho).
+ */
+export function responderComEtag(req: FastifyRequest, reply: import('fastify').FastifyReply, dados: unknown, extra = ''): import('fastify').FastifyReply {
+  const corpo = JSON.stringify(dados);
+  const etag = `W/"${createHash('sha1').update(corpo).update(extra).digest('base64url')}"`;
+  reply.header('etag', etag).header('cache-control', 'private, no-cache');
+  const pedido = req.headers['if-none-match'];
+  if (pedido && pedido.split(',').some((x) => x.trim() === etag)) return reply.code(304).send();
+  return reply.type('application/json; charset=utf-8').send(corpo);
 }

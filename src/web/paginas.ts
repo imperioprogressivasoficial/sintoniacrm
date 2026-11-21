@@ -104,6 +104,8 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/radar.js': { arquivo: 'telas/radar.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/conversas-gestos.js': { arquivo: 'telas/conversas-gestos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/fluidez.js': { arquivo: 'telas/fluidez.js', tipo: 'text/javascript; charset=utf-8' },
+  /* robustez: lista de Conversas sem o corte de 500 (busca no servidor e rolagem infinita) */
+  '/telas/lista-servidor.js': { arquivo: 'telas/lista-servidor.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/email-conexoes.js': { arquivo: 'telas/email-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/logos-conexoes.js': { arquivo: 'telas/logos-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/catalogo-conexoes.js': { arquivo: 'telas/catalogo-conexoes.js', tipo: 'text/javascript; charset=utf-8' },

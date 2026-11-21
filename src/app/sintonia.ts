@@ -67,7 +67,23 @@ export interface DependenciasSintonia {
    * os follow-ups fixos (1h/1d/3d) e os lembretes fixos (véspera/2h) do motor saem. Ausente = tudo como sempre.
    */
   motor?: (c: Conversa) => Promise<{ followups: boolean; lembretes: boolean }>;
+  /**
+   * robustez: há IA para esta conversa agora (chave geral em Conexões ou chave própria do agente dela)?
+   * Sem IA: a conversa nova nasce em "Minha resposta" (equipe), a IA não é chamada e nada fica reagendado para sempre.
+   * Ausente = sempre há (comportamento antigo, testes).
+   */
+  iaDisponivel?: (c: Conversa) => Promise<boolean>;
+  /**
+   * robustez: fila própria da IA. Com ela, `receber` só grava e mostra a mensagem (rápido) e pede para a IA pensar
+   * por trás (src/app/fila-ia.ts). Ausente = pensa na hora, dentro de `receber` (comportamento antigo, testes).
+   */
+  filaIa?: { pedir(conversaId: string): void; executar?(conversaId: string): Promise<void> };
 }
+
+/** robustez: falhas seguidas da IA numa conversa antes de desistir (a conversa fica para a equipe). */
+export const MAX_FALHAS_IA = 5;
+/** Espera antes de a IA tentar de novo: 2, 4, 8, 16 e 30 min (teto). */
+export const esperaFalhaIa = (falhas: number) => Math.min(2 * 60_000 * 2 ** Math.max(0, falhas - 1), 30 * 60_000);
 
 /**
  * Ganchos para os funis por tags e as automações. São chamados SOB a trava da conversa (a conversa
@@ -118,6 +134,10 @@ export class Sintonia {
   private readonly agora: () => Date;
   private readonly regras: RegrasAtendimento;
   private readonly log: (msg: string, extra?: unknown) => void;
+  /** robustez: falhas seguidas da IA por conversa (zera quando dá certo). */
+  private readonly falhasIa = new Map<string, number>();
+  /** robustez: dentro deste processo, a mesma conversa é pensada pela IA uma vez por vez (fora da trava do banco). */
+  private readonly vezDaIa = new TravaMemoria();
 
   constructor(private readonly d: DependenciasSintonia) {
     this.agora = d.agora ?? (() => new Date());
@@ -165,6 +185,8 @@ export class Sintonia {
         const inicial = this.d.modoInicial ? await this.d.modoInicial(conversa, agora).catch(() => undefined) : undefined;
         if (inicial) conversa.modo = inicial;
         else if (config.modoPadrao) conversa.modo = config.modoPadrao;
+        // robustez: sem chave da IA, nasce com a equipe ("Minha resposta"), não em Sugestões/IA esperando uma IA que não existe.
+        if (conversa.modo !== 'humano' && !(await this.temIa(conversa))) conversa.modo = 'humano';
       }
       // A mensagem (com os dados da mídia) é gravada primeiro; o arquivo é baixado depois, fora daqui.
       const mensagemId = randomUUID();
@@ -213,12 +235,29 @@ export class Sintonia {
       await this.moverFunil(conversa, { tipo: 'mensagem_cliente' });
       await this.d.repo.salvarConversa(conversa);
       await this.d.repo.cancelarTarefas(conversa.id, FOLLOWUPS);
+      // robustez: rede de segurança da fila da IA (que fica em memória): se o processo cair antes de a IA pensar,
+      // o relógio reavalia daqui a 3 min. Quando a IA responde ou sugere, esta tarefa é trocada ou cancelada.
+      if (this.d.filaIa && conversa.modo !== 'humano') await this.reavaliarEm(conversa.id, new Date(agora.getTime() + 3 * 60_000));
       await this.evento('mensagem_cliente', conversa);
       await this.gancho('mensagemCliente', () => this.d.ganchos?.mensagemCliente?.(conversa, { texto: msg.texto, idExterno: msg.idExterno, primeira }));
       return true;
     });
     if (baixar) this.d.midias?.avisar();
-    if (pensar) await this.processar(criada.conversa.id);
+    if (!pensar) return;
+    // robustez: com a fila da IA, a mensagem já está na tela; a IA pensa por trás, sem segurar a fila de entrada.
+    if (this.d.filaIa) this.d.filaIa.pedir(criada.conversa.id);
+    else await this.processar(criada.conversa.id);
+  }
+
+  /** robustez: há IA para esta conversa? Falha ao conferir = considera que há (não cala a IA por um erro de leitura). */
+  private async temIa(c: Conversa): Promise<boolean> {
+    if (!this.d.iaDisponivel) return true;
+    try {
+      return await this.d.iaDisponivel(c);
+    } catch (e) {
+      this.log('Falha ao conferir se há IA', String(e));
+      return true;
+    }
   }
 
   /**
@@ -656,15 +695,22 @@ export class Sintonia {
 
   async tick(): Promise<void> {
     const agora = this.agora();
-    for (const t of await this.d.repo.reivindicarTarefas(agora)) {
+    const tarefas = await this.d.repo.reivindicarTarefas(agora);
+    // robustez: com a fila da IA, as reavaliações vão para ela (várias em paralelo, no limite da fila) e o relógio
+    // não fica preso esperando uma IA de cada vez. Sem a fila, uma por vez, como sempre.
+    const reavaliar = this.d.filaIa && 'executar' in this.d.filaIa ? (this.d.filaIa as { executar(id: string): Promise<void> }) : undefined;
+    const paralelas: Promise<void>[] = [];
+    for (const t of tarefas) {
       try {
-        if (t.tipo === 'reavaliar') await this.processar(t.conversaId);
+        if (t.tipo === 'reavaliar' && reavaliar) paralelas.push(reavaliar.executar(t.conversaId));
+        else if (t.tipo === 'reavaliar') await this.processar(t.conversaId);
         else await this.mutar(t.conversaId, (c) => this.enviarAtivo(t, c));
       } catch (e) {
         this.log('Falha ao executar tarefa', { tarefa: t, erro: String(e) });
         await this.d.repo.registrarEvento({ tipo: 'falha', conversaId: t.conversaId, em: agora, dados: { tarefa: t.tipo, erro: String(e) } });
       }
     }
+    await Promise.all(paralelas);
   }
 
   /**
@@ -674,10 +720,9 @@ export class Sintonia {
   private async eventosDoDia(dia: Date, visivel?: (c: Conversa) => boolean, ocultar?: Set<string>): Promise<{ eventos: Evento[]; conversas: Conversa[] }> {
     const p = partesBahia(dia);
     const inicio = bahia(p.ano, p.mes, p.dia);
-    const [brutos, todas] = await Promise.all([
-      this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA)),
-      this.d.repo.listarConversas(),
-    ]);
+    // robustez: só as conversas dos eventos do dia (antes: as 500 mais recentes; as outras sumiam do relatório).
+    const brutos = await this.d.repo.eventosEntre(inicio, new Date(inicio.getTime() + DIA));
+    const todas = await this.d.repo.listarConversas({ ids: [...new Set(brutos.flatMap((e) => (e.conversaId ? [e.conversaId] : [])))] });
     // `ocultar`: conversas que não entram (as de demonstração, no relatório que sai pelo WhatsApp às 20h).
     const todos = ocultar?.size ? brutos.filter((e) => !e.conversaId || !ocultar.has(e.conversaId)) : brutos;
     const conversas = ocultar?.size ? todas.filter((c) => !ocultar.has(c.id)) : todas;
@@ -714,22 +759,56 @@ export class Sintonia {
   }
 
   /** Uma conversa por vez: mensagens em sequência não geram respostas cruzadas. */
+  /** Pensa a resposta (IA) para a conversa agora. Usado pela fila da IA (src/app/fila-ia.ts). */
+  async pensar(conversaId: string): Promise<void> {
+    await this.processar(conversaId);
+  }
+
   private async processar(conversaId: string): Promise<void> {
     try {
-      await this.trava.comTrava(conversaId, () => this.processarAgora(conversaId));
+      await this.vezDaIa.comTrava(conversaId, () => this.processarAgora(conversaId));
+      this.falhasIa.delete(conversaId);
     } catch (e) {
       // A mensagem já está salva; a falha foi ao pensar ou enviar (IA fora, WhatsApp fora).
-      // Registra e tenta de novo daqui a 2 minutos, para a cliente não ficar sem resposta.
       this.log('Falha ao processar', String(e));
-      await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: String(e) } });
-      await this.reavaliarEm(conversaId, new Date(this.agora().getTime() + 2 * 60_000));
+      await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: String(e) } }).catch(() => undefined);
+      // robustez: sem chave da IA não adianta tentar de novo (a conversa fica para a equipe).
+      if ((e as { codigo?: string }).codigo === 'sem_chave' || (e as { status?: number }).status === 401) {
+        this.falhasIa.delete(conversaId);
+        return;
+      }
+      // robustez: novas tentativas com espera crescente (2, 4, 8, 16, 30 min) e teto; depois desiste e a conversa
+      // fica para a equipe (a próxima mensagem da cliente recomeça a contagem).
+      const falhas = (this.falhasIa.get(conversaId) ?? 0) + 1;
+      if (falhas > MAX_FALHAS_IA) {
+        this.falhasIa.delete(conversaId);
+        this.log(`A IA falhou ${MAX_FALHAS_IA} vezes seguidas nesta conversa; ela fica para a equipe`, conversaId);
+        await this.d.repo.registrarEvento({ tipo: 'falha', conversaId, em: this.agora(), dados: { etapa: 'processar', erro: 'IA desistiu depois de várias falhas', desistiu: true } }).catch(() => undefined);
+        return;
+      }
+      if (this.falhasIa.size > 5000) this.falhasIa.clear();
+      this.falhasIa.set(conversaId, falhas);
+      await this.reavaliarEm(conversaId, new Date(this.agora().getTime() + esperaFalhaIa(falhas)));
     }
   }
 
+  /** robustez: quantas falhas seguidas da IA esta conversa tem (testes e painel). */
+  falhasDaIa(conversaId: string): number {
+    return this.falhasIa.get(conversaId) ?? 0;
+  }
+
+  /**
+   * robustez: a IA pensa FORA da trava da conversa (antes segurava a trava os ~8 s da IA, e a mensagem seguinte da
+   * mesma cliente, a resposta da atendente e as automações ficavam esperando). Só a parte de enviar e gravar é feita
+   * sob a trava, relendo a conversa: se chegou mensagem nova enquanto a IA pensava, pensa de novo com tudo; se a
+   * equipe assumiu, não atropela. Dentro do mesmo processo, a mesma conversa é pensada uma vez por vez (`vezDaIa`).
+   */
   private async processarAgora(conversaId: string): Promise<void> {
     const { regras } = await this.configAgora();
     for (let rodada = 0; rodada < 3; rodada++) {
-      const c = await this.d.repo.buscarConversa(conversaId);
+      // Lê e decide sob a trava (rápido): o que já estava esperando a conversa (bot, automação, resposta da equipe)
+      // termina antes, e a IA nem é chamada se a mensagem já foi respondida.
+      const c = await this.trava.comTrava(conversaId, () => this.d.repo.buscarConversa(conversaId));
       if (!c) return;
       const agora = this.agora();
       const decisao = decidirQuemResponde(c, unidadeDe(c.unidade), agora, regras);
@@ -740,58 +819,65 @@ export class Sintonia {
         await this.reavaliarEm(c.id, decisao.reavaliarEm);
         return;
       }
+      // robustez: sem chave da IA (ou IA desligada), não chama nem reagenda: a conversa fica para a equipe.
+      if (!(await this.temIa(c))) return;
 
       const marco = c.ultimaMensagemCliente?.getTime();
       const mensagens = await this.d.repo.mensagens(c.id);
       const modo = decisao.acao === 'sugerir' ? 'sugerir' : 'responder';
       const r = await this.d.agente.executar({ conversa: c, mensagens, agora, modo, tagsDisponiveis: await this.tagsParaIa(), objetivo: await this.objetivoDe(c) });
 
-      // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
-      const depois = await this.d.repo.buscarConversa(c.id);
-      if (!depois) return;
-      if (depois.ultimaMensagemCliente?.getTime() !== marco) continue;
-      // A equipe assumiu enquanto a IA pensava: não atropela.
-      if (modo === 'responder' && decidirQuemResponde(depois, unidadeDe(depois.unidade), this.agora(), regras).acao !== 'ia_responde') {
-        return;
-      }
+      const fim = await this.trava.comTrava(conversaId, async (): Promise<'fim' | 'de_novo'> => {
+        // Chegou mensagem nova enquanto a IA pensava: descarta e pensa de novo com tudo.
+        const depois = await this.d.repo.buscarConversa(c.id);
+        if (!depois) return 'fim';
+        if (depois.ultimaMensagemCliente?.getTime() !== marco) return 'de_novo';
+        // A equipe assumiu enquanto a IA pensava: não atropela.
+        if (modo === 'responder' && decidirQuemResponde(depois, unidadeDe(depois.unidade), this.agora(), regras).acao !== 'ia_responde') {
+          return 'fim';
+        }
 
-      if (decisao.acao === 'sugerir') {
-        await this.d.repo.guardarSugestao(depois.id, r.texto);
+        if (decisao.acao === 'sugerir') {
+          await this.d.repo.guardarSugestao(depois.id, r.texto);
+          await this.aplicarAcoes(depois, r.acoes, 'ia');
+          await this.d.repo.salvarConversa(depois);
+          await this.evento('sugestao_gerada', depois);
+          await this.reavaliarEm(depois.id, decisao.reavaliarEm);
+          return 'fim';
+        }
+
+        if (!r.texto.trim()) {
+          // Agente que só organiza o CRM (sem "responder"): aplica as ações e não envia nada.
+          await this.aplicarAcoes(depois, r.acoes, 'ia');
+          await this.d.repo.salvarConversa(depois);
+          return 'fim';
+        }
+        const enviadoEm = this.agora();
+        const id = await this.enviar(depois, r.texto);
+        const espera = this.tempoDeResposta(depois, enviadoEm);
+        await this.d.repo.adicionarMensagem({ conversaId: depois.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
+        depois.ultimaMensagemIa = enviadoEm;
+        depois.atualizadaEm = enviadoEm;
+        if (decisao.assumiu) {
+          depois.modo = 'ia';
+          await this.evento('ia_assumiu', depois, { motivo: decisao.motivo });
+        }
         await this.aplicarAcoes(depois, r.acoes, 'ia');
         await this.d.repo.salvarConversa(depois);
-        await this.evento('sugestao_gerada', depois);
-        await this.reavaliarEm(depois.id, decisao.reavaliarEm);
-        return;
-      }
-
-      if (!r.texto.trim()) {
-        // Agente que só organiza o CRM (sem "responder"): aplica as ações e não envia nada.
-        await this.aplicarAcoes(depois, r.acoes, 'ia');
-        await this.d.repo.salvarConversa(depois);
-        return;
-      }
-      const enviadoEm = this.agora();
-      const id = await this.enviar(depois, r.texto);
-      const espera = this.tempoDeResposta(depois, enviadoEm);
-      await this.d.repo.adicionarMensagem({ conversaId: depois.id, autor: 'ia', texto: r.texto, em: enviadoEm, idExterno: id });
-      depois.ultimaMensagemIa = enviadoEm;
-      depois.atualizadaEm = enviadoEm;
-      if (decisao.assumiu) {
-        depois.modo = 'ia';
-        await this.evento('ia_assumiu', depois, { motivo: decisao.motivo });
-      }
-      await this.aplicarAcoes(depois, r.acoes, 'ia');
-      await this.d.repo.salvarConversa(depois);
-      await this.evento('ia_respondeu', depois, espera === undefined ? undefined : { tempoRespostaMs: espera });
-      await this.d.repo.cancelarTarefas(depois.id, ['reavaliar']);
-      await this.programarFollowups(depois, enviadoEm);
-      return;
+        await this.evento('ia_respondeu', depois, espera === undefined ? undefined : { tempoRespostaMs: espera });
+        await this.d.repo.cancelarTarefas(depois.id, ['reavaliar']);
+        await this.programarFollowups(depois, enviadoEm);
+        return 'fim';
+      });
+      if (fim === 'fim') return;
     }
   }
 
   private async enviarAtivo(t: Tarefa, c: Conversa): Promise<void> {
     if (c.modo === 'humano' || t.tipo === 'reavaliar') return;
     if (await this.botConduz(c)) return;
+    // robustez: follow-up e lembrete da IA sem chave: não chama a IA (nada sai).
+    if (!(await this.temIa(c))) return;
     const numero = this.numeroDa(c);
     // Na API oficial, mensagem ativa fora da janela de 24h exige modelo aprovado (Fase 3).
     if (TIPOS_COM_JANELA_24H.includes(numero.canal.tipo)) {
