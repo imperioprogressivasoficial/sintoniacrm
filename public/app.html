@@ -9,6 +9,8 @@
 <script src="/telas/atualizando.js"></script>
 <!-- contato-nome: telefone no padrão "+55 (71) 99220-0365" em todas as telas (antes do resto, que já usa). -->
 <script src="/telas/fone.js"></script>
+<!-- vistos: ✓ saiu, ✓✓ entregue, ✓✓ azul lida, microfone azul = áudio ouvido, relógio = enviando (antes da conversa desenhar) -->
+<script src="/telas/vistos.js"></script>
 <!-- fluidez2: ordem de chegada na abertura (lista primeiro; contadores e o resto depois) e pedidos repetidos juntados -->
 <script src="/telas/prioridade.js"></script>
 <!-- fluidez2: "Ocultar dados dos clientes" (nomes, números e fotos desfocados); antes da tela aparecer -->
@@ -1979,7 +1981,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (velha && velha.ass === ass) { desejadas.push(velha.el); continue; }
       const u = c.ultima; const nova = naoLida(c);
       const previa = el('span', { class: 'previa' });
-      if (u && u.autor !== 'cliente') previa.insertAdjacentHTML('beforeend', CHECK);
+      if (u && u.autor !== 'cliente') { if (window.SintoniaVistos) previa.append(window.SintoniaVistos.el(u)); else previa.insertAdjacentHTML('beforeend', CHECK); } /* vistos */
       if (u && u.autor === 'ia') previa.append(el('b', { text: 'IA: ', style: 'font-weight:500' }));
       previa.append(document.createTextNode(u ? textoPrevia(u).replace(/\s+/g, ' ') : ''));
       // Item limpo: foto, nome + ícone de origem, prévia, hora, não lidas e quem atende (sem etiquetas escritas).
@@ -2284,11 +2286,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (quem !== anterior && m.autor === 'ia') bal.append(el('span', { class: 'autor ia', text: 'IA da Sintonia' }));
       if (quem !== anterior && m.autor === 'equipe') bal.append(el('span', { class: 'autor eq', text: m.autorNome || 'Equipe' }));
       if (m.anexo) montarBalaoMidia(bal, m, c); else bal.append(document.createTextNode(m.texto));
-      const meta = el('span', { class: 'meta', text: hm(m.em) }); if (lado === 'env') meta.insertAdjacentHTML('beforeend', CHECK);
+      const meta = el('span', { class: 'meta', text: hm(m.em) }); if (lado === 'env') { if (window.SintoniaVistos) meta.append(window.SintoniaVistos.el(m)); else meta.insertAdjacentHTML('beforeend', CHECK); } /* vistos */
       (bal.querySelector(':scope > .legenda') || bal).append(meta);
       caixa.append(bal); anterior = quem;
     }
-    if (!mensagens.length) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
+    window.SintoniaVistos?.noFim?.(caixa, c.id); /* vistos: balão com relógio enquanto sai */
+    if (!mensagens.length && !caixa.querySelector('.vistos-enviando')) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
     window.SintoniaAgendadas?.noFim?.(caixa, c); /* msg-agendada: "Agendada para…" no fim */
     /* balao-fantasma: a sugestão da IA vira o último balão (tracejado) da conversa; a faixa antiga só sem o arquivo */
     const fantasma = window.SintoniaBalaoFantasma?.noFim?.(caixa, c, sugestao, mensagens);
@@ -2507,6 +2510,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const direto = typeof pronto === 'string';
     const t = (direto ? pronto : texto.value).trim(); if (!t || !estado.aberta) return false;
     $('enviar').disabled = true;
+    const relogio = window.SintoniaVistos?.enviando.adicionar(estado.aberta, t); /* vistos: relógio até o WhatsApp aceitar */
     try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
     catch (x) {
       /* whatsapp-estavel: o servidor já explica ("Não enviada: …"). O aviso fica na conversa, acima da caixa, e o texto continua lá. */
@@ -2515,7 +2519,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       toast(doWa ? x.message : 'Não enviou: ' + x.message);
       return false;
     }
-    finally { $('enviar').disabled = false; if (!direto) texto.focus(); }
+    finally { window.SintoniaVistos?.enviando.tirar(relogio); /* vistos: o balão de verdade já foi desenhado (ou deu erro) */ $('enviar').disabled = false; if (!direto) texto.focus(); }
   }
   const usarTexto = (t) => { texto.value = t; texto.dispatchEvent(new Event('input')); texto.focus(); };
   $('usar-sugestao').addEventListener('click', () => usarTexto($('sugestao-txt').textContent));
@@ -2634,7 +2638,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const foto = m.autor === 'cliente' ? avatar(c)
       : m.autor === 'ia' ? el('span', { class: 'avatar com-selo-ia', style: 'background:var(--ia)', text: 'IA' })
       : el('span', { class: 'avatar' + (ehIA(m.autorNome) ? ' com-selo-ia' : ''), style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') });
-    const quem = el('span', { class: 'quem-aud' }, foto, el('span', { class: 'selo', html: a.voz ? MIC : NOTA }));
+    const quem = el('span', { class: 'quem-aud' }, foto, el('span', { class: 'selo' + (window.SintoniaVistos?.seloAudio(m) || ''), html: a.voz ? MIC : NOTA })); /* vistos: microfone azul = ouvido */
     const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(a.duracaoSeg) || 0);
     const pintar = (p) => {
       p = Math.max(0, Math.min(1, p || 0));
@@ -2730,6 +2734,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   async function enviarArquivo({ blob, tipo, mimetype, nomeArquivo, legenda, duracaoSeg }, conversaId = estado.aberta) {
     if (blob.size > LIMITE_ENVIO) { toast('Arquivo grande demais: o limite é 16 MB.'); return false; }
     toast(tipo === 'audio' ? 'Enviando áudio…' : 'Enviando…');
+    /* vistos: balão com relógio até o WhatsApp aceitar */
+    const relogio = window.SintoniaVistos?.enviando.adicionar(conversaId, legenda || (tipo === 'audio' ? 'Áudio' : tipo === 'imagem' ? 'Foto' : tipo === 'video' ? 'Vídeo' : nomeArquivo || 'Arquivo'));
     try {
       const base64 = await paraBase64(blob);
       await post(`/api/conversas/${conversaId}/enviar-midia`, { tipo, base64, mimetype, nomeArquivo, legenda, duracaoSeg, atendente: estado.eu.nome });
@@ -2737,6 +2743,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       await atualizar();
       return true;
     } catch (x) { toast('Não enviou: ' + x.message); return false; }
+    finally { window.SintoniaVistos?.enviando.tirar(relogio); } /* vistos */
   }
 
   // nota de voz, como no WhatsApp: segure o microfone para gravar e solte para enviar; arraste para o lado para cancelar.
