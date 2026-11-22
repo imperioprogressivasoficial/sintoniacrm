@@ -3,7 +3,7 @@
  * - Pesquisar: procura em TODAS as mensagens da conversa (GET /api/conversas/:id/busca), não só nas que estão na tela.
  * - ⋯: o que a Sintonia já faz com uma conversa — ficha, radar, atendimento e IA, atribuir, etapa, tarefa, favorito,
  *   silenciar, arquivar, papel de parede, exportar (.txt), finalizar e fechar.
- * O Radar saiu do topo e foi para o ⋯ (a faixa do radar continua aparecendo embaixo do topo). O "Ocultar dados" mora em
+ * Barra só com ícones: Radar (colorido e com pontinho quando ligado), Agendar, Ligar, Pesquisar e ⋯ (o vídeo fica no ⋯). O "Ocultar dados" mora em
  * Conta › Privacidade. Usa window.Sintonia.ui; texto vindo do servidor entra sempre por textContent. */
 (() => {
   const ui = window.Sintonia && window.Sintonia.ui;
@@ -12,6 +12,7 @@
   const $ = (id) => document.getElementById(id);
   const ic = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const SVG = {
+    agenda: ic('<rect x="3.75" y="5" width="16.5" height="15.25" rx="3"/><path d="M3.75 9.75h16.5M8.25 3v3.5M15.75 3v3.5"/><circle cx="8.5" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/>'),
     video: ic('<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="m15.5 10.5 6-3.5v10l-6-3.5"/>'),
     lupa: ic('<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>'),
     pontos: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5.5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18.5" r="1.8"/></svg>',
@@ -33,13 +34,20 @@
   };
 
   const CSS = `
-  #chat-aberto .pilula-topo .tc-sep { width: 1px; height: 20px; background: var(--linha); margin: 0 2px; flex: none; }
-  #chat-aberto .pilula-topo .icone[aria-expanded="true"] { background: var(--vidro-item, var(--hover)); }
-  #topo-radar { display: none !important; }
+  /* barra do topo só com os ícones, sem pílula nem contorno, mais arejada (dono 21/11: modelos 3 + 4) */
+  #chat-aberto .pilula-topo { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; gap: 10px !important; }
+  #chat-aberto .pilula-topo .icone { width: 40px !important; height: 40px !important; border-radius: 50% !important; color: var(--texto); position: relative; }
+  #chat-aberto .pilula-topo .icone svg { width: 24px !important; height: 24px !important; stroke-width: 1.6; }
+  #chat-aberto .pilula-topo .icone:hover, #chat-aberto .pilula-topo .icone[aria-expanded="true"] { background: var(--vidro-item, var(--hover)); }
+  #chat-aberto .pilula-topo .tc-sep { display: none; }
+  /* radar ligado: colorido e com um pontinho, para ver de longe */
+  #chat-aberto #topo-radar.rd-ligado::after { content: ""; position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px var(--fundo, #fff); }
   @media (max-width: 760px) {
-    #topo-pesquisar, #chat-aberto .pilula-topo .tc-sep { display: none !important; }
-    #chat-aberto .pilula-topo .icone { width: 36px !important; height: 38px !important; }
-    #chat-aberto .pilula-topo .icone svg { width: 21px !important; height: 21px !important; }
+    #topo-pesquisar { display: none !important; }
+    #chat-aberto .pilula-topo { gap: 6px !important; }
+    #chat-aberto .pilula-topo .icone { width: 38px !important; height: 38px !important; }
+    #chat-aberto .pilula-topo .icone svg { width: 22px !important; height: 22px !important; }
+    #chat-aberto #topo-radar.rd-ligado::after { top: 6px; right: 6px; }
   }
   .menu-lista.tc-menu { position: fixed; top: 0; left: auto; right: auto; z-index: 60; min-width: 250px; max-width: calc(100vw - 24px);
     overflow-y: auto; overscroll-behavior: contain; padding: 6px; border-radius: 18px; gap: 0; }
@@ -95,16 +103,25 @@
     const ligar = $('topo-ligar'), agendar = $('topo-agendar');
     if (montado || !pilula || !ligar || !agendar) return;
     montado = true;
-    const video = botao('topo-video', 'Chamada de vídeo', SVG.video, (e) => abrirVideo(e.currentTarget));
     const pesquisar = botao('topo-pesquisar', 'Pesquisar na conversa', SVG.lupa, () => abrirBusca());
     const mais = botao('topo-mais', 'Mais opções', SVG.pontos, (e) => { e.stopPropagation(); alternarMenu(e.currentTarget); });
     mais.setAttribute('aria-haspopup', 'menu'); mais.setAttribute('aria-expanded', 'false');
     const sep = el('span', { class: 'tc-sep', 'aria-hidden': 'true' });
-    pilula.append(video, ligar, agendar, pesquisar, sep, mais);
-    // sem telefone não há ligação nem vídeo: o vídeo some junto com o Ligar
-    const espelhar = () => { video.hidden = ligar.hidden; };
-    espelhar(); new MutationObserver(espelhar).observe(ligar, { attributes: true, attributeFilter: ['hidden'] });
+    // ordem (dono 21/11): Radar, Agendar, Ligar, Pesquisar e ⋯. O vídeo foi para o ⋯.
+    const radar = $('topo-radar');
+    pilula.append(...[radar, agendar, ligar, pesquisar, sep, mais].filter(Boolean));
+    iconeAgenda();
   }
+  /* o ícone do Agendar no topo: calendário limpo (sem o "+"); a conversa-ux troca os ícones depois, então repõe */
+  function iconeAgenda() {
+    const ag = $('topo-agendar'); if (!ag) return;
+    const v = ag.querySelector(':scope > svg');
+    if (v && v.dataset.tc === 'agenda') return;
+    const tmp = document.createElement('span'); tmp.innerHTML = SVG.agenda; const novo = tmp.firstElementChild; novo.dataset.tc = 'agenda';
+    if (v) v.replaceWith(novo); else ag.prepend(novo);
+  }
+  setTimeout(iconeAgenda, 800); setTimeout(iconeAgenda, 2500);
+  new MutationObserver(() => { if (!$('topo-agendar')?.querySelector(':scope > svg[data-tc="agenda"]')) iconeAgenda(); }).observe(document.querySelector('#chat-aberto') || document.body, { childList: true, subtree: true });
 
   // ------------------------------------------------------------ vídeo
   function abrirVideo(ancora) {
@@ -174,6 +191,7 @@
     const noRadar = Boolean(T.radar?.tem?.(c.id));
     return [
       { svg: SVG.ficha, texto: 'Dados do contato', fazer: () => ui.abrirFicha?.() },
+      soNumeros(c.telefone) && { svg: SVG.video, texto: 'Chamada de vídeo', fazer: () => abrirVideo($('topo-mais')) },
       { svg: SVG.lupa, texto: 'Pesquisar', soCel: true, fazer: () => abrirBusca() },
       T.radar && G && { svg: SVG.radar, texto: noRadar ? 'Tirar do radar' : 'Colocar no radar', fazer: viaGestos('radar') },
       window.SintoniaConversa?.abrirMenuIa && { svg: SVG.ia, texto: 'Atendimento e IA', fazer: () => window.SintoniaConversa.abrirMenuIa() },

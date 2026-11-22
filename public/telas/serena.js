@@ -61,6 +61,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     historico: I('<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4.5v4h4"/><path d="M12 8v4l2.5 1.5"/>'),
     pin: I('<path d="M9 4h6l-1 5 3 3v1.5H7V12l3-3Z"/><path d="M12 13.5V20"/>'),
     /* serena-super */
+    cerebro: I('<path d="M12 5a3 3 0 1 0-6 .1 4 4 0 0 0-2.5 5.8 4 4 0 0 0 .5 6.6A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 6 .1 4 4 0 0 1 2.5 5.8 4 4 0 0 1-.5 6.6A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.6 6.5a3 3 0 0 0 .4-1.4M6 5.1a3 3 0 0 0 .4 1.4M3.5 10.9a4 4 0 0 1 .6-.4M19.9 10.5a4 4 0 0 1 .6.4M6 18a4 4 0 0 1-2-.5M20 17.5a4 4 0 0 1-2 .5"/>'),
     pensar: I('<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3Z"/>'),
     globo: I('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5S9.5 6.1 12 3.5Z"/>'),
     externo: I('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/>'),
@@ -416,6 +417,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   /* ===== serena-super: "Pensar mais", "Pesquisando na internet…", fontes, raciocínio e os cartões do CRM vivo ===== */
   .srn-opcoes { display: flex; gap: 6px; max-width: 720px; margin: 0 auto 6px; padding: 0 2px; }
+  .srn-opcoes[hidden] { display: none; }
+  .srn-pensar .x { font-size: 16px; line-height: 1; opacity: .75; margin-left: 2px; }
   .srn-pensar { all: unset; box-sizing: border-box; cursor: pointer; flex: none; height: 32px; padding: 0 12px 0 9px; background: var(--vidro-item); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--sub); box-shadow: inset 0 0 0 1px var(--vidro-borda); position: relative; overflow: hidden; }
   .srn-pensar svg { width: 17px; height: 17px; }
   .srn-pensar[aria-pressed="true"] { color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); box-shadow: none; }
@@ -510,6 +513,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const chavePensar = () => `sintonia.serena.pensar.${estado.eu?.id || 'local'}`;
   const lerPensar = () => { try { return localStorage.getItem(chavePensar()) === '1'; } catch { return false; } };
   const gravarPensar = (v) => { try { localStorage.setItem(chavePensar(), v ? '1' : '0'); } catch { /* sem armazenamento */ } };
+  const pintarPensar = () => { if (R.opcoes) R.opcoes.hidden = !lerPensar(); };
   let montado = false, pessoaCarregada = null;
   const R = {}; // elementos
 
@@ -640,10 +644,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     R.btEnviar = el('button', { type: 'button', class: 'srn-env', 'aria-label': 'Enviar', html: SVG.enviar, onclick: () => mandar() });
     R.anexo = el('div', { class: 'srn-anexo srn-vidro', hidden: '' });
     /* serena-super: "Pensar mais" ao lado do campo (vale para a próxima mensagem; fica lembrado neste aparelho) */
-    R.btPensar = el('button', { type: 'button', class: 'srn-pensar', 'aria-pressed': 'false', title: 'Pensar mais: a Serena raciocina com mais calma (demora um pouco mais)', onclick: () => { const v = R.btPensar.getAttribute('aria-pressed') !== 'true'; R.btPensar.setAttribute('aria-pressed', String(v)); gravarPensar(v); toast(v ? 'Pensar mais ligado: ela vai raciocinar com mais calma.' : 'Pensar mais desligado.'); } },
-      el('span', { html: SVG.pensar, style: 'display:grid' }), el('span', { class: 'tx', text: 'Pensar mais' }));
+    /* "Pensar mais" (dono 21/11): mora no "+" (com o cérebro); ligado, aparece só esta etiqueta acima do campo — tocar desliga */
+    const mudarPensar = (v) => { gravarPensar(v); pintarPensar(); toast(v ? 'Pensar mais ligado: ela vai raciocinar com mais calma.' : 'Pensar mais desligado.'); };
+    R.btPensar = el('button', { type: 'button', class: 'srn-pensar', 'aria-pressed': 'true', title: 'Pensar mais está ligado. Toque para desligar.', onclick: () => mudarPensar(false) },
+      el('span', { html: SVG.cerebro, style: 'display:grid' }), el('span', { class: 'tx', text: 'Pensar mais' }), el('span', { class: 'x', 'aria-hidden': 'true', text: '×' }));
+    R.mudarPensar = mudarPensar;
     R.compor = el('div', { class: 'srn-compor srn-vidro' }, R.btMais, R.campo, R.btMic, R.btEnviar);
-    R.opcoes = el('div', { class: 'srn-opcoes' }, R.btPensar);
+    R.opcoes = el('div', { class: 'srn-opcoes' }, R.btPensar); R.opcoes.hidden = !lerPensar();
     R.arquivos = {
       camera: el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: '' }),
       fotos: el('input', { type: 'file', accept: 'image/*', hidden: '' }),
@@ -1139,7 +1146,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     requestAnimationFrame(() => { R.miolo.scrollTop = R.miolo.scrollHeight; });
   }
   function desenharMiolo() {
-    if (R.btPensar) R.btPensar.setAttribute('aria-pressed', String(lerPensar()));
+    pintarPensar();
     const c = atual();
     if (c && c.msgs.length) desenharConversa(); else { ultimoQtd = 0; if (falha || enviando) desenharConversa(); else desenharInicio(); }
     desenharCabecalho();
@@ -1308,7 +1315,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     R.popMais.replaceChildren(
       opcao(SVG.camera, 'Câmera', 'Tirar uma foto', () => R.arquivos.camera.click()),
       opcao(SVG.fotos, 'Fotos', 'Print de uma conversa', () => R.arquivos.fotos.click()),
-      opcao(SVG.clipe, 'Arquivos', 'Imagem do aparelho', () => R.arquivos.arquivos.click()));
+      opcao(SVG.clipe, 'Arquivos', 'Imagem do aparelho', () => R.arquivos.arquivos.click()),
+      opcao(SVG.cerebro, 'Pensar mais', lerPensar() ? 'Ligado: ela raciocina com mais calma' : 'Ela pensa com mais calma', () => R.mudarPensar(!lerPensar()), { checado: lerPensar() }));
     posicionar(R.popMais, R.btMais, true);
     R.popMais.hidden = false; R.veuPop.hidden = false; R.btMais.setAttribute('aria-expanded', 'true');
     R.popMais.querySelector('.srn-op')?.focus({ preventScroll: true });

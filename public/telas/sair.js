@@ -41,14 +41,15 @@
 
   /* animação de saída: a tela recua e desfoca, entra o "Até logo" */
   html.saindo body > *:not(.sair-veu) { transition: transform .5s cubic-bezier(.4,0,.2,1), filter .5s, opacity .5s; transform: scale(.96); filter: blur(8px); opacity: .4; }
-  .sair-veu { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; align-content: center; gap: 14px;
-    background: radial-gradient(120% 90% at 50% 40%, #13305a 0%, #0d2240 60%, #081629 100%); color: #fff; opacity: 0; transition: opacity .45s ease; }
+  .sair-veu { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; align-content: center; gap: 18px; text-align: center; color: #fff;
+    background: linear-gradient(165deg, #106ebe 0%, #0d2240 52%, #0b3b3d 100%); opacity: 0; transition: opacity .35s ease; }
   .sair-veu.vis { opacity: 1; }
-  .sair-veu .logo { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 4px 14px rgba(15,252,190,.35)); transform: translateY(8px) scale(.9); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1) .15s, opacity .4s .15s; }
-  .sair-veu b { font: 700 22px/1.2 Poppins, system-ui, sans-serif; transform: translateY(8px); opacity: 0; transition: transform .5s cubic-bezier(.2,.8,.2,1) .25s, opacity .4s .25s; }
-  .sair-veu small { font: 400 14px/1.3 Poppins, system-ui, sans-serif; color: rgba(255,255,255,.7); opacity: 0; transition: opacity .4s .4s; }
-  .sair-veu.vis .logo, .sair-veu.vis b { transform: none; opacity: 1; }
-  .sair-veu.vis small { opacity: 1; }
+  /* a logo da Sintonia em branco (a mesma do topo do app, invertida para dar contraste no fundo escuro) */
+  .sair-veu .logo { width: 190px; height: auto; filter: brightness(0) invert(1); opacity: 0; transform: translateY(6px); transition: opacity .45s ease .12s, transform .45s cubic-bezier(.2,.8,.2,1) .12s; }
+  .sair-veu .txt { display: grid; gap: 6px; opacity: 0; transform: translateY(6px); transition: opacity .45s ease .22s, transform .45s cubic-bezier(.2,.8,.2,1) .22s; }
+  .sair-veu b { font: 600 20px/1.25 Poppins, system-ui, sans-serif; }
+  .sair-veu small { font: 400 14px/1.3 Poppins, system-ui, sans-serif; color: rgba(255,255,255,.72); }
+  .sair-veu.vis .logo, .sair-veu.vis .txt { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) { .sair-dlg[open] { animation: none; } html.saindo body > *:not(.sair-veu) { transition: none; } .sair-veu, .sair-veu * { transition: none !important; } }
   `;
   const ICONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>';
@@ -62,7 +63,7 @@
     try { localStorage.removeItem('sintonia.fz.lista'); } catch {}
     const nome = primeiroNome();
     const veu = el('div', { class: 'sair-veu', role: 'status', 'aria-live': 'polite' },
-      el('img', { class: 'logo', src: '/simbolo-escuro.png', alt: '' }), el('b', { text: nome ? `Até logo, ${nome}!` : 'Até logo!' }), el('small', { text: 'Você saiu da Sintonia.' }));
+      el('img', { class: 'logo', src: '/logo.png', alt: 'Sintonia' }), el('span', { class: 'txt' }, el('b', { text: nome ? `Até logo, ${nome}!` : 'Até logo!' }), el('small', { text: 'Você saiu da Sintonia.' })));
     document.body.append(veu);
     document.documentElement.classList.add('saindo');
     requestAnimationFrame(() => requestAnimationFrame(() => veu.classList.add('vis')));
