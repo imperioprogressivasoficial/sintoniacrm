@@ -1,7 +1,7 @@
 import { FORA_DA_JANELA_SOCIAL, TIPOS_COM_JANELA_24H } from '../channels/meta-social.js';
 import { randomUUID } from 'node:crypto';
 import type { Anexo, Conversa, Etapa, ModoAtendimento, UnidadeId } from '../domain.js';
-import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio, ModeloAprovado, ModeloEnvio, StatusRecebido } from '../channels/tipos.js';
+import type { AlvoMensagem, AnexoRecebido, CanalWhatsApp, EnvioResultado, MensagemRecebida, MidiaEnvio, ModeloAprovado, ModeloEnvio, StatusRecebido } from '../channels/tipos.js';
 import { FORA_DA_JANELA, textoDoModelo } from '../channels/meta.js';
 import { HISTORICO_MIDIA, LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { VALIDADE_DIGITANDO_MS, type Evento, type Repositorio, type Tarefa } from '../store/repositorio.js';
@@ -458,18 +458,30 @@ export class Sintonia {
   }
 
   /** Atendente enviou pelo CRM. Com `quem` (usuária logada), vale a anti-duplicidade e ela pode virar a dona. */
-  async equipeEnviou(conversaId: string, texto: string, atendente: string, quem?: Quem): Promise<void> {
+  /**
+   * menu-mensagem: `opcoes.citada` responde citando outra mensagem (no WhatsApp ela aparece em cima, onde o canal permite);
+   * `opcoes.id` é o id que a mensagem gravada recebe (para guardar a citação junto).
+   */
+  async equipeEnviou(conversaId: string, texto: string, atendente: string, quem?: Quem, opcoes: { citada?: AlvoMensagem & { texto: string }; id?: string } = {}): Promise<void> {
     const { regras } = await this.configAgora();
-    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente, regras, quem));
+    const feito = await this.mutar(conversaId, (c) => this.equipeEnviouAgora(c, texto, atendente, regras, quem, opcoes));
     if (feito === undefined) throw new Error('Conversa não encontrada');
   }
 
-  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string, regras: RegrasAtendimento, quem?: Quem): Promise<true> {
+  /** menu-mensagem: o número (canal) por onde a conversa fala, para reagir, editar e apagar. */
+  canalDaConversa(c: Conversa): NumeroConectado | undefined {
+    return this.d.numeros.find((x) => x.canalId === c.canalId);
+  }
+
+  private async equipeEnviouAgora(c: Conversa, texto: string, atendente: string, regras: RegrasAtendimento, quem?: Quem, opcoes: { citada?: AlvoMensagem & { texto: string }; id?: string } = {}): Promise<true> {
     if (quem) await this.conferirVezEm(c, quem);
     const agora = this.agora();
     const espera = this.tempoDeResposta(c, agora);
-    const id = await this.enviar(c, texto);
-    await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
+    const citada = opcoes.citada;
+    const id = citada
+      ? await this.enviarCom(c, texto, (n) => (n.canal.enviarCitando ? n.canal.enviarCitando(n.canalId, c.telefone, texto, citada) : n.canal.enviarTexto(n.canalId, c.telefone, texto)))
+      : await this.enviar(c, texto);
+    await this.d.repo.adicionarMensagem({ ...(opcoes.id ? { id: opcoes.id } : {}), conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
     await this.depoisDoEnvioDaEquipe(c, agora, atendente, espera, regras, quem);
     return true;
   }

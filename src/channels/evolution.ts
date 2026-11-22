@@ -181,7 +181,7 @@ export function lerAcoesEvolution(corpo: unknown): AcaoRecebida[] {
   if (!lido) return [];
   const saida: AcaoRecebida[] = [];
   for (const m of lido.lista) {
-    if (ehGrupo(m.key.remoteJid)) continue;
+    if (m.key.remoteJid.endsWith('@g.us')) continue;
     const jid = m.key.remoteJid.endsWith('@lid') ? (m.key.remoteJidAlt ?? m.key.senderPn ?? '') : m.key.remoteJid;
     const telefone = telefoneDoJid(jid);
     const msg = m.message ? desembrulhar(m.message) : undefined;
