@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="preload" as="image" href="/vendas/mac-conversas-1440.webp?v=2111" imagesrcset="/vendas/mac-conversas-1440.webp?v=2111 1440w" imagesizes="(max-width: 760px) 100vw, 840px">
 <link rel="stylesheet" href="/estilo.css">
-<style>/* sem-pagamento: botões de WhatsApp (sem preços nem planos na página) */
+<style>/* sem-pagamento: botões de WhatsApp (os planos mostram o preço, mas contratar é só pelo WhatsApp) */
 .v-wa-ic { flex: none; }
 a[data-whats] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .v-wa-final { display: grid; gap: 14px; justify-items: start; align-content: center; }
@@ -42,6 +42,7 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
       <a class="v-link some" href="#mudou-2026">O que mudou</a>
       <a class="v-link some" href="#equipe-2027">Por que IA</a>
       <a class="v-link some" href="#crm">CRM</a>
+      <a class="v-link some" href="#planos">Planos</a>
       <a class="v-link some" href="#perguntas">Perguntas</a>
       <a class="v-link" href="/entrar">Entrar</a>
       <a class="botao botao-menta" data-whats href="/suporte" data-sem-whats="Contato" aria-label="Falar no WhatsApp"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>WhatsApp</span></a>
@@ -53,6 +54,7 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
   <section class="v-heroi" aria-labelledby="titulo-heroi">
     <div class="v-miolo">
       <div class="v-heroi-texto">
+        <p class="v-lancamento"><svg class="v-lanc-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><b>Lançamento oficial:</b> 3 de março de 2027</span></p>
         <p class="v-selo"><i>NOVO</i> CRM de WhatsApp com IA integrada</p>
         <h1 id="titulo-heroi">Nenhum cliente sem resposta. <em>Nenhuma venda esquecida.</em></h1>
         <p class="v-sub"><b>Uma IA que atende, vende e agenda no seu WhatsApp 24 horas, dentro de um CRM completo.</b> Não tem jornada e nunca deixa cliente esperando.</p>
@@ -294,6 +296,73 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
 
   
 
+  <section class="v-secao v-noite" id="planos" aria-labelledby="titulo-planos">
+    <div class="v-miolo">
+      <div class="v-titulo centro revela">
+        <p class="v-olho">Planos</p>
+        <h2 id="titulo-planos">Um CRM completo. <em>E um Colaborador de IA que custa menos que um funcionário.</em></h2>
+        <p>Sem cobrança por usuário. Comece pelo CRM, grátis no 1º ano, e coloque a IA para atender, vender e agendar quando fizer sentido para o seu negócio.</p>
+        <p class="v-lancamento v-lancamento-planos"><svg class="v-lanc-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><b>Lançamento oficial:</b> 3 de março de 2027</span></p>
+      </div>
+      <div class="v-planos">
+        <article class="v-plano revela" data-plano="Essencial">
+          <p class="v-plano-selo">1º ano grátis</p>
+          <p class="v-plano-nome">Essencial</p>
+          <p class="v-plano-tag">CRM completo, sem IA</p>
+          <p class="v-plano-preco"><b>R$ 0</b><span>no 1º ano</span></p>
+          <p class="v-plano-depois">depois, R$ 497/mês</p>
+          <p class="v-plano-ilimitado"><b>Tudo ilimitado:</b> usuários, pipelines, leads e clientes</p>
+          <ul>
+            <li>WhatsApp (API oficial), Instagram Direct e Messenger</li>
+            <li>Multiatendente e respostas rápidas</li>
+            <li>Chatbot de fluxo (bot comum, sem IA)</li>
+            <li>Automações por etapa do funil</li>
+            <li>Transmissões e e-mail marketing</li>
+            <li>Agenda integrada</li>
+            <li>Dashboard e relatórios</li>
+            <li>Painel da sala comercial na TV</li>
+            <li>Funciona no navegador do computador e do celular</li>
+          </ul>
+          <p class="v-plano-aviso">Sem IA: a IA não conversa nem responde.</p>
+          <a class="botao v-vidro-btn" data-whats data-whats-texto="Olá! Quero o plano Essencial da Sintonia." data-sem-whats="Quero o Essencial" href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Quero o Essencial</span></a>
+        </article>
+        <article class="v-plano destaque revela" style="--atraso:.06s" data-plano="Colaborador de IA">
+          <p class="v-plano-selo">Mais escolhido</p>
+          <p class="v-plano-nome">Colaborador de IA</p>
+          <p class="v-plano-tag">a IA trabalha na sua equipe</p>
+          <p class="v-plano-preco"><b>R$ 1.997</b><span>por mês</span></p>
+          <p class="v-plano-depois">menos que o custo de um atendente com encargos</p>
+          <p class="v-plano-ilimitado"><b>Tudo do Essencial, mais:</b></p>
+          <ul>
+            <li>IA atendendo 24 horas, que conversa como gente, vende, agenda e recupera clientes sumidos</li>
+            <li>Agente de IA treinado para o seu negócio</li>
+            <li>IA Copiloto, que sugere a resposta para a equipe</li>
+            <li>Relatórios automáticos de IA</li>
+            <li>A IA organiza o CRM sozinha</li>
+            <li>Painel IA × equipe</li>
+          </ul>
+          <p class="v-plano-limite">Limites de uso a cada 5 horas, por semana e por mês.</p>
+          <a class="botao botao-menta" data-whats data-whats-texto="Olá! Quero o plano Colaborador de IA da Sintonia." data-sem-whats="Quero o Colaborador de IA" href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Quero o Colaborador de IA</span></a>
+        </article>
+        <article class="v-plano revela" style="--atraso:.12s" data-plano="Empresarial">
+          <p class="v-plano-nome">Empresarial</p>
+          <p class="v-plano-tag">para operações maiores</p>
+          <p class="v-plano-preco"><b>Sob medida</b></p>
+          <p class="v-plano-depois">plano montado para a sua operação</p>
+          <p class="v-plano-ilimitado"><b>Tudo do Colaborador de IA, mais:</b></p>
+          <ul>
+            <li>Implantação personalizada</li>
+            <li>Mais de um agente de IA para outras funções: vendas, pós-venda, suporte, cobrança…</li>
+            <li>Integrações sob medida</li>
+            <li>Atendimento prioritário</li>
+          </ul>
+          <a class="botao v-vidro-btn" data-whats data-whats-texto="Olá! Quero o plano Empresarial da Sintonia." data-sem-whats="Quero o Empresarial" href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Quero o Empresarial</span></a>
+        </article>
+      </div>
+      <p class="v-plano-demo revela"><b>Como contratar:</b> fale com a gente no WhatsApp. Nada é pago pelo site nem pelo app: a nossa equipe conhece a sua operação, mostra a Sintonia funcionando e libera o acesso para a sua empresa.</p>
+    </div>
+  </section>
+
   <section class="v-secao v-clara" id="perguntas" aria-labelledby="titulo-faq" style="padding-top:24px">
     <div class="v-miolo">
       <div class="v-titulo centro revela">
@@ -304,7 +373,9 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
         <details><summary>A IA vai responder sozinha os meus clientes?</summary><p>Só se você quiser. Em cada conversa você escolhe: a IA atende sozinha, só sugere a resposta para a equipe (Copiloto) ou fica em silêncio. Dá para decidir por conversa e por horário.</p></details>
         <details><summary>E se a IA não souber responder?</summary><p>Ela responde com as regras e informações da sua empresa. Quando não tem certeza, passa a conversa para a equipe e avisa quem atende.</p></details>
         <details><summary>Preciso trocar o meu número de WhatsApp?</summary><p>Não. Você conecta o número que os clientes já conhecem, pela API oficial da Meta.</p></details>
-<details><summary>Como faço para usar a Sintonia?</summary><p>Fale com a gente no WhatsApp. A nossa equipe conhece a sua operação, mostra a Sintonia funcionando e libera o acesso para a sua empresa. Não é preciso criar conta.</p></details>
+<details><summary>Quanto custa?</summary><p>O plano Essencial (CRM completo, sem IA) é grátis no 1º ano e depois custa R$ 497 por mês. O Colaborador de IA custa R$ 1.997 por mês para a equipe inteira, menos que um atendente com encargos. O Empresarial é montado sob medida. Nenhum plano cobra por usuário. Veja os <a href="#planos">planos</a>.</p></details>
+        <details><summary>Como faço para contratar?</summary><p>Fale com a gente no WhatsApp. Nada é pago pelo site nem pelo app: a nossa equipe conhece a sua operação, mostra a Sintonia funcionando e libera o acesso para a sua empresa. Não é preciso criar conta.</p></details>
+        <details><summary>Quando é o lançamento?</summary><p>O lançamento oficial da Sintonia é em 3 de março de 2027. Quer conhecer antes? Fale com a gente no WhatsApp.</p></details>
       </div>
     </div>
   </section>
@@ -332,7 +403,7 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
         <p>O CRM de WhatsApp com uma IA que atende, vende e agenda 24 horas. Feito dentro de uma operação real de atendimento.</p>
         <div class="v-rod-canais" aria-label="Canais conectados"><span title="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#25D366"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span><span title="Instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ig-r1" cx="0.15" cy="1.05" r="1.25"><stop offset="0" stop-color="#FFD600"/><stop offset=".22" stop-color="#FF7A00"/><stop offset=".45" stop-color="#FF0069"/><stop offset=".7" stop-color="#D300C5"/><stop offset="1" stop-color="#7638FA"/></radialGradient></defs><rect x="1" y="1" width="22" height="22" rx="6.4" fill="url(#ig-r1)"/><rect x="5.3" y="5.3" width="13.4" height="13.4" rx="4" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="16.4" cy="7.6" r="1.05" fill="#fff"/></svg></span><span title="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true" style="color:#0866FF"><path fill="currentColor" d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg></span><span title="Messenger"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><radialGradient id="ms-r1" cx="0.19" cy="0.99" r="1.09"><stop offset="0" stop-color="#0099FF"/><stop offset=".61" stop-color="#A033FF"/><stop offset=".93" stop-color="#FF5280"/><stop offset="1" stop-color="#FF7061"/></radialGradient></defs><path fill="url(#ms-r1)" d="M.001 11.639C.001 4.949 5.241 0 12.001 0S24 4.95 24 11.639c0 6.689-5.24 11.638-12 11.638-1.21 0-2.38-.16-3.47-.46a.96.96 0 00-.64.05l-2.39 1.05a.96.96 0 01-1.35-.85l-.07-2.14a.97.97 0 00-.32-.68A11.39 11.389 0 01.002 11.64zm8.32-2.19l-3.52 5.6c-.35.53.32 1.139.82.75l3.79-2.87c.26-.2.6-.2.87 0l2.8 2.1c.84.63 2.04.4 2.6-.48l3.52-5.6c.35-.53-.32-1.13-.82-.75l-3.79 2.87c-.25.2-.6.2-.86 0l-2.8-2.1a1.8 1.8 0 00-2.61.48z"/></svg></span><span title="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#25F4EE" d="M9.4 9.6v-.9a6.6 6.6 0 0 0-.9-.1 6.6 6.6 0 1 0 3.8 12 6.6 6.6 0 0 1-2.9-11Z"/><path fill="#25F4EE" d="M9.6 19.7a3 3 0 0 0 3-2.9V2.5h2.6a5 5 0 0 1-.1-.9h-3.6v14.2a3 3 0 0 1-3 2.9 3 3 0 0 1-1.4-.4 3 3 0 0 0 2.5 1.4Zm10.5-12.3v-.9a5 5 0 0 1-2.7-.8 5 5 0 0 0 2.7 1.7Z"/><path fill="#FE2C55" d="M17.4 5.7a5 5 0 0 1-1.2-3.2h-.9a5 5 0 0 0 2.1 3.2ZM9.4 12.6a3 3 0 0 0-1.4 5.7 3 3 0 0 1 2.4-4.8 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-.9-.1h-.2v2.8a3 3 0 0 0-.8 0Z"/><path fill="#FE2C55" d="M20.1 7.4v2.8a8.5 8.5 0 0 1-5-1.6v7.2a6.6 6.6 0 0 1-10.3 5.4 6.6 6.6 0 0 0 11.2-4.7V9.2a8.5 8.5 0 0 0 5 1.6V7.6a5 5 0 0 1-.9-.2Z"/><path fill="#111" d="M15.1 16.5V9.2a8.5 8.5 0 0 0 5 1.6V7.4a5 5 0 0 1-2.7-1.7 5 5 0 0 1-2.1-3.2h-2.6v14.2a3 3 0 0 1-5.4 1.8 3 3 0 0 1 1.4-5.7 3 3 0 0 1 .9.1V9.9a6.6 6.6 0 0 0-4.6 11.2 6.6 6.6 0 0 0 10.1-4.6Z"/></svg></span><span title="Gmail"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="gm-r5v" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#EE6AA7"/><stop offset=".35" stop-color="#EA4335"/><stop offset=".65" stop-color="#EA4335"/><stop offset=".85" stop-color="#F28B2E"/><stop offset="1" stop-color="#F9D648"/></linearGradient><linearGradient id="gm-r5d" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6CC96A"/><stop offset=".5" stop-color="#3FA98C"/><stop offset="1" stop-color="#4285F4"/></linearGradient></defs><rect x="1.6" y="6.4" width="4.8" height="14" rx="1.8" fill="#EA4335"/><rect x="17.6" y="6.4" width="4.8" height="14" rx="1.8" fill="url(#gm-r5d)"/><path d="M4 7.6 12 14l8-6.4" stroke="url(#gm-r5v)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span></div>
       </div>
-      <nav class="v-rod-col" aria-label="Produto"><b>Produto</b><a href="#como-funciona">Como funciona</a><a href="#equipe-2027">Por que IA</a><a href="#crm">CRM e funil</a><a href="#sala-tv">Painel na TV</a></nav>
+      <nav class="v-rod-col" aria-label="Produto"><b>Produto</b><a href="#como-funciona">Como funciona</a><a href="#equipe-2027">Por que IA</a><a href="#crm">CRM e funil</a><a href="#sala-tv">Painel na TV</a><a href="#planos">Planos e preços</a></nav>
       <nav class="v-rod-col" aria-label="Ajuda"><b>Ajuda</b><a href="#perguntas">Perguntas frequentes</a><a href="/suporte">Suporte</a><a href="/privacidade">Política de privacidade</a><a href="/termos">Termos de uso</a></nav>
       <nav class="v-rod-col" aria-label="Novidades"><b>2026</b><a href="#mudou-2026">Meta cobra por mensagem</a><a href="#escala-6x1">Fim da escala 6x1</a><a href="#equipe-2027">A equipe de 2027</a></nav>
       <div class="v-rod-col v-rod-cta"><b>Quer usar a Sintonia?</b><p>Fale com a nossa equipe no WhatsApp: a gente mostra funcionando e libera o acesso.</p><a class="botao botao-menta" data-whats href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Falar no WhatsApp</span></a><a class="v-rod-entrar" href="/entrar">Já sou cliente · Entrar</a></div>
