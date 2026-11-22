@@ -1,7 +1,7 @@
 /* sem-pagamento: contato da Sintonia nas páginas públicas (vendas, login, suporte, privacidade e termos).
  * O número de WhatsApp vem do servidor (GET /api/publico/contato, variável SINTONIA_WHATSAPP_VENDAS).
  *   <a data-whats href="/suporte"><span data-whats-rotulo>Falar no WhatsApp</span></a>
- *     com número: abre o WhatsApp com a mensagem pronta;
+ *     com número: abre o WhatsApp com a mensagem pronta (a do link em data-whats-texto, ex.: o plano escolhido);
  *     sem número: vai para o e-mail de suporte (se houver) ou para a página /suporte, e o rótulo vira "Fale com a gente"
  *     (ou o texto de data-sem-whats).
  *   [data-contato="whatsapp"] / [data-contato="email"]: mostram o número / e-mail (textContent).
@@ -26,7 +26,7 @@
         return;
       }
       a.removeAttribute('target');
-      if (email) a.href = `mailto:${email}?subject=${encodeURIComponent('Quero conhecer a Sintonia')}`;
+      if (email) a.href = `mailto:${email}?subject=${encodeURIComponent('Quero conhecer a Sintonia')}` + (a.hasAttribute('data-whats-texto') ? `&body=${encodeURIComponent(texto)}` : '');
       else a.href = a.getAttribute('data-sem') || '/suporte';
       if (rot) rot.textContent = a.getAttribute('data-sem-whats') || 'Fale com a gente';
     });
