@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-21 22:32 UTC (21/11, 19h32 na Bahia)
-commit: e9227f7
-pacote sha256: 2b2bbee67dfaaab106a14065b71699ed1624630dd80899b4dd8824e3a653d1cd
+data: 2026-11-22 01:35 UTC (21/11, 22h35 na Bahia)
+commit: 003b9d5
+pacote sha256: 7087f7ac13a328c1af9dcc14ff209af155bda7d1066dbe95f67f349155585670
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-e9227f7.b64); pode apagar depois.
-observação: em cima do eea23f8. Entra: botão ao lado da câmera com abas Respostas | Fluxos sempre à vista e "Criar fluxo".
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-003b9d5.b64); pode apagar depois.
+observação: em cima do e9227f7 (+ anotações do Claude Pro no PASSAGEM). Entra: barra do topo só com ícones e arejada, radar com pontinho, vídeo no ⋯, ícone novo do agendar; Pensar mais no + da Serena (cérebro); saída com a logo branca; categoria Agenda no menu (claude/menu-agenda).
