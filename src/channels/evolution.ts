@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { AcaoRecebida, AlvoMensagem, AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida, MidiaBaixada, MidiaEnvio, StatusEntrega, StatusRecebido } from './tipos.js';
 import type { TipoAnexo } from '../domain.js';
-import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, tamanhoBase64, textoDoAnexo } from '../midia.js';
+import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, miniaturaJpeg, tamanhoBase64, textoDoAnexo } from '../midia.js';
 import { telefoneDoJid } from '../util/telefone.js';
 import { referenciaDaEvolution } from '../rastreio/referencia.js';
 import { baixarDoWhatsApp } from './whatsapp-cdn.js';
@@ -65,6 +65,9 @@ function desembrulhar(msg: Obj): Obj {
   return atual;
 }
 
+/** velocidade: largura/altura de foto ou vídeo (1–20000 px); fora disso, ignora. */
+const medida = (v: unknown): number | undefined => { const n = numero(v); return n && Number.isInteger(n) && n > 0 && n <= 20000 ? n : undefined; };
+
 const TIPOS: Array<[string, TipoAnexo]> = [
   ['imageMessage', 'imagem'],
   ['audioMessage', 'audio'],
@@ -93,6 +96,10 @@ function lerConteudo(bruta: Obj | null | undefined): { texto: string; anexo?: An
       tamanho: numero(m.fileLength),
       voz: tipo === 'audio' ? m.ptt === true : undefined,
       base64: base64 && tamanhoBase64(base64) <= LIMITE_INLINE ? base64 : undefined,
+      /* velocidade: a miniatura que o WhatsApp manda na hora (foto e vídeo) e o tamanho, para o balão não ficar vazio */
+      miniatura: tipo === 'imagem' || tipo === 'video' ? miniaturaJpeg(m.jpegThumbnail) : undefined,
+      largura: tipo === 'imagem' || tipo === 'video' ? medida(m.width) : undefined,
+      altura: tipo === 'imagem' || tipo === 'video' ? medida(m.height) : undefined,
     };
     for (const k of Object.keys(anexo) as Array<keyof AnexoRecebido>) if (anexo[k] === undefined) delete anexo[k];
     // Áudio ainda não é transcrito: o marcador deixa a equipe ver e a IA pedir em texto.

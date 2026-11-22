@@ -16,6 +16,33 @@ export const LIMITE_INLINE = 5 * 1024 * 1024;
  */
 export const HISTORICO_MIDIA = { dias: 30, maxBytes: 10 * 1024 * 1024, maxPorVez: 400 };
 
+/** velocidade: maior miniatura guardada (bytes do JPEG). As do WhatsApp têm 1–6 KB; maior que isso é ignorada. */
+export const LIMITE_MINIATURA = 9 * 1024;
+
+/**
+ * velocidade: miniatura (jpegThumbnail) do jeito que chega no webhook — texto em base64, Buffer em JSON
+ * ({ type: 'Buffer', data: [...] }) ou bytes numerados ({ "0": 255, "1": 216, ... }) — conferida e em base64.
+ * Só JPEG de verdade e pequeno; qualquer outra coisa vira undefined (a foto aparece sem miniatura, como antes).
+ */
+export function miniaturaJpeg(v: unknown): string | undefined {
+  let b: Buffer | undefined;
+  try {
+    if (typeof v === 'string') {
+      const t = v.trim();
+      if (!t || t.length > LIMITE_MINIATURA * 2 || !/^[A-Za-z0-9+/]+={0,2}$/.test(t)) return undefined;
+      b = Buffer.from(t, 'base64');
+    } else if (v && typeof v === 'object') {
+      const o = v as { type?: unknown; data?: unknown };
+      const lista = o.type === 'Buffer' && Array.isArray(o.data) ? o.data : Object.keys(o).length && Object.keys(o).length <= LIMITE_MINIATURA && Object.keys(o).every((k, i) => k === String(i)) ? Object.values(o) : null;
+      if (!lista || lista.length > LIMITE_MINIATURA || !lista.every((x) => Number.isInteger(x) && (x as number) >= 0 && (x as number) <= 255)) return undefined;
+      b = Buffer.from(lista as number[]);
+    }
+  } catch { return undefined; }
+  if (!b || b.length < 100 || b.length > LIMITE_MINIATURA) return undefined;
+  if (b[0] !== 0xff || b[1] !== 0xd8 || b[2] !== 0xff) return undefined; // começa como JPEG
+  return b.toString('base64');
+}
+
 /** Marcador que vai no texto da mensagem: é o que a IA lê (ela não vê a mídia). */
 export function textoDoAnexo(tipo: TipoAnexo, legenda?: string, nomeArquivo?: string): string {
   const marcador =

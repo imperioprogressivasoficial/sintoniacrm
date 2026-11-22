@@ -75,12 +75,15 @@ interface LinhaMensagem {
   md_tamanho: string | null;
   md_voz: boolean | null;
   md_situacao: SituacaoAnexo | null;
+  md_largura: number | null;
+  md_altura: number | null;
   entrega: Mensagem['entrega'] | null;
 }
 
 const COLUNAS_MENSAGEM = `m.id, m.conversa_id, m.autor, m.autor_nome, m.texto, m.id_externo, m.em, m.entrega,
   md.tipo as md_tipo, md.mimetype as md_mimetype, md.nome_arquivo as md_nome_arquivo, md.duracao_seg as md_duracao_seg,
-  md.legenda as md_legenda, md.tamanho as md_tamanho, md.voz as md_voz, md.situacao as md_situacao`;
+  md.legenda as md_legenda, md.tamanho as md_tamanho, md.voz as md_voz, md.situacao as md_situacao,
+  md.largura as md_largura, md.altura as md_altura`; /* velocidade: a miniatura não vem aqui (só em miniaturas()) */
 
 function anexoDa(l: Omit<LinhaMensagem, 'id' | 'conversa_id' | 'autor' | 'autor_nome' | 'texto' | 'id_externo' | 'em' | 'entrega'>): Anexo | undefined {
   if (!l.md_tipo || !l.md_situacao) return undefined;
@@ -91,6 +94,7 @@ function anexoDa(l: Omit<LinhaMensagem, 'id' | 'conversa_id' | 'autor' | 'autor_
   if (l.md_legenda) a.legenda = l.md_legenda;
   if (l.md_tamanho !== null) a.tamanho = Number(l.md_tamanho);
   if (l.md_voz) a.voz = true;
+  if (l.md_largura && l.md_altura) { a.largura = l.md_largura; a.altura = l.md_altura; } /* velocidade */
   return a;
 }
 
@@ -284,9 +288,10 @@ export class RepositorioPostgres implements Repositorio {
     const a = m.anexo;
     const r = await this.pool.query(
       `with nova as (${inserir} returning id)
-       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa)
-       select id, $8, $9, $10, $11, $12, $13, $14, $15, $16, coalesce($17::timestamptz, '-infinity') from nova`,
-      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, m.refMidia ?? null, m.proximaMidia ?? null],
+       insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa, miniatura, largura, altura)
+       select id, $8, $9, $10, $11, $12, $13, $14, $15, $16, coalesce($17::timestamptz, '-infinity'), $18, $19, $20 from nova`,
+      [...valores, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, m.refMidia ?? null, m.proximaMidia ?? null,
+        a.miniatura ?? null, a.largura ?? null, a.altura ?? null],
     );
     return (r.rowCount ?? 0) > 0;
   }
@@ -294,16 +299,19 @@ export class RepositorioPostgres implements Repositorio {
   async completarMidia(conversaId: string, idExterno: string, a: Anexo, o: { ref?: string; proxima?: Date } = {}) {
     // Só a mensagem desta conversa, e só se ainda não tem mídia (o "on conflict" segura dois resgates ao mesmo tempo).
     const { rows } = await this.pool.query<{ mensagem_id: string }>(
-      `insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa)
-       select m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12::timestamptz, '-infinity')
+      `insert into sintonia.midias (mensagem_id, tipo, mimetype, nome_arquivo, duracao_seg, legenda, tamanho, voz, situacao, ref_canal, proxima_tentativa, miniatura, largura, altura)
+       select m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, coalesce($12::timestamptz, '-infinity'), $13, $14, $15
          from sintonia.mensagens m where m.id_externo = $2 and m.conversa_id = $1
        on conflict (mensagem_id) do update
          -- Já existia e falhou (ex.: antes não havia a mensagem completa): com a referência nova, tenta de novo do zero.
-         set ref_canal = excluded.ref_canal, situacao = 'pendente', tentativas = 0, erro = null, proxima_tentativa = excluded.proxima_tentativa
+         set ref_canal = excluded.ref_canal, situacao = 'pendente', tentativas = 0, erro = null, proxima_tentativa = excluded.proxima_tentativa,
+             miniatura = coalesce(sintonia.midias.miniatura, excluded.miniatura), largura = coalesce(sintonia.midias.largura, excluded.largura),
+             altura = coalesce(sintonia.midias.altura, excluded.altura)
          where sintonia.midias.situacao in ('falhou', 'pendente') and excluded.ref_canal is not null
            and sintonia.midias.ref_canal is distinct from excluded.ref_canal
        returning mensagem_id`,
-      [conversaId, idExterno, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, o.ref ?? null, o.proxima ?? null],
+      [conversaId, idExterno, a.tipo, a.mimetype ?? null, a.nomeArquivo ?? null, a.duracaoSeg ?? null, a.legenda ?? null, a.tamanho ?? null, a.voz ?? false, a.situacao, o.ref ?? null, o.proxima ?? null,
+        a.miniatura ?? null, a.largura ?? null, a.altura ?? null],
     );
     return rows[0]?.mensagem_id;
   }
@@ -440,6 +448,17 @@ export class RepositorioPostgres implements Repositorio {
         order by m.conversa_id, m.em desc, m.id desc`,
     );
     return new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)]));
+  }
+
+  /** velocidade: miniaturas do WhatsApp das mensagens pedidas (só as que têm), para o detalhe da conversa. */
+  async miniaturas(mensagemIds: string[]) {
+    const ids = mensagemIds.filter((x) => UUID.test(x)).slice(0, 500);
+    if (!ids.length) return new Map<string, string>();
+    const { rows } = await this.pool.query<{ mensagem_id: string; miniatura: string }>(
+      `select mensagem_id, miniatura from sintonia.midias where mensagem_id = any($1::uuid[]) and miniatura is not null`,
+      [ids],
+    );
+    return new Map(rows.map((r) => [r.mensagem_id, r.miniatura]));
   }
 
   async mensagens(conversaId: string, limite = 40) {

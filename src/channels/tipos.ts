@@ -40,6 +40,11 @@ export interface AnexoRecebido {
   base64?: string;
   /** Id da mídia no canal, quando é diferente do id da mensagem (API oficial: o media id da Graph API). */
   ref?: string;
+  /** velocidade: miniatura que o WhatsApp manda junto (jpegThumbnail da Evolution; a API oficial não manda), já conferida. */
+  miniatura?: string;
+  /** velocidade: largura e altura informadas pelo WhatsApp. */
+  largura?: number;
+  altura?: number;
 }
 
 /** Arquivo baixado do canal. */
