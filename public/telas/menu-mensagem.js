@@ -20,7 +20,6 @@
   const SEGURAR_MS = 400;
   const ANDOU_PX = 8;
   const RAPIDOS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '✅'];
-  const MAIS_EMOJIS = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '🥲', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😎', '🤔', '🤗', '🤭', '😴', '😌', '😏', '🙄', '😬', '😱', '😭', '😡', '🥺', '👏', '🙌', '👌', '✌️', '🤝', '💪', '🔥', '✨', '🎉', '💯', '💖', '💐', '⭐', '👀', '💅', '💇‍♀️'];
 
   const tr = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const IC = {
@@ -112,6 +111,17 @@
   .mm-grade button { all: unset; cursor: pointer; aspect-ratio: 1; display: grid; place-items: center; border-radius: 10px; font-size: 24px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
   .mm-grade button:hover, .mm-grade button:focus-visible { background: var(--hover); }
   .mm-cartao.mm-grade-cartao { width: min(330px, calc(100vw - 16px)); }
+  .mm-emo { display: grid; }
+  .mm-emo-topo { padding: 8px 10px 4px; }
+  .mm-emo-busca { all: unset; box-sizing: border-box; width: 100%; height: 38px; padding: 0 12px; border-radius: 12px; background: var(--hover); color: var(--texto); font-size: 15px; }
+  .mm-emo-busca::placeholder { color: var(--sub); }
+  .mm-emo-abas { display: flex; gap: 2px; padding: 2px 8px 4px; overflow-x: auto; scrollbar-width: none; }
+  .mm-emo-abas[hidden] { display: none; }
+  .mm-emo-abas button { all: unset; cursor: pointer; flex: none; width: 32px; height: 30px; display: grid; place-items: center; border-radius: 8px; font-size: 18px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+  .mm-emo-abas button:hover, .mm-emo-abas button:focus-visible { background: var(--hover); }
+  .mm-grade.mm-emo-lista { max-height: min(42vh, 300px); padding-top: 0; }
+  .mm-emo-tit { grid-column: 1 / -1; font-size: 12px; font-weight: 600; color: var(--sub); padding: 8px 4px 2px; position: sticky; top: 0; background: var(--fundo); z-index: 1; }
+  .mm-emo-vazio { grid-column: 1 / -1; margin: 0; padding: 16px 6px; font-size: 14px; color: var(--sub); text-align: center; }
 
   /* ---------- no balão ---------- */
   #msgs .bal.mm-com-reacao { margin-bottom: 15px; }
@@ -403,12 +413,68 @@
     catch (x) { toast(x.message); }
     recarregar();
   }
+  /* Seletor com TODOS os emojis (dono 22/11): busca em português, categorias e "Usados por último".
+   * Os dados (public/telas/emojis-dados.js, ~38 KB comprimido) só são baixados na primeira vez que abre. */
+  let dadosEmoji = null;
+  function carregarEmojis() {
+    if (window.SintoniaEmojiDados) return Promise.resolve(window.SintoniaEmojiDados);
+    if (dadosEmoji) return dadosEmoji;
+    dadosEmoji = new Promise((ok, falha) => {
+      const sc = document.createElement('script'); sc.src = '/telas/emojis-dados.js'; sc.async = true;
+      sc.onload = () => ok(window.SintoniaEmojiDados || []); sc.onerror = () => { dadosEmoji = null; falha(new Error('Não deu para carregar os emojis.')); };
+      document.head.append(sc);
+    });
+    return dadosEmoji;
+  }
+  const CHAVE_RECENTES = 'sintonia.emojis.recentes';
+  const lerRecentes = () => { try { return JSON.parse(localStorage.getItem(CHAVE_RECENTES) || '[]').slice(0, 24); } catch { return []; } };
+  const guardarRecente = (e) => { try { localStorage.setItem(CHAVE_RECENTES, JSON.stringify([e, ...lerRecentes().filter((x) => x !== e)].slice(0, 24))); } catch {} };
+  const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const GRUPOS_EMOJI = [[0, '😀', 'Carinhas'], [1, '👋', 'Pessoas'], [3, '🐶', 'Animais e natureza'], [4, '🍔', 'Comida e bebida'], [5, '✈️', 'Viagens e lugares'], [6, '⚽', 'Atividades'], [7, '💡', 'Objetos'], [8, '❤️', 'Símbolos'], [9, '🏳️', 'Bandeiras']];
+  function seletorEmoji({ marcado, escolher, aoCarregar }) {
+    const busca = el('input', { type: 'search', class: 'mm-emo-busca', placeholder: 'Buscar emoji', 'aria-label': 'Buscar emoji', autocomplete: 'off', enterkeyhint: 'search' });
+    const abas = el('div', { class: 'mm-emo-abas', role: 'tablist', 'aria-label': 'Categorias' });
+    const lista = el('div', { class: 'mm-grade mm-emo-lista', role: 'group', 'aria-label': 'Emojis' });
+    const botao = (emo, rot) => el('button', { type: 'button', text: emo, title: rot || '', 'aria-label': 'Escolher ' + emo, 'aria-pressed': String(marcado === emo), onclick: () => { guardarRecente(emo); escolher(emo); } });
+    const titulo = (t, id) => el('div', { class: 'mm-emo-tit', id, text: t });
+    let dados = [];
+    const desenharTudo = () => {
+      const filhos = [];
+      const rec = lerRecentes();
+      if (rec.length) filhos.push(titulo('Usados por último', 'mm-emo-g-r'), ...rec.map((e) => botao(e)));
+      for (const [g, , nome] of GRUPOS_EMOJI) {
+        const doGrupo = dados.filter((x) => x[0] === g); if (!doGrupo.length) continue;
+        filhos.push(titulo(nome, 'mm-emo-g-' + g), ...doGrupo.map((x) => botao(x[1], x[2])));
+      }
+      lista.replaceChildren(...filhos);
+    };
+    const filtrar = () => {
+      const q = semAcento(busca.value.trim());
+      if (!q) { abas.hidden = false; desenharTudo(); return; }
+      abas.hidden = true;
+      const termos = q.split(/\s+/);
+      const achados = dados.filter((x) => { const p = ' ' + x[2]; return termos.every((t) => p.includes(' ' + t)); }).slice(0, 240); /* pelo começo das palavras: "bolo" não acha "símbolo" */
+      lista.replaceChildren(...(achados.length ? achados.map((x) => botao(x[1], x[2])) : [el('p', { class: 'mm-emo-vazio', text: 'Nenhum emoji com esse nome.' })]));
+      lista.scrollTop = 0;
+    };
+    for (const [g, ic, nome] of GRUPOS_EMOJI) abas.append(el('button', { type: 'button', role: 'tab', text: ic, title: nome, 'aria-label': nome, onclick: () => { lista.querySelector('#mm-emo-g-' + g)?.scrollIntoView({ block: 'start' }); } }));
+    busca.addEventListener('input', filtrar);
+    lista.replaceChildren(el('p', { class: 'mm-emo-vazio', text: 'Carregando emojis…' }));
+    carregarEmojis().then((d) => { dados = d; filtrar(); aoCarregar?.(); }).catch((x) => lista.replaceChildren(el('p', { class: 'mm-emo-vazio', text: x.message })));
+    const caixa = el('div', { class: 'mm-emo' }, el('div', { class: 'mm-emo-topo' }, busca), abas, lista);
+    caixa.focar = () => busca.focus({ preventScroll: true });
+    return caixa;
+  }
+  window.SintoniaEmojis = { seletor: seletorEmoji, carregar: carregarEmojis };
+
   function grade(m, minha) {
+    const sel = seletorEmoji({ marcado: minha, escolher: (emo) => reagir(m, minha === emo ? null : emo), aoCarregar: () => { if (menu.aberto && menu.clone) posicionar(false); } });
     preencher(menu.cartao, [
       cabecalho('Escolha um emoji', () => preencher(menu.cartao, opcoesPrincipais(m, possiveis(m, menu.bal)))),
-      el('div', { class: 'mm-grade', role: 'group', 'aria-label': 'Emojis' }, ...MAIS_EMOJIS.map((emo) => el('button', { type: 'button', text: emo, 'aria-label': 'Reagir com ' + emo, 'aria-pressed': String(minha === emo), onclick: () => reagir(m, minha === emo ? null : emo) }))),
+      sel,
     ], 'mm-grade-cartao');
-    menu.cartao.querySelector('.mm-grade button')?.focus({ preventScroll: true });
+    /* no celular não abre o teclado sozinho (ele tamparia os emojis); no computador já dá para digitar */
+    if (matchMedia('(hover: hover)').matches) sel.focar();
   }
   async function copiar(t) {
     try { await navigator.clipboard.writeText(t); toast('Copiado'); }
