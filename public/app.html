@@ -2511,7 +2511,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('enviar').disabled = true;
     /* menu-mensagem: com a faixa "Respondendo a…" aberta, vai citando a mensagem */
     const citada = direto ? null : window.SintoniaMenuMensagem?.citando?.();
-    try { await (citada ? post(`/api/conversas/${estado.aberta}/responder`, { texto: t, citadaId: citada }) : post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome })); if (citada) window.SintoniaMenuMensagem.limparResposta(); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
+    try { await (citada ? post(`/api/conversas/${estado.aberta}/responder`, { texto: t, citadaId: citada }) : post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome })); if (citada) window.SintoniaMenuMensagem.limparResposta(true); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
     catch (x) {
       /* whatsapp-estavel: o servidor já explica ("Não enviada: …"). O aviso fica na conversa, acima da caixa, e o texto continua lá. */
       const doWa = /^Não enviada|pode ter saído/.test(x.message);

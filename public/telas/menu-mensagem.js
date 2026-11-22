@@ -45,7 +45,7 @@
   };
   const ESTRELA_CHEIA = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 3.8 2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8L12 3.8Z"/></svg>';
 
-  const CSS = `
+  const ESTILO = `
   /* toque longo: sem o menu do iOS (copiar/consultar) por cima do nosso, sem seleção no celular */
   #msgs .bal { -webkit-touch-callout: none; }
   @media (pointer: coarse) { #msgs .bal { -webkit-user-select: none; user-select: none; } }
@@ -137,20 +137,19 @@
   /* ---------- faixas ---------- */
   .mm-fixada { display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 14px; border-bottom: 1px solid var(--vidro-borda, var(--linha)); background: var(--vidro-forte, var(--fundo)); cursor: pointer; flex: none; min-width: 0; position: relative; z-index: 2; }
   .mm-fixada[hidden] { display: none; }
-  .mm-fixada > svg { width: 18px; height: 18px; flex: none; color: var(--icone, var(--texto)); }
+  .mm-fixada svg { width: 18px; height: 18px; flex: none; color: var(--icone, var(--texto)); }
   .mm-fixada .mm-ft { display: grid; min-width: 0; flex: 1; }
   .mm-fixada .mm-ft b { font-size: 12.5px; font-weight: 600; color: var(--marca-azul, #106ebe); line-height: 16px; }
   html[data-tema="escuro"] .mm-fixada .mm-ft b { color: #0ffcbe; }
   .mm-fixada .mm-ft span { font-size: 14px; line-height: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto); }
   .mm-fixada button { all: unset; cursor: pointer; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--sub); flex: none; }
   .mm-fixada button:hover { background: var(--hover); } .mm-fixada button svg { width: 18px; height: 18px; }
-  .mm-resp { position: absolute; left: 0; right: 0; bottom: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; background: var(--vidro-forte, var(--painel)); border-top: 1px solid var(--vidro-borda, var(--linha));
-    -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3); z-index: 3; }
+  .mm-resp { display: flex; align-items: center; gap: 6px; padding: 0 0 0 2px; }
   .mm-resp[hidden] { display: none; }
-  .mm-resp .mm-cit { flex: 1; min-width: 0; margin: 0; cursor: default; }
+  .mm-resp .mm-cit { flex: 1; min-width: 0; margin: 0; cursor: default; background: var(--painel); }
   .mm-resp button { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--sub); flex: none; }
   .mm-resp button:hover { background: var(--hover); } .mm-resp button svg { width: 20px; height: 20px; }
-  #msgs.mm-com-resp { padding-bottom: 74px; }
+  .mm-clone .audio-extras button, .mm-clone .transcrever { white-space: nowrap; }
   .mm-favs { display: grid; margin: 0 -16px; }
   .mm-fav-it { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 3px; padding: 12px 16px; border-bottom: 1px solid var(--linha); }
   .mm-fav-it:hover { background: var(--hover); }
@@ -158,7 +157,7 @@
   .mm-fav-it span { font-size: 14.5px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .mm-vazio { padding: 30px 10px; text-align: center; color: var(--sub); }
   `;
-  document.head.append(el('style', { id: 'mm-css', text: CSS }));
+  document.head.append(el('style', { id: 'mm-css', text: ESTILO }));
 
   // ------------------------------------------------------------ dados da conversa aberta
   const conversa = () => estado.detalhe?.conversa || null;
@@ -423,11 +422,13 @@
   function responder(m) {
     const c = conversa(); if (!c) return;
     resp = { id: m.id, conversaId: c.id };
-    faixaResp.replaceChildren(citacaoEl(m, false), el('button', { type: 'button', 'aria-label': 'Não responder a esta mensagem', html: IC.fechar, onclick: limparResposta }));
-    faixaResp.hidden = false; msgs.classList.add('mm-com-resp');
+    faixaResp.replaceChildren(citacaoEl(m, false), el('button', { type: 'button', 'aria-label': 'Não responder a esta mensagem', html: IC.fechar, onclick: () => limparResposta() }));
+    faixaResp.hidden = false;
     const t = $('texto'); t?.focus();
   }
-  function limparResposta() { resp = null; faixaResp.hidden = true; faixaResp.replaceChildren(); msgs.classList.remove('mm-com-resp'); }
+  let rolarAteFim = false;
+  /** enviada = true: a resposta saiu; ao redesenhar, a conversa desce até ela (como no WhatsApp). */
+  function limparResposta(enviada) { resp = null; faixaResp.hidden = true; faixaResp.replaceChildren(); if (enviada === true) rolarAteFim = true; }
   function citacaoEl(m, clicavel = true) {
     const b = el('span', { class: 'mm-cit', ...(clicavel ? { role: 'button', tabindex: '0', 'aria-label': 'Ir para a mensagem citada' } : {}) },
       el('b', { text: nomeAutor(m) }), el('span', { text: trechoDe(m) }));
@@ -638,6 +639,7 @@
   function depois() {
     const c = conversa(); const f = acoes().fixada;
     if (resp && resp.conversaId !== c?.id) limparResposta();
+    if (rolarAteFim) { rolarAteFim = false; requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
     if (!f || !c) { faixaFix.hidden = true; return; }
     const m = { autor: f.autor, autorNome: f.autorNome, texto: f.texto, anexo: f.tipo ? { tipo: f.tipo, legenda: f.texto } : null };
     faixaFix.replaceChildren(el('i', { html: IC.fixar, style: 'display:contents' }),
