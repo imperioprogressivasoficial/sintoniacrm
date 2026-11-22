@@ -150,7 +150,8 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
   return saida;
 }
 
-const STATUS: Record<string, StatusEntrega> = { sent: 'enviada', delivered: 'entregue', read: 'lida', failed: 'falhou' };
+// "played": a cliente tocou o áudio de voz (a Meta manda desde 17/03/2026, só para voz). "read" é só "viu a conversa".
+const STATUS: Record<string, StatusEntrega> = { sent: 'enviada', delivered: 'entregue', read: 'lida', played: 'ouvida', failed: 'falhou' };
 
 export function lerStatusMeta(corpo: unknown): StatusRecebido[] {
   const r = WebhookMeta.safeParse(corpo);

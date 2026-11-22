@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida, MidiaBaixada, MidiaEnvio } from './tipos.js';
+import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida, MidiaBaixada, MidiaEnvio, StatusEntrega, StatusRecebido } from './tipos.js';
 import type { TipoAnexo } from '../domain.js';
 import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, tamanhoBase64, textoDoAnexo } from '../midia.js';
 import { telefoneDoJid } from '../util/telefone.js';
@@ -169,6 +169,61 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
   return saida;
 }
 
+// ---------- vistos: evento messages.update (Evolution v2) ----------
+// O WhatsApp (Baileys) numera: 0 erro, 1 pendente (relógio), 2 saiu do servidor (✓), 3 chegou no aparelho (✓✓),
+// 4 lida (✓✓ azul), 5 áudio tocado (microfone azul). A Evolution manda o nome (SERVER_ACK...) ou, em versões antigas, o número.
+const STATUS_EVOLUTION: Record<string, StatusEntrega | undefined> = {
+  ERROR: 'falhou', '0': 'falhou',
+  SERVER_ACK: 'enviada', '2': 'enviada',
+  DELIVERY_ACK: 'entregue', '3': 'entregue',
+  READ: 'lida', '4': 'lida',
+  PLAYED: 'ouvida', '5': 'ouvida',
+};
+
+/** Data do aviso: a Evolution manda em milissegundos ou segundos (ou não manda). */
+function dataDoAviso(v: unknown): Date {
+  const n = numero(v);
+  if (n && n > 0) return new Date(n < 1e12 ? n * 1000 : n);
+  if (typeof v === 'string' && !Number.isNaN(Date.parse(v))) return new Date(v);
+  return new Date();
+}
+
+/**
+ * Avisos de entrega/leitura das mensagens que a loja mandou (evento messages.update).
+ * Só as nossas (fromMe): os avisos das mensagens da cliente (a loja leu) não interessam aqui.
+ * Formatos aceitos: v2 ({ keyId, fromMe, status }), v2 antiga ({ key: { id, fromMe }, update: { status } }) e lista.
+ */
+export function lerStatusEvolution(corpo: unknown): StatusRecebido[] {
+  if (eventoEvolution(corpo) !== 'messages.update') return [];
+  const bruto = obj(corpo);
+  const instancia = texto(bruto?.instance);
+  if (!instancia) return [];
+  const dados = Array.isArray(bruto!.data) ? bruto!.data : [bruto!.data];
+  const saida: StatusRecebido[] = [];
+  for (const item of dados) {
+    const d = obj(item);
+    if (!d) continue;
+    const key = obj(d.key);
+    const update = obj(d.update);
+    const fromMe = d.fromMe ?? key?.fromMe;
+    if (fromMe !== true) continue;
+    const id = texto(d.keyId) ?? texto(key?.id) ?? texto(d.id);
+    const bruta = d.status ?? update?.status;
+    const status = STATUS_EVOLUTION[String(bruta ?? '').toUpperCase()];
+    if (!id || !status) continue;
+    const jid = texto(d.remoteJid) ?? texto(key?.remoteJid);
+    const telefone = jid && !jid.endsWith('@lid') && !jid.endsWith('@g.us') ? telefoneDoJid(jid) : undefined;
+    saida.push({
+      canalId: instancia,
+      idExterno: id,
+      status,
+      em: dataDoAviso(d.datetime ?? d.messageTimestamp ?? update?.messageTimestamp),
+      ...(telefone ? { telefone } : {}),
+    });
+  }
+  return saida;
+}
+
 /** Mensagem de um grupo do WhatsApp (Conversas de grupo). Nunca vira conversa de cliente. */
 export interface MensagemGrupoRecebida {
   canalId: string;
@@ -316,6 +371,10 @@ export class CanalEvolution implements CanalWhatsApp {
 
   lerWebhook(corpo: unknown): MensagemRecebida[] {
     return lerWebhookEvolution(corpo);
+  }
+
+  lerStatus(corpo: unknown): StatusRecebido[] {
+    return lerStatusEvolution(corpo);
   }
 
   private url(caminho: string, instancia: string) {

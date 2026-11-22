@@ -63,7 +63,7 @@ export interface EnvioResultado {
 }
 
 /** Situação de entrega de uma mensagem que a loja enviou. */
-export type StatusEntrega = 'enviada' | 'entregue' | 'lida' | 'falhou';
+export type StatusEntrega = 'enviada' | 'entregue' | 'lida' | 'ouvida' | 'falhou';
 
 /** Aviso de entrega/leitura que o canal manda pelo webhook. */
 export interface StatusRecebido {

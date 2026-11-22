@@ -28,6 +28,8 @@ export const EVENTOS_WEBHOOK = [
   'CALL',
   // CONNECTION_UPDATE: conectou, caiu, o aparelho foi removido no celular (aviso e faixa no app).
   'CONNECTION_UPDATE',
+  // MESSAGES_UPDATE: vistos das mensagens da loja (✓ saiu, ✓✓ entregue, ✓✓ azul lida, áudio ouvido).
+  'MESSAGES_UPDATE',
 ];
 
 function lerInfo(nome: string, i: Record<string, unknown>): InfoInstancia {
