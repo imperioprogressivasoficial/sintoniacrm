@@ -802,7 +802,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           campos.append(larga(rotulo('Tarefa', t)),
             rotulo('Prazo (0 = agora)', duracaoCampo(p.em_minutos ?? 60, (m) => { p.em_minutos = Math.min(43200, m); marcarSujo(); }, { minimo: 0 })),
             rotulo('Prioridade', selecao([['baixa', 'Baixa'], ['normal', 'Normal'], ['alta', 'Alta']], p.prioridade || 'normal', (v) => { p.prioridade = v; marcarSujo(); })),
-            larga(el('p', { class: 'au-info', text: 'Aparece em Atendimento › Rotina para a dona da conversa. Sem dona, vai para a gestão.' })));
+            larga(el('p', { class: 'au-info', text: 'Aparece em Agenda › Rotina para a dona da conversa. Sem dona, vai para a gestão.' })));
           break;
         }
         case 'distribuir_rodizio':

@@ -1,4 +1,4 @@
-/* Rotina do vendedor (Atendimento › Rotina): tarefas com prazo e o checklist do dia que se repete.
+/* Rotina do vendedor (Agenda › Rotina): tarefas com prazo e o checklist do dia que se repete.
  * Registra window.SintoniaTelas.rotina = { desenhar(caixa, ui), novaTarefa({ conversaId }), resumo() }.
  * Servidor: src/rotina/rotina.ts (rotas /api/rotina/...). Texto do servidor entra sempre por textContent. */
 window.SintoniaTelas = window.SintoniaTelas || {};
@@ -315,7 +315,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       try {
         if (x) await ui.api(`/api/rotina/tarefas/${x.id}`, { method: 'PUT', body: JSON.stringify(corpo) });
         else await ui.post('/api/rotina/tarefas', corpo);
-        d.close(); ui.toast(x ? 'Tarefa salva.' : 'Tarefa criada. Ela aparece em Atendimento › Rotina.'); fim();
+        d.close(); ui.toast(x ? 'Tarefa salva.' : 'Tarefa criada. Ela aparece em Agenda › Rotina.'); fim();
       } catch (er) { erro.textContent = er.message; erro.hidden = false; }
     });
     d.append(form); d.showModal(); if (!x) titulo.focus();

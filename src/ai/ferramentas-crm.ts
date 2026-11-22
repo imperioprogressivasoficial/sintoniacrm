@@ -43,7 +43,7 @@ export const FERRAMENTA_VINCULAR = def('vincular_produto', 'Liga ao lead um prod
 });
 export const FERRAMENTA_TAREFA = def(
   'criar_tarefa_equipe',
-  'Cria uma tarefa para a equipe (Atendimento › Rotina) ligada a esta conversa: algo que só uma pessoa pode fazer (ex.: enviar orçamento, conferir pagamento, ligar). Não substitui passar_para_humano quando a cliente precisa de alguém agora.',
+  'Cria uma tarefa para a equipe (Agenda › Rotina) ligada a esta conversa: algo que só uma pessoa pode fazer (ex.: enviar orçamento, conferir pagamento, ligar). Não substitui passar_para_humano quando a cliente precisa de alguém agora.',
   {
     titulo: { type: 'string', description: 'O que fazer, curto (ex.: "Enviar orçamento da progressiva")' },
     detalhe: { type: 'string', description: 'Contexto para quem vai fazer' },

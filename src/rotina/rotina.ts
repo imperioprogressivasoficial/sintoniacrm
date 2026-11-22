@@ -9,7 +9,7 @@ import type { Repositorio } from '../store/repositorio.js';
 import { nomeOuTelefone } from '../contatos/nome.js';
 
 /**
- * Rotina do vendedor (Atendimento › Rotina): "o vendedor tem rotinas e tarefas que precisa fazer, para não se perder".
+ * Rotina do vendedor (Agenda › Rotina): "o vendedor tem rotinas e tarefas que precisa fazer, para não se perder".
  * - Tarefas: título, prazo, responsável, conversa ligada, prioridade, feita/não feita.
  * - Rotina: itens de checklist que se repetem (todo dia, dias da semana ou uma vez por semana);
  *   cada dia vira o checklist da pessoa, com progresso (3 de 5).
