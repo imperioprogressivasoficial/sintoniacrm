@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { CanalWhatsApp, EnvioResultado } from './tipos.js';
+import type { AlvoMensagem, CanalWhatsApp, EnvioResultado } from './tipos.js';
 
 /**
  * WhatsApp de teste, dentro da própria Sintonia: não envia nada para fora.
@@ -17,6 +17,13 @@ export class CanalTeste implements CanalWhatsApp {
   async enviarMidia(): Promise<EnvioResultado> {
     return { idExterno: `teste-${randomUUID()}` };
   }
+  /* menu-mensagem: reagir, responder citando, editar e apagar para todos, sem mandar nada para fora */
+  async enviarReacao(_canalId: string, _alvo: AlvoMensagem, _emoji: string): Promise<void> {}
+  async enviarCitando(_canalId: string, _telefone: string, _texto: string, _citada: AlvoMensagem & { texto: string }): Promise<EnvioResultado> {
+    return { idExterno: `teste-${randomUUID()}` };
+  }
+  async editarTexto(_canalId: string, _alvo: AlvoMensagem, _texto: string): Promise<void> {}
+  async apagarParaTodos(_canalId: string, _alvo: AlvoMensagem): Promise<void> {}
 }
 
 /** Canal de teste de cada unidade. */

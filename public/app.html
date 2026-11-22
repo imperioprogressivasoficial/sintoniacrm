@@ -2295,10 +2295,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       if (m.anexo) montarBalaoMidia(bal, m, c); else bal.append(document.createTextNode(m.texto));
       const meta = el('span', { class: 'meta', text: hm(m.em) }); if (lado === 'env') { if (window.SintoniaVistos) meta.append(window.SintoniaVistos.el(m)); else meta.insertAdjacentHTML('beforeend', CHECK); } /* vistos */
       (bal.querySelector(':scope > .legenda') || bal).append(meta);
+      window.SintoniaMenuMensagem?.decorar?.(bal, m); /* menu-mensagem: reações, citação, apagada, editada, favorita */
       caixa.append(bal); anterior = quem;
     }
     window.SintoniaVistos?.noFim?.(caixa, c.id); /* vistos: balão com relógio enquanto sai */
     if (!mensagens.length && !caixa.querySelector('.vistos-enviando')) caixa.append(el('div', { class: 'sistema', text: 'Sem mensagens ainda.' }));
+    window.SintoniaMenuMensagem?.depois?.(); /* menu-mensagem: faixa da mensagem fixada */
     window.SintoniaAgendadas?.noFim?.(caixa, c); /* msg-agendada: "Agendada para…" no fim */
     /* balao-fantasma: a sugestão da IA vira o último balão (tracejado) da conversa; a faixa antiga só sem o arquivo */
     const fantasma = window.SintoniaBalaoFantasma?.noFim?.(caixa, c, sugestao, mensagens);
@@ -2518,7 +2520,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const t = (direto ? pronto : texto.value).trim(); if (!t || !estado.aberta) return false;
     $('enviar').disabled = true;
     const relogio = window.SintoniaVistos?.enviando.adicionar(estado.aberta, t); /* vistos: relógio até o WhatsApp aceitar */
-    try { await post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome }); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
+    /* menu-mensagem: com a faixa "Respondendo a…" aberta, vai citando a mensagem */
+    const citada = direto ? null : window.SintoniaMenuMensagem?.citando?.();
+    try { await (citada ? post(`/api/conversas/${estado.aberta}/responder`, { texto: t, citadaId: citada }) : post(`/api/conversas/${estado.aberta}/enviar`, { texto: t, atendente: estado.eu.nome })); if (citada) window.SintoniaMenuMensagem.limparResposta(true); if (!direto) { texto.value = ''; texto.style.height = ''; } $('revisao').hidden = true; trocarBotao(); await atualizar(); return true; }
     catch (x) {
       /* whatsapp-estavel: o servidor já explica ("Não enviada: …"). O aviso fica na conversa, acima da caixa, e o texto continua lá. */
       const doWa = /^Não enviada|pode ter saído/.test(x.message);
@@ -3986,6 +3990,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/rotina.js" defer></script>
 <script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
 <script src="/telas/balao-fantasma.js" defer></script><!-- balao-fantasma: sugestão da IA como balão tracejado na conversa -->
+<script src="/telas/menu-mensagem.js" defer></script><!-- menu-mensagem: segurar a mensagem abre o menu (reagir, responder, encaminhar, editar, apagar, fixar…) -->
 <script src="/telas/distribuicao.js" defer></script><!-- automacao-vendas -->
 <script src="/telas/scripts.js" defer></script>
 <script src="/telas/integracoes.js" defer></script><!-- integracoes -->

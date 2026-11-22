@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type {
+  AcaoRecebida,
+  AlvoMensagem,
   AnexoRecebido,
   CanalWhatsApp,
   EnvioResultado,
@@ -147,6 +149,27 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
       }
     }
   }
+  return saida;
+}
+
+/**
+ * menu-mensagem: reação da cliente pela API oficial (mensagem type "reaction": { message_id, emoji }; emoji vazio = tirou).
+ * A API oficial não avisa quando a cliente apaga ou edita.
+ */
+export function lerAcoesMeta(corpo: unknown): AcaoRecebida[] {
+  const r = WebhookMeta.safeParse(corpo);
+  if (!r.success) return [];
+  const bruto = corpo as { entry: Array<{ changes: Array<{ value: { messages?: Array<Record<string, unknown>> } }> }> };
+  const saida: AcaoRecebida[] = [];
+  r.data.entry.forEach((entry, i) => entry.changes.forEach((change, j) => {
+    for (const m of bruto.entry[i]?.changes[j]?.value.messages ?? []) {
+      if (m.type !== 'reaction') continue;
+      const reacao = m.reaction as { message_id?: unknown; emoji?: unknown } | undefined;
+      const telefone = normalizarCelular(String(m.from ?? ''));
+      if (!telefone || typeof reacao?.message_id !== 'string') continue;
+      saida.push({ canalId: change.value.metadata.phone_number_id, telefone, alvoIdExterno: reacao.message_id, deMim: false, tipo: 'reacao', emoji: typeof reacao.emoji === 'string' ? reacao.emoji.slice(0, 16) : '', em: new Date(Number(m.timestamp ?? 0) * 1000 || Date.now()) });
+    }
+  }));
   return saida;
 }
 
@@ -382,6 +405,15 @@ export class CanalMeta implements CanalWhatsApp {
     if (tipo !== 'audio' && m.legenda?.trim()) midia.caption = m.legenda.trim();
     if (tipo === 'document' && m.nomeArquivo) midia.filename = m.nomeArquivo;
     return this.mensagem(phoneNumberId, { to: telefone, type: tipo, [tipo]: midia }, 'o envio do arquivo');
+  }
+
+  /* menu-mensagem: reação e resposta citando. A API oficial não edita nem apaga para todos. */
+  async enviarReacao(phoneNumberId: string, alvo: AlvoMensagem, emoji: string): Promise<void> {
+    await this.mensagem(phoneNumberId, { to: alvo.telefone, type: 'reaction', reaction: { message_id: alvo.idExterno, emoji } }, 'a reação');
+  }
+
+  async enviarCitando(phoneNumberId: string, telefone: string, texto: string, citada: AlvoMensagem & { texto: string }): Promise<EnvioResultado> {
+    return this.mensagem(phoneNumberId, { to: telefone, context: { message_id: citada.idExterno }, type: 'text', text: { body: texto, preview_url: /https?:\/\//.test(texto) } }, 'o envio');
   }
 
   async enviarModelo(phoneNumberId: string, telefone: string, m: ModeloEnvio): Promise<EnvioResultado> {

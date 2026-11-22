@@ -168,6 +168,12 @@ export interface Repositorio {
   /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
   rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** menu-mensagem: uma mensagem pelo id (com os dados da mídia). */
+  mensagemPorId?(id: string): Promise<Mensagem | undefined>;
+  /** menu-mensagem: uma mensagem pelo id no canal (reação/apagou/editou que veio pelo webhook). */
+  mensagemPorIdExterno?(idExterno: string): Promise<Mensagem | undefined>;
+  /** menu-mensagem: troca o texto (mensagem editada). A IA passa a ler o texto novo. */
+  trocarTexto?(id: string, texto: string): Promise<boolean>;
   /** Pesquisar dentro de uma conversa (lupa do topo): as mais recentes primeiro, sem diferenciar maiúsculas. */
   buscarNaConversa?(conversaId: string, termo: string, limite?: number): Promise<Mensagem[]>;
   /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
@@ -407,6 +413,22 @@ export class RepositorioMemoria implements Repositorio {
       .filter((m) => m.conversaId === conversaId)
       .slice(-limite)
       .map((m) => this.comAnexo(m));
+  }
+
+  /* menu-mensagem */
+  async mensagemPorId(id: string) {
+    const m = this.msgs.find((x) => x.id === id);
+    return m ? this.comAnexo(m) : undefined;
+  }
+  async mensagemPorIdExterno(idExterno: string) {
+    const m = idExterno ? this.msgs.find((x) => x.idExterno === idExterno) : undefined;
+    return m ? this.comAnexo(m) : undefined;
+  }
+  async trocarTexto(id: string, texto: string) {
+    const m = this.msgs.find((x) => x.id === id);
+    if (!m) return false;
+    m.texto = texto;
+    return true;
   }
 
   async buscarNaConversa(conversaId: string, termo: string, limite = 50) {

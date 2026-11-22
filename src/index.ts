@@ -72,6 +72,7 @@ import { registrarFunis } from './rotas/funis.js';
 import { ArmazemBotsMemoria, ArmazemBotsPostgres, Bots, ligarBots } from './bot/bot.js';
 import { registrarBots } from './bot/rotas.js';
 import { registrarConversa } from './conversa/rotas.js';
+import { AcoesMensagemMemoria, AcoesMensagemPostgres, criarAcoesMensagem } from './conversa/acoes-mensagem.js'; /* menu-mensagem */
 import { EnvioAosPoucos, registrarSerenaFaz, transmitirPelaSerena, type ServicosSerenaFaz } from './serena/confirmar.js'; /* serena-faz */
 import { ArmazemPausaMemoria, ArmazemPausaPostgres, avisoDaMudanca, ChaveSerena, conversasParaRetomar, portaoIa, RETOMAR_ATE_MS } from './serena/pausa.js'; /* serena-chave */
 import { registrarPausaSerena } from './serena/pausa-rotas.js'; /* serena-chave */
@@ -786,7 +787,20 @@ async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void>
 const escaparHtml = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 /* usuarios: um só armazém de perfis (Conta › Perfil e o telefone que a gestão usa para mandar o convite pelo WhatsApp). */
 const perfisUsuario = pool ? new ArmazemPerfisPostgres(pool) : new ArmazemPerfisMemoria();
+/* menu-mensagem: segurar uma mensagem (reagir, responder citando, encaminhar, editar, apagar, fixar, favoritar, nota, traduzir) */
+const acoesMensagem = criarAcoesMensagem({
+  repo,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new AcoesMensagemPostgres(pool) : new AcoesMensagemMemoria(),
+  sintonia,
+  contatos: armazemContatos,
+  auditoria,
+  transcritas: async (id) => new Set((await transcricoes.daConversa(id)).map((t) => t.mensagemId)),
+  ia: { claude, modelo: cfg.SINTONIA_MODELO, ligada: () => iaLigada },
+  log,
+});
 const app = criarServidor({
+  acoesMensagem /* menu-mensagem */,
   /* banco-seguranca: auditoria das ações sensíveis, LGPD (exportar/apagar dados de cliente) e CSP (SINTONIA_CSP) */
   protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria, ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
@@ -1213,6 +1227,7 @@ const servicosSerena: ServicosSerenaFaz = {
 registrarSerenaFaz(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, sintonia, servicos: servicosSerena, auditoria, envio: new EnvioAosPoucos({ log }), log });
 
 // Tela de conversa: respostas rápidas, botão "IA", transcrição de áudio e nova conversa por número.
+acoesMensagem.registrar(app); /* menu-mensagem */
 registrarConversa(app, {
   repo,
   sintonia,

@@ -1,12 +1,12 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
-import { ErroEnvioWhatsApp, eventoEvolution, lerWebhookEvolution } from './channels/evolution.js';
+import { ErroEnvioWhatsApp, eventoEvolution, lerAcoesEvolution, lerWebhookEvolution } from './channels/evolution.js';
 import type { SaudeWhatsApp } from './channels/whatsapp-saude.js';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { Sintonia } from './app/sintonia.js';
 import type { CanalWhatsApp } from './channels/tipos.js';
 import type { Repositorio } from './store/repositorio.js';
-import { assinaturaMetaValida, ErroMeta } from './channels/meta.js';
+import { assinaturaMetaValida, ErroMeta, lerAcoesMeta } from './channels/meta.js';
 import type { Leituras } from './app/leituras.js';
 import { camposPessoais, registrarConversasPessoais, type ConversasPessoais } from './conversa/pessoal.js'; /* conversa-extra */
 import { registrarLayoutPainel, type LayoutsPainel } from './painel/layout.js';
@@ -121,6 +121,8 @@ export interface DependenciasServidor {
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
   /* banco-seguranca: cabeçalhos de segurança, limites, auditoria e LGPD (src/seguranca/protecao.ts). Sem isto, valem os padrões. */
   protecao?: Partial<OpcoesProtecao>;
+  /* menu-mensagem: reações, citações, apagadas, editadas, favoritas e fixada (src/conversa/acoes-mensagem.ts) */
+  acoesMensagem?: Pick<import('./conversa/acoes-mensagem.js').ServicoAcoesMensagem, 'daConversa' | 'aoReceber'>;
 }
 
 export interface OpcoesWebhookMeta {
@@ -302,6 +304,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const grupos = d.grupos ? await d.grupos.aoWebhook(corpo).catch((e) => (log('Falha ao gravar mensagem de grupo', String(e)), 0)) : 0;
     if (grupos && !mensagens.length) d.whatsappSaude?.aoMensagem(instancia, undefined);
     const chamadas = d.chamadas ? await registrarChamadasWhatsapp(corpo).catch((e) => (log('Falha ao registrar ligação do WhatsApp', String(e)), 0)) : 0;
+    /* menu-mensagem: reação, mensagem apagada ou editada (da cliente ou do celular da loja) */
+    if (d.acoesMensagem) await d.acoesMensagem.aoReceber(lerAcoesEvolution(corpo)).catch((e) => log('Falha ao registrar reação do WhatsApp', String(e)));
     // Se gravar na fila falhar, responde erro: a Evolution reenvia (as repetidas são ignoradas pelo id).
     return { recebidas: await entregar('evolution', mensagens), ...(chamadas ? { chamadas } : {}), ...(grupos ? { grupos } : {}) };
   });
@@ -350,6 +354,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const status = (meta.canal.lerStatus?.(req.body) ?? []).filter((x) => liberado(x.canalId));
     for (const id of new Set([...mensagens, ...status].map((x) => x.canalId))) vistosMeta.set(id, new Date());
     if (status.length && meta.status) await meta.status(status).catch((e) => log('Falha ao registrar entrega (Meta)', String(e)));
+    /* menu-mensagem: reação da cliente pela API oficial */
+    if (d.acoesMensagem) await d.acoesMensagem.aoReceber(lerAcoesMeta(req.body).filter((x) => liberado(x.canalId))).catch((e) => log('Falha ao registrar reação (Meta)', String(e)));
     return { recebidas: await entregar('meta', mensagens), status: status.length };
   };
   app.get('/webhook/meta', verificarMeta);
@@ -505,6 +511,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       permissoes,
       // API oficial: até quando dá para escrever livremente (depois, só modelo aprovado).
       janela: d.sintonia.janelaDa(conversa),
+      /* menu-mensagem */
+      ...(d.acoesMensagem ? { acoes: await d.acoesMensagem.daConversa(conversa, u).catch((e) => (log('Falha ao ler ações das mensagens', String(e)), null)) } : {}),
     });
   });
 

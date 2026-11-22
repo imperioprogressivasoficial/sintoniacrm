@@ -162,6 +162,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/rotina.js': { arquivo: 'telas/rotina.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agendadas.js': { arquivo: 'telas/agendadas.js', tipo: 'text/javascript; charset=utf-8' }, // msg-agendada
   '/telas/balao-fantasma.js': { arquivo: 'telas/balao-fantasma.js', tipo: 'text/javascript; charset=utf-8' }, // balao-fantasma
+  '/telas/menu-mensagem.js': { arquivo: 'telas/menu-mensagem.js', tipo: 'text/javascript; charset=utf-8' }, // menu-mensagem
   '/telas/distribuicao.js': { arquivo: 'telas/distribuicao.js', tipo: 'text/javascript; charset=utf-8' }, // automacao-vendas
   // grupos: Conversas de grupo (grupos do WhatsApp) e a troca Conversas · Grupos · Equipe no celular.
   '/telas/grupos.js': { arquivo: 'telas/grupos.js', tipo: 'text/javascript; charset=utf-8' },
