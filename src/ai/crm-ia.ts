@@ -12,7 +12,7 @@ import { nomeOuTelefone } from '../contatos/nome.js';
  * - leitura (na hora em que a IA pensa): pipelines e etapas, onde a cliente está, motivos de perda, produtos e preços
  *   do cadastro (Empresa › Produtos e serviços), arquivos que podem ir para a cliente;
  * - escrita (depois, sob a trava da conversa, pela Sintonia): mover em qualquer pipeline (com motivo de perda),
- *   vincular produto ao lead, criar tarefa para a equipe (Atendimento › Rotina) e pegar o arquivo para enviar.
+ *   vincular produto ao lead, criar tarefa para a equipe (Agenda › Rotina) e pegar o arquivo para enviar.
  * Tudo da empresa da conversa; nada é criado (funil, etapa, produto) pela IA.
  */
 
@@ -100,7 +100,7 @@ export class ArmazemTarefasIaMemoria implements ArmazemTarefasIa {
   }
 }
 
-/** Grava em Atendimento › Rotina (tabela da migração 340). */
+/** Grava em Agenda › Rotina (tabela da migração 340). */
 export class ArmazemTarefasIaPostgres implements ArmazemTarefasIa {
   constructor(private readonly pool: pg.Pool) {}
   async criar(t: Parameters<ArmazemTarefasIa['criar']>[0]) {

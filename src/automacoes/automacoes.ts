@@ -535,7 +535,7 @@ export interface OpcoesAutomacoes {
   calendario?: CalendarioAutomacoes;
   /** Variáveis da empresa para as mensagens (ex.: {link_avaliacao} da pesquisa de satisfação). */
   variaveis?: () => Promise<Record<string, string>>;
-  /** etapa-entrada: passo "criar_tarefa" (Atendimento › Rotina, o mesmo caminho da IA). Pode ser preenchida depois. */
+  /** etapa-entrada: passo "criar_tarefa" (Agenda › Rotina, o mesmo caminho da IA). Pode ser preenchida depois. */
   tarefas?: () => TarefasParaAutomacoes | undefined;
   /** etapa-entrada: passo "distribuir_rodizio" (src/rodizio). Pode ser preenchida depois. */
   rodizio?: () => { pedir(conversaId: string): void } | undefined;

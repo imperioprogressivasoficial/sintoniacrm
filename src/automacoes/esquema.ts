@@ -105,7 +105,7 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('enviar_transmissao'), transmissaoId: id }),
     /** E-mail marketing: manda o modelo salvo para o e-mail da ficha (entra na fila, com ritmo e descadastro). */
     z.object({ tipo: z.literal('enviar_email'), modeloId: id }),
-    /** etapa-entrada: tarefa para a equipe (Atendimento › Rotina), para a dona da conversa (sem dona: a gestão). Prazo em minutos. */
+    /** etapa-entrada: tarefa para a equipe (Agenda › Rotina), para a dona da conversa (sem dona: a gestão). Prazo em minutos. */
     z.object({ tipo: z.literal('criar_tarefa'), titulo: z.string().trim().min(2).max(120), em_minutos: z.number().int().min(0).max(30 * 24 * 60).default(0), prioridade: z.enum(PRIORIDADES).default('normal') }),
     /** etapa-entrada: passa a conversa para a próxima pessoa do rodízio de leads da unidade (Atendimento › Rodízio precisa estar ligado). */
     z.object({ tipo: z.literal('distribuir_rodizio') }),

@@ -867,7 +867,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ag-acoes' },
         i.podeAbrir ? el('button', { class: 'ag-bt ag-cheio', type: 'button', html: IC.conversa + '<span>Abrir conversa</span>', onclick: () => { d.close(); s.ui.abrir(i.conversaId); } }) : null,
         jaFoi(i) ? null : cancelar),
-      el('div', { class: 'ag-aviso', text: 'Os links de agendamento ficam em Atendimento › Agendamento online (confirmação pelo WhatsApp e lembrete antes).' })].filter(Boolean));
+      el('div', { class: 'ag-aviso', text: 'Os links de agendamento ficam em Agenda › Agendamento online (confirmação pelo WhatsApp e lembrete antes).' })].filter(Boolean));
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     d.addEventListener('close', () => d.remove());
     ligarPuxarParaBaixo(d);

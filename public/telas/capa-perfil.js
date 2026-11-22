@@ -13,7 +13,11 @@
     { id: 'floresta', nome: 'Floresta' },
     { id: 'cidade', nome: 'Cidade à noite' },
   ];
-  const PADRAO = { capa: 'montanha', atalhos: ['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena'], capaEm: null };
+  const PADRAO = { capa: 'montanha', atalhos: ['agenda:agenda', 'atendimento:respostas-rapidas', 'agenda:rotina', 'aba:serena'], capaEm: null };
+  /* menu-agenda (dono 22/11): Agenda, Rotina e Agendamento online foram para a categoria "Agenda"; os códigos antigos
+     guardados (no servidor ou neste aparelho) viram os novos. O mesmo mapa está em src/conta/conta.ts. */
+  const RENOMEADOS = { 'atendimento:agenda': 'agenda:agenda', 'atendimento:rotina': 'agenda:rotina', 'atendimento:agendamento-online': 'agenda:agendamento-online' };
+  const renomear = (l) => [...new Set(l.map((id) => RENOMEADOS[id] || id))];
   const MAX = 8, LIMITE = 400 * 1024, CHAVE = 'sintonia.capa-perfil';
   const I = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const IC = {
@@ -97,11 +101,11 @@
   // ------------------------------------------------------------ preferências (servidor + cópia neste aparelho para pintar já)
   let atual = null, carregando = null, salvando = Promise.resolve();
   const euId = () => ui()?.estado?.eu?.id || '';
-  const lerLocal = () => { try { const j = JSON.parse(localStorage.getItem(CHAVE) || 'null'); return j && j.id === euId() ? j : null; } catch { return null; } };
+  const lerLocal = () => { try { const j = JSON.parse(localStorage.getItem(CHAVE) || 'null'); return j && j.id === euId() ? { ...j, atalhos: Array.isArray(j.atalhos) ? renomear(j.atalhos) : PADRAO.atalhos } : null; } catch { return null; } };
   const guardarLocal = () => { try { localStorage.setItem(CHAVE, JSON.stringify({ ...atual, id: euId() })); } catch {} };
   function usar(conta) {
     if (!conta?.preferencias) return;
-    const novo = { capa: conta.preferencias.capa || PADRAO.capa, atalhos: Array.isArray(conta.preferencias.atalhos) ? conta.preferencias.atalhos : PADRAO.atalhos, capaEm: conta.capaEm || null };
+    const novo = { capa: conta.preferencias.capa || PADRAO.capa, atalhos: Array.isArray(conta.preferencias.atalhos) ? renomear(conta.preferencias.atalhos) : PADRAO.atalhos, capaEm: conta.capaEm || null };
     const mudou = JSON.stringify(novo) !== JSON.stringify(atual);
     atual = novo; guardarLocal();
     if (mudou) avisar();

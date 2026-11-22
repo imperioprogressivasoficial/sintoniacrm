@@ -54,12 +54,21 @@ export const LIMITE_CAPA = 400 * 1024;
  * de um item do app ("grupo:nome", "conta:nome" ou "aba:tela"); a tela ignora o que a pessoa não pode abrir.
  */
 export const MAX_ATALHOS = 8;
-export const ATALHOS_PADRAO = ['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena'];
+export const ATALHOS_PADRAO = ['agenda:agenda', 'atendimento:respostas-rapidas', 'agenda:rotina', 'aba:serena'];
+/**
+ * menu-agenda (dono 22/11): Agenda, Rotina e Agendamento online saíram de "Atendimento" para a categoria "Agenda".
+ * Os códigos antigos que alguém já guardou viram os novos (o atalho continua no mesmo lugar).
+ */
+export const ATALHOS_RENOMEADOS: Readonly<Record<string, string>> = {
+  'atendimento:agenda': 'agenda:agenda',
+  'atendimento:rotina': 'agenda:rotina',
+  'atendimento:agendamento-online': 'agenda:agendamento-online',
+};
 const CodigoAtalho = z.string().regex(/^[a-z0-9]+(?:[:-][a-z0-9]+)*$/, 'Atalho inválido.').max(60);
 const ListaAtalhos = z
   .array(CodigoAtalho)
   .max(MAX_ATALHOS, `Escolha até ${MAX_ATALHOS} atalhos.`)
-  .transform((l) => [...new Set(l)]);
+  .transform((l) => [...new Set(l.map((c) => ATALHOS_RENOMEADOS[c] ?? c))]);
 
 export const Preferencias = z
   .object({

@@ -1216,16 +1216,23 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
       <div class="lt-grupo" data-grupo="atendimento">
         <button class="lt-cab" type="button" aria-expanded="false" title="Atendimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><path class="ic-cheio" d="M4 13h2.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Zm16 0h-2.5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1H19a1 1 0 0 0 1-1Z"/></svg><span class="lt-rot">Atendimento</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
         <div class="lt-filhos"><div class="lt-filhos-in">
-          <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
           <button class="nav lt-item" data-vista="ligacoes" title="Ligações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6.6 3.5h2.6l1.6 4.3-2 1.3a11.5 11.5 0 0 0 6.1 6.1l1.3-2 4.3 1.6v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z"/></svg><span class="lt-rot">Ligações</span></button>
           <button class="nav lt-item" data-vista="respostas" title="Respostas rápidas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="m13 8-3 7"/></svg><span class="lt-rot">Respostas rápidas</span></button>
-          <button class="nav lt-item" data-vista="reunioes" title="Agendamento online: link para o contato marcar reunião"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/></svg><span class="lt-rot">Agendamento online</span></button>
-          <!-- rotina: tarefas e checklist do dia do vendedor (public/telas/rotina.js) -->
-          <button class="nav lt-item" data-vista="rotina" title="Rotina: tarefas e checklist do dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/></svg><span class="lt-rot">Rotina</span><span class="lt-qtd" id="lt-rotina-qtd" hidden></span></button>
           <!-- msg-agendada: mensagens agendadas nas conversas (public/telas/agendadas.js) -->
           <!-- automacao-vendas: rodízio de leads e prazos de resposta (public/telas/distribuicao.js) -->
           <button class="so-gestao nav lt-item" data-vista="distribuicao" title="Distribuição de leads e prazos de resposta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7"/><path d="M20 4v4.7h-4.7"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3"/><path d="M4 20v-4.7h4.7"/></svg><span class="lt-rot">Distribuição e prazos</span></button>
           <button class="nav lt-item" data-vista="agendadas" title="Mensagens agendadas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/></svg><span class="lt-rot">Envios agendados</span><span class="lt-qtd" id="lt-agendadas-qtd" hidden></span></button>
+        </div></div>
+      </div>
+
+      <!-- menu-agenda (dono 22/11): Agenda, Rotina e Agendamento online saíram de Atendimento e têm categoria própria. O cabeçalho abre a Agenda. -->
+      <div class="lt-grupo" data-grupo="agenda" data-navega="1">
+        <button class="lt-cab" type="button" aria-expanded="false" title="Agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg><span class="lt-rot">Agenda</span><i class="lt-aviso" hidden></i><svg class="lt-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+        <div class="lt-filhos"><div class="lt-filhos-in">
+          <button class="nav lt-item" data-vista="agenda" title="Agenda em tempo real"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path class="ic-cheio" d="M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z"/><path d="M8 3v4M16 3v4"/><path class="ic-det" d="M3 10h18M8 14h2M14 14h2M8 17h2"/></svg><span class="lt-rot">Agenda</span></button>
+          <!-- rotina: tarefas e checklist do dia do vendedor (public/telas/rotina.js) -->
+          <button class="nav lt-item" data-vista="rotina" title="Rotina: tarefas e checklist do dia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/></svg><span class="lt-rot">Rotina</span><span class="lt-qtd" id="lt-rotina-qtd" hidden></span></button>
+          <button class="nav lt-item" data-vista="reunioes" title="Agendamento online: link para o contato marcar reunião"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/></svg><span class="lt-rot">Agendamento online</span></button>
         </div></div>
       </div>
 
@@ -3293,16 +3300,20 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     // Categorias no padrão dos CRMs (como o Kommo): cada coisa dentro da sua área, em sanfona. Só o que o perfil pode usar.
     const grupos = [
       { id: 'atendimento', titulo: 'Atendimento', ic: IC.respostas, cor: '#106ebe', itens: [
-        { nome: 'Agenda', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('agenda') },
         { nome: 'Ligações', ic: IC.ligacoes, cor: '#16a34a', acao: () => mostrar('ligacoes') },
         { nome: 'Respostas rápidas', ic: IC.respostas, cor: '#0a8f7a', acao: () => mostrar('respostas') },
-        { nome: 'Agendamento online', sub: 'Link para o contato marcar reunião', ic: IC.agenda, cor: '#106ebe', acao: () => mostrar('reunioes') },
-        /* rotina: tarefas e checklist do dia; o valor mostra as atrasadas */
-        { nome: 'Rotina', sub: 'Tarefas e checklist do dia', valor: window.SintoniaTelas?.rotina?.valorMenu?.() || '', ic: I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), cor: '#0ea5e9', acao: () => mostrar('rotina') },
         /* msg-agendada: o valor mostra quantas das minhas ainda vão sair */
         { nome: 'Mensagens agendadas', sub: 'O que vai sair na hora marcada', valor: window.SintoniaTelas?.agendadas?.valorMenu?.() || '', ic: I('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5M9.5 3h5M19 6l1.5 1.5"/>'), cor: '#106ebe', acao: () => mostrar('agendadas') },
         /* automacao-vendas: rodízio de leads e prazos de resposta (gestão) */
         gestor && { nome: 'Distribuição e prazos', sub: 'Rodízio de leads e prazo de resposta', ic: I('<path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7"/><path d="M20 4v4.7h-4.7"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3"/><path d="M4 20v-4.7h4.7"/>'), cor: '#0a8f7a', acao: () => mostrar('distribuicao') },
+      ] },
+      /* menu-agenda (dono 22/11): categoria própria, logo depois de Atendimento. Os códigos dos atalhos mudaram de
+         "atendimento:…" para "agenda:…" (os antigos guardados são trocados em capa-perfil.js e em src/conta/conta.ts). */
+      { id: 'agenda', titulo: 'Agenda', ic: I('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>'), cor: '#0ea5e9', itens: [
+        { nome: 'Agenda', sub: 'Horários marcados em tempo real', ic: IC.agenda, cor: '#0ea5e9', acao: () => mostrar('agenda') },
+        /* rotina: tarefas e checklist do dia; o valor mostra as atrasadas */
+        { nome: 'Rotina', sub: 'Tarefas e checklist do dia', valor: window.SintoniaTelas?.rotina?.valorMenu?.() || '', ic: I('<rect x="4.5" y="4" width="15" height="17" rx="2.5"/><path d="M9 4V3h6v1"/><path d="m8 10 1.5 1.5L12 9M8 15.5l1.5 1.5L12 14.5M14.5 10.5H16M14.5 16H16"/>'), cor: '#0ea5e9', acao: () => mostrar('rotina') },
+        { nome: 'Agendamento online', sub: 'Link para o contato marcar reunião', ic: I('<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m9.5 14.5 2 2 3.5-3.5"/>'), cor: '#106ebe', acao: () => mostrar('reunioes') },
       ] },
       { id: 'vendas', titulo: 'Pipelines', ic: IC.funil, cor: '#106ebe', itens: [
         gestor && { nome: 'Criar novo pipeline', ic: IC.funil, cor: '#106ebe', acao: () => { mostrar('funil'); setTimeout(() => window.SintoniaTelas?.funil?.novoFunil?.(), 300); } },
@@ -3442,7 +3453,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const IC_CONVERSA = I('<path d="M6 4h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-8l-4.5 3.5V18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/>');
       const IC_GRUPOS = I('<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/>');
       const IC_PAINEL = I('<rect x="4" y="4" width="6" height="16" rx="1.5"/><rect x="14" y="4" width="6" height="7" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/>');
-      const CURTO = { 'atendimento:respostas-rapidas': 'Respostas', 'atendimento:agendamento-online': 'Agendar online', 'atendimento:mensagens-agendadas': 'Agendadas', 'atendimento:distribuicao-e-prazos': 'Distribuição',
+      const CURTO = { 'atendimento:respostas-rapidas': 'Respostas', 'agenda:agendamento-online': 'Agendar online', 'atendimento:mensagens-agendadas': 'Agendadas', 'atendimento:distribuicao-e-prazos': 'Distribuição',
         'clientes:clientes-e-leads': 'Clientes', 'clientes:importar-e-exportar': 'Importar', 'vendas:criar-novo-pipeline': 'Novo pipeline', 'vendas:funis-e-etapas': 'Funis', 'marketing:rastreamento-e-links': 'Links',
         'marketing:central-de-criativos': 'Criativos', 'marketing:e-mail-marketing': 'E-mail', 'automacoes:agente-de-ia': 'Agente de IA', 'automacoes:pesquisa-de-satisfacao': 'Pesquisa', 'automacoes:mensagens-agendadas': 'Agendadas (todas)',
         'analises:desempenho-do-atendimento': 'Desempenho', 'analises:vendas-e-receita': 'Vendas', 'analises:clientes-e-satisfacao': 'Satisfação', 'analises:horarios-e-funil': 'Horários', 'analises:painel-da-tv': 'Painel da TV',
@@ -3456,9 +3467,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
         { id: 'aba:serena', nome: 'Serena', sub: 'Sua assistente de IA', ic: IC.ia, secao: 'Telas', acao: () => mostrar('serena') },
         ...grupos.flatMap((g) => g.itens.map((it) => ({ ...it, id: `${g.id}:${codigo(it.nome)}`, secao: g.titulo }))),
         ...itensConta.filter((it) => it.nome).map((it) => ({ ...it, id: `conta:${codigo(it.nome)}`, secao: 'Minha conta' })),
-      ].filter(Boolean).map((c) => ({ ...c, ic: c.id === 'atendimento:rotina' ? IC_ROTINA : c.ic, curto: CURTO[c.id] || c.nome }));
+      ].filter(Boolean).map((c) => ({ ...c, ic: c.id === 'agenda:rotina' ? IC_ROTINA : c.ic, curto: CURTO[c.id] || c.nome }));
       const porId = new Map(); catalogo.forEach((c) => { if (!porId.has(c.id)) porId.set(c.id, c); });
-      const ATALHOS_PADRAO = ['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena'];
+      const ATALHOS_PADRAO = ['agenda:agenda', 'atendimento:respostas-rapidas', 'agenda:rotina', 'aba:serena']; /* menu-agenda */
       const atalhos = el('div', { class: 'cfg-atalhos' });
       const editar = () => CP?.editarAtalhos([...porId.values()]);
       const pintarAtalhos = () => {

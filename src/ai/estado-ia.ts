@@ -19,7 +19,7 @@ export const O_QUE_FAZ: Record<FerramentaAgente, string> = {
   agendar: 'Marca, remarca e cancela na agenda da unidade (Trinks e outras), sempre confirmando com a cliente antes. Nunca marca duas vezes o mesmo horário.',
   mover_etapa: 'Move a cliente em qualquer pipeline, com o motivo quando é perda.',
   produtos: 'Liga ao lead o produto ou serviço de interesse (o valor do lead acompanha).',
-  tarefas: 'Cria tarefa para a equipe em Atendimento › Rotina, ligada à conversa.',
+  tarefas: 'Cria tarefa para a equipe em Agenda › Rotina, ligada à conversa.',
   retorno: 'Combina um retorno ("me chama sexta") e volta a falar com a cliente no dia.',
   enviar_arquivos: 'Manda a foto do produto ou o catálogo/tabela do cadastro.',
   marcar_tag: 'Marca tags que já existem (com "IA marca tags" ligado).',

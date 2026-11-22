@@ -60,8 +60,12 @@ describe('capa-perfil: valores de sempre', () => {
     const p = Preferencias.parse({});
     expect(p.capa).toBe('montanha');
     expect(CAPA_PADRAO).toBe('montanha');
-    expect(p.atalhos).toEqual(['atendimento:agenda', 'atendimento:respostas-rapidas', 'atendimento:rotina', 'aba:serena']);
+    expect(p.atalhos).toEqual(['agenda:agenda', 'atendimento:respostas-rapidas', 'agenda:rotina', 'aba:serena']);
     expect(p.atalhos).toEqual(ATALHOS_PADRAO);
+  });
+  it('menu-agenda: códigos antigos (Agenda, Rotina e Agendamento online em Atendimento) viram os da categoria Agenda', () => {
+    const p = Preferencias.parse({ atalhos: ['atendimento:agendamento-online', 'atendimento:rotina', 'atendimento:ligacoes', 'atendimento:agenda', 'agenda:agenda'] });
+    expect(p.atalhos).toEqual(['agenda:agendamento-online', 'agenda:rotina', 'atendimento:ligacoes', 'agenda:agenda']);
   });
   it('valor estragado no banco volta ao padrão sem quebrar o resto', () => {
     const p = Preferencias.parse({ tema: 'escuro', capa: 'lua', atalhos: 'agenda' });
@@ -77,7 +81,7 @@ for (const a of ambientes) {
       expect(c0.preferencias).toMatchObject({ capa: 'montanha', atalhos: ATALHOS_PADRAO });
       expect(c0.capaEm).toBeNull();
 
-      const novos = ['aba:conversas', 'atendimento:ligacoes', 'aba:serena', 'atendimento:agenda'];
+      const novos = ['aba:conversas', 'atendimento:ligacoes', 'aba:serena', 'agenda:agenda'];
       const r1 = await m.como('carla@imperio.com', 'PATCH', '/api/conta', { preferencias: { atalhos: novos } });
       expect(r1.statusCode).toBe(200);
       expect(r1.json().preferencias.atalhos).toEqual(novos);
