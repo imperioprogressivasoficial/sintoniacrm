@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida, MidiaBaixada, MidiaEnvio } from './tipos.js';
+import type { AcaoRecebida, AlvoMensagem, AnexoRecebido, CanalWhatsApp, EnvioResultado, FotoPerfil, MensagemRecebida, MidiaBaixada, MidiaEnvio } from './tipos.js';
 import type { TipoAnexo } from '../domain.js';
 import { ErroMidiaGrande, LIMITE_INLINE, LIMITE_MIDIA, tamanhoBase64, textoDoAnexo } from '../midia.js';
 import { telefoneDoJid } from '../util/telefone.js';
@@ -165,6 +165,45 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
       ...(conteudo.anexo ? { anexo: conteudo.anexo } : {}),
       ...(referencia ? { referencia } : {}),
     });
+  }
+  return saida;
+}
+
+/**
+ * menu-mensagem: reações, mensagens apagadas e editadas que chegam pelo webhook (messages.upsert).
+ * - reactionMessage { key (da mensagem reagida), text: emoji; vazio = tirou a reação };
+ * - protocolMessage type REVOKE (0): apagou para todos; MESSAGE_EDIT (14) com editedMessage: editou.
+ * Grupos ficam de fora (são outra tela).
+ */
+export function lerAcoesEvolution(corpo: unknown): AcaoRecebida[] {
+  if (eventoEvolution(corpo) !== 'messages.upsert') return [];
+  const lido = mensagensDoCorpo(corpo);
+  if (!lido) return [];
+  const saida: AcaoRecebida[] = [];
+  for (const m of lido.lista) {
+    if (ehGrupo(m.key.remoteJid)) continue;
+    const jid = m.key.remoteJid.endsWith('@lid') ? (m.key.remoteJidAlt ?? m.key.senderPn ?? '') : m.key.remoteJid;
+    const telefone = telefoneDoJid(jid);
+    const msg = m.message ? desembrulhar(m.message) : undefined;
+    if (!telefone || !msg) continue;
+    const ts = Number(m.messageTimestamp ?? 0);
+    const base = { canalId: lido.instancia, telefone, deMim: m.key.fromMe, em: ts ? new Date(ts * 1000) : new Date(), ...(m.pushName && !m.key.fromMe ? { nome: m.pushName } : {}) };
+    const reacao = obj(msg.reactionMessage);
+    const alvoReacao = texto(obj(reacao?.key)?.id);
+    if (reacao && alvoReacao) {
+      saida.push({ ...base, tipo: 'reacao', alvoIdExterno: alvoReacao, emoji: typeof reacao.text === 'string' ? reacao.text.slice(0, 16) : '' });
+      continue;
+    }
+    const proto = obj(msg.protocolMessage);
+    const alvo = texto(obj(proto?.key)?.id);
+    if (!proto || !alvo) continue;
+    const tipo = proto.type;
+    if (tipo === 0 || tipo === 'REVOKE') saida.push({ ...base, tipo: 'apagou', alvoIdExterno: alvo });
+    else if (tipo === 14 || tipo === 'MESSAGE_EDIT') {
+      const ed = obj(proto.editedMessage);
+      const t = ed ? (texto(ed.conversation) ?? texto(obj(ed.extendedTextMessage)?.text)) : undefined;
+      if (t) saida.push({ ...base, tipo: 'editou', alvoIdExterno: alvo, texto: t });
+    }
   }
   return saida;
 }
@@ -372,6 +411,42 @@ export class CanalEvolution implements CanalWhatsApp {
     if (m.legenda?.trim()) corpo.caption = m.legenda.trim();
     if (m.nomeArquivo) corpo.fileName = m.nomeArquivo;
     return this.enviarComTentativas('message/sendMedia', instancia, corpo, 120_000);
+  }
+
+  /* menu-mensagem: reação, resposta citando, editar e apagar para todos (Evolution v2). */
+  private chave(a: AlvoMensagem) {
+    return { remoteJid: `${a.telefone}@s.whatsapp.net`, fromMe: a.deMim, id: a.idExterno };
+  }
+  private async conferir(resp: Response): Promise<void> {
+    if (!resp.ok) throw erroDaResposta(resp.status, await resp.text().catch(() => ''));
+  }
+
+  /** POST /message/sendReaction { key, reaction } (reaction vazia tira a reação). */
+  async enviarReacao(instancia: string, alvo: AlvoMensagem, emoji: string): Promise<void> {
+    await this.conferir(await this.postar('message/sendReaction', instancia, { key: this.chave(alvo), reaction: emoji }, 20_000).catch((e) => { throw erroDeRede(e); }));
+  }
+
+  /** sendText com "quoted": a cliente vê a mensagem citada em cima da resposta. */
+  async enviarCitando(instancia: string, telefone: string, texto: string, citada: AlvoMensagem & { texto: string }): Promise<EnvioResultado> {
+    const quoted = { key: this.chave(citada), message: { conversation: citada.texto.slice(0, 1000) } };
+    return this.enviarComTentativas('message/sendText', instancia, { number: telefone, text: texto, quoted }, 30_000);
+  }
+
+  /** POST /chat/updateMessage { number, key, text }. */
+  async editarTexto(instancia: string, alvo: AlvoMensagem, texto: string): Promise<void> {
+    await this.conferir(await this.postar('chat/updateMessage', instancia, { number: alvo.telefone, key: this.chave(alvo), text: texto }, 20_000).catch((e) => { throw erroDeRede(e); }));
+  }
+
+  /** DELETE /chat/deleteMessageForEveryone { id, remoteJid, fromMe }. */
+  async apagarParaTodos(instancia: string, alvo: AlvoMensagem): Promise<void> {
+    const k = this.chave(alvo);
+    const resp = await this.fetchFn(this.url('chat/deleteMessageForEveryone', instancia), {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json', apikey: this.apiKey },
+      body: JSON.stringify({ id: k.id, remoteJid: k.remoteJid, fromMe: k.fromMe }),
+      signal: AbortSignal.timeout(20_000),
+    }).catch((e) => { throw erroDeRede(e); });
+    await this.conferir(resp);
   }
 
   /** "digitando…"/"gravando áudio…": POST /chat/sendPresence (a Evolution mostra o aviso por `delay` ms). */

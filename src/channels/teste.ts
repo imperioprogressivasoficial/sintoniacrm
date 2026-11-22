@@ -17,6 +17,13 @@ export class CanalTeste implements CanalWhatsApp {
   async enviarMidia(): Promise<EnvioResultado> {
     return { idExterno: `teste-${randomUUID()}` };
   }
+  /* menu-mensagem: reagir, responder citando, editar e apagar para todos, sem mandar nada para fora */
+  async enviarReacao(): Promise<void> {}
+  async enviarCitando(): Promise<EnvioResultado> {
+    return { idExterno: `teste-${randomUUID()}` };
+  }
+  async editarTexto(): Promise<void> {}
+  async apagarParaTodos(): Promise<void> {}
 }
 
 /** Canal de teste de cada unidade. */

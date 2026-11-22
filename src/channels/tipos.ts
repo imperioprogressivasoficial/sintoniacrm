@@ -122,6 +122,42 @@ export interface CanalWhatsApp {
   buscarFoto?(canalId: string, telefone: string): Promise<FotoPerfil | null>;
   /** Nome (e foto) da cliente na rede social (Messenger/Instagram). Opcional. */
   perfil?(canalId: string, telefone: string): Promise<{ nome?: string; usuario?: string; fotoUrl?: string }>;
+  /* menu-mensagem: ações de segurar a mensagem (opcionais: canal sem suporte só faz a parte da Sintonia) */
+  /** Reação com emoji numa mensagem (emoji vazio tira a reação). */
+  enviarReacao?(canalId: string, alvo: AlvoMensagem, emoji: string): Promise<void>;
+  /** Texto respondendo (citando) outra mensagem. */
+  enviarCitando?(canalId: string, telefone: string, texto: string, citada: AlvoMensagem & { texto: string }): Promise<EnvioResultado>;
+  /** Troca o texto de uma mensagem que a loja mandou (o WhatsApp só deixa até 15 minutos depois). */
+  editarTexto?(canalId: string, alvo: AlvoMensagem, texto: string): Promise<void>;
+  /** Apaga para todos uma mensagem que a loja mandou. */
+  apagarParaTodos?(canalId: string, alvo: AlvoMensagem): Promise<void>;
+}
+
+/** menu-mensagem: a mensagem do WhatsApp em que a ação vale. */
+export interface AlvoMensagem {
+  /** Id da mensagem no canal. */
+  idExterno: string;
+  /** Telefone da cliente (dígitos). */
+  telefone: string;
+  /** true quando a mensagem é da loja. */
+  deMim: boolean;
+}
+
+/** menu-mensagem: o que o webhook avisou sobre uma mensagem que já existe (reação, apagou, editou). */
+export interface AcaoRecebida {
+  canalId: string;
+  telefone: string;
+  /** Id (no canal) da mensagem em que a ação vale. */
+  alvoIdExterno: string;
+  /** true = feita pelo número da loja (celular). */
+  deMim: boolean;
+  tipo: 'reacao' | 'apagou' | 'editou';
+  /** Reação: o emoji (vazio = tirou). */
+  emoji?: string;
+  /** Editou: o texto novo. */
+  texto?: string;
+  nome?: string;
+  em: Date;
 }
 
 export interface FotoPerfil {
