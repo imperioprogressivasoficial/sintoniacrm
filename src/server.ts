@@ -44,7 +44,8 @@ import { registrarProtecao, type OpcoesProtecao } from './seguranca/protecao.js'
 export interface DependenciasServidor {
   sintonia: Sintonia;
   repo: Repositorio;
-  evolution?: { canal: CanalWhatsApp; token?: string };
+  /** `status`: vistos (entregue, lida, áudio ouvido) do evento messages.update. */
+  evolution?: { canal: CanalWhatsApp; token?: string; status?: (lista: StatusRecebido[]) => Promise<unknown> };
   /** Histórico de ligações (tela Ligações) e o evento CALL do WhatsApp (Evolution). */
   chamadas?: { armazem: ArmazemChamadas; empresaId: string; canalDaInstancia?: (instancia: string) => string | undefined };
   /** WhatsApp oficial (Meta). Lido a cada webhook: as unidades podem mudar pela tela de Conexões. */
@@ -255,6 +256,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const instancia = typeof (corpo as { instance?: unknown }).instance === 'string' ? String((corpo as { instance: string }).instance) : '';
     // Conectou, caiu, aparelho removido no celular: só atualiza o estado (o aviso sai por trás).
     if (d.whatsappSaude?.aoWebhook(corpo)) return { ok: true };
+    /* vistos: ✓ saiu, ✓✓ entregue, ✓✓ azul lida, microfone azul áudio ouvido (messages.update) */
+    if (evento === 'messages.update') {
+      const status = d.evolution.canal.lerStatus?.(corpo) ?? [];
+      if (status.length && d.evolution.status) await d.evolution.status(status).catch((e) => log('Falha ao registrar entrega (Evolution)', String(e)));
+      return { status: status.length };
+    }
     if (evento === 'messages.set') {
       // Histórico de conversas logo depois de conectar: grava sem IA, avisos nem funil, em segundo plano.
       let historico: MensagemRecebida[] = [];
@@ -421,7 +428,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       .filter((c) => !q.tag || (tags.get(c.id) ?? []).some((t) => t.id === q.tag))
       .map((c) => {
         const m = pagina.ultimas.get(c.id);
-        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ...(pessoais ? camposPessoais(pessoais.get(c.id), c, agoraLista) : {}), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo } : null };
+        return { ...c, tags: tags.get(c.id) ?? [], ...(origens ? { origem: origens[c.id] ?? { icone: 'desconhecido' } } : {}), lidaAte: lidas.get(c.id) ?? null, marcadaNaoLida: marcadas.has(c.id), finalizadaEm: finalizadas.get(c.id) ?? null, ...(pessoais ? camposPessoais(pessoais.get(c.id), c, agoraLista) : {}), ultima: m ? { autor: m.autor, autorNome: m.autorNome, texto: m.texto.slice(0, 140), em: m.em, anexo: m.anexo, ...(m.entrega ? { entrega: m.entrega } : {}) } : null };
       });
     if (pagina.proximo) reply.header('x-sintonia-proximo', Buffer.from(`${pagina.proximo.em.toISOString()}|${pagina.proximo.id}`).toString('base64url'));
     return responderComEtag(req, reply, saida, sino ? JSON.stringify(sino) : '');

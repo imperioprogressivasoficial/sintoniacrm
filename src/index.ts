@@ -33,7 +33,7 @@ import { canaisEvolution, numerosDasConexoes, opcoesWebhookMeta } from './conexo
 import { contaDaRede, numerosSociais } from './conexoes/sociais.js';
 import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/chamadas.js';
 import { ehCanalSocial } from './channels/meta-social.js';
-import type { CanalWhatsApp } from './channels/tipos.js';
+import type { CanalWhatsApp, StatusRecebido } from './channels/tipos.js';
 import { criarServidor } from './server.js';
 import { AuditoriaMemoria, AuditoriaPostgres } from './seguranca/auditoria.js'; /* banco-seguranca */
 import { DadosCliente } from './seguranca/dados-cliente.js'; /* banco-seguranca */
@@ -800,7 +800,16 @@ const app = criarServidor({
     return agendaLigada ? agendas : undefined;
   },
   get evolution() {
-    return { canal: evolution, token: conexoes.get('webhookToken') };
+    /* vistos: avisos de entrega/leitura/áudio ouvido da Evolution (messages.update), como na API oficial */
+    return {
+      canal: evolution,
+      token: conexoes.get('webhookToken'),
+      status: async (lista: StatusRecebido[]) => {
+        const n = await sintonia.statusRecebidos(lista);
+        await transmissoes?.statusRecebidos(lista).catch((e) => log('Falha nos avisos de entrega das transmissões', String(e)));
+        return n;
+      },
+    };
   },
   grupos,
   aoReuniao: integracoes.aoReuniao,

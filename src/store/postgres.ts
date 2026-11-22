@@ -309,11 +309,15 @@ export class RepositorioPostgres implements Repositorio {
   }
 
   async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date) {
-    const ordem = `case entrega when 'enviada' then 1 when 'entregue' then 2 when 'lida' then 3 when 'falhou' then 4 else 0 end`;
+    const ordem = (col: string) => `case ${col} ${Object.entries(ORDEM_ENTREGA).map(([k, n]) => `when '${k}' then ${n}`).join(' ')} else 0 end`;
+    // "Ouvida" só vale para áudio; em texto, foto etc. conta como lida. Só avança: nunca volta atrás.
     const r = await this.pool.query(
-      `update sintonia.mensagens set entrega = $2, entrega_em = $3
-        where id_externo = $1 and ${ordem} < $4`,
-      [idExterno, status, em, ORDEM_ENTREGA[status]],
+      `update sintonia.mensagens m set entrega = v.status, entrega_em = $3
+         from (select x.id, case when $2::text = 'ouvida' and not exists (select 1 from sintonia.midias md where md.mensagem_id = x.id and md.tipo = 'audio')
+                                 then 'lida' else $2::text end as status
+                 from sintonia.mensagens x where x.id_externo = $1) v
+        where m.id = v.id and ${ordem('m.entrega')} < ${ordem('v.status')}`,
+      [idExterno, status, em],
     );
     return (r.rowCount ?? 0) > 0;
   }

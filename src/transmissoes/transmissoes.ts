@@ -774,7 +774,9 @@ export class Transmissoes {
   /** Avisos de entrega/leitura/falha (webhook da API oficial). Nunca volta atrás. */
   async statusRecebidos(lista: StatusRecebido[]): Promise<number> {
     let n = 0;
-    for (const s of lista) {
+    for (const aviso of lista) {
+      // Áudio ouvido conta como lida na transmissão (ela só guarda até "lida").
+      const s = aviso.status === 'ouvida' ? { ...aviso, status: 'lida' as const } : aviso;
       if (s.status === 'falhou') {
         const r = await this.pool.query(
           "update sintonia.transmissao_destinos set status = 'falhou', falhou_em = $2, erro = $3 where id_externo = $1 and status in ('enviando', 'enviada')",

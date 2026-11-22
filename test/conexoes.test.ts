@@ -196,7 +196,7 @@ describe('Rotas de Conexões', () => {
     const criar = evo.pedidos.find((p) => p.url.endsWith('/instance/create'))!;
     expect(criar.corpo).toMatchObject({
       instanceName: 'sintonia-norte',
-      webhook: { url: 'https://sintonia.n8nimperio.tech/webhooks/evolution', headers: { 'x-sintonia-token': conexoes.get('webhookToken') }, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE'] },
+      webhook: { url: 'https://sintonia.n8nimperio.tech/webhooks/evolution', headers: { 'x-sintonia-token': conexoes.get('webhookToken') }, events: ['MESSAGES_UPSERT', 'MESSAGES_SET', 'CALL', 'CONNECTION_UPDATE', 'MESSAGES_UPDATE'] },
     });
     expect(conexoes.numeros()).toEqual([{ canalId: 'sintonia-norte', unidade: 'norte' }]);
 

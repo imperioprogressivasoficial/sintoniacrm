@@ -98,6 +98,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/vendas/logo-hubspot.png': { arquivo: 'vendas/logo-hubspot.png', tipo: 'image/png' },
   '/vendas/logo-rdstation.png': { arquivo: 'vendas/logo-rdstation.png', tipo: 'image/png' },
   '/telas/fone.js': { arquivo: 'telas/fone.js', tipo: 'text/javascript; charset=utf-8' } /* contato-nome */,
+  '/telas/vistos.js': { arquivo: 'telas/vistos.js', tipo: 'text/javascript; charset=utf-8' }, /* vistos: ✓, ✓✓, ✓✓ azul, áudio ouvido, relógio */
   '/telas/prioridade.js': { arquivo: 'telas/prioridade.js', tipo: 'text/javascript; charset=utf-8' }, // fluidez2: ordem de chegada na abertura
   '/telas/privacidade.js': { arquivo: 'telas/privacidade.js', tipo: 'text/javascript; charset=utf-8' }, // fluidez2: Ocultar dados dos clientes
   '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },

@@ -83,8 +83,8 @@ export interface Digitando {
 export const VALIDADE_DIGITANDO_MS = 60_000;
 
 /** Mídia esperando download (fila própria, na tabela de mídias). */
-/** Ordem da entrega: só avança (um aviso atrasado de "entregue" não apaga o "lida"). */
-export const ORDEM_ENTREGA: Record<NonNullable<Mensagem['entrega']>, number> = { enviada: 1, entregue: 2, lida: 3, falhou: 4 };
+/** Ordem da entrega: só avança (um aviso atrasado de "entregue" não apaga o "lida"). "ouvida" só existe em áudio. */
+export const ORDEM_ENTREGA: Record<NonNullable<Mensagem['entrega']>, number> = { enviada: 1, entregue: 2, lida: 3, ouvida: 4, falhou: 5 };
 
 export interface MidiaPendente {
   mensagemId: string;
@@ -386,9 +386,12 @@ export class RepositorioMemoria implements Repositorio {
     return m.id;
   }
 
-  async registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>) {
+  async registrarEntrega(idExterno: string, pedido: NonNullable<Mensagem['entrega']>) {
     const m = this.msgs.find((x) => x.idExterno === idExterno);
-    if (!m || ORDEM_ENTREGA[status] <= (m.entrega ? ORDEM_ENTREGA[m.entrega] : 0)) return false;
+    if (!m) return false;
+    // "Ouvida" só vale para áudio; em texto, foto etc. conta como lida.
+    const status = pedido === 'ouvida' && this.midias.get(m.id)?.anexo.tipo !== 'audio' ? 'lida' : pedido;
+    if (ORDEM_ENTREGA[status] <= (m.entrega ? ORDEM_ENTREGA[m.entrega] : 0)) return false;
     m.entrega = status;
     return true;
   }
