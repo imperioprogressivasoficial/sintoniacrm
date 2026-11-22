@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-22 12:59 UTC (22/11, 09h59 na Bahia)
-commit: ba5ffab
-pacote sha256: d4316b7e01428395aaecd72938d9b901bd2321d02f81277c28d83327f87d4bec
+data: 2026-11-22 13:02 UTC (22/11, 10h02 na Bahia)
+commit: f890d29
+pacote sha256: e51ad0a7de54f57fc39aaf9d63290193031bfff0927b2bff9115bd8206bca698
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-ba5ffab.b64); pode apagar depois.
-observação: em cima do a3d8037. Entra: seletor com todos os emojis (busca em português, categorias, usados por último) nas reações; public/telas/emojis-dados.js (Emojibase, MIT).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f890d29.b64); pode apagar depois.
+observação: em cima do ba5ffab. Entra: avisos da conversa (🤖 …) com a foto redonda de quem é citado (avisoSistema em app.html).
