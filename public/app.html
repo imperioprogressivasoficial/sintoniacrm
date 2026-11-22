@@ -376,6 +376,7 @@
     color: #fff; background: var(--marca-azul, #106ebe); box-shadow: 0 12px 30px rgba(4,18,31,.3); animation: dicaEntra .25s ease-out; }
   .dica-ficha::before { content: ""; position: absolute; top: -6px; left: 22px; width: 12px; height: 12px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
   .dica-ficha[hidden] { display: none; }
+  #chat-aberto > .chat-topo { z-index: 30; } /* a dica "Toque aqui…" e os menus do topo ficam por cima dos balões */
   @keyframes dicaEntra { from { opacity: 0; transform: translateY(-4px); } }
   /* chip "quem atende" no composer: aceso quando a IA atende */
   .linha-compor .modo[data-m="ia"] { box-shadow: inset 0 0 0 1px rgba(15,252,190,.7), 0 0 12px rgba(15,252,190,.45); }
