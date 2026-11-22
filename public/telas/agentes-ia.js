@@ -10,6 +10,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const ABAS = [
     ['geral', 'Visão geral'],
     ['estado', 'O que a IA faz'], /* ia-completa */
+    ['economia', 'Quanto economiza'], /* calculadora: /telas/economia-ia.js */
     ['agentes', 'Agentes'],
     ['treinamento', 'Treinamento'],
     ['memoria', 'Memória'],
@@ -207,7 +208,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     conteudo.append(el('div', { class: 'agx-esq', style: 'height:180px' }));
     const telas = { agentes: telaAgentes, treinamento: telaTreinamento, memoria: telaMemoria, comandos: telaComandos, configuracao: telaConfiguracao,
       /* ia-completa: /telas/ia-estado.js */
-      estado: (c) => (window.SintoniaTelas.iaEstado ? window.SintoniaTelas.iaEstado.desenhar(c) : Promise.reject(new Error('Atualize a página para ver esta parte.'))) };
+      estado: (c) => (window.SintoniaTelas.iaEstado ? window.SintoniaTelas.iaEstado.desenhar(c) : Promise.reject(new Error('Atualize a página para ver esta parte.'))),
+      /* calculadora: /telas/economia-ia.js */
+      economia: (c) => (window.SintoniaTelas.economiaIa ? window.SintoniaTelas.economiaIa.desenhar(c) : Promise.reject(new Error('Atualize a página para ver esta parte.'))) };
     return telas[aba](ctx).catch((x) => {
       if (!vivo()) return;
       conteudo.replaceChildren(el('div', { class: 'agx-vidro' }, el('b', { text: 'Não deu para carregar esta parte.' }), el('span', { class: 'agx-sub', text: erroTxt(x) }), el('button', { class: 'agx-botao', type: 'button', text: 'Tentar de novo', onclick: ctx.recarregar })));

@@ -134,3 +134,17 @@ describe.runIf(temPostgres)('custo da equipe no Postgres', () => {
     expect(custoGravado(a!)).toMatchObject({ salario: 2000, minutosPorMensagem: 3 });
   });
 });
+
+describe('tela "Quanto economiza" (sem venda dentro do app)', () => {
+  it('é uma aba da Inteligência, servida pelo app, sem plano, compra ou pagamento', async () => {
+    const { readFileSync } = await import('node:fs');
+    const ler = (f: string) => readFileSync(new URL(`../public/${f}`, import.meta.url), 'utf8');
+    expect(ler('app.html')).toContain('<script src="/telas/economia-ia.js"');
+    expect(ler('telas/agentes-ia.js')).toContain("['economia', 'Quanto economiza']");
+    const tela = ler('telas/economia-ia.js');
+    expect(tela).toContain('/api/economia-ia');
+    expect(tela).not.toMatch(/plano|assin(e|ar|atura)|checkout|comprar|contratar|recarga|cr[eé]dito|wa\.me|\/api\/planos|innerHTML/i);
+    const { app } = await montar();
+    expect((await app.inject({ url: '/telas/economia-ia.js' })).statusCode).toBe(200);
+  });
+});
