@@ -133,6 +133,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   /* robustez: lista de Conversas sem o corte de 500 (busca no servidor e rolagem infinita) */
   '/telas/lista-servidor.js': { arquivo: 'telas/lista-servidor.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/email-conexoes.js': { arquivo: 'telas/email-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/sincronizando.js': { arquivo: 'telas/sincronizando.js', tipo: 'text/javascript; charset=utf-8' }, // sincronizando: folha das outras conexões
   '/telas/logos-conexoes.js': { arquivo: 'telas/logos-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/catalogo-conexoes.js': { arquivo: 'telas/catalogo-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agenda.js': { arquivo: 'telas/agenda.js', tipo: 'text/javascript; charset=utf-8' },
