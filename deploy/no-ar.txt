@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-22 01:48 UTC (21/11, 22h48 na Bahia)
-commit: b465e49
-pacote sha256: 64f700fa866fd5859f50a19499e6eeb3e8cf4cee130c40bb89b826b8adc13d93
+data: 2026-11-22 01:52 UTC (21/11, 22h52 na Bahia)
+commit: 1f8a043
+pacote sha256: 81146668d0d6bdc01ddaf65afc4fd0cbb5f790e0f9e5884bdc5af215eabce93d
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-b465e49.b64); pode apagar depois.
-observação: em cima do 003b9d5. Entra: claude/vistos (migração 740: ✓ do WhatsApp e áudio ouvido, MESSAGES_UPDATE no webhook) e claude/vendas-planos (planos de volta na página antiga, contratação pelo WhatsApp, sem botão flutuante, lançamento 3/3/2027).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1f8a043.b64); pode apagar depois.
+observação: em cima do b465e49. Entra: áudio com a foto de quem mandou (atendente, Serena, cliente).
