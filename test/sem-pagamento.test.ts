@@ -120,7 +120,7 @@ describe('nada se compra pelo app', () => {
     expect(vendas).toContain('id="planos"');
     for (const t of ['Essencial', 'Colaborador de IA', 'Empresarial', 'R$ 0', 'R$ 497/mês', 'R$ 1.997', 'Sob medida']) expect(vendas).toContain(t);
     // Nada se paga, assina ou cadastra pela página: sem formulário, checkout, cartão, Pix ou boleto.
-    expect(vendas).not.toMatch(/<form|checkout|assin(e|ar|atura)|cart[aã]o de cr[eé]dito|\bpix\b|boleto|pagar agora|compre agora|comprar (agora|pelo|no app|no site)|Começar grátis|Contratar o|data-lead|calculadora-ia|\/api\/planos/i);
+    expect(vendas).not.toMatch(/<form|checkout|assin(e|ar|atura)|cart[aã]o de cr[eé]dito|\bpix\b|boleto|pagar agora|compre agora|comprar (agora|pelo|no app|no site)|Começar grátis|Contratar o|data-lead|\/api\/planos/i);
     // Todo botão de plano (inclusive o grátis) abre o WhatsApp de vendas com a mensagem pronta citando o plano.
     const inicio = vendas.indexOf('id="planos"');
     const secao = vendas.slice(inicio, vendas.indexOf('</section>', inicio));
@@ -140,6 +140,16 @@ describe('nada se compra pelo app', () => {
     expect(secao).toContain('<b>Lançamento oficial:</b> 3 de março de 2027');
     expect(vendas).toContain('data-whats');
     expect(vendas).toContain('/contato-publico.js');
+    // calculadora: a conta voltou na seção da 6x1; só mostra a conta e o único botão dela abre o WhatsApp de vendas.
+    const ini = vendas.indexOf('id="calculadora"');
+    expect(ini).toBeGreaterThan(vendas.indexOf('id="escala-6x1"'));
+    const calc = vendas.slice(ini, vendas.indexOf('<div class="v-27-motivos">', ini));
+    const botoesCalc = calc.match(/<a\b[^>]*>/g) ?? [];
+    expect(botoesCalc).toHaveLength(1);
+    expect(botoesCalc[0]).toContain('data-whats ');
+    expect(botoesCalc[0]).toContain('href="/suporte"');
+    expect(calc).not.toMatch(/<form|<button|recarga|cr[eé]ditos|plano/i);
+    expect(vendas).toContain('<script src="/calculadora-ia.js"');
     for (const p of ['/privacidade', '/termos', '/suporte']) expect(vendas).toContain(`href="${p}"`);
     const app = ler('app.html');
     expect(app).not.toMatch(/telas\/planos\.js|Plano e uso da IA|v-planos/);
@@ -160,6 +170,7 @@ describe('nada se compra pelo app', () => {
       expect(r.body).toContain('/contato-publico.js');
     }
     expect((await app.inject({ url: '/contato-publico.js' })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/calculadora-ia.js' })).statusCode).toBe(200); // calculadora
     expect((await app.inject({ url: '/telas/planos.js' })).statusCode).toBe(404);
   });
 });

@@ -2,6 +2,8 @@
  * Calculadoras da página de vendas.
  * Na página: window.SintoniaCalculadora.escala6x1({ horas, salario }) (nova jornada × Colaborador de IA).
  * Também: window.SintoniaCalculadora.calcular({ atendentes, salario, encargos, beneficios, conversas })
+ * calculadora: window.SintoniaCalculadora.simular({ atendentes, salario, encargos, beneficios, horas, mensagens, ficam })
+ *   (a calculadora da página de vendas: equipe de hoje × fim da 6x1 × pessoas + Colaborador de IA).
  *
  * Funcionários: (salário × (1 + encargos%) + benefícios) × atendentes.
  * Colaborador de IA: R$ 1.997/mês + créditos estimados. ESTIMATIVA: o plano cobre cerca de
@@ -89,5 +91,56 @@
     };
   }
 
-  raiz.SintoniaCalculadora = Object.freeze({ calcular: calcular, escala6x1: escala6x1, PREMISSAS: PREMISSAS, PADRAO: PADRAO });
+
+  /**
+   * calculadora: a conta da página de vendas, com os números da própria empresa.
+   * - custo por pessoa = salário × (1 + encargos%) + benefícios; equipe de hoje = atendentes × custo (jornada de 44 h);
+   * - fim da 6x1 (EC 141/2026): a jornada cai para 40 h com o mesmo salário. Para manter as mesmas horas de trabalho
+   *   da equipe (atendentes × 44 h), são ⌈atendentes × 44 ÷ 40⌉ pessoas; a perda é o custo das pessoas a mais;
+   *   a hora de trabalho fica 10% mais cara;
+   * - com a IA: `ficam` pessoas (padrão 1) + Colaborador de IA (R$ 1.997/mês), que atende 24 h, 7 dias (168 h);
+   * - economia = equipe na nova jornada − com a IA;
+   * - mensagens por dia × 2 min = horas por mês que a equipe passa só respondendo (a IA responde em segundos);
+   * - horas por semana em que a empresa atende: a IA cobre também as outras 168 − h (noite, domingo, feriado).
+   */
+  function simular(entradas) {
+    var e = entradas || {};
+    var atendentes = Math.round(numero(e.atendentes, 2, 1, 50));
+    var salario = numero(e.salario, PADRAO.salario, 0, 1000000);
+    var encargos = numero(e.encargos, PADRAO.encargos, 0, 300);
+    var beneficios = numero(e.beneficios, PADRAO.beneficios, 0, 1000000);
+    var horas = Math.round(numero(e.horas, 60, 1, 168));
+    var mensagens = Math.round(numero(e.mensagens, 150, 0, 1000000));
+    var ficam = Math.round(numero(e.ficam, 1, 0, atendentes));
+    var porPessoa = salario * (1 + encargos / 100) + beneficios;
+    var semanasMes = 52 / 12;
+
+    var hoje = { pessoas: atendentes, jornada: 44, mes: arred(atendentes * porPessoa), horasSemana: atendentes * 44 };
+    var pessoasDepois = Math.ceil((atendentes * 44) / 40);
+    var depois = { pessoas: pessoasDepois, jornada: 40, mes: arred(pessoasDepois * porPessoa), horasSemana: atendentes * 40 };
+    var perda = {
+      pessoas: pessoasDepois - atendentes,
+      mes: arred(depois.mes - hoje.mes),
+      ano: arred((depois.mes - hoje.mes) * 12),
+      horasSemana: atendentes * 4,
+      horasMes: Math.round(atendentes * 4 * semanasMes),
+      hora: Math.round((44 / 40 - 1) * 100),
+    };
+    var comIaMes = ficam * porPessoa + PREMISSAS.precoPlano;
+    var economiaMes = depois.mes - comIaMes;
+    var horasRespondendo = Math.round((mensagens * 30 * 2) / 60);
+    var horaPessoa = porPessoa / (40 * semanasMes);
+    return {
+      entradas: { atendentes: atendentes, salario: salario, encargos: encargos, beneficios: beneficios, horas: horas, mensagens: mensagens, ficam: ficam },
+      porPessoa: arred(porPessoa),
+      hoje: hoje,
+      depois: depois,
+      perda: perda,
+      comIa: { pessoas: ficam, ia: PREMISSAS.precoPlano, mes: arred(comIaMes), ano: arred(comIaMes * 12), horasSemana: PREMISSAS.horasSemanaIA, foraDoHorario: Math.max(0, PREMISSAS.horasSemanaIA - horas) },
+      economia: { mes: arred(economiaMes), ano: arred(economiaMes * 12), percentual: depois.mes > 0 ? Math.round((economiaMes / depois.mes) * 100) : 0 },
+      mensagens: { horasMes: horasRespondendo, valorMes: arred(horasRespondendo * horaPessoa), pessoas: Math.round((horasRespondendo / (40 * semanasMes)) * 10) / 10 },
+    };
+  }
+
+  raiz.SintoniaCalculadora = Object.freeze({ calcular: calcular, escala6x1: escala6x1, simular: simular, PREMISSAS: PREMISSAS, PADRAO: PADRAO });
 })(typeof window !== 'undefined' ? window : globalThis);

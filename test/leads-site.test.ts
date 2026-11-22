@@ -150,6 +150,28 @@ describe('Calculadora de custo da IA (public/calculadora-ia.js)', () => {
     expect(calc.escala6x1({ horas: 500 }).horas).toBe(168);
     expect((calc as any).equipe2027).toBeUndefined();
   });
+  it('calculadora da página: equipe de hoje × nova jornada × pessoas + IA, com a perda da 6x1', async () => {
+    await import(/* @vite-ignore */ new URL('../public/calculadora-ia.js', import.meta.url).href);
+    const calc = (globalThis as unknown as { SintoniaCalculadora: { simular(e: object): any } }).SintoniaCalculadora;
+    const r = calc.simular({});
+    // 2 pessoas × 3.660 (1.800 × 1,7 + 600); 2 × 44 h = 88 h ÷ 40 = 2,2 → 3 pessoas
+    expect(r.hoje).toMatchObject({ pessoas: 2, mes: 7320 });
+    expect(r.depois).toMatchObject({ pessoas: 3, mes: 10980 });
+    expect(r.perda).toMatchObject({ pessoas: 1, mes: 3660, ano: 43920, horasSemana: 8, hora: 10 });
+    expect(r.comIa).toMatchObject({ pessoas: 1, ia: 1997, mes: 5657, horasSemana: 168, foraDoHorario: 108 });
+    expect(r.economia).toMatchObject({ mes: 5323, ano: 63876 });
+    expect(r.mensagens.horasMes).toBe(150); // 150 por dia × 30 × 2 min
+    // Números da empresa: texto com ponto de milhar, só a IA (ninguém fica), limites.
+    const s = calc.simular({ atendentes: 5, salario: '2.500', encargos: 80, beneficios: 0, ficam: 0, horas: 200, mensagens: 400 });
+    expect(s.porPessoa).toBe(4500);
+    expect(s.depois.pessoas).toBe(6); // 220 h ÷ 40 = 5,5 → 6
+    expect(s.comIa.mes).toBe(1997);
+    expect(s.entradas.horas).toBe(168);
+    expect(s.comIa.foraDoHorario).toBe(0);
+    expect(calc.simular({ atendentes: 1, ficam: 9 }).entradas.ficam).toBe(1);
+    // Quando a IA não sai mais barata, a conta mostra (economia negativa), sem esconder.
+    expect(calc.simular({ atendentes: 1, salario: 0, beneficios: 0 }).economia.mes).toBeLessThan(0);
+  });
 });
 
 describe.runIf(temPostgres)('Leads do site no Postgres', () => {
