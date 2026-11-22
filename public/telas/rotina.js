@@ -387,5 +387,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   window.SintoniaTelas.rotina = { desenhar, novaTarefa, resumo, valorMenu, css };
   // Selo do menu: ao abrir o app e a cada 2 minutos (só uma leitura leve).
-  addEventListener('load', () => { setTimeout(resumo, 1500); setInterval(() => { if (!document.hidden) resumo(); }, 120000); });
+  /* velocidade: esta tela pode chegar depois da abertura (public/telas/sob-demanda.js): aí o "load" já passou */
+  const ligarResumo = () => { setTimeout(resumo, 1500); setInterval(() => { if (!document.hidden) resumo(); }, 120000); };
+  if (document.readyState === 'complete') ligarResumo(); else addEventListener('load', ligarResumo, { once: true });
 })();

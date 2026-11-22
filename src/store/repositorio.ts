@@ -154,6 +154,8 @@ export interface Repositorio {
 
   // ---------- mídias (fotos, áudios, vídeos, documentos) ----------
   midia(mensagemId: string): Promise<MidiaGuardada | undefined>;
+  /** velocidade: miniaturas do WhatsApp (base64) das mensagens pedidas; as sem miniatura ficam de fora. */
+  miniaturas(mensagemIds: string[]): Promise<Map<string, string>>;
   /** Arquivo baixado: situação "pronta". */
   guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }): Promise<void>;
   /** Passou do limite: ficam só os dados. */
@@ -260,6 +262,12 @@ const passaFiltro = (f: FiltroConversas | undefined, c: Conversa) =>
     (!f.telefone || c.telefone === f.telefone) &&
     (!f.empresaId || c.empresaId === f.empresaId) &&
     (!f.escopo || noEscopo(f.escopo, c)));
+
+/** velocidade: cópia do anexo sem a miniatura (ela só vai no detalhe da conversa). */
+function semMiniatura(a: Anexo): Anexo {
+  const { miniatura: _m, ...resto } = a;
+  return resto;
+}
 
 export class RepositorioMemoria implements Repositorio {
   private conversas = new Map<string, Conversa>();
@@ -405,7 +413,7 @@ export class RepositorioMemoria implements Repositorio {
   /** A mensagem com os dados atuais da mídia (a situação muda depois do download). */
   private comAnexo(m: Mensagem): Mensagem {
     const md = this.midias.get(m.id);
-    return md ? { ...m, anexo: { ...md.anexo } } : { ...m };
+    return md ? { ...m, anexo: semMiniatura(md.anexo) } : { ...m }; /* velocidade: a miniatura só sai por miniaturas() (igual ao Postgres) */
   }
 
   async mensagens(conversaId: string, limite = 40) {
@@ -441,9 +449,15 @@ export class RepositorioMemoria implements Repositorio {
 
   private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string; ref?: string }>();
 
+  async miniaturas(mensagemIds: string[]) {
+    const r = new Map<string, string>();
+    for (const id of mensagemIds) { const mi = this.midias.get(id)?.anexo.miniatura; if (mi) r.set(id, mi); }
+    return r;
+  }
+
   async midia(mensagemId: string) {
     const md = this.midias.get(mensagemId);
-    return md ? { conversaId: md.conversaId, anexo: { ...md.anexo }, conteudo: md.conteudo } : undefined;
+    return md ? { conversaId: md.conversaId, anexo: semMiniatura(md.anexo), conteudo: md.conteudo } : undefined;
   }
 
   async guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }) {

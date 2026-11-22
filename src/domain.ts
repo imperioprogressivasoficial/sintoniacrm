@@ -100,6 +100,12 @@ export interface Anexo {
   /** Nota de voz (áudio gravado na hora). */
   voz?: boolean;
   situacao: SituacaoAnexo;
+  /** velocidade: largura e altura da foto/vídeo informadas pelo WhatsApp (a caixa já nasce do tamanho certo). */
+  largura?: number;
+  altura?: number;
+  /** velocidade: miniatura que o próprio WhatsApp manda (JPEG pequeno, base64), mostrada desfocada até a foto chegar.
+   * Só vem no detalhe da conversa (GET /api/conversas/:id), nunca na lista. */
+  miniatura?: string;
 }
 
 export interface Conversa {

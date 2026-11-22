@@ -7,7 +7,7 @@ import { CanalTeste } from '../src/channels/teste.js';
 import type { CanalWhatsApp, MensagemRecebida, MidiaBaixada, MidiaEnvio } from '../src/channels/tipos.js';
 import { ContasMemoria } from '../src/auth/contas.js';
 import { gerarHash } from '../src/auth/senha.js';
-import { ErroMidiaGrande, LIMITE_ENVIO, LIMITE_MIDIA, textoDoAnexo } from '../src/midia.js';
+import { ErroMidiaGrande, LIMITE_ENVIO, LIMITE_MIDIA, LIMITE_MINIATURA, miniaturaJpeg, textoDoAnexo } from '../src/midia.js';
 import { criarServidor } from '../src/server.js';
 import { RepositorioMemoria, type Repositorio } from '../src/store/repositorio.js';
 import { fabricas } from './repos.js';
@@ -121,7 +121,8 @@ describe('webhook da Evolution: mídias', () => {
   it('foto com legenda: marcador para a IA + anexo com os dados', () => {
     const [m] = lerWebhookEvolution(upsert(IMAGEM));
     expect(m!.texto).toBe('[foto] meu cabelo hoje');
-    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'imagem', mimetype: 'image/jpeg', legenda: 'meu cabelo hoje', tamanho: 183442 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'imagem', mimetype: 'image/jpeg', legenda: 'meu cabelo hoje', tamanho: 183442,
+      largura: 960, altura: 1280, miniatura: IMAGEM.imageMessage.jpegThumbnail }); // velocidade: miniatura e tamanho do WhatsApp
     expect(m!.nome).toBe('Marina Souza');
   });
 
@@ -139,7 +140,8 @@ describe('webhook da Evolution: mídias', () => {
   it('vídeo: tamanho no formato Long do WhatsApp', () => {
     const [m] = lerWebhookEvolution(upsert(VIDEO));
     expect(m!.texto).toBe('[vídeo] olha o resultado');
-    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'video', mimetype: 'video/mp4', duracaoSeg: 9, legenda: 'olha o resultado', tamanho: 2_345_678 });
+    expect({ ...m!.anexo, ref: undefined }).toEqual({ ref: undefined, tipo: 'video', mimetype: 'video/mp4', duracaoSeg: 9, legenda: 'olha o resultado', tamanho: 2_345_678,
+      largura: 480, altura: 848 }); // velocidade: '/9j/4AAQ' é curto demais para ser miniatura de verdade
   });
 
   it('documento com nome do arquivo', () => {
@@ -704,5 +706,68 @@ describe('Rotas de mídia', () => {
     expect(sem.statusCode).toBe(400);
     const todas = await Promise.all((await repo.listarConversas()).map((c) => repo.mensagens(c.id)));
     expect(todas.flat().filter((m) => m.anexo?.situacao === 'pronta').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+/* velocidade: a miniatura que o WhatsApp manda junto da foto aparece desfocada até a foto de verdade chegar */
+const MINI = IMAGEM.imageMessage.jpegThumbnail;
+describe('miniatura do WhatsApp (jpegThumbnail)', () => {
+  it('aceita base64, Buffer em JSON e bytes numerados; devolve sempre base64', () => {
+    const bytes = [...Buffer.from(MINI, 'base64')];
+    expect(miniaturaJpeg(MINI)).toBe(MINI);
+    expect(miniaturaJpeg({ type: 'Buffer', data: bytes })).toBe(MINI);
+    expect(miniaturaJpeg(Object.fromEntries(bytes.map((b, i) => [String(i), b])))).toBe(MINI);
+  });
+
+  it('recusa o que não é JPEG pequeno de verdade', () => {
+    expect(miniaturaJpeg(undefined)).toBeUndefined();
+    expect(miniaturaJpeg('')).toBeUndefined();
+    expect(miniaturaJpeg('/9j/4AAQ')).toBeUndefined(); // curto demais
+    expect(miniaturaJpeg(Buffer.alloc(300, 7).toString('base64'))).toBeUndefined(); // não começa como JPEG
+    expect(miniaturaJpeg(Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(LIMITE_MINIATURA)]).toString('base64'))).toBeUndefined(); // grande demais
+    expect(miniaturaJpeg('<script>alert(1)</script>')).toBeUndefined();
+    expect(miniaturaJpeg({ type: 'Buffer', data: [255, 216, 255, 999] })).toBeUndefined();
+    expect(miniaturaJpeg(12345)).toBeUndefined();
+  });
+
+  it('webhook da Evolution: foto em Buffer JSON também vira miniatura; figurinha e documento não têm', () => {
+    const [m] = lerWebhookEvolution(upsert({ imageMessage: { ...IMAGEM.imageMessage, jpegThumbnail: { type: 'Buffer', data: [...Buffer.from(MINI, 'base64')] } } }));
+    expect(m!.anexo?.miniatura).toBe(MINI);
+    expect(lerWebhookEvolution(upsert(DOCUMENTO))[0]!.anexo?.miniatura).toBeUndefined();
+    expect(lerWebhookEvolution(upsert(FIGURINHA))[0]!.anexo?.miniatura).toBeUndefined();
+  });
+});
+
+describe.each(fabricas)('Miniatura guardada junto da mídia ($nome)', (f) => {
+  it('fica no banco, vai no detalhe da conversa (esperando e pronta) e nunca na lista', async () => {
+    const repo = await f.criar();
+    const { sintonia, midias } = montar(repo);
+    const app = criarServidor({ sintonia, repo });
+    await sintonia.receber(recebida({ anexo: { tipo: 'imagem', mimetype: 'image/jpeg', tamanho: JPG.length, miniatura: MINI, largura: 960, altura: 1280 } }));
+    const [c] = await repo.listarConversas();
+    const foto = await midiaDe(repo, c!.id);
+    expect(foto.anexo).toMatchObject({ tipo: 'imagem', largura: 960, altura: 1280 });
+    expect(foto.anexo?.miniatura).toBeUndefined(); // a leitura comum não carrega a miniatura
+    expect((await repo.miniaturas([foto.id])).get(foto.id)).toBe(MINI);
+    const detalhe = async () => (await app.inject({ url: `/api/conversas/${c!.id}` })).json() as { mensagens: Array<{ id: string; anexo?: { situacao: string; miniatura?: string; largura?: number } }> };
+    let d = await detalhe();
+    const antes = d.mensagens.find((m) => m.id === foto.id)!;
+    expect(antes.anexo).toMatchObject({ miniatura: MINI, largura: 960 });
+    await midias.ocioso();
+    d = await detalhe();
+    expect(d.mensagens.find((m) => m.id === foto.id)!.anexo).toMatchObject({ situacao: 'pronta', miniatura: MINI });
+    const lista = await app.inject({ url: '/api/conversas' });
+    expect(lista.body).not.toContain(MINI.slice(0, 40));
+    expect((await repo.ultimasMensagens([c!.id])).get(c!.id)?.anexo?.miniatura).toBeUndefined();
+  });
+
+  it('sem miniatura (API oficial, mídia antiga): tudo como antes', async () => {
+    const repo = await f.criar();
+    const { sintonia } = montar(repo);
+    await sintonia.receber(recebida({}));
+    const [c] = await repo.listarConversas();
+    const foto = await midiaDe(repo, c!.id);
+    expect((await repo.miniaturas([foto.id])).size).toBe(0);
+    expect(await repo.miniaturas([])).toEqual(new Map());
   });
 });

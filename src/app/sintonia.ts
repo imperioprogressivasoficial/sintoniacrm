@@ -1539,6 +1539,8 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
   if (r.legenda) a.legenda = r.legenda;
   if (r.tamanho !== undefined) a.tamanho = r.tamanho;
   if (r.voz) a.voz = true;
+  if (r.largura && r.altura) { a.largura = r.largura; a.altura = r.altura; } /* velocidade */
+  if (r.miniatura) a.miniatura = r.miniatura; /* velocidade: miniatura do WhatsApp (guardada junto da mídia) */
   if (r.tamanho !== undefined && r.tamanho > LIMITE_MIDIA) a.situacao = 'grande';
   else if (!r.base64 && !canal.baixarMidia) a.situacao = 'falhou';
   return a;

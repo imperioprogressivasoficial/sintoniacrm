@@ -13,6 +13,8 @@
 <script src="/telas/vistos.js"></script>
 <!-- fluidez2: ordem de chegada na abertura (lista primeiro; contadores e o resto depois) e pedidos repetidos juntados -->
 <script src="/telas/prioridade.js"></script>
+<!-- velocidade: telas fora da primeira vista (Dashboard, Pipeline, Análises, Automações…) chegam só quando abrem, ou em segundo plano depois que a lista apareceu -->
+<script src="/telas/sob-demanda.js"></script>
 <!-- fluidez2: "Ocultar dados dos clientes" (nomes, números e fotos desfocados); antes da tela aparecer -->
 <script src="/telas/privacidade.js"></script>
 <title>Sintonia CRM</title>
@@ -1075,6 +1077,12 @@ html[data-tema="escuro"] .fz-veu { --fz-v1: rgba(58,160,255,.20); --fz-v2: rgba(
 .mid-video.fz-veu:not(.fz-ok) { aspect-ratio: 16 / 9; }
 .mid-foto.fz-veu.fz-ok { background: var(--midia-caixa); } .bal.fig .mid-foto.fz-veu { background: transparent; }
 .mid-espera.fz-veu { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+/* velocidade: miniatura do WhatsApp desfocada (sem animação em loop): na espera do servidor e enquanto a foto baixa no aparelho */
+.mid-espera.mid-mini { position: relative; overflow: hidden; padding: 0; height: auto; aspect-ratio: var(--fz-proporcao, 4 / 3); max-height: 420px; align-content: end; isolation: isolate; }
+.mid-mini > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(12px); transform: scale(1.15); z-index: -1; }
+.mid-mini-txt { margin: 0 0 10px; padding: 3px 10px; border-radius: 999px; background: rgba(7, 29, 51, .55); color: #fff; font-size: 12px; font-weight: 500; }
+.mid-foto.mid-mini-fundo { isolation: isolate; }
+.mid-foto.mid-mini-fundo::before { content: ""; position: absolute; inset: 0; background: var(--mid-mini) center / cover no-repeat; filter: blur(12px); transform: scale(1.15); z-index: -1; }
 .esq-msgs { display: grid; gap: 10px; padding: 14px 4px; filter: blur(2.5px); opacity: 0; animation: fz-aparece .4s ease .25s 1 forwards; pointer-events: none; }
 .esq-msgs i { display: block; height: 38px; border-radius: 14px; background: var(--esq, rgba(13,34,64,.09)); }
 .esq-msgs i.e { justify-self: start; border-top-left-radius: 4px; } .esq-msgs i.d { justify-self: end; border-top-right-radius: 4px; background: var(--esq-d, rgba(16,110,190,.13)); }
@@ -2587,6 +2595,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   function criarNoMidia(m, c) {
     const a = m.anexo, url = urlMidia(c, m);
     const visual = a.tipo === 'imagem' || a.tipo === 'video' || a.tipo === 'figurinha';
+    /* velocidade: a miniatura que o WhatsApp manda junto aparece na hora, desfocada, até a foto de verdade chegar */
+    const mini = (a.tipo === 'imagem' || a.tipo === 'video') && typeof a.miniatura === 'string' && a.miniatura.length < 16000 && /^[A-Za-z0-9+/]+=*$/.test(a.miniatura) ? 'data:image/jpeg;base64,' + a.miniatura : '';
+    const proporcao = a.largura > 0 && a.altura > 0 ? `${a.largura} / ${a.altura}` : '';
+    if (a.situacao === 'pendente' && mini) {
+      const cx = el('div', { class: 'mid-espera mid-mini', role: 'img', 'aria-label': (a.tipo === 'video' ? 'Vídeo' : 'Foto') + ' baixando' },
+        el('img', { src: mini, alt: '', 'aria-hidden': 'true', decoding: 'async' }), el('span', { class: 'mid-mini-txt', text: 'Baixando…' }));
+      if (proporcao) cx.style.setProperty('--fz-proporcao', proporcao);
+      return cx;
+    }
     if (a.situacao === 'pendente') {
       return visual ? el('div', { class: 'mid-espera fz-veu' }, el('span', { class: 'girando' }), el('span', { text: 'Baixando…' })) /* fluidez2: véu desfocado */
         : linhaDoc(a, 'Baixando…', el('span', { class: 'girando' }));
@@ -2608,14 +2625,15 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       img.addEventListener('error', pronta, { once: true });
       // A foto carrega depois: se a conversa estava no fim, continua no fim.
       img.addEventListener('load', () => { const cx = $('msgs'); if (cx.contains(img) && cx.scrollHeight - cx.scrollTop - cx.clientHeight < img.clientHeight + 120) cx.scrollTop = cx.scrollHeight; });
-      const b = el('button', { class: 'mid-foto fz-veu', type: 'button', 'aria-label': a.tipo === 'imagem' ? 'Abrir foto' : 'Figurinha' }, img);
+      const b = el('button', { class: 'mid-foto fz-veu' + (mini ? ' mid-mini-fundo' : ''), type: 'button', 'aria-label': a.tipo === 'imagem' ? 'Abrir foto' : 'Figurinha' }, img);
+      if (mini) b.style.setProperty('--mid-mini', `url("${mini}")`); /* velocidade: miniatura desfocada por baixo enquanto a foto baixa */
       if (a.largura > 0 && a.altura > 0) b.style.setProperty('--fz-proporcao', `${a.largura} / ${a.altura}`); /* fluidez2: proporção certa quando o WhatsApp informa */
       if (img.complete && img.naturalWidth) pronta();
       if (a.tipo === 'imagem') b.addEventListener('click', () => abrirVisor(url, a.legenda, m.autor === 'cliente' ? nomeDe(c) : (m.autor === 'ia' ? 'IA da Sintonia' : m.autorNome || 'Equipe'), m.em));
       return b;
     }
     if (a.tipo === 'video') { /* fluidez2: véu até o primeiro quadro chegar */
-      const v = el('video', { class: 'mid-video fz-veu', src: url, controls: '', preload: 'metadata', playsinline: '' });
+      const v = el('video', { class: 'mid-video fz-veu', src: url, controls: '', preload: 'metadata', playsinline: '', ...(mini ? { poster: mini } : {}) }); /* velocidade: miniatura como capa */
       const ok = () => v.classList.add('fz-ok'); v.addEventListener('loadeddata', ok, { once: true }); v.addEventListener('error', ok, { once: true });
       return v;
     }
@@ -3842,32 +3860,10 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 })();
 </script>
 <script src="/painel-lateral.js" defer></script>
-<script src="/telas/comercial.js" defer></script>
-<script src="/telas/painel.js" defer></script>
-<script src="/telas/ia.js" defer></script>
-<script src="/telas/economia-ia.js" defer></script><!-- calculadora: Inteligência › Quanto economiza -->
-<script src="/telas/agentes-ia.js" defer></script>
-<script src="/telas/ia-estado.js" defer></script><!-- ia-completa: aba "O que a IA faz" -->
 <script src="/telas/icones.js" defer></script><!-- conversa-ux: conjunto de ícones -->
 <script src="/telas/conversa-extras.js" defer></script>
-<script src="/telas/funil.js" defer></script>
-<script src="/telas/funil-topo.js" defer></script><!-- crm-topo: topo do Pipeline, filtro completo, lista -->
-<!-- pipeline-celular: o CRM do celular (Foco, Lista, Colunas) -->
-<script src="/telas/funil-celular.js" defer></script>
-<script src="/telas/funil-modos.js" defer></script><!-- pipeline-modos: Foco · Lista · Colunas no computador -->
-<script src="/telas/automacoes.js" defer></script>
-<script src="/telas/bot.js" defer></script>
-<script src="/telas/etapa-acoes.js" defer></script><!-- etapa-entrada: Entrada de leads (cadeado) e a caixa de automações da etapa -->
-<script src="/telas/relatorios.js" defer></script>
-<script src="/telas/desempenho.js" defer></script>
-<script src="/telas/analises.js" defer></script><!-- analises -->
 <script src="/telas/perdas.js" defer></script><!-- perdas-saude: motivo de perda obrigatório -->
-<script src="/telas/saude.js" defer></script><!-- perdas-saude: painel de saúde da gestão -->
 <script src="/telas/sem-internet.js" defer></script><!-- sem-pagamento: aviso de sem internet -->
-<script src="/telas/relatorio-dia.js" defer></script><!-- relatorio-dia: Análises › Dia a dia e relatório automático -->
-<script src="/telas/leads.js" defer></script>
-<script src="/telas/transmissoes.js" defer></script>
-<script src="/telas/email.js" defer></script>
 <script src="/telas/followup.js" defer></script>
 <!-- nps-posvenda: finalizar atendimento, pesquisa de satisfação (NPS), pós-venda pronto -->
 <script src="/telas/nps.js" defer></script>
@@ -3880,7 +3876,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/topo-lista.js" defer></script><!-- topo-lista: mesma barra de cima em Conversas, Grupos e Equipe (celular) -->
 <script src="/telas/conversas-abas.js" defer></script>
 <script src="/telas/grupos.js" defer></script>
-<script src="/telas/agenda.js" defer></script>
 <script src="/telas/notificacoes.js" defer></script>
 <script src="/telas/instalar.js" defer></script>
 <script src="/telas/alertas.js" defer></script>
@@ -3891,7 +3886,6 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 <script src="/telas/chat-ia.js" defer></script>
 <script src="/telas/serena-chave.js" defer></script><!-- serena-chave: chave "Serena ligada/pausada", faixa em Conversas e chip -->
 <script src="/telas/serena.js" defer></script>
-<script src="/telas/ligacoes.js" defer></script>
 <script src="/acesso-rapido.js" defer></script>
 <script>
 // Bolinha de acesso rápido (AssistiveTouch): atalhos do dia a dia num toque. Liga/desliga em Mais.
@@ -3985,17 +3979,11 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/criativos.js" defer></script><!-- marketing: Central de criativos -->
 <script src="/telas/acessos.js" defer></script>
 <script src="/telas/tags.js" defer></script>
-<script src="/telas/clientes.js" defer></script>
 <script src="/telas/fluxos-mensagens.js" defer></script><!-- respostas-fluxos -->
 <script src="/telas/respostas.js" defer></script>
-<script src="/telas/reunioes.js" defer></script>
-<script src="/telas/rotina.js" defer></script>
 <script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
 <script src="/telas/balao-fantasma.js" defer></script><!-- balao-fantasma: sugestão da IA como balão tracejado na conversa -->
 <script src="/telas/menu-mensagem.js" defer></script><!-- menu-mensagem: segurar a mensagem abre o menu (reagir, responder, encaminhar, editar, apagar, fixar…) -->
-<script src="/telas/distribuicao.js" defer></script><!-- automacao-vendas -->
-<script src="/telas/scripts.js" defer></script>
-<script src="/telas/integracoes.js" defer></script><!-- integracoes -->
 <script src="/telas/empresa.js" defer></script><!-- layout-telas -->
 <script src="/telas/conta.js" defer></script><!-- empresa-conta: Conta da pessoa -->
 <script src="/telas/capa-perfil.js" defer></script><!-- capa-perfil: capa com foto e atalhos por pessoa -->
@@ -4009,6 +3997,38 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
 <script src="/telas/conversa-extra.js" defer></script><script src="/telas/topo-conversa.js" defer></script><script src="/telas/sair.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/voltar-celular.js" defer></script><!-- rotas-celular: botão "Voltar" nas telas de dentro (celular) -->
+<!-- velocidade: estas telas não rodam na abertura; public/telas/sob-demanda.js baixa cada uma quando a pessoa abre (o ?v= da versão entra aqui como em qualquer script) -->
+<template id="telas-sob-demanda">
+<script src="/telas/comercial.js"></script>
+<script src="/telas/painel.js"></script>
+<script src="/telas/ia.js"></script>
+<script src="/telas/economia-ia.js"></script>
+<script src="/telas/agentes-ia.js"></script>
+<script src="/telas/ia-estado.js"></script>
+<script src="/telas/funil.js"></script>
+<script src="/telas/funil-topo.js"></script>
+<script src="/telas/funil-celular.js"></script>
+<script src="/telas/funil-modos.js"></script>
+<script src="/telas/relatorios.js"></script>
+<script src="/telas/desempenho.js"></script>
+<script src="/telas/etapa-acoes.js"></script>
+<script src="/telas/analises.js"></script>
+<script src="/telas/saude.js"></script>
+<script src="/telas/automacoes.js"></script>
+<script src="/telas/bot.js"></script>
+<script src="/telas/relatorio-dia.js"></script>
+<script src="/telas/leads.js"></script>
+<script src="/telas/email.js"></script>
+<script src="/telas/transmissoes.js"></script>
+<script src="/telas/agenda.js"></script>
+<script src="/telas/ligacoes.js"></script>
+<script src="/telas/reunioes.js"></script>
+<script src="/telas/rotina.js"></script>
+<script src="/telas/clientes.js"></script>
+<script src="/telas/distribuicao.js"></script>
+<script src="/telas/scripts.js"></script>
+<script src="/telas/integracoes.js"></script>
+</template>
 <script src="/telas/rotas.js" defer></script><!-- rotas-fontes: endereços /app/<tela> (depois de todas as telas) -->
 <script>
 // imperio: presença da equipe (disponível / fora do ar)

@@ -20,7 +20,7 @@ import type { MensagemRecebida, StatusRecebido } from './channels/tipos.js';
 import { registrarAuth, type OpcoesAuth } from './auth/rotas.js';
 import { exigir, pode } from './auth/permissoes.js';
 import { escopoDe, podeAssumir, podeReceber, podeTransferir, podeVer, veTudo } from './auth/acesso.js';
-import type { Conversa } from './domain.js';
+import type { Conversa, Mensagem } from './domain.js';
 import { registrarCompressao } from './web/compressao.js';
 import { registrarPaginas } from './web/paginas.js';
 import { atualizacoesDeHoje } from './app/atualizacoes.js';
@@ -489,6 +489,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     return '\ufeff' + texto;
   });
 
+  /** velocidade: miniatura nas até 40 fotos/vídeos mais novos que ainda podem aparecer sem a foto (a lista nunca leva). */
+  const comMiniaturas = async (ms: Mensagem[]): Promise<Mensagem[]> => {
+    const visuais = ms.filter((m) => m.anexo && (m.anexo.tipo === 'imagem' || m.anexo.tipo === 'video') && (m.anexo.situacao === 'pendente' || m.anexo.situacao === 'pronta')).slice(-40);
+    if (!visuais.length) return ms;
+    const mapa = (await d.repo.miniaturas?.(visuais.map((m) => m.id)).catch(() => null)) ?? new Map<string, string>();
+    if (!mapa.size) return ms;
+    return ms.map((m) => (m.anexo && mapa.has(m.id) ? { ...m, anexo: { ...m.anexo, miniatura: mapa.get(m.id) } } : m));
+  };
   app.get('/api/conversas/:id', async (req, reply) => {
     const conversa = await conversaVisivel(req);
     const id = conversa.id;
@@ -503,9 +511,11 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       : { assumir: !conversa.responsavelId, transferir: true };
     const tags = d.gestao?.tags ? await d.gestao.tags.daConversa(id) : [];
     // robustez: ETag (o app pede a conversa aberta a cada 4 s; sem novidade, 304 sem corpo).
+    /* velocidade: as fotos e vídeos mais recentes levam a miniatura do WhatsApp (desfocada até a foto chegar) */
+    const mensagens = await comMiniaturas(await d.repo.mensagens(id, 200));
     return responderComEtag(req, reply, {
       conversa: { ...conversa, tags },
-      mensagens: await d.repo.mensagens(id, 200),
+      mensagens,
       sugestao: await d.repo.sugestao(id),
       digitando,
       permissoes,
