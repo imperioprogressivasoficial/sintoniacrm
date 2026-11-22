@@ -96,11 +96,40 @@
     for (const k of ['id', 'senhaDefinida', 'apiChaveDefinida', 'testadaEm', 'testeErro', 'imapLidoEm', 'imapErro', 'enviadosHoje']) delete corpo[k];
     if (!corpo.remetenteEmail && corpo.usuario?.includes('@')) corpo.remetenteEmail = corpo.usuario;
     for (const k of ['smtpPorta', 'imapPorta', 'porMinuto', 'limiteDiario']) corpo[k] = corpo[k] ? Number(corpo[k]) : undefined;
+    // sincronizando: conta nova (ou senha/chave trocada) abre a folha "Sincronizando o e-mail".
+    const conectando = corpo.ativa !== false && (!c.id || Boolean(corpo.senha || corpo.apiChave));
     try {
-      await api(c.id ? `/api/email/contas/${c.id}` : '/api/email/contas', { method: c.id ? 'PUT' : 'POST', body: JSON.stringify(corpo) });
+      const salva = await api(c.id ? `/api/email/contas/${c.id}` : '/api/email/contas', { method: c.id ? 'PUT' : 'POST', body: JSON.stringify(corpo) });
       s.editando = null;
       await carregar();
+      if (conectando && salva?.id) sincronizar(salva);
     } catch (e) { res.className = 'res erro'; res.textContent = e.message; }
+  }
+  /* sincronizando: passos de verdade (login no servidor; IMAP se ligado). O e-mail não traz histórico: a leitura começa de agora. */
+  async function sincronizar(conta) {
+    const S = window.SintoniaSincronizando; if (!S) return;
+    const smtp = conta.provedor === 'smtp';
+    const passos = [{ texto: smtp ? 'Conferindo o login no servidor de e-mail' : `Conferindo a chave da API ${conta.provedor === 'resend' ? 'Resend' : 'Brevo'}`, pronto: smtp ? 'Login conferido' : 'Chave conferida', fazer: async () => {
+      const r = await api(`/api/email/contas/${conta.id}/conferir`, { method: 'POST', body: '{}' });
+      if (!r.ok) throw new Error(r.erro || 'o servidor não respondeu');
+      return r.mensagem;
+    } }];
+    if (smtp && conta.imapLigado) passos.push({ texto: 'Abrindo a caixa de entrada para ler as respostas', pronto: 'Caixa de entrada ligada', opcional: true, maxMs: 40000, fazer: async () => {
+      await api('/api/email/contas/ler-caixas', { method: 'POST', body: '{}' });
+      const lista = await api('/api/email/contas'); const agora = (Array.isArray(lista) ? lista : lista?.contas || []).find((k) => k.id === conta.id);
+      if (agora?.imapErro) throw new Error(`IMAP: ${agora.imapErro}`);
+      return 'As respostas novas serão lidas daqui pra frente';
+    } });
+    await S.abrir({
+      nome: 'e-mail', artigo: 'o', sub: `Ligando ${conta.remetenteEmail || conta.nome} à Sintonia.`, passos,
+      fim: () => ({
+        titulo: 'E-mail conectado',
+        texto: [`A Sintonia já pode mandar e-mails como ${conta.remetenteNome ? conta.remetenteNome + ' <' + conta.remetenteEmail + '>' : conta.remetenteEmail}.`,
+          smtp && conta.imapLigado ? 'As respostas das clientes chegam na ficha delas a partir de agora. Os e-mails antigos da caixa não são trazidos.' : 'Para ver as respostas das clientes na ficha, ligue “Ler respostas e avisos de erro (IMAP)” em Editar.'].join('\n'),
+      }),
+      falha: (x) => ({ titulo: 'O servidor de e-mail não aceitou', texto: `A conta foi salva, mas o login não passou: ${x?.message || 'sem resposta'}. Confira o usuário e a senha${smtp ? ' (no Gmail, a senha de app)' : ''} e toque em Editar.` }),
+    });
+    carregar();
   }
   async function apagar() {
     if (!confirm('Apagar esta conta? Os e-mails na fila dela serão cancelados.')) return;
