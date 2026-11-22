@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-22 02:40 UTC (21/11, 23h40 na Bahia)
-commit: 1e34bc4
-pacote sha256: a4cba0fd54e27fc9589d68fac6191fa8cc87e70b01b2dbe2c463b7824179bac4
+data: 2026-11-22 02:48 UTC (21/11, 23h48 na Bahia)
+commit: 90c2bc3
+pacote sha256: e45f647a81943cb71ae95a33a26a35ca7844d4bf97f9c886a7a85686e38d93df
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1e34bc4.b64); pode apagar depois.
-observação: em cima do 779109e. Entra: dica "Toque aqui…" por cima dos balões; página de vendas com prints atuais (?v=2211) e cena Copiloto com balão fantasma.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-90c2bc3.b64); pode apagar depois.
+observação: em cima do 1e34bc4. Entra: claude/sincronizando (folha "Sincronizando" no Instagram, Facebook, TikTok, WhatsApp oficial e e-mail; rota POST /api/email/contas/:id/conferir).
