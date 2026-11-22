@@ -7,6 +7,7 @@ import { assinaturaTikTokValida, lerLeadsTikTok, type LeadTikTok } from '../chan
 import type { CanalWhatsApp, MensagemRecebida } from '../channels/tipos.js';
 import type { UnidadeId } from '../domain.js';
 import { novoVerifyToken, type Campo, type Conexoes } from './conexoes.js';
+import { andamentoParaTela, type ContaHistoricoMeta, type HistoricoMeta } from './historico-meta.js';
 import { existeUnidade, primeiraUnidade, zUnidade } from '../unidades.js';
 
 /**
@@ -179,6 +180,15 @@ export interface OpcoesRotasSociais {
   quem: (req: FastifyRequest) => Promise<string>;
   baseDe: (req: FastifyRequest) => string;
   fetchFn?: typeof fetch;
+  /** meta-historico: traz as conversas antigas do Messenger/Instagram ao conectar. Ausente = a tela diz que não traz. */
+  historicoMeta?: HistoricoMeta;
+}
+
+/** meta-historico: a conta ligada agora, do jeito que o importador das conversas antigas usa. */
+export function contaHistoricoMeta(c: Conexoes, rede: 'messenger' | 'instagram', fetchFn?: typeof fetch): ContaHistoricoMeta | undefined {
+  const conta = contaDaRede(c, rede);
+  if (!conta) return undefined;
+  return { contaId: conta.contaId, listar: (o) => canalDaRede(conta, fetchFn).listarConversas(o) };
 }
 
 export const RedeParam = z.enum(['messenger', 'instagram', 'tiktok']);
@@ -256,6 +266,20 @@ export function registrarRotasSociais(app: FastifyInstance, o: OpcoesRotasSociai
     } catch (e) {
       return { ok: false, erro: String((e as Error).message ?? e).slice(0, 400) };
     }
+  });
+
+  /* meta-historico: começa a trazer as conversas antigas (POST) e mostra o andamento (GET). */
+  const RedeMeta = z.enum(['messenger', 'instagram'], { message: 'O TikTok não tem conversas antigas para trazer' });
+  app.post('/api/conexoes/sociais/:rede/historico', async (req, reply) => {
+    await o.quem(req);
+    const rede = RedeMeta.parse((req.params as { rede: string }).rede);
+    if (!o.historicoMeta) return reply.code(503).send({ erro: 'Trazer conversas antigas não está disponível nesta instalação' });
+    return andamentoParaTela(await o.historicoMeta.iniciar(rede));
+  });
+  app.get('/api/conexoes/sociais/:rede/historico', async (req) => {
+    await o.quem(req);
+    const rede = RedeMeta.parse((req.params as { rede: string }).rede);
+    return { disponivel: Boolean(o.historicoMeta), ...andamentoParaTela(await o.historicoMeta?.situacao(rede)) };
   });
 
   /** Gera outro Verify Token (o antigo deixa de valer: cole o novo no painel). */

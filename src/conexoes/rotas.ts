@@ -30,6 +30,8 @@ export interface OpcoesConexoes {
   sincronizarGrupos?: () => Promise<unknown>;
   /** Quanto do histórico do WhatsApp já chegou depois de conectar. */
   progressoHistorico?: (canalId: string) => { mensagens: number; conversas: number; em: Date } | undefined;
+  /** meta-historico: conversas antigas do Messenger/Instagram ao conectar (src/conexoes/historico-meta.ts). */
+  historicoMeta?: import('./historico-meta.js').HistoricoMeta;
   /** Saúde do WhatsApp não oficial (selo de cada canal, reconectar, avisos). */
   saude?: SaudeWhatsApp;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
@@ -261,7 +263,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
   });
 
   // ---------- Facebook Messenger, Instagram Direct e TikTok ----------
-  registrarRotasSociais(app, { conexoes: c, quem, baseDe, fetchFn: o.fetchFn });
+  registrarRotasSociais(app, { conexoes: c, quem, baseDe, fetchFn: o.fetchFn, ...(o.historicoMeta ? { historicoMeta: o.historicoMeta } : {}) });
 
   app.post('/api/conexoes/testar', async (req, reply) => {
     await quem(req);

@@ -30,7 +30,8 @@ import { EvolutionAdmin } from './channels/evolution-admin.js';
 import { ArmazemSaudeMemoria, ArmazemSaudePostgres, SaudeWhatsApp } from './channels/whatsapp-saude.js';
 import { CanalMeta } from './channels/meta.js';
 import { canaisEvolution, numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
-import { contaDaRede, numerosSociais } from './conexoes/sociais.js';
+import { contaDaRede, contaHistoricoMeta, numerosSociais } from './conexoes/sociais.js';
+import { ArmazemHistoricoMetaMemoria, ArmazemHistoricoMetaPostgres, HistoricoMeta } from './conexoes/historico-meta.js';
 import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/chamadas.js';
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp, StatusRecebido } from './channels/tipos.js';
@@ -774,6 +775,14 @@ const avisosReuniao = pool
 const importadorHistorico = pool
   ? new ImportadorHistorico({ fila: new FilaHistoricoPostgres(pool), importar: (m) => sintonia.importarHistorico(m), log })
   : undefined;
+/* meta-historico: conversas antigas do Instagram (Direct) e do Facebook (Messenger) ao conectar, com o andamento no banco. */
+const historicoMeta = new HistoricoMeta({
+  armazem: pool ? new ArmazemHistoricoMetaPostgres(pool) : new ArmazemHistoricoMetaMemoria(),
+  conta: (rede) => contaHistoricoMeta(conexoes, rede),
+  importar: (m) => sintonia.importarHistorico(m),
+  pausaMs: 400,
+  log,
+});
 /* perdas-saude: conta bloqueada por muitas tentativas de senha errada: a dona fica sabendo pelo sino e pelo e-mail. */
 async function avisarContaBloqueada(u: Usuario, b: BloqueioConta): Promise<void> {
   const hora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bahia' }).format(new Date(b.ate));
@@ -831,6 +840,7 @@ const app = criarServidor({
   conexoes: {
     conexoes,
     agendas,
+    historicoMeta /* meta-historico */,
     sincronizarGrupos: () => grupos.sincronizar(),
     testarIA: async (chave) => {
       await new Anthropic({ apiKey: chave }).models.list({ limit: 1 });
@@ -1403,6 +1413,7 @@ void rodadaReserva();
 
 trabalhador.iniciar();
 nomesWhatsapp.iniciar(); // contato-nome: primeira rodada uns segundos depois de subir, sem segurar a subida
+void historicoMeta.continuar().catch((e) => log('Histórico da Meta: não deu para continuar ao subir', String(e))); // meta-historico
 importadorHistorico?.avisar(); // robustez: histórico que ficou pela metade antes de reiniciar continua agora
 await app.listen({ port: cfg.PORT, host: '0.0.0.0' });
 
@@ -1424,6 +1435,7 @@ for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
     await app.close().catch(() => {});
     await trabalhador.parar();
     await importadorHistorico?.encerrar().catch(() => {});
+    await historicoMeta.encerrar().catch(() => {}); // meta-historico
     // A IA em andamento tem até 15 s para terminar; o que ficar na fila volta pela tarefa "reavaliar" do banco.
     await Promise.race([filaIa?.encerrar(), new Promise((r) => setTimeout(r, 15_000))]);
     await Promise.race([Promise.all([rodadaRelogio.ocioso(), rodadaFluxos.ocioso(), rodadaAgendadas.ocioso(), rodadaTransmissoes.ocioso(), rodadaWebhooks.ocioso(), rodadaReserva.ocioso()]).catch(() => {}), new Promise((r) => setTimeout(r, 10_000))]);

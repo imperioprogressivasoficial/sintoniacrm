@@ -297,6 +297,29 @@ abstract class CanalSocialBase implements CanalWhatsApp {
     return { conteudo, ...(mimetype ? { mimetype } : {}) };
   }
 
+  /** Onde ficam as conversas da conta (Conversations API). */
+  protected abstract caminhoConversas(): string;
+  /** Campos de cada mensagem pedidos na leitura das conversas antigas. */
+  protected abstract readonly camposMensagemAntiga: string;
+
+  /**
+   * meta-historico: uma página das conversas mais recentes da conta (as mais novas primeiro), com até `mensagens`
+   * mensagens de cada (a Meta só dá detalhes das 20 mais recentes de cada conversa).
+   * Permissões: Messenger = pages_messaging (+ pages_manage_metadata, pages_read_engagement);
+   * Instagram = instagram_manage_messages (login do Facebook) ou instagram_business_manage_messages (login do Instagram).
+   * A janela de 24 h não vale para ler.
+   */
+  async listarConversas(o: { depois?: string; porPagina: number; mensagens: number }): Promise<PaginaConversasSocial> {
+    const q = new URLSearchParams({
+      platform: this.tipo,
+      fields: `participants,updated_time,messages.limit(${Math.min(20, Math.max(1, o.mensagens))}){${this.camposMensagemAntiga}}`,
+      limit: String(o.porPagina),
+    });
+    if (o.depois) q.set('after', o.depois);
+    const j = await this.pedir<unknown>(`${this.caminhoConversas()}?${q}`, { method: 'GET' }, 'a leitura das conversas antigas');
+    return lerConversasSocial(j, this.rede, canalIdSocial(this.rede, this.conta.contaId), [this.conta.contaId, this.conta.pageId ?? '']);
+  }
+
   protected abstract camposPerfil: string;
   protected abstract lerPerfil(j: Obj): PerfilSocial;
 
@@ -320,6 +343,93 @@ abstract class CanalSocialBase implements CanalWhatsApp {
   }
 }
 
+// ---------------------------------------------------------------- conversas antigas (meta-historico)
+
+/** Uma conversa lida da Graph API (Conversations API), já com as mensagens no formato do webhook. */
+export interface ConversaSocialAntiga {
+  id: string;
+  atualizada: Date;
+  /** Identificador da cliente (fb:<PSID> / ig:<IGSID>). */
+  telefone: string;
+  mensagens: MensagemRecebida[];
+}
+export interface PaginaConversasSocial {
+  conversas: ConversaSocialAntiga[];
+  /** Cursor da página seguinte (vazio = acabou). */
+  proximo?: string;
+}
+
+const dataMeta = (v: unknown): Date | undefined => {
+  const t = str(v);
+  if (!t) return undefined;
+  // A Graph API manda "2026-11-20T14:03:11+0000" (sem os dois-pontos no fuso).
+  const d = new Date(t.replace(/([+-]\d{2})(\d{2})$/, '$1:$2'));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+};
+
+/** Anexo da mensagem na Conversations API (attachments.data[]: image_data / video_data / file_url). */
+function anexoAntigo(a: Obj | undefined): AnexoRecebido | undefined {
+  if (!a) return undefined;
+  const mime = str(a.mime_type);
+  const url = str(obj(a.image_data)?.url) ?? str(obj(a.video_data)?.url) ?? str(a.file_url);
+  if (!url || !/^https:\/\//.test(url)) return undefined;
+  const tipo: TipoAnexo = obj(a.image_data) || mime?.startsWith('image/') ? 'imagem'
+    : obj(a.video_data) || mime?.startsWith('video/') ? 'video'
+      : mime?.startsWith('audio/') ? 'audio' : 'documento';
+  const anexo: AnexoRecebido = { tipo, ref: url };
+  if (mime) anexo.mimetype = mime;
+  if (str(a.name)) anexo.nomeArquivo = str(a.name);
+  const tam = Number(a.size);
+  if (Number.isFinite(tam) && tam > 0) anexo.tamanho = tam;
+  if (tipo === 'audio') anexo.voz = true;
+  return anexo;
+}
+
+/**
+ * Converte a resposta de GET /{conta}/conversations em conversas e mensagens (mesmo formato do webhook).
+ * `contas` = ids da loja na rede (Página, conta do Instagram): quem tem um desses ids é a loja (deMim).
+ */
+export function lerConversasSocial(corpo: unknown, rede: 'facebook' | 'instagram', contaCanal: string, contas: string[]): PaginaConversasSocial {
+  const c = obj(corpo);
+  const daLoja = new Set(contas.filter(Boolean));
+  const saida: ConversaSocialAntiga[] = [];
+  for (const bruta of Array.isArray(c?.data) ? (c.data as unknown[]) : []) {
+    const conv = obj(bruta);
+    const id = str(conv?.id);
+    if (!conv || !id) continue;
+    const msgs = (Array.isArray(obj(conv.messages)?.data) ? (obj(conv.messages)!.data as unknown[]) : []).map(obj).filter((m): m is Obj => Boolean(m));
+    const participantes = (Array.isArray(obj(conv.participants)?.data) ? (obj(conv.participants)!.data as unknown[]) : []).map(obj).filter((p): p is Obj => Boolean(p));
+    // A cliente: o participante que não é a loja (ou, sem participantes, quem escreveu/recebeu sem ser a loja).
+    const pessoas = [...participantes, ...msgs.flatMap((m) => [obj(m.from), ...((obj(m.to)?.data as unknown[] | undefined) ?? []).map(obj)])].filter((p): p is Obj => Boolean(p));
+    const cliente = pessoas.find((p) => str(p.id) && !daLoja.has(str(p.id)!));
+    const clienteId = str(cliente?.id);
+    if (!clienteId) continue;
+    const nomeCliente = str(cliente?.name) ?? (str(cliente?.username) ? `@${str(cliente!.username)}` : undefined);
+    const telefone = identificadorSocial(rede, clienteId);
+    const mensagens: MensagemRecebida[] = [];
+    for (const m of msgs) {
+      const mid = str(m.id);
+      const em = dataMeta(m.created_time);
+      if (!mid || !em) continue;
+      const deId = str(obj(m.from)?.id);
+      const deMim = deId ? deId !== clienteId : false;
+      const anexo = anexoAntigo(obj(((obj(m.attachments)?.data as unknown[] | undefined) ?? [])[0]));
+      const escrito = str(m.message)?.trim();
+      const compartilhado = str(obj(((obj(m.shares)?.data as unknown[] | undefined) ?? [])[0])?.link);
+      const texto = anexo ? textoDoAnexo(anexo.tipo, escrito) : escrito ?? (compartilhado ? `[publicação compartilhada] ${compartilhado}` : '[mensagem sem texto: veja no app da rede]');
+      mensagens.push({
+        canalId: contaCanal, telefone, texto, deMim, idExterno: mid, em, rede,
+        ...(nomeCliente && !deMim ? { nome: nomeCliente } : {}),
+        ...(anexo ? { anexo } : {}),
+      });
+    }
+    saida.push({ id, atualizada: dataMeta(conv.updated_time) ?? mensagens[0]?.em ?? new Date(0), telefone, mensagens });
+  }
+  const paging = obj(c?.paging);
+  const proximo = str(paging?.next) ? str(obj(paging?.cursors)?.after) : undefined;
+  return { conversas: saida, ...(proximo ? { proximo } : {}) };
+}
+
 const TIPO_ENVIO: Record<MidiaEnvio['tipo'], string> = { imagem: 'image', video: 'video', audio: 'audio', documento: 'file' };
 
 /** Facebook Messenger: mensagens da Página. canalId = fb-<Page ID>. */
@@ -327,6 +437,11 @@ export class CanalMessenger extends CanalSocialBase {
   readonly tipo = 'messenger' as const;
   protected readonly rede = 'facebook' as const;
   protected readonly camposPerfil = 'first_name,last_name,profile_pic';
+  protected readonly camposMensagemAntiga = 'id,created_time,from,to,message,attachments{mime_type,name,size,image_data,video_data,file_url}';
+
+  protected caminhoConversas() {
+    return `${encodeURIComponent(this.conta.contaId)}/conversations`;
+  }
 
   protected caminhoEnvio() {
     return `${encodeURIComponent(this.conta.contaId)}/messages`;
@@ -362,6 +477,13 @@ export class CanalInstagram extends CanalSocialBase {
   readonly tipo = 'instagram' as const;
   protected readonly rede = 'instagram' as const;
   protected readonly camposPerfil = 'name,username,profile_pic';
+  // Instagram: a Meta não documenta anexos na leitura das conversas; vêm o texto e o link do que foi compartilhado.
+  protected readonly camposMensagemAntiga = 'id,created_time,from,to,message,shares{link}';
+
+  protected caminhoConversas() {
+    if (this.base === GRAPH_INSTAGRAM) return 'me/conversations';
+    return `${encodeURIComponent(this.conta.pageId ?? 'me')}/conversations`;
+  }
 
   protected caminhoEnvio() {
     if (this.base === GRAPH_INSTAGRAM) return `${encodeURIComponent(this.conta.contaId)}/messages`;
