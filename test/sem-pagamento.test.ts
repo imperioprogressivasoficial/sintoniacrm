@@ -113,10 +113,31 @@ describe('nada se compra pelo app', () => {
     expect((await app.inject({ url: '/api/planos' })).statusCode).toBe(401);
   });
 
-  it('páginas sem preço, plano nem compra; app sem a tela de plano', () => {
+  it('página de vendas mostra os planos e o preço, mas contrata só pelo WhatsApp; app sem a tela de plano', () => {
     const ler = (f: string) => readFileSync(new URL(`../public/${f}`, import.meta.url), 'utf8');
     const vendas = ler('index.html');
-    expect(vendas).not.toMatch(/R\$ ?1\.997|R\$ ?497|Começar grátis|Ver planos|id="planos"|Contratar|data-lead|calculadora-ia/);
+    // vendas-planos: os 3 planos voltaram, com o preço de cada um.
+    expect(vendas).toContain('id="planos"');
+    for (const t of ['Essencial', 'Colaborador de IA', 'Empresarial', 'R$ 0', 'R$ 497/mês', 'R$ 1.997', 'Sob medida']) expect(vendas).toContain(t);
+    // Nada se paga, assina ou cadastra pela página: sem formulário, checkout, cartão, Pix ou boleto.
+    expect(vendas).not.toMatch(/<form|checkout|assin(e|ar|atura)|cart[aã]o de cr[eé]dito|\bpix\b|boleto|pagar agora|compre agora|comprar (agora|pelo|no app|no site)|Começar grátis|Contratar o|data-lead|calculadora-ia|\/api\/planos/i);
+    // Todo botão de plano (inclusive o grátis) abre o WhatsApp de vendas com a mensagem pronta citando o plano.
+    const inicio = vendas.indexOf('id="planos"');
+    const secao = vendas.slice(inicio, vendas.indexOf('</section>', inicio));
+    const botoes = secao.match(/<a\b[^>]*class="botao[^"]*"[^>]*>/g) ?? [];
+    expect(botoes).toHaveLength(3);
+    botoes.forEach((b, i) => {
+      const plano = ['Essencial', 'Colaborador de IA', 'Empresarial'][i]!;
+      expect(b).toContain('data-whats ');
+      expect(b).toContain(`data-whats-texto="Olá! Quero o plano ${plano} da Sintonia."`);
+      expect(b).toContain('href="/suporte"');
+    });
+    expect(secao).toContain('fale com a gente no WhatsApp');
+    expect(secao).toContain('Nada é pago pelo site nem pelo app');
+    // Sem o botão redondo fixo do WhatsApp; aviso do lançamento no topo e perto dos planos.
+    expect(vendas).not.toMatch(/class="(v-)?flutuante"/);
+    expect(vendas.split('<b>Lançamento oficial:</b> 3 de março de 2027').length - 1).toBeGreaterThanOrEqual(2);
+    expect(secao).toContain('<b>Lançamento oficial:</b> 3 de março de 2027');
     expect(vendas).toContain('data-whats');
     expect(vendas).toContain('/contato-publico.js');
     for (const p of ['/privacidade', '/termos', '/suporte']) expect(vendas).toContain(`href="${p}"`);
