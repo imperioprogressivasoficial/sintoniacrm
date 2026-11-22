@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-22 01:52 UTC (21/11, 22h52 na Bahia)
-commit: 1f8a043
-pacote sha256: 81146668d0d6bdc01ddaf65afc4fd0cbb5f790e0f9e5884bdc5af215eabce93d
+data: 2026-11-22 02:04 UTC (21/11, 23h04 na Bahia)
+commit: 779109e
+pacote sha256: 17284ccbaf1f8b771b2a92c3a3426ab4a5f974269114930773391007a9a0a1eb
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-1f8a043.b64); pode apagar depois.
-observação: em cima do b465e49. Entra: áudio com a foto de quem mandou (atendente, Serena, cliente).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-779109e.b64); pode apagar depois.
+observação: em cima do 1f8a043. Entra: claude/menu-mensagem (migração 730: segurar a mensagem — reações, responder citando, encaminhar, editar, apagar, fixar, favoritar, notas, traduzir, dados).
