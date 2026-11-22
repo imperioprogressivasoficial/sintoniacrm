@@ -352,7 +352,7 @@
     <label>Verify Token <span class="dica">gerado pela Sintonia</span>
         <span class="copia"><input id="soc-vt-messenger" readonly aria-label="Verify Token"><button class="botao leve mini" data-copiar="soc-vt-messenger">Copiar</button><button class="botao leve mini" data-soc-novo="messenger">Gerar outro</button></span>
       </label>
-    <div class="linha"><button class="botao" data-salvar="messengerLigado,messengerUnidade,messengerPageId,messengerToken,messengerAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="messenger">Testar</button><span class="res" id="soc-res-messenger"></span></div>
+    <div class="linha"><button class="botao" data-salvar="messengerLigado,messengerUnidade,messengerPageId,messengerToken,messengerAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="messenger">Testar</button><button class="botao leve" data-soc-historico="messenger">Trazer conversas antigas</button><span class="res" id="soc-res-messenger"></span></div>
     <details class="passos">
       <summary>Passo a passo no painel da Meta</summary>
       <ol>
@@ -384,7 +384,7 @@
     <label>Verify Token <span class="dica">gerado pela Sintonia</span>
         <span class="copia"><input id="soc-vt-instagram" readonly aria-label="Verify Token"><button class="botao leve mini" data-copiar="soc-vt-instagram">Copiar</button><button class="botao leve mini" data-soc-novo="instagram">Gerar outro</button></span>
       </label>
-    <div class="linha"><button class="botao" data-salvar="instagramLigado,instagramUnidade,instagramAccountId,instagramPageId,instagramToken,instagramAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="instagram">Testar</button><span class="res" id="soc-res-instagram"></span></div>
+    <div class="linha"><button class="botao" data-salvar="instagramLigado,instagramUnidade,instagramAccountId,instagramPageId,instagramToken,instagramAppSecret" data-soc-salvar>Salvar</button><button class="botao leve" data-soc-testar="instagram">Testar</button><button class="botao leve" data-soc-historico="instagram">Trazer conversas antigas</button><span class="res" id="soc-res-instagram"></span></div>
     <details class="passos">
       <summary>Passo a passo no painel da Meta</summary>
       <ol>
@@ -1089,12 +1089,22 @@
     return d;
   }
   /* sincronizando: depois de salvar, a rede que passou a "Ligado" (completa) abre a folha "Sincronizando".
-     Cada passo é uma chamada de verdade; Messenger, Instagram e TikTok não trazem histórico (só o que chega daqui pra frente). */
+     Cada passo é uma chamada de verdade. meta-historico: Messenger e Instagram trazem as conversas antigas
+     (passo "Trazendo conversas antigas", com o andamento do servidor); o TikTok não tem histórico. */
   const REDES = {
-    messenger: { nome: 'Facebook', sub: 'Ligando as mensagens da sua Página do Facebook (Messenger) às Conversas.', conta: 'Conferindo a Página na Meta', contaOk: 'Página conferida na Meta', novos: 'As mensagens novas da Página chegam nas Conversas na hora. As antigas não são trazidas.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
-    instagram: { nome: 'Instagram', sub: 'Ligando as mensagens do Direct às Conversas.', conta: 'Conferindo a conta do Instagram', contaOk: 'Conta do Instagram conferida', novos: 'As mensagens novas do Direct chegam nas Conversas na hora. As antigas não são trazidas.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
+    messenger: { nome: 'Facebook', sub: 'Ligando as mensagens da sua Página do Facebook (Messenger) às Conversas.', conta: 'Conferindo a Página na Meta', contaOk: 'Página conferida na Meta', novos: 'As mensagens novas da Página chegam nas Conversas na hora.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
+    instagram: { nome: 'Instagram', sub: 'Ligando as mensagens do Direct às Conversas.', conta: 'Conferindo a conta do Instagram', contaOk: 'Conta do Instagram conferida', novos: 'As mensagens novas do Direct chegam nas Conversas na hora.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
     tiktok: { nome: 'TikTok', sub: 'Ligando os formulários dos anúncios do TikTok: cada lead vira uma cliente na Sintonia.', novos: 'Os leads novos dos formulários chegam em Clientes na hora. Os antigos não são trazidos.', botao: { texto: 'Ver clientes', href: '/app#vista=clientes' } },
   };
+  /* meta-historico: a frase do fim, como a do WhatsApp ("N conversas trazidas"). */
+  function textoHistorico(a) {
+    if (!a) return '';
+    const n = a.conversas || 0, conv = `${n} ${n === 1 ? 'conversa trazida' : 'conversas trazidas'}`;
+    if (a.situacao === 'rodando') return `${conv} até agora; as outras continuam chegando nas Conversas.`;
+    if (a.situacao === 'erro') return n ? `${conv}; o resto não veio (veja o aviso acima).` : 'As conversas antigas não vieram (veja o aviso acima).';
+    if (n) return `${conv} (${a.mensagens} ${a.mensagens === 1 ? 'mensagem' : 'mensagens'}).`;
+    return a.lidas ? 'As conversas antigas já estavam na Sintonia.' : `Não havia conversas nos últimos ${a.dias || 90} dias.`;
+  }
   function sincronizarRede(rede, r) {
     const S = window.SintoniaSincronizando; const info = REDES[rede]; if (!S || !info) return;
     const passos = [];
@@ -1102,6 +1112,23 @@
       const t = await api(`/api/conexoes/sociais/${rede}/testar`, { method: 'POST' });
       if (!t.ok) throw new Error(t.erro || 'a Meta não respondeu');
       ctx.conta = t.nome || t.id || ''; return ctx.conta;
+    } });
+    /* meta-historico: traz as conversas antigas (últimos 90 dias, até 300) e mostra o andamento de verdade. */
+    if (rede !== 'tiktok') passos.push({ texto: 'Trazendo conversas antigas', pronto: 'Conversas antigas trazidas', opcional: true, maxMs: 200000, fazer: async (ctx) => {
+      const url = `/api/conexoes/sociais/${rede}/historico`;
+      let a = await api(url, { method: 'POST' });
+      const inicio = Date.now();
+      const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+      while (a.situacao === 'rodando' && Date.now() - inicio < 180000) {
+        ctx.andamento(a.lidas ? `${plural(a.lidas, 'conversa lida', 'conversas lidas')} · ${plural(a.mensagens, 'mensagem nova', 'mensagens novas')}` : 'Lendo as conversas na Meta…', a.limite ? a.lidas / a.limite : 0);
+        await new Promise((ok) => setTimeout(ok, 1500));
+        a = await api(url).catch(() => a);
+      }
+      ctx.historico = a;
+      if (a.situacao === 'erro') throw new Error(a.erro || 'A Meta não respondeu');
+      if (a.situacao === 'rodando') return `${plural(a.conversas, 'conversa trazida', 'conversas trazidas')} até agora; as outras continuam chegando`;
+      if (a.conversas) return `${plural(a.conversas, 'conversa trazida', 'conversas trazidas')} · ${plural(a.mensagens, 'mensagem', 'mensagens')}`;
+      return a.lidas ? 'As conversas antigas já estavam na Sintonia' : `Nenhuma conversa nos últimos ${a.dias || 90} dias`;
     } });
     passos.push({ texto: rede === 'tiktok' ? 'Preparando o endereço que recebe os leads' : 'Preparando o recebimento das mensagens', pronto: rede === 'tiktok' ? 'Endereço que recebe os leads pronto' : 'Recebimento das mensagens pronto', fazer: async () => {
       if (!r.webhookUrl || !r.verifyToken) throw new Error('Falta o token do webhook: toque em “Gerar outro”.');
@@ -1117,7 +1144,7 @@
       nome: info.nome, artigo: 'o', sub: info.sub, passos,
       fim: (ctx) => ({
         titulo: `${info.nome} conectado`,
-        texto: [ctx.conta ? `Conta: ${ctx.conta}.` : '', info.novos, ctx.visto ? '' : 'Falta só colar o webhook no painel (passo a passo logo abaixo).'].filter(Boolean).join('\n'),
+        texto: [ctx.conta ? `Conta: ${ctx.conta}.` : '', textoHistorico(ctx.historico), info.novos, ctx.visto ? '' : 'Falta só colar o webhook no painel (passo a passo logo abaixo).'].filter(Boolean).join('\n'),
         botao: info.botao,
       }),
       falha: (x) => ({ titulo: `${rede === 'instagram' ? 'O Instagram' : rede === 'messenger' ? 'O Facebook' : 'O TikTok'} não aceitou`, texto: `Os dados foram salvos, mas a conta não respondeu: ${x?.message || 'sem resposta'}. Confira o token e toque em Testar.` }),
@@ -1136,6 +1163,14 @@
     try { const r = await api(`/api/conexoes/sociais/${rede}/testar`, { method: 'POST' }); res.className = 'res ' + (r.ok ? 'ok' : 'erro'); res.textContent = r.ok ? r.mensagem + ' ✓' : 'Não funcionou: ' + r.erro; }
     catch (x) { res.className = 'res erro'; res.textContent = x.message; }
     finally { b.removeAttribute('aria-busy'); }
+  }));
+  /* meta-historico: trazer as conversas antigas de novo (ex.: depois de a Meta liberar a permissão). */
+  document.querySelectorAll('[data-soc-historico]').forEach((b) => b.addEventListener('click', async () => {
+    const rede = b.dataset.socHistorico; const res = $(`soc-res-${rede}`);
+    const d = await carregar(); const r = d?.redes.find((x) => x.rede === rede);
+    if (r?.status !== 'ligado') { res.className = 'res erro'; res.textContent = r?.faltando?.length ? `Falta ${r.faltando.join(', ')}.` : 'Ligue e salve a conexão primeiro.'; return; }
+    res.className = 'res'; res.textContent = '';
+    sincronizarRede(rede, r);
   }));
   document.querySelectorAll('[data-soc-novo]').forEach((b) => b.addEventListener('click', async () => {
     if (!confirm('Gerar outro token? O atual deixa de valer: cole o novo no painel.')) return;

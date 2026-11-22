@@ -109,7 +109,7 @@ export class ArmazemHistoricoMetaPostgres implements ArmazemHistoricoMeta {
 export const LIMITES_HISTORICO_META = { dias: 90, conversas: 300, mensagensPorConversa: 20, porPagina: 25 };
 
 export const SEM_PERMISSAO_HISTORICO =
-  'A Meta não deu permissão para ler as conversas antigas. As mensagens novas continuam chegando normalmente. Para trazer as antigas, o app da Meta precisa da permissão de mensagens (pages_messaging no Facebook; instagram_manage_messages no Instagram) e, depois, toque em “Trazer conversas antigas” de novo.';
+  'A Meta não deu permissão para ler as conversas antigas. As novas continuam chegando normalmente. Para trazer as antigas, libere no app da Meta a permissão de mensagens (pages_messaging no Facebook, instagram_manage_messages no Instagram) e toque em “Trazer conversas antigas”.';
 export const TOKEN_VENCIDO_HISTORICO = 'O token da conta venceu ou foi trocado: gere outro no painel da Meta, cole em Conexões e tente de novo.';
 
 /** Erro que não adianta tentar de novo (falta permissão ou token): a mensagem já é a que vai para a tela. */

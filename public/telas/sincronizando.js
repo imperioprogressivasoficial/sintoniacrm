@@ -6,6 +6,8 @@
  *   nome: 'Instagram', artigo: 'o',            // título "Sincronizando o Instagram…"
  *   sub: 'Ligando as mensagens do Direct…',    // o que está sendo feito/trazido
  *   passos: [{ texto, pronto?, fazer: async (ctx) => 'detalhe opcional', opcional?: true, maxMs?: 20000 }],  // pronto = texto depois de feito
+ *   // meta-historico: durante um passo longo, ctx.andamento('12 conversas…', 0.4) mostra o andamento embaixo do passo
+ *   // e enche a barra até essa fração do passo (progresso de verdade, vindo do servidor).
  *   fim: (ctx) => ({ titulo, texto, botao?: { texto, href } }),
  *   falha?: (erro, passo, ctx) => ({ titulo, texto }),
  * }) -> Promise<{ ok, ctx }>
@@ -99,6 +101,14 @@
       const p = o.passos[i]; const li = itens[i];
       li.className = 'sc-agora'; li.setAttribute('aria-current', 'step');
       const inicio = Date.now();
+      // meta-historico: andamento real do passo (texto embaixo dele + barra até a fração feita).
+      ctx.andamento = (texto, fracao) => {
+        if (!viva()) return;
+        let s = li.querySelector('small.sc-and');
+        if (!s) { s = el('small', { className: 'sc-and' }); li.lastChild.append(s); }
+        s.textContent = texto || '';
+        if (typeof fracao === 'number' && Number.isFinite(fracao)) q('sc-barra').firstChild.style.width = `${Math.round(((i + Math.min(1, Math.max(0, fracao))) / o.passos.length) * 100)}%`;
+      };
       let detalhe = '', deu = true, erro = null;
       try { detalhe = (await comPrazo(Promise.resolve().then(() => p.fazer(ctx)), p.maxMs || 20000)) || ''; }
       catch (x) { deu = false; erro = x; }
@@ -106,6 +116,7 @@
       const resta = 500 - (Date.now() - inicio); if (resta > 0) await pausa(resta);
       if (!viva()) return { ok: false, ctx };
       li.removeAttribute('aria-current');
+      li.querySelector('small.sc-and')?.remove();
       li.className = deu ? 'sc-feito' : p.opcional ? 'sc-aviso' : 'sc-erro';
       if (deu && p.pronto) li.lastChild.textContent = p.pronto;
       li.querySelector('.sc-marca').replaceChildren(svg(deu ? OK : p.opcional ? EXCL : XIS, '2.4'));
