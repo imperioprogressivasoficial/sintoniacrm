@@ -2642,9 +2642,20 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     const onda = el('div', { class: 'onda', role: 'slider', 'aria-label': 'Posição do áudio', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0', tabindex: '0' }, ...barras, cursor);
     const tempo = el('span', { class: 'tempo', text: duracao(a.duracaoSeg) });
     const botao = el('button', { class: 'tocar', type: 'button', 'aria-label': 'Tocar áudio', html: PLAY });
+    /* áudio com a foto de quem mandou (dono 22/11, como no WhatsApp): cliente = foto dela; IA = foto da Serena;
+       equipe = foto da atendente (achada pelo nome: você, a responsável da conversa ou alguém da equipe já carregada). */
+    const idDoAutor = (nome) => {
+      const n = String(nome || '').trim().toLowerCase(); if (!n) return null;
+      if (estado.eu && String(estado.eu.nome || '').trim().toLowerCase() === n) return estado.eu.id;
+      if (c?.responsavelId && String(c.responsavelNome || '').trim().toLowerCase() === n) return c.responsavelId;
+      return (estado.equipe?.pessoas || []).find((p) => String(p.nome || '').trim().toLowerCase() === n)?.id || null;
+    };
+    const serenaFoto = window.SintoniaSerenaFoto;
+    const fotoIa = () => serenaFoto ? el('span', { class: 'avatar com-selo-ia com-foto' }, el('img', { class: 'foto-pessoa', src: serenaFoto, alt: '', decoding: 'async' }))
+      : el('span', { class: 'avatar com-selo-ia', style: 'background:var(--ia)', text: 'IA' });
     const foto = m.autor === 'cliente' ? avatar(c)
-      : m.autor === 'ia' ? el('span', { class: 'avatar com-selo-ia', style: 'background:var(--ia)', text: 'IA' })
-      : el('span', { class: 'avatar' + (ehIA(m.autorNome) ? ' com-selo-ia' : ''), style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') });
+      : m.autor === 'ia' || ehIA(m.autorNome) ? fotoIa()
+      : fotoPessoa(el('span', { class: 'avatar', style: `background:${cor(m.autorNome || 'Equipe')}`, text: iniciais(m.autorNome || 'Equipe') }), idDoAutor(m.autorNome));
     const quem = el('span', { class: 'quem-aud' }, foto, el('span', { class: 'selo' + (window.SintoniaVistos?.seloAudio(m) || ''), html: a.voz ? MIC : NOTA })); /* vistos: microfone azul = ouvido */
     const total = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(a.duracaoSeg) || 0);
     const pintar = (p) => {
