@@ -314,6 +314,20 @@ export class EmailMarketing {
     await this.q('delete from sintonia.email_contas where id = $1', [id]);
   }
 
+  /** sincronizando: só confere o login no servidor de e-mail (sem mandar nada), logo depois de conectar a conta. */
+  async conferirConta(id: string): Promise<{ ok: boolean; mensagem?: string; erro?: string }> {
+    const l = await this.linhaConta(id);
+    try {
+      await this.o.transporte(this.envioDe(l)).verificar();
+      await this.q('update sintonia.email_contas set testada_em = $2, teste_erro = null where id = $1', [id, this.agora()]);
+      return { ok: true, mensagem: l.provedor === 'smtp' ? `Login aceito em ${l.smtp_host}` : 'Chave da API aceita' };
+    } catch (e) {
+      const erro = String((e as Error).message ?? e).slice(0, 400);
+      await this.q('update sintonia.email_contas set testada_em = $2, teste_erro = $3 where id = $1', [id, this.agora(), erro]);
+      return { ok: false, erro };
+    }
+  }
+
   /** Confere o login e envia um e-mail de teste. */
   async testarConta(id: string, para: string): Promise<{ ok: boolean; mensagem?: string; erro?: string }> {
     const l = await this.linhaConta(id);

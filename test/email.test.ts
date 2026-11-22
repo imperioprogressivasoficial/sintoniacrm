@@ -90,6 +90,21 @@ describe.skipIf(!temPostgres)('E-mail marketing (Postgres)', () => {
     expect((await m.como(m.gente.admin, 'POST', `/api/email/contas/${m.conta.id}/testar`, { para: 'x@y.com' })).json()).toMatchObject({ ok: false, erro: expect.stringContaining('535') });
   });
 
+  it('sincronizando: conferir só confere o login (não envia nada) e grava o resultado na conta', async () => {
+    const m = await preparar();
+    const antes = m.falso.enviados.length;
+    expect((await m.como(m.gente.admin, 'POST', `/api/email/contas/${m.conta.id}/conferir`)).json()).toMatchObject({ ok: true, mensagem: expect.stringContaining('smtp.hostinger.com') });
+    expect(m.falso.enviados.length).toBe(antes);
+    let conta = ((await m.como(m.gente.admin, 'GET', '/api/email/contas')).json() as Array<Record<string, unknown>>)[0]!;
+    expect(conta.testadaEm).toBeTruthy();
+    expect(conta.testeErro).toBeNull();
+    m.falso.falharVerificacao = 'Login recusado pelo servidor de e-mail: 535';
+    expect((await m.como(m.gente.admin, 'POST', `/api/email/contas/${m.conta.id}/conferir`)).json()).toMatchObject({ ok: false, erro: expect.stringContaining('535') });
+    conta = ((await m.como(m.gente.admin, 'GET', '/api/email/contas')).json() as Array<Record<string, unknown>>)[0]!;
+    expect(conta.testeErro).toContain('535');
+    expect((await m.como(m.gente.gerenteNorte, 'POST', `/api/email/contas/${m.conta.id}/conferir`)).statusCode).toBe(403);
+  });
+
   it('público: só e-mail válido, filtros por tag/etapa/unidade, quantidade e exclusão de descadastro e bounce', async () => {
     const m = await preparar();
     const ana = await m.cliente({ nome: 'Ana Souza', email: 'ana@exemplo.com' });

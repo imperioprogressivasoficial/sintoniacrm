@@ -24,6 +24,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="stylesheet" href="/ds.css">
+<script src="/telas/sincronizando.js" defer></script><!-- sincronizando -->
 <script src="/telas/email-conexoes.js" defer></script>
 <script src="/telas/anuncios-conexao.js" defer></script><!-- marketing -->
 <script src="/telas/logos-conexoes.js" defer></script>
@@ -604,7 +605,15 @@
 
   function ligarBotoes(raiz) {
     raiz.querySelectorAll('[data-salvar]').forEach((b) => b.addEventListener('click', async () => {
-      if (await salvarCampos(b, b.dataset.salvar.split(','))) { carregarLojas(); carregarMeta(); desenharEscolhas(); carregarAgenda(); }
+      /* sincronizando: WhatsApp oficial que fica pronto ao salvar abre a folha "Sincronizando" */
+      const uMeta = b.closest('.cartao[id^="meta-"]')?.id.slice(5);
+      const prontaAntes = Boolean(uMeta && meta?.unidades.find((x) => x.unidade === uMeta)?.pronta);
+      const campos = b.dataset.salvar.split(',');
+      if (await salvarCampos(b, campos)) {
+        carregarLojas(); const pm = carregarMeta(); desenharEscolhas(); carregarAgenda();
+        document.dispatchEvent(new CustomEvent('conexoes-salvas', { detail: { campos } }));
+        if (uMeta) { await pm; if (!prontaAntes && meta?.unidades.find((x) => x.unidade === uMeta)?.pronta) sincronizarMeta(uMeta); }
+      }
     }));
     raiz.querySelectorAll('[data-testar]').forEach((b) => b.addEventListener('click', async () => {
       const res = $('res-' + b.dataset.testar); b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';
@@ -1011,6 +1020,38 @@
     desenharEscolhas();
   }
 
+  /* sincronizando: WhatsApp oficial (Meta) acabou de ficar pronto. Passos de verdade: o número na Meta e os avisos (webhook).
+     A API oficial não traz conversas antigas: o fim diz "conectado", sem prometer histórico. */
+  function sincronizarMeta(u) {
+    const S = window.SintoniaSincronizando; if (!S) return;
+    const nome = NOMES[u] || '';
+    S.abrir({
+      nome: 'WhatsApp oficial', artigo: 'o',
+      sub: `Ligando o número da API oficial${UNIDADES.length > 1 && nome ? ' de ' + nome : ''} às Conversas.`,
+      passos: [
+        { texto: 'Conferindo o número na Meta', pronto: 'Número conferido na Meta', fazer: async (ctx) => {
+          const r = await api(`/api/conexoes/meta/${u}/testar`, { method: 'POST', body: '{}' });
+          if (!r.ok) throw new Error(r.erro || 'a Meta não respondeu');
+          ctx.numero = r; return [r.numero, r.nome].filter(Boolean).join(' · ');
+        } },
+        { texto: 'Conferindo se os avisos da Meta chegam aqui', pronto: 'Os avisos da Meta estão chegando', opcional: true, fazer: async (ctx) => {
+          meta = await api('/api/conexoes/meta'); desenharEscolhas();
+          const info = meta.unidades.find((x) => x.unidade === u); ctx.info = info;
+          if (!info?.ultimoWebhook) throw new Error('Nenhum aviso ainda: cole a URL do webhook e o Verify Token no painel da Meta.');
+          return `Último aviso ${haQuanto(info.ultimoWebhook)}`;
+        } },
+      ],
+      fim: (ctx) => {
+        const m = ctx.numero?.modelos;
+        const partes = ['As mensagens novas chegam nas Conversas na hora. As conversas antigas não são trazidas pela API oficial.'];
+        if (m !== undefined) partes.push(`${m} ${m === 1 ? 'modelo de mensagem aprovado' : 'modelos de mensagem aprovados'}.`);
+        if (ctx.info && ctx.info.canal !== 'meta') partes.push(`Ainda não está em uso${UNIDADES.length > 1 && nome ? ' em ' + nome : ''}: escolha “Oficial” em “Qual WhatsApp cada loja usa”.`);
+        return { titulo: 'WhatsApp oficial conectado', texto: partes.join('\n'), botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } };
+      },
+      falha: (x) => ({ titulo: 'A Meta não aceitou o número', texto: `Os dados foram salvos, mas a Meta respondeu: ${x?.message || 'sem resposta'}. Confira o Phone Number ID e o token e toque em Testar.` }),
+    });
+  }
+
   (async () => {
     await carregarUnidades(); /* unidades */
     $('meta-lojas').replaceChildren(...UNIDADES.map(([u, suf, nome]) => cartaoMeta(u, suf, nome)));
@@ -1033,9 +1074,11 @@
     return j;
   };
   const haQuanto = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return m < 1 ? 'agora há pouco' : m < 60 ? `há ${m} min` : m < 1440 ? `há ${Math.round(m / 60)} h` : `há ${Math.round(m / 1440)} dia(s)`; };
+  const ultimo = {}; /* sincronizando: status de cada rede da última leitura */
   async function carregar() {
-    let d; try { d = await api('/api/conexoes/sociais'); } catch { return; }
+    let d; try { d = await api('/api/conexoes/sociais'); } catch { return null; }
     for (const r of d.redes) {
+      ultimo[r.rede] = r.status;
       $(`soc-url-${r.rede}`).value = r.webhookUrl;
       $(`soc-vt-${r.rede}`).value = r.verifyToken || '';
       const est = $(`soc-estado-${r.rede}`);
@@ -1043,8 +1086,50 @@
       est.textContent = r.status === 'ligado' ? 'Ligado' : r.status === 'falta' ? `Falta ${r.faltando.join(', ')}` : 'Desligado';
       $(`soc-visto-${r.rede}`).textContent = r.ultimoWebhook ? `Último aviso ${haQuanto(r.ultimoWebhook)}.` : 'Nenhum aviso chegou ainda.';
     }
+    return d;
   }
-  document.querySelectorAll('[data-soc-salvar]').forEach((b) => b.addEventListener('click', () => setTimeout(carregar, 700)));
+  /* sincronizando: depois de salvar, a rede que passou a "Ligado" (completa) abre a folha "Sincronizando".
+     Cada passo é uma chamada de verdade; Messenger, Instagram e TikTok não trazem histórico (só o que chega daqui pra frente). */
+  const REDES = {
+    messenger: { nome: 'Facebook', sub: 'Ligando as mensagens da sua Página do Facebook (Messenger) às Conversas.', conta: 'Conferindo a Página na Meta', contaOk: 'Página conferida na Meta', novos: 'As mensagens novas da Página chegam nas Conversas na hora. As antigas não são trazidas.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
+    instagram: { nome: 'Instagram', sub: 'Ligando as mensagens do Direct às Conversas.', conta: 'Conferindo a conta do Instagram', contaOk: 'Conta do Instagram conferida', novos: 'As mensagens novas do Direct chegam nas Conversas na hora. As antigas não são trazidas.', botao: { texto: 'Ver conversas', href: '/app#vista=conversas' } },
+    tiktok: { nome: 'TikTok', sub: 'Ligando os formulários dos anúncios do TikTok: cada lead vira uma cliente na Sintonia.', novos: 'Os leads novos dos formulários chegam em Clientes na hora. Os antigos não são trazidos.', botao: { texto: 'Ver clientes', href: '/app#vista=clientes' } },
+  };
+  function sincronizarRede(rede, r) {
+    const S = window.SintoniaSincronizando; const info = REDES[rede]; if (!S || !info) return;
+    const passos = [];
+    if (rede !== 'tiktok') passos.push({ texto: info.conta, pronto: info.contaOk, fazer: async (ctx) => {
+      const t = await api(`/api/conexoes/sociais/${rede}/testar`, { method: 'POST' });
+      if (!t.ok) throw new Error(t.erro || 'a Meta não respondeu');
+      ctx.conta = t.nome || t.id || ''; return ctx.conta;
+    } });
+    passos.push({ texto: rede === 'tiktok' ? 'Preparando o endereço que recebe os leads' : 'Preparando o recebimento das mensagens', pronto: rede === 'tiktok' ? 'Endereço que recebe os leads pronto' : 'Recebimento das mensagens pronto', fazer: async () => {
+      if (!r.webhookUrl || !r.verifyToken) throw new Error('Falta o token do webhook: toque em “Gerar outro”.');
+      return rede === 'tiktok' ? 'Cole a URL do webhook no TikTok' : 'URL do webhook e Verify Token gerados';
+    } });
+    passos.push({ texto: rede === 'tiktok' ? 'Conferindo se o TikTok já mandou algum lead' : 'Conferindo se os avisos da Meta chegam aqui', pronto: rede === 'tiktok' ? 'O TikTok já está mandando os leads' : 'Os avisos da Meta estão chegando', opcional: true, fazer: async (ctx) => {
+      const d = await carregar(); const agora = d?.redes.find((x) => x.rede === rede);
+      ctx.visto = agora?.ultimoWebhook;
+      if (!ctx.visto) throw new Error(rede === 'tiktok' ? 'Nenhum lead ainda: cole a URL do webhook no Gerenciador de Anúncios e envie um lead de teste.' : 'Nenhum aviso ainda: cole a URL do webhook e o Verify Token no painel da Meta.');
+      return `Último aviso ${haQuanto(ctx.visto)}`;
+    } });
+    S.abrir({
+      nome: info.nome, artigo: 'o', sub: info.sub, passos,
+      fim: (ctx) => ({
+        titulo: `${info.nome} conectado`,
+        texto: [ctx.conta ? `Conta: ${ctx.conta}.` : '', info.novos, ctx.visto ? '' : 'Falta só colar o webhook no painel (passo a passo logo abaixo).'].filter(Boolean).join('\n'),
+        botao: info.botao,
+      }),
+      falha: (x) => ({ titulo: `${rede === 'instagram' ? 'O Instagram' : rede === 'messenger' ? 'O Facebook' : 'O TikTok'} não aceitou`, texto: `Os dados foram salvos, mas a conta não respondeu: ${x?.message || 'sem resposta'}. Confira o token e toque em Testar.` }),
+    });
+  }
+  document.addEventListener('conexoes-salvas', async (e) => {
+    const rede = Object.keys(REDES).find((k) => e.detail?.campos?.[0]?.startsWith(k));
+    const antes = rede ? ultimo[rede] : undefined;
+    const d = await carregar();
+    const r = d?.redes.find((x) => x.rede === rede);
+    if (rede && r?.status === 'ligado' && antes !== 'ligado') sincronizarRede(rede, r);
+  });
   document.querySelectorAll('[data-soc-testar]').forEach((b) => b.addEventListener('click', async () => {
     const rede = b.dataset.socTestar; const res = $(`soc-res-${rede}`);
     b.setAttribute('aria-busy', 'true'); res.className = 'res'; res.textContent = 'Testando…';

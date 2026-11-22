@@ -111,6 +111,11 @@ export function registrarEmail(app: FastifyInstance, o: OpcoesRotasEmail): void 
     if (!destino) return reply.code(400).send({ erro: 'Informe para qual e-mail mandar o teste.' });
     return responder(reply, () => em.testarConta(id, destino));
   });
+  app.post('/api/email/contas/:id/conferir', async (req, reply) => {
+    administracao(req);
+    const { id } = Id.parse(req.params);
+    return responder(reply, () => em.conferirConta(id));
+  });
   app.post('/api/email/contas/ler-caixas', async (req) => {
     administracao(req);
     return em.lerCaixas();
