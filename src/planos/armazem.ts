@@ -51,6 +51,8 @@ export interface Assinatura {
   clt?: Partial<CustoClt>;
   /** Limites personalizados (Empresarial; vale também para ajustar um Colaborador de IA). null = sem limite. */
   limites?: Partial<Limites>;
+  /** calculadora: custo da equipe na tela "Quanto a IA economiza" (salário, encargos, jornada, minutos por mensagem...). */
+  economia?: Record<string, number>;
   atualizadaEm: Date;
   atualizadaPor: string | null;
 }
@@ -249,6 +251,7 @@ export class ArmazemPlanosPostgres implements ArmazemPlanos {
       status: r.status,
       clt: cfg.clt as Assinatura['clt'],
       limites: cfg.limites as Assinatura['limites'],
+      ...(cfg.economia ? { economia: cfg.economia as Assinatura['economia'] } : {}),
       atualizadaEm: r.atualizada_em,
       atualizadaPor: r.atualizada_por,
     };
@@ -260,7 +263,7 @@ export class ArmazemPlanosPostgres implements ArmazemPlanos {
        values ($1, $2, false, $3, $4, $5, $6)
        on conflict (empresa_id) do update set plano = excluded.plano, status = excluded.status,
          config = excluded.config, atualizada_em = excluded.atualizada_em, atualizada_por = excluded.atualizada_por`,
-      [a.empresaId, a.plano, a.status, JSON.stringify({ clt: a.clt, limites: a.limites }), a.atualizadaEm, a.atualizadaPor],
+      [a.empresaId, a.plano, a.status, JSON.stringify({ clt: a.clt, limites: a.limites, economia: a.economia }), a.atualizadaEm, a.atualizadaPor],
     );
   }
 

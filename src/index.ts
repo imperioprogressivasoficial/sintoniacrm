@@ -108,6 +108,7 @@ import { FonteComercialMemoria, FonteComercialPostgres } from './comercial/fonte
 import { registrarComercial } from './comercial/rotas.js';
 import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
 import { registrarDesempenho } from './desempenho/rotas.js';
+import { registrarEconomiaIa } from './economia-ia/rotas.js'; // calculadora
 import { FonteAnalisesMemoria, FonteAnalisesPostgres } from './analises/fonte.js';
 import { OrigensConversa } from './analises/origens.js';
 import { registrarAnalises } from './analises/rotas.js';
@@ -1098,6 +1099,15 @@ registrarDesempenho(app, {
   get unidades() {
     return idsUnidades();
   },
+  agora: () => new Date(),
+});
+/* calculadora: Inteligência › Quanto economiza (números reais da IA × custo de uma pessoa; não vende nada). */
+registrarEconomiaIa(app, {
+  fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),
+  planos,
+  armazemComercial,
+  contas,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
   agora: () => new Date(),
 });
 // Análises (menu Análises): vendas e receita, horários de pico, tempo parado no funil e clientes que voltaram.
