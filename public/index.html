@@ -123,7 +123,7 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
           <a class="v-not-link" href="https://www.infomoney.com.br/politica/em-sessao-com-lula-congresso-promulga-fim-da-escala-6x1-veja-quando-comeca-a-valer/" target="_blank" rel="noopener">Ler a notícia <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
         </article>
       </div>
-      <p class="v-not-ponte revela">Mensagem mais cara e equipe com menos horas: quem responde rápido, com menos gente, sai na frente. <a href="#escala-6x1">Veja o impacto da nova jornada num exemplo</a>.</p>
+      <p class="v-not-ponte revela">Mensagem mais cara e equipe com menos horas: quem responde rápido, com menos gente, sai na frente. <a href="#calculadora">Faça a conta com a sua equipe</a>.</p>
     </div>
   </section>
 
@@ -196,13 +196,45 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
           <h3>Acabou a escala 6x1. <em>A IA cobre o horário que a equipe não alcança.</em></h3>
           <p>A jornada máxima cai de 44 h para 42 h dois meses depois da publicação e para 40 h um ano depois disso, com duas folgas por semana e o mesmo salário. Para cobrir o mesmo horário de atendimento, a empresa precisa de mais gente. Ou de IA.</p>
         </div>
-        <a class="botao botao-menta" data-whats href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Quero ver a IA na minha operação</span></a>
+        <!-- calculadora: a conta com os números da empresa (public/calculadora-ia.js). Só mostra a conta; o botão abre o WhatsApp. -->
+        <div class="v-cx" id="calculadora" role="group" aria-label="Calculadora: equipe × Colaborador de IA">
+          <div class="v-cx-entradas">
+            <p class="v-cx-tit">Faça a conta com a sua equipe</p>
+            <div class="v-cx-faixa">
+              <label for="cx-atendentes">Pessoas no atendimento hoje</label>
+              <div class="v-cx-faixa-linha"><input id="cx-atendentes" type="range" min="1" max="20" step="1" value="2"><output for="cx-atendentes" id="cx-atendentes-v">2</output></div>
+            </div>
+            <div class="v-cx-grade">
+            <label class="v-cx-campo" for="cx-salario"><span>Salário por pessoa</span><span class="v-cx-entrada"><i>R$</i><input id="cx-salario" type="number" inputmode="numeric" min="0" max="100000" step="50" value="1800"></span></label>
+            <label class="v-cx-campo" for="cx-encargos"><span>Encargos</span><span class="v-cx-entrada"><input id="cx-encargos" type="number" inputmode="numeric" min="0" max="300" step="1" value="70"><i>%</i></span><small>INSS, FGTS, 13º, férias</small></label>
+            <label class="v-cx-campo" for="cx-beneficios"><span>Benefícios por pessoa</span><span class="v-cx-entrada"><i>R$</i><input id="cx-beneficios" type="number" inputmode="numeric" min="0" max="100000" step="50" value="600"></span><small>vale-transporte, refeição</small></label>
+            <label class="v-cx-campo" for="cx-horas"><span>Horário de atendimento</span><span class="v-cx-entrada"><input id="cx-horas" type="number" inputmode="numeric" min="1" max="168" step="1" value="60"><i>h por semana</i></span></label>
+            <label class="v-cx-campo" for="cx-mensagens"><span>Mensagens por dia</span><span class="v-cx-entrada"><input id="cx-mensagens" type="number" inputmode="numeric" min="0" max="100000" step="10" value="150"></span><small>no WhatsApp e no Instagram</small></label>
+            </div>
+            <div class="v-cx-faixa">
+              <label for="cx-ficam">Pessoas que ficam, junto com a IA</label>
+              <div class="v-cx-faixa-linha"><input id="cx-ficam" type="range" min="0" max="2" step="1" value="1"><output for="cx-ficam" id="cx-ficam-v">1</output></div>
+            </div>
+          </div>
+          <div class="v-cx-saidas" aria-live="polite">
+            <div class="v-cx-colunas">
+              <div class="v-cx-col hoje"><span class="v-cx-rot">Hoje · 6x1, 44 h</span><p class="v-cx-gente"><b data-cx="hoje-pessoas">2</b> <span data-cx="hoje-pl">pessoas</span></p><p class="v-cx-valor"><b data-cx="hoje-mes">R$ 7.320</b><small>por mês</small></p><div class="v-cx-barra" aria-hidden="true"><i data-cx-barra="hoje"></i></div></div>
+              <div class="v-cx-col depois"><span class="v-cx-rot">Nova jornada · 40 h</span><p class="v-cx-gente"><b data-cx="depois-pessoas">3</b> <span data-cx="depois-pl">pessoas</span></p><p class="v-cx-valor"><b data-cx="depois-mes">R$ 10.980</b><small>por mês</small></p><div class="v-cx-barra" aria-hidden="true"><i data-cx-barra="depois"></i></div></div>
+              <div class="v-cx-col ia"><span class="v-cx-rot">Com a IA</span><p class="v-cx-gente" data-cx="ia-gente">1 pessoa + IA</p><p class="v-cx-valor"><b data-cx="ia-mes">R$ 5.657</b><small>por mês</small></p><div class="v-cx-barra" aria-hidden="true"><i data-cx-barra="ia"></i></div></div>
+            </div>
+            <p class="v-cx-perda"><b>Perda com o fim da 6x1:</b> <span data-cx="perda">a mesma equipe trabalha 8 h a menos por semana, pelo mesmo salário. Para manter as horas: +1 pessoa, + R$ 3.660 por mês.</span></p>
+            <div class="v-cx-eco" data-cx-eco><span data-cx="eco-rot">Economia com a IA</span><b data-cx="eco-ano">R$ 63.876</b><small data-cx="eco-mes">por ano · R$ 5.323 por mês</small></div>
+            <p class="v-cx-msgs" data-cx="msgs">150 mensagens por dia tomam cerca de 150 h por mês da equipe. A IA responde em segundos, 24 h por dia, inclusive nas 108 h por semana em que a empresa está fechada.</p>
+            <a class="botao botao-menta" id="cx-whats" data-whats data-sem-whats="Quero ver a IA na minha operação" data-whats-texto="Olá! Fiz a conta na calculadora da Sintonia e quero ver a IA na minha operação." href="/suporte"><svg class="v-wa-ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Quero ver a IA na minha operação</span></a>
+          </div>
+        </div>
       </div>
       <div class="v-27-motivos">
         <article class="revela"><b>Ninguém fica esperando</b><p>A IA responde em segundos, inclusive de madrugada, quando muitos clientes chamam e ninguém da equipe está online.</p></article>
         <article class="revela" style="--atraso:.05s"><b>Pico sem contratar</b><p>Campanha, promoção ou data especial: a IA atende 10 ou 500 conversas ao mesmo tempo, sem hora extra.</p></article>
         <article class="revela" style="--atraso:.1s"><b>Follow-up que não esquece</b><p>Quem sumiu é chamado de volta no momento certo. Nenhum lead fica parado no CRM por esquecimento.</p></article>
       </div>
+      <p class="v-calc-nota v-jornada-nota">Como a conta é feita: custo por pessoa = salário + encargos + benefícios. Com a jornada de 40 h (fim da escala 6x1), para manter as mesmas horas de trabalho de hoje são precisas mais pessoas (horas de hoje ÷ 40, arredondado para cima). Com a IA: as pessoas que ficam + o Colaborador de IA a R$ 1.997 por mês, que atende 24 h, 7 dias. Cada mensagem toma cerca de 2 minutos de uma pessoa. É uma estimativa, não é consultoria trabalhista. Fontes: <a href="https://www.infomoney.com.br/politica/em-sessao-com-lula-congresso-promulga-fim-da-escala-6x1-veja-quando-comeca-a-valer/" target="_blank" rel="noopener">InfoMoney</a> · <a href="https://agenciabrasil.ebc.com.br/politica/noticia/2026-10/congresso-promulga-emenda-do-fim-da-6x1-escala-5x2-comeca-em-60-dias" target="_blank" rel="noopener">Agência Brasil</a> · <a href="https://www12.senado.leg.br/noticias/materias/2026/10/16/congresso-promulga-o-fim-da-escala-6x1-e-aposentadoria-de-agentes-de-saude" target="_blank" rel="noopener">Agência Senado</a>.</p>
     </div>
   </section>
 
@@ -416,6 +448,7 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
 
 
 <script src="/contato-publico.js" defer></script>
+<script src="/calculadora-ia.js" defer></script><!-- calculadora -->
 <script>
 (() => {
   // topo mais escuro ao rolar
@@ -731,6 +764,51 @@ a[data-whats] { display: inline-flex; align-items: center; justify-content: cent
     quandoVisivel(tv, () => { if (vis) return; vis = true; ciclo(); }, () => { vis = false; clearTimeout(t); }, 0.3);
   })();
 })();
+</script>
+<script>
+/* calculadora: liga os campos da #calculadora à conta de public/calculadora-ia.js (SintoniaCalculadora.simular).
+   Tudo por textContent; o botão leva a conta para a mensagem do WhatsApp de vendas. Sem animação em loop. */
+document.addEventListener('DOMContentLoaded', () => {
+  const C = window.SintoniaCalculadora, raiz = document.getElementById('calculadora');
+  if (!C || !C.simular || !raiz) return;
+  const $ = (id) => document.getElementById(id);
+  const brl = (n) => (n < 0 ? '− ' : '') + 'R$ ' + Math.round(Math.abs(n)).toLocaleString('pt-BR');
+  const num = (n) => Math.round(n).toLocaleString('pt-BR');
+  const pessoas = (n) => n === 1 ? '1 pessoa' : num(n) + ' pessoas';
+  const put = (k, t) => raiz.querySelectorAll(`[data-cx="${k}"]`).forEach((e) => { e.textContent = t; });
+  const campos = ['atendentes', 'salario', 'encargos', 'beneficios', 'horas', 'mensagens', 'ficam'];
+  const whats = $('cx-whats');
+  const contar = () => {
+    const ent = {}; campos.forEach((c) => { ent[c] = $('cx-' + c).value; });
+    const ficam = $('cx-ficam');
+    ficam.max = String(Math.max(1, Number(ent.atendentes) || 1));
+    if (Number(ficam.value) > Number(ficam.max)) ficam.value = ficam.max;
+    ent.ficam = ficam.value;
+    const r = C.simular(ent);
+    $('cx-atendentes-v').textContent = String(r.entradas.atendentes);
+    $('cx-ficam-v').textContent = String(r.entradas.ficam);
+    put('hoje-pessoas', num(r.hoje.pessoas)); put('hoje-mes', brl(r.hoje.mes)); put('hoje-pl', r.hoje.pessoas === 1 ? 'pessoa' : 'pessoas'); put('depois-pl', r.depois.pessoas === 1 ? 'pessoa' : 'pessoas');
+    put('depois-pessoas', num(r.depois.pessoas)); put('depois-mes', brl(r.depois.mes));
+    put('ia-gente', r.comIa.pessoas ? pessoas(r.comIa.pessoas) + ' + IA' : 'só a IA'); put('ia-mes', brl(r.comIa.mes));
+    const maior = Math.max(r.hoje.mes, r.depois.mes, r.comIa.mes, 1);
+    raiz.querySelectorAll('[data-cx-barra]').forEach((b) => { const v = { hoje: r.hoje.mes, depois: r.depois.mes, ia: r.comIa.mes }[b.dataset.cxBarra]; b.style.setProperty('--w', Math.max(3, Math.round((v / maior) * 100)) + '%'); });
+    put('perda', `a mesma equipe trabalha ${num(r.perda.horasSemana)} h a menos por semana (cerca de ${num(r.perda.horasMes)} h por mês), pelo mesmo salário: a hora fica ${r.perda.hora}% mais cara.` +
+      (r.perda.pessoas > 0 ? ` Para manter as horas: +${pessoas(r.perda.pessoas)}, + ${brl(r.perda.mes)} por mês (${brl(r.perda.ano)} por ano).` : ''));
+    const ganha = r.economia.mes > 0;
+    raiz.querySelector('[data-cx-eco]').classList.toggle('negativa', !ganha);
+    put('eco-rot', ganha ? 'Economia com a IA' : 'Com esses números, a IA custa a mais');
+    put('eco-ano', brl(Math.abs(r.economia.ano)));
+    put('eco-mes', `por ano · ${brl(Math.abs(r.economia.mes))} por mês` + (ganha ? '' : ', mas atende 24 h, 7 dias'));
+    put('msgs', `${num(r.entradas.mensagens)} mensagens por dia tomam cerca de ${num(r.mensagens.horasMes)} h por mês da equipe. A IA responde em segundos, 24 h por dia` +
+      (r.comIa.foraDoHorario > 0 ? `, inclusive nas ${num(r.comIa.foraDoHorario)} h por semana em que a empresa está fechada.` : '.'));
+    const texto = `Olá! Fiz a conta na calculadora da Sintonia: ${pessoas(r.entradas.atendentes)} no atendimento, ${num(r.entradas.mensagens)} mensagens por dia` +
+      (ganha ? `, economia de ${brl(r.economia.mes)} por mês com a IA.` : '.') + ' Quero ver a IA na minha operação.';
+    whats.setAttribute('data-whats-texto', texto);
+    if (/^https:\/\/wa\.me\//.test(whats.href)) { const u = new URL(whats.href); u.searchParams.set('text', texto); whats.href = u.toString(); }
+  };
+  raiz.addEventListener('input', contar);
+  contar();
+});
 </script>
 </body>
 </html>

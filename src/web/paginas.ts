@@ -19,6 +19,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/suporte': { arquivo: 'suporte.html', tipo: 'text/html; charset=utf-8' },
   '/legal.css': { arquivo: 'legal.css', tipo: 'text/css; charset=utf-8' },
   '/contato-publico.js': { arquivo: 'contato-publico.js', tipo: 'text/javascript; charset=utf-8' },
+  '/calculadora-ia.js': { arquivo: 'calculadora-ia.js', tipo: 'text/javascript; charset=utf-8' }, // calculadora: página de vendas
   '/telas/sem-internet.js': { arquivo: 'telas/sem-internet.js', tipo: 'text/javascript; charset=utf-8' },
   // Tela de "abrindo o aplicativo" (login e primeira carga do /app).
   '/abertura.css': { arquivo: 'abertura.css', tipo: 'text/css; charset=utf-8' },
@@ -105,6 +106,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agentes-ia.js': { arquivo: 'telas/agentes-ia.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/economia-ia.js': { arquivo: 'telas/economia-ia.js', tipo: 'text/javascript; charset=utf-8' }, // calculadora
   '/telas/ia-estado.js': { arquivo: 'telas/ia-estado.js', tipo: 'text/javascript; charset=utf-8' } /* ia-completa */,
   '/telas/conversa-extras.js': { arquivo: 'telas/conversa-extras.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/icones.js': { arquivo: 'telas/icones.js', tipo: 'text/javascript; charset=utf-8' },
