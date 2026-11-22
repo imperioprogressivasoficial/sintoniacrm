@@ -602,11 +602,19 @@ export function criarAcoesMensagem(o: OpcoesAcoesMensagem): ServicoAcoesMensagem
       if (!m) continue;
       const c = await o.repo.buscarConversa(m.conversaId);
       if (!c || c.empresaId !== o.empresaId || c.telefone !== a.telefone) continue;
-      if (a.tipo === 'reacao') await o.armazem.reagir(c.id, m.id, a.deMim ? 'loja' : 'cliente', a.deMim ? 'Celular da loja' : (a.nome ?? null), a.emoji || null, a.em);
+      if (a.tipo === 'reacao') {
+        if (a.deMim) {
+          // Eco da reação que a própria Sintonia mandou (alguém da equipe reagiu aqui): não vira uma segunda reação.
+          const atuais = (await o.armazem.daConversa(c.id, null)).reacoes.get(m.id) ?? [];
+          if (a.emoji ? atuais.some((r) => r.quem.startsWith('u:') && r.emoji === a.emoji) : !atuais.some((r) => r.quem === 'loja')) continue;
+        }
+        await o.armazem.reagir(c.id, m.id, a.deMim ? 'loja' : 'cliente', a.deMim ? 'Celular da loja' : (a.nome ?? null), a.emoji || null, a.em);
+      }
       else if (a.tipo === 'apagou') {
         if ((await o.armazem.extras(m.id))?.apagada) continue;
         await o.armazem.marcar(c.id, m.id, { apagada: a.deMim ? 'todos' : 'cliente', apagadaPor: a.deMim ? 'Celular da loja' : (c.nome ?? 'Cliente'), apagadaEm: a.em });
       } else if (a.tipo === 'editou' && a.texto && o.repo.trocarTexto) {
+        if (a.texto === m.texto) continue; // eco da edição feita aqui
         const e = await o.armazem.extras(m.id);
         await o.repo.trocarTexto(m.id, a.texto);
         await o.armazem.marcar(c.id, m.id, { editadaEm: a.em, editadaPor: a.deMim ? 'Celular da loja' : (c.nome ?? 'Cliente'), ...(e?.textoOriginal ? {} : { textoOriginal: m.texto }) });

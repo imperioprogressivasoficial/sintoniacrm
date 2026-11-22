@@ -213,6 +213,22 @@ for (const f of fabricas) {
       expect(await t.acoesServico.aoReceber(outro)).toBe(0);
     });
 
+    it('eco do WhatsApp da reação e da edição feitas aqui não duplica', async () => {
+      const t = await montar(f);
+      await t.post(t.carla, t.url('cliente', 'reacao'), { emoji: '❤️' });
+      await t.post(t.carla, t.url('carla', 'editar'), { texto: 'Claro! Qual dia?' });
+      const eco = (message: unknown) => lerAcoesEvolution({ event: 'messages.upsert', instance: 'teste-norte', data: { key: { remoteJid: '5571988887777@s.whatsapp.net', fromMe: true, id: `eco-${Math.random()}` }, message, messageTimestamp: Math.floor(Date.now() / 1000) } });
+      await t.acoesServico.aoReceber(eco({ reactionMessage: { key: { id: 'wa-cli-1' }, text: '❤️' } }));
+      await t.acoesServico.aoReceber(eco({ protocolMessage: { key: { id: 'wa-eq-1' }, type: 'MESSAGE_EDIT', editedMessage: { conversation: 'Claro! Qual dia?' } } }));
+      const a = await t.acoesDa();
+      expect(a.reacoes[t.ids.cliente!]).toHaveLength(1);
+      const d = (await t.app.inject({ method: 'GET', url: t.url('carla', 'dados'), headers: { cookie: t.admin } })).json();
+      expect(d.editadaPor).toBe('Carla');
+      // reação feita pelo celular da loja (não veio daqui): entra
+      await t.acoesServico.aoReceber(eco({ reactionMessage: { key: { id: 'wa-cli-1' }, text: '🙏' } }));
+      expect((await t.acoesDa()).reacoes[t.ids.cliente!]).toHaveLength(2);
+    });
+
     it('traduzir sem a chave da IA avisa claramente', async () => {
       const t = await montar(f);
       const r = await t.post(t.carla, t.url('cliente', 'traduzir'), {});
