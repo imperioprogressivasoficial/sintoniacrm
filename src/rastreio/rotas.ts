@@ -166,6 +166,41 @@ export function registrarRastreio(app: FastifyInstance, o: OpcoesRotasRastreio):
     return { primeiro: primeiro ?? null, ultimo: ultimo ?? null, selo: primeiro ? seloDe(primeiro) : null, link: link ? { id: link.id, nome: link.nome, codigo: link.codigo } : null };
   });
 
+  // origem-auto: a equipe marca (ou corrige) a origem na ficha. Vale mais que o palpite e o automático.
+  const OPCOES_ORIGEM: Record<string, { canal: 'anuncio_meta' | 'link' | 'organico' | 'indicacao' | 'outro'; fonte?: string; detalhe?: string }> = {
+    anuncio_instagram: { canal: 'anuncio_meta', fonte: 'instagram' },
+    anuncio_facebook: { canal: 'anuncio_meta', fonte: 'facebook' },
+    instagram_bio: { canal: 'organico', fonte: 'instagram', detalhe: 'Bio do Instagram' },
+    instagram_direct: { canal: 'organico', fonte: 'instagram', detalhe: 'Direct do Instagram' },
+    instagram: { canal: 'organico', fonte: 'instagram' },
+    facebook: { canal: 'organico', fonte: 'facebook' },
+    google: { canal: 'organico', fonte: 'google' },
+    site: { canal: 'organico', fonte: 'site' },
+    tiktok: { canal: 'organico', fonte: 'tiktok' },
+    indicacao: { canal: 'indicacao' },
+    loja: { canal: 'outro', fonte: 'loja', detalhe: 'Passou na loja' },
+    whatsapp: { canal: 'organico', fonte: 'whatsapp' },
+    cliente_antiga: { canal: 'outro', detalhe: 'Cliente antiga' },
+  };
+  app.put('/api/conversas/:id/origem', async (req) => {
+    const c = await o.repo.buscarConversa((req.params as { id: string }).id).catch(() => undefined);
+    if (!c || !visivel(req, c)) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    const b = z.object({ opcao: z.enum(Object.keys(OPCOES_ORIGEM) as [string, ...string[]]), indicadoPor: z.string().trim().max(80).optional() }).parse(req.body ?? {});
+    const base = OPCOES_ORIGEM[b.opcao]!;
+    const { primeiro } = await o.rastreio.armazem.origem(c.id);
+    const nova = {
+      ...(primeiro && primeiro.canal === 'anuncio_meta' && base.canal === 'anuncio_meta' ? primeiro : {}),
+      ...base,
+      ...(b.indicadoPor ? { indicadoPor: b.indicadoPor } : {}),
+      origemPor: 'equipe' as const,
+      em: primeiro?.em ?? new Date(),
+      ...(primeiro?.primeiraMensagem ? { primeiraMensagem: primeiro.primeiraMensagem } : {}),
+    };
+    await o.rastreio.armazem.gravarOrigem(c.id, 'primeiro', nova, 'substituir');
+    await o.rastreio.armazem.gravarOrigem(c.id, 'ultimo', nova, 'se_vazio');
+    return { ok: true, selo: seloDe(nova) };
+  });
+
   app.get('/api/rastreio/selos', async (req) => {
     const conversas = (await o.repo.listarConversas()).filter((c) => visivel(req, c));
     const ids = new Set(conversas.map((c) => c.id));

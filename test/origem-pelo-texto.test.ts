@@ -11,6 +11,13 @@ describe('origem pelo que a cliente escreve', () => {
     ['achei vocês no google', 'organico', 'google'],
     ['passei na loja ontem e queria saber o preço', 'outro', 'loja'],
     ['vi no tiktok', 'organico', 'tiktok'],
+    ['Olá, vim pelo anúncio', 'anuncio_meta', 'meta'],
+    ['Olá, vim pelo Google', 'organico', 'google'],
+    ['Olá, vim pelo site', 'organico', 'site'],
+    ['Olá, vim pela bio do Instagram', 'organico', 'instagram'],
+    ['Olá, vim pelo direct do Instagram', 'organico', 'instagram'],
+    ['Olá, validei', 'anuncio_meta', 'meta'],
+    ['Olá, vim pelo anúncio do Instagram', 'anuncio_meta', 'instagram'],
   ])('%s', (texto, canal, fonte) => {
     const o = origemPeloTexto(texto);
     expect(o?.canal).toBe(canal);
@@ -21,6 +28,11 @@ describe('origem pelo que a cliente escreve', () => {
     expect(origemPeloTexto('Oi! A Ana que me indicou vocês')).toMatchObject({ canal: 'indicacao', indicadoPor: 'Ana' });
     expect(origemPeloTexto('fui indicada pela Carla')).toMatchObject({ canal: 'indicacao', indicadoPor: 'Carla' });
     expect(origemPeloTexto('minha amiga fez aí e amou')?.canal).toBe('indicacao');
+  });
+
+  it('bio e direct do Instagram ficam separados', () => {
+    expect(origemPeloTexto('Olá, vim pela bio do Instagram')?.detalhe).toBe('Bio do Instagram');
+    expect(origemPeloTexto('Olá, vim pelo direct do Instagram')?.detalhe).toBe('Direct do Instagram');
   });
 
   it('mensagem comum não vira origem', () => {

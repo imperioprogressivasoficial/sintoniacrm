@@ -177,7 +177,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const o = r.primeiro;
     const cab = el('h3', {}, iconeEl(r.selo || { icone: 'desconhecido' }), 'Origem', o ? seloLivre(r.selo) : null);
     if (!o) {
-      caixa.replaceChildren(cab, el('div', { class: 'ra-vazio', text: 'Ainda sem origem identificada. Quando a cliente vem de um anúncio de clique para WhatsApp ou de um link rastreado, a origem aparece aqui sozinha.' }));
+      caixa.replaceChildren(cab, el('div', { class: 'ra-vazio', text: 'Ainda sem origem identificada. Ela aparece sozinha quando a cliente vem de um anúncio, de um link rastreado ou diz de onde veio ("vim pelo Instagram"). Se souber, marque aqui.' }), marcarOrigem(conversa, caixa, null));
       return;
     }
     const linha = (rot, v) => (v ? [el('dt', { text: rot }), el('dd', { text: v })] : []);
@@ -210,7 +210,42 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (ul && (ul.adId !== o.adId || ul.codigo !== o.codigo || ul.canal !== o.canal)) {
       filhos.push(el('div', { class: 'ra-vazio' }, 'Último toque: ', seloLivre({ canal: ul.canal, rotulo: ul.campaignNome || ul.utmCampaign || ul.anuncioTitulo || ul.detalhe || NOME_CANAL[ul.canal] }), ` em ${quando(ul.em)}`));
     }
+    filhos.push(marcarOrigem(conversa, caixa, o));
     caixa.replaceChildren(...filhos);
+  }
+  // origem-auto: a equipe marca ou corrige a origem (vale mais que o palpite e o automático).
+  const OPCOES_ORIGEM = [
+    ['anuncio_instagram', 'Anúncio no Instagram'], ['anuncio_facebook', 'Anúncio no Facebook'],
+    ['instagram_bio', 'Bio do Instagram'], ['instagram_direct', 'Direct do Instagram'], ['instagram', 'Instagram (perfil, stories)'],
+    ['facebook', 'Facebook'], ['google', 'Google'], ['site', 'Site'], ['tiktok', 'TikTok'],
+    ['indicacao', 'Indicação'], ['loja', 'Passou na loja'], ['cliente_antiga', 'Cliente antiga'], ['whatsapp', 'WhatsApp direto'],
+  ];
+  function marcarOrigem(conversa, caixa, o) {
+    const u = ui(); const el = u.el;
+    const abrir = el('button', { type: 'button', class: 'ra-botao leve', style: 'justify-self:start;min-height:38px;padding:0 14px;font-size:13.5px', text: o ? 'Trocar origem' : 'Marcar origem' });
+    const area = el('div', { style: 'display:grid;gap:8px' }, abrir);
+    abrir.addEventListener('click', () => {
+      const sel = el('select', { 'aria-label': 'De onde a cliente veio', style: 'min-height:40px;border-radius:12px;padding:0 10px;font:inherit;background:var(--painel);color:var(--texto);border:1px solid var(--vidro-borda)' },
+        el('option', { value: '', text: 'De onde ela veio?' }), ...OPCOES_ORIGEM.map(([v, t]) => el('option', { value: v, text: t })));
+      const quem = el('input', { type: 'text', maxlength: '80', placeholder: 'Quem indicou (opcional)', hidden: '', style: 'min-height:40px;border-radius:12px;padding:0 12px;font:inherit;background:var(--painel);color:var(--texto);border:1px solid var(--vidro-borda)' });
+      const salvar = el('button', { type: 'button', class: 'ra-botao', style: 'min-height:40px;font-size:14px', text: 'Salvar' });
+      const cancelar = el('button', { type: 'button', class: 'ra-botao leve', style: 'min-height:40px;font-size:14px', text: 'Cancelar' });
+      const erro = el('span', { class: 'ra-vazio', role: 'alert' });
+      sel.addEventListener('change', () => { quem.hidden = sel.value !== 'indicacao'; });
+      cancelar.addEventListener('click', () => ficha(conversa, caixa));
+      salvar.addEventListener('click', async () => {
+        if (!sel.value) { erro.textContent = 'Escolha de onde ela veio.'; return; }
+        salvar.disabled = true;
+        try {
+          await u.api(`/api/conversas/${conversa.id}/origem`, { method: 'PUT', body: JSON.stringify({ opcao: sel.value, ...(quem.value.trim() ? { indicadoPor: quem.value.trim() } : {}) }), headers: { 'content-type': 'application/json' } });
+          await carregarSelos(true);
+          ficha(conversa, caixa);
+        } catch (x) { erro.textContent = x.message || 'Não deu para salvar agora.'; salvar.disabled = false; }
+      });
+      area.replaceChildren(sel, quem, el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, salvar, cancelar), erro);
+      sel.focus();
+    });
+    return area;
   }
   function seloLivre(x) {
     const el = ui().el;
