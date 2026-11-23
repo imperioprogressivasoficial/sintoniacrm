@@ -44,16 +44,25 @@ export class FonteComercialPostgres implements FonteComercial {
 
   async carregar(inicio: Date, fim: Date, escopo: EscopoVisao): Promise<DadosComercial> {
     const p1: unknown[] = [inicio, fim, TIPOS];
-    const onde1 = sqlEscopo(escopo, 'c', p1);
+    // trocar-numero: vendas já registradas contam mesmo com a conversa arquivada (número antigo)…
+    const onde1 = sqlEscopo(escopo, 'c', p1, { arquivadas: true });
+    // …ou apagada: o agendamento ficou sem a conversa, com a empresa e o "compareceu" gravados nele (troca-numero.ts).
+    p1.push(escopo.empresaId ?? null, escopo.unidades ?? null, Boolean(escopo.donaOuSemDona));
+    const n = p1.length;
+    const ondeApagada = `e.conversa_id is null and e.dados->>'conversaApagada' = 'true' and not $${n}::boolean
+      and ($${n - 2}::text is null or e.dados->>'empresaId' = $${n - 2}) and ($${n - 1}::text[] is null or e.unidade = any($${n - 1}::text[]))`;
     const p2: unknown[] = [inicio, fim];
     const onde2 = sqlEscopo(escopo, 'c', p2);
     const [v, a] = await Promise.all([
       this.pool.query<{ tipo: string; em: Date; unidade: string; dados: Record<string, unknown>; id: string; nome: string | null; responsavel_id: string | null; compareceu: boolean }>(
-        `select e.tipo, e.em, coalesce(e.unidade, c.unidade) as unidade, e.dados, c.id, c.nome, c.responsavel_id::text as responsavel_id,
-                (c.etapa = 'compareceu' or exists (select 1 from sintonia.eventos x where x.conversa_id = e.conversa_id and x.tipo = 'etapa_mudou'
-                                                    and x.dados->>'para' = 'compareceu' and x.em >= e.em)) as compareceu
-           from sintonia.eventos e join sintonia.conversas c on c.id = e.conversa_id
-          where e.em >= $1 and e.em < $2 and e.tipo = any($3::text[]) and ${onde1}
+        `select e.tipo, e.em, coalesce(e.unidade, c.unidade) as unidade, e.dados, coalesce(c.id::text, '') as id, c.nome,
+                coalesce(c.responsavel_id::text, e.dados->>'responsavelId') as responsavel_id,
+                case when c.id is null then coalesce((e.dados->>'compareceu')::boolean, false)
+                     else (c.etapa = 'compareceu' or exists (select 1 from sintonia.eventos x where x.conversa_id = e.conversa_id and x.tipo = 'etapa_mudou'
+                                                    and x.dados->>'para' = 'compareceu' and x.em >= e.em)) end as compareceu
+           from sintonia.eventos e left join sintonia.conversas c on c.id = e.conversa_id
+          where e.em >= $1 and e.em < $2 and e.tipo = any($3::text[])
+            and ((c.id is not null and ${onde1}) or (${ondeApagada}))
           order by e.em`,
         p1,
       ),
@@ -81,9 +90,17 @@ export class FonteComercialMemoria implements FonteComercial {
   constructor(private readonly repo: Repositorio) {}
 
   async carregar(inicio: Date, fim: Date, escopo: EscopoVisao): Promise<DadosComercial> {
-    const conversas = new Map((await this.repo.listarConversas()).filter((c) => noEscopo(escopo, c)).map((c) => [c.id, c]));
-    const eventos = (await this.repo.eventosEntre(inicio, new Date(8.64e15))).filter((e) => e.conversaId && conversas.has(e.conversaId));
+    // trocar-numero: vendas contam mesmo com a conversa arquivada (número antigo) ou apagada (sem a conversa).
+    const conversas = new Map((await this.repo.listarConversas({ incluirArquivadas: true })).filter((c) => noEscopo(escopo, c)).map((c) => [c.id, c]));
+    const todos = await this.repo.eventosEntre(inicio, new Date(8.64e15));
+    const eventos = todos.filter((e) => e.conversaId && conversas.has(e.conversaId));
     const vendas: Venda[] = [];
+    for (const e of todos) {
+      if (e.conversaId || e.dados?.conversaApagada !== true || e.em >= fim || !TIPOS.includes(e.tipo) || escopo.donaOuSemDona) continue;
+      if (escopo.empresaId && e.dados.empresaId !== escopo.empresaId) continue;
+      if (escopo.unidades && !escopo.unidades.includes(e.unidade ?? '')) continue;
+      vendas.push(venda(e.tipo, e.em, e.unidade ?? '', e.dados, { id: '', responsavelId: str(e.dados.responsavelId) }, e.dados.compareceu === true));
+    }
     const porAtendente = new Map<string, { nome: string; conversas: Map<string, number | null> }>();
     for (const e of eventos) {
       if (e.em >= fim) continue;

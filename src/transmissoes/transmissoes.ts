@@ -327,7 +327,7 @@ export class Transmissoes {
               c.telefone !~ '${CELULAR}' as sem_celular
          from sintonia.conversas c
          left join sintonia.contatos ct on ct.empresa_id = c.empresa_id and ct.telefone = c.telefone
-        where c.empresa_id = $1 and c.unidade = $2
+        where c.empresa_id = $1 and c.unidade = $2 and c.arquivada_em is null /* trocar-numero: número antigo fica de fora */
           and (cardinality($3::text[]) = 0 or (
                 case when $10::boolean
                   then (select count(distinct x.tag_id) from sintonia.conversa_tags x where x.conversa_id = c.id and x.tag_id::text = any($3::text[])) = cardinality($3::text[])
@@ -659,7 +659,7 @@ export class Transmissoes {
            select distinct on (c.telefone) $1, c.telefone, $4, c.id, coalesce(nullif(ct.nome, ''), c.nome), 'gatilho: aniversário', $5, $5
              from sintonia.conversas c
              join sintonia.contatos ct on ct.empresa_id = c.empresa_id and ct.telefone = c.telefone
-            where c.empresa_id = $2 and c.unidade = $3 and to_char(ct.nascimento, 'MM-DD') = $6 and c.telefone ~ '${CELULAR}'
+            where c.empresa_id = $2 and c.unidade = $3 and c.arquivada_em is null and to_char(ct.nascimento, 'MM-DD') = $6 and c.telefone ~ '${CELULAR}'
               and not exists (select 1 from sintonia.transmissao_optout o where o.empresa_id = c.empresa_id and o.telefone = c.telefone)
            on conflict do nothing`,
           [camp.id, this.empresaId, camp.unidade, String(p.ano), agora, mmdd],

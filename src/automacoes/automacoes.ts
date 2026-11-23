@@ -445,7 +445,7 @@ export class ArmazemAutomacoesPostgres implements ArmazemAutomacoes {
       `with x as (
          select c.id, c.ultima_mensagem_cliente as cl, greatest(c.ultima_mensagem_equipe, c.ultima_mensagem_ia) as loja
            from sintonia.conversas c
-          where c.empresa_id = $2
+          where c.empresa_id = $2 and c.arquivada_em is null /* trocar-numero */
             and (case when $3 = 'equipe' then c.ultima_mensagem_cliente between $5 and $4
                       else greatest(c.ultima_mensagem_equipe, c.ultima_mensagem_ia) between $5 and $4 end)
        ), y as (

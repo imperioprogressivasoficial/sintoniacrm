@@ -16,7 +16,7 @@ export function calendarioPostgres(pool: pg.Pool, empresaId: string): Calendario
       const { rows } = await pool.query<{ conversa_id: string }>(
         `select distinct on (ct.telefone) c.id as conversa_id
            from sintonia.contatos ct join sintonia.conversas c on c.empresa_id = ct.empresa_id and c.telefone = ct.telefone
-          where ct.empresa_id = $1 and ct.nascimento is not null and extract(month from ct.nascimento) = $2 and extract(day from ct.nascimento) = $3
+          where ct.empresa_id = $1 and c.arquivada_em is null /* trocar-numero */ and ct.nascimento is not null and extract(month from ct.nascimento) = $2 and extract(day from ct.nascimento) = $3
           order by ct.telefone, c.atualizada_em desc`,
         [empresaId, d.mes, d.dia],
       );
@@ -29,7 +29,7 @@ export function calendarioPostgres(pool: pg.Pool, empresaId: string): Calendario
       const fim = new Date(agora.getTime() - dias * DIA);
       const { rows } = await pool.query<{ conversa_id: string; id: string }>(
         `select e.conversa_id, e.id from sintonia.eventos e join sintonia.conversas c on c.id = e.conversa_id
-          where c.empresa_id = $1 and e.tipo = 'etapa_mudou' and e.dados->>'para' = 'compareceu' and e.em >= $2 and e.em <= $3`,
+          where c.empresa_id = $1 and c.arquivada_em is null and e.tipo = 'etapa_mudou' and e.dados->>'para' = 'compareceu' and e.em >= $2 and e.em <= $3`,
         [empresaId, inicio, fim],
       );
       return rows.map((r) => ({ conversaId: r.conversa_id, chave: `compareceu:${dias}:${r.id}` }));

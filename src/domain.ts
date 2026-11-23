@@ -132,6 +132,10 @@ export interface Conversa {
   responsavelId?: string;
   /** Nome da dona, para exibir sem consultar a equipe. */
   responsavelNome?: string;
+  /** trocar-numero: arquivada pela empresa (ex.: conversas do número antigo). Some da lista, da busca, do Pipeline e dos relatórios. */
+  arquivadaEm?: Date;
+  /** trocar-numero: por que foi arquivada ("numero_antigo"). */
+  arquivadaMotivo?: string;
   criadaEm: Date;
   atualizadaEm: Date;
 }

@@ -115,6 +115,11 @@ export interface Repositorio {
     agora: Date;
   }): Promise<{ conversa: Conversa; nova: boolean }>;
   salvarConversa(c: Conversa): Promise<void>;
+  /**
+   * trocar-numero: arquiva (em = data) ou desarquiva (em = null) conversas da empresa, para todo mundo.
+   * Devolve quantas mudaram.
+   */
+  arquivarConversas(empresaId: string, ids: string[], em: Date | null, motivo?: string): Promise<number>;
   /** contato-nome: conversas sem nome de verdade (vazio, o número, símbolos), da mais recente para a mais antiga. */
   conversasSemNome(empresaId: string, limite: number): Promise<Array<{ id: string; telefone: string; nome?: string }>>;
   /**
@@ -221,7 +226,15 @@ export interface FiltroConversas {
   telefone?: string;
   empresaId?: string;
   escopo?: EscopoVisao;
+  /**
+   * trocar-numero: arquivadas pela empresa ficam de fora das listas (Pipeline, relatórios, alarmes...).
+   * Quem procura por ids ou telefone recebe todas; `incluirArquivadas` força trazer também numa lista.
+   */
+  incluirArquivadas?: boolean;
 }
+
+/** trocar-numero: a lista leva as arquivadas pela empresa? (por ids/telefone sim: é uma procura pontual). */
+export const comArquivadas = (f: FiltroConversas | undefined) => Boolean(f?.incluirArquivadas || f?.ids || f?.telefone);
 
 /** robustez: pedido de uma página da lista de Conversas. */
 export interface PedidoPagina {
@@ -233,6 +246,8 @@ export interface PedidoPagina {
   busca?: string;
   /** Só as conversas com esta tag. */
   tagId?: string;
+  /** trocar-numero: true = só as arquivadas pela empresa (filtro "Arquivadas do número antigo"); sem = só as outras. */
+  arquivadas?: boolean;
 }
 
 /** serena-super: pedido da busca no texto das mensagens. */
@@ -257,11 +272,12 @@ export const digitosBusca = (b: string) => {
 };
 
 const passaFiltro = (f: FiltroConversas | undefined, c: Conversa) =>
-  !f ||
-  ((!f.ids || f.ids.includes(c.id)) &&
-    (!f.telefone || c.telefone === f.telefone) &&
-    (!f.empresaId || c.empresaId === f.empresaId) &&
-    (!f.escopo || noEscopo(f.escopo, c)));
+  (comArquivadas(f) || !c.arquivadaEm) &&
+  (!f ||
+    ((!f.ids || f.ids.includes(c.id)) &&
+      (!f.telefone || c.telefone === f.telefone) &&
+      (!f.empresaId || c.empresaId === f.empresaId) &&
+      (!f.escopo || noEscopo(f.escopo, c))));
 
 /** velocidade: cópia do anexo sem a miniatura (ela só vai no detalhe da conversa). */
 function semMiniatura(a: Anexo): Anexo {
@@ -292,6 +308,9 @@ export class RepositorioMemoria implements Repositorio {
   }) {
     for (const c of this.conversas.values()) {
       if (c.empresaId === d.empresaId && c.unidade === d.unidade && c.telefone === d.telefone) {
+        // trocar-numero: mensagem nova tira a conversa do arquivo da empresa.
+        delete c.arquivadaEm;
+        delete c.arquivadaMotivo;
         if (d.nome && !c.nome) c.nome = d.nome;
         else {
           // contato-nome: só o número (ou símbolos) no nome e chegou um nome de verdade: usa o nome. Nome de verdade não muda.
@@ -319,7 +338,62 @@ export class RepositorioMemoria implements Repositorio {
   }
 
   async salvarConversa(c: Conversa) {
-    this.conversas.set(c.id, { ...c });
+    // trocar-numero: o arquivo da empresa só muda por arquivarConversas (e por mensagem nova), como no Postgres.
+    const atual = this.conversas.get(c.id);
+    const { arquivadaEm: _a, arquivadaMotivo: _m, ...resto } = c;
+    this.conversas.set(c.id, { ...resto, ...(atual?.arquivadaEm ? { arquivadaEm: atual.arquivadaEm, arquivadaMotivo: atual.arquivadaMotivo } : {}) });
+  }
+
+  async arquivarConversas(empresaId: string, ids: string[], em: Date | null, motivo?: string) {
+    let n = 0;
+    for (const id of ids) {
+      const c = this.conversas.get(id);
+      if (!c || c.empresaId !== empresaId || Boolean(c.arquivadaEm) === Boolean(em)) continue;
+      if (em) Object.assign(c, { arquivadaEm: em, arquivadaMotivo: motivo ?? 'numero_antigo' });
+      else {
+        delete c.arquivadaEm;
+        delete c.arquivadaMotivo;
+      }
+      n++;
+    }
+    return n;
+  }
+
+  /** trocar-numero (só memória): apaga conversas e o que é só delas (mensagens, mídias, tarefas, eventos, sugestões). */
+  apagarConversasMemoria(ids: string[]): { conversas: number; mensagens: number; midias: number } {
+    const alvo = new Set(ids.filter((id) => this.conversas.has(id)));
+    const msgs = this.msgs.filter((m) => alvo.has(m.conversaId));
+    let midias = 0;
+    for (const m of msgs) if (this.midias.delete(m.id)) midias++;
+    this.msgs = this.msgs.filter((m) => !alvo.has(m.conversaId));
+    this.tarefas = this.tarefas.filter((t) => !alvo.has(t.conversaId));
+    // Agendamentos (vendas) ficam nos relatórios, sem a ligação com a conversa; o resto da conversa vai junto.
+    this.eventos = this.eventos.flatMap((e) => {
+      if (!e.conversaId || !alvo.has(e.conversaId)) return [e];
+      if (e.tipo !== 'agendamento_ia' && e.tipo !== 'agendamento_equipe') return [];
+      const { conversaId: _c, ...resto } = e;
+      return [{ ...resto, dados: { ...(e.dados ?? {}), empresaId: this.conversas.get(e.conversaId)!.empresaId, conversaApagada: true } }];
+    });
+    for (const id of alvo) {
+      this.sugestoes.delete(id);
+      this.conversas.delete(id);
+    }
+    return { conversas: alvo.size, mensagens: msgs.length, midias };
+  }
+
+  /** trocar-numero (só memória): mensagens e mídias de cada conversa, sem cópia. */
+  contarMensagensMemoria(ids: string[]): { mensagens: number; midias: number; ultima: Map<string, Date> } {
+    const alvo = new Set(ids);
+    let mensagens = 0, midias = 0;
+    const ultima = new Map<string, Date>();
+    for (const m of this.msgs) {
+      if (!alvo.has(m.conversaId)) continue;
+      mensagens++;
+      if (this.midias.has(m.id)) midias++;
+      const u = ultima.get(m.conversaId);
+      if (!u || m.em > u) ultima.set(m.conversaId, m.em);
+    }
+    return { mensagens, midias, ultima };
   }
 
   async conversasSemNome(empresaId: string, limite: number) {
@@ -340,7 +414,8 @@ export class RepositorioMemoria implements Repositorio {
   async paginaConversas(p: PedidoPagina) {
     const busca = p.busca?.trim().toLowerCase();
     const digitos = busca ? digitosBusca(busca) : '';
-    const lista = (await this.listarConversas({ escopo: p.escopo })).filter((c) => {
+    const lista = (await this.listarConversas({ escopo: p.escopo, incluirArquivadas: true })).filter((c) => {
+      if (Boolean(c.arquivadaEm) !== (p.arquivadas === true)) return false;
       if (p.antes && !(c.atualizadaEm.getTime() < p.antes.em.getTime() || (c.atualizadaEm.getTime() === p.antes.em.getTime() && c.id < p.antes.id))) return false;
       if (!busca) return true;
       if ((c.nome ?? '').toLowerCase().includes(busca) || (digitos && c.telefone.includes(digitos))) return true;

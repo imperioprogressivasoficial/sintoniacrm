@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { Anexo, Conversa, Etapa, Mensagem, ModoAtendimento, SituacaoAnexo, TipoAnexo, UnidadeId } from '../domain.js';
-import { digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoBuscaMensagens, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
+import { comArquivadas, digitosBusca, ORDEM_ENTREGA, VALIDADE_DIGITANDO_MS, type Evento, type FiltroConversas, type MidiaPendente, type PedidoBuscaMensagens, type PedidoPagina, type Repositorio, type Tarefa, type TipoEvento } from './repositorio.js';
 import { nomeEhReal, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Repositório de produção: tudo no Postgres, esquema "sintonia". Mesmo contrato do RepositorioMemoria. */
@@ -24,6 +24,8 @@ interface LinhaConversa {
   resumo: string | null;
   responsavel_id: string | null;
   responsavel_nome: string | null;
+  arquivada_em: Date | null;
+  arquivada_motivo: string | null;
   criada_em: Date;
   atualizada_em: Date;
 }
@@ -50,13 +52,14 @@ function paraConversa(l: LinhaConversa): Conversa {
     resumo: ou(l.resumo),
     responsavelId: ou(l.responsavel_id),
     responsavelNome: ou(l.responsavel_nome),
+    ...(l.arquivada_em ? { arquivadaEm: l.arquivada_em, arquivadaMotivo: l.arquivada_motivo ?? undefined } : {}),
     criadaEm: l.criada_em,
     atualizadaEm: l.atualizada_em,
   };
 }
 
 const COLUNAS_CONVERSA = `id, empresa_id, unidade, canal_id, telefone, nome, modo, etapa, trinks_cliente_id, pausa_ia_ate,
-  ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, responsavel_id, responsavel_nome, criada_em, atualizada_em`;
+  ultima_mensagem_cliente, ultima_mensagem_equipe, ultima_mensagem_ia, etiquetas, resumo, responsavel_id, responsavel_nome, arquivada_em, arquivada_motivo, criada_em, atualizada_em`;
 
 /** Mensagem com os dados da mídia (sem o arquivo). */
 interface LinhaMensagem {
@@ -138,7 +141,8 @@ export class RepositorioPostgres implements Repositorio {
       `insert into sintonia.conversas (id, empresa_id, unidade, canal_id, telefone, nome, criada_em, atualizada_em)
        values ($1, $2, $3, $4, $5, $6, $7, $7)
        on conflict (empresa_id, unidade, telefone)
-         do update set nome = coalesce(sintonia.conversas.nome, excluded.nome)
+         -- trocar-numero: mensagem nova tira a conversa do arquivo da empresa.
+         do update set nome = coalesce(sintonia.conversas.nome, excluded.nome), arquivada_em = null, arquivada_motivo = null
        returning ${COLUNAS_CONVERSA}, (xmax = 0) as nova`,
       [randomUUID(), d.empresaId, d.unidade, d.canalId, d.telefone, d.nome ?? null, d.agora],
     );
@@ -152,6 +156,17 @@ export class RepositorioPostgres implements Repositorio {
       if (r.rowCount) conversa.nome = novo;
     }
     return { conversa, nova: l.nova };
+  }
+
+  async arquivarConversas(empresaId: string, ids: string[], em: Date | null, motivo?: string) {
+    const validos = ids.filter((x) => UUID.test(x));
+    if (!validos.length) return 0;
+    const r = await this.pool.query(
+      `update sintonia.conversas set arquivada_em = $3, arquivada_motivo = case when $3::timestamptz is null then null else $4 end
+        where empresa_id = $1 and id = any($2::uuid[]) and (arquivada_em is null) = ($3::timestamptz is not null)`,
+      [empresaId, validos, em, motivo ?? 'numero_antigo'],
+    );
+    return r.rowCount ?? 0;
   }
 
   async conversasSemNome(empresaId: string, limite: number) {
@@ -206,8 +221,9 @@ export class RepositorioPostgres implements Repositorio {
           and ($4::text is null or empresa_id = $4)
           and ($5::text[] is null or unidade = any($5))
           and ($6::uuid is null or responsavel_id is null or responsavel_id = $6)
+          and ($7::boolean or arquivada_em is null)
         order by atualizada_em desc, id desc`,
-      [ids ?? null, f.telefone ?? null, f.empresaId ?? null, e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null],
+      [ids ?? null, f.telefone ?? null, f.empresaId ?? null, e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, comArquivadas(f)],
     );
     return rows.map(paraConversa);
   }
@@ -231,10 +247,11 @@ export class RepositorioPostgres implements Repositorio {
                or ($7 <> '' and c.telefone like '%' || $7 || '%')
                or c.id in (select m.conversa_id from sintonia.mensagens m where m.texto ilike $6))
           and ($8::uuid is null or exists (select 1 from sintonia.conversa_tags ct where ct.conversa_id = c.id and ct.tag_id = $8))
+          and (c.arquivada_em is not null) = $11::boolean
         order by c.atualizada_em desc, c.id desc
         limit $9`,
       // banco-seguranca: com uma unidade só, o "= $10" deixa o Postgres 16 usar o índice conversas_unidade_recentes (631).
-      [e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.antes?.em ?? null, p.antes?.id ?? null, padrao, digitos, p.tagId ?? null, p.limite + 1, e.unidades?.length === 1 ? e.unidades[0] : null],
+      [e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.antes?.em ?? null, p.antes?.id ?? null, padrao, digitos, p.tagId ?? null, p.limite + 1, e.unidades?.length === 1 ? e.unidades[0] : null, p.arquivadas === true],
     );
     const pagina = rows.slice(0, p.limite).map(paraConversa);
     const ultima = pagina.at(-1);
@@ -268,6 +285,7 @@ export class RepositorioPostgres implements Repositorio {
           and ($7::timestamptz is null or m.em < $7)
           and ($8::text is null or c.unidade = $8)
           and ($9::uuid[] is null or m.conversa_id = any($9))
+          and c.arquivada_em is null
         order by m.em desc, m.id desc
         limit $10`,
       [padrao, autores, e.empresaId ?? null, e.unidades ?? null, e.donaOuSemDona ?? null, p.desde ?? null, p.ate ?? null, p.unidade ?? null, ids ?? null, p.limite],

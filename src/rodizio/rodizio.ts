@@ -155,7 +155,7 @@ export class ArmazemRodizioPostgres implements ArmazemRodizio {
     if (!validos.length) return m;
     const { rows } = await this.pool.query<{ responsavel_id: string; n: number }>(
       `select responsavel_id::text, count(*)::int as n from sintonia.conversas
-        where empresa_id = $1 and responsavel_id = any($2::uuid[])
+        where empresa_id = $1 and responsavel_id = any($2::uuid[]) and arquivada_em is null /* trocar-numero */
           and greatest(coalesce(ultima_mensagem_cliente, 'epoch'), coalesce(ultima_mensagem_equipe, 'epoch')) >= $3
         group by responsavel_id`,
       [empresaId, validos, desde],
