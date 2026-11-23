@@ -265,6 +265,25 @@
       b.addEventListener('click', () => abrir(canal, 'troca', recarregar));
       lista.push(el('div', { className: 'tn-aviso' }, el('span', { textContent: `Outro número conectou. Falta decidir o que fazer com ${plural(canal.troca.conversas, 'conversa', 'conversas')} do número anterior.` }), b));
     }
+    /* grupos do número antigo (dono 23/11): botão próprio, só aparece quando há grupos de antes do número de agora */
+    const grupos = el('button', { className: 'tn-apagar', type: 'button', innerHTML: IC.apagar, hidden: true });
+    fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(canal.id)}/grupos-antigos`, { credentials: 'same-origin' })
+      .then((x) => (x.ok ? x.json() : null)).then((g) => {
+        if (!g?.grupos) return;
+        grupos.append(`Apagar os grupos do número antigo (${g.grupos})`); grupos.hidden = false;
+      }).catch(() => {});
+    grupos.addEventListener('click', async () => {
+      const c = window.prompt('Os grupos do número antigo (as conversas de grupo e as mensagens deles) vão sumir da Sintonia. Isso não pode ser desfeito.\nOs grupos do número novo ficam.\n\nPara confirmar, digite APAGAR:');
+      if (c == null) return;
+      try {
+        const r = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(canal.id)}/grupos-antigos`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmacao: c }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.erro || j.message || 'Não deu para apagar agora.');
+        window.alert(`Pronto: ${j.grupos} ${j.grupos === 1 ? 'grupo apagado' : 'grupos apagados'}.`);
+        grupos.hidden = true; recarregar?.();
+      } catch (x) { window.alert(x.message); }
+    });
+    lista.push(grupos);
     const apagar = el('button', { className: 'tn-apagar', type: 'button', innerHTML: IC.apagar });
     apagar.append('Apagar os dados deste WhatsApp');
     apagar.addEventListener('click', () => abrir(canal, 'tudo', recarregar));

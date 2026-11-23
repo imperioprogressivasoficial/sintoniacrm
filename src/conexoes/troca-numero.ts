@@ -72,6 +72,9 @@ export interface LimpezaNumero {
   apagarLote(alvo: AlvoNumero, limite: number): Promise<Resumo>;
   /** Quantas conversas do canal estão arquivadas agora. */
   arquivadas(empresaId: string, canalId: string): Promise<number>;
+  /** Grupos do WhatsApp do número antigo (canal + loja, sem mensagem depois da troca). Devolve quantos saíram. */
+  apagarGrupos?(alvo: AlvoNumero): Promise<number>;
+  contarGrupos?(alvo: AlvoNumero): Promise<number>;
 }
 
 export interface Quem {
@@ -87,6 +90,8 @@ export interface Trabalho {
   estado: 'apagando' | 'pronto' | 'erro';
   total: Resumo;
   feito: Resumo;
+  /** Grupos do WhatsApp do número antigo que saíram junto. */
+  grupos?: number;
   erro?: string;
   inicio: Date;
   fim?: Date;
@@ -198,6 +203,24 @@ export class TrocaNumero {
     return { trocaEm: r.trocaEm, numeroAnterior: r.numeroAnterior, numeroNovo: r.numero, resumo };
   }
 
+  /** Grupos do número antigo (dono 23/11): os que existiam antes do número de agora conectar e não tiveram mensagem depois. */
+  async gruposAntigos(canalId: string, unidade: string): Promise<{ grupos: number; sabeQuando: boolean }> {
+    const r = await this.o.armazem.ler(canalId);
+    const sabeQuando = Boolean(r?.conectadoEm || r?.trocaEm);
+    if (!sabeQuando || !this.o.limpeza.contarGrupos) return { grupos: 0, sabeQuando };
+    return { grupos: await this.o.limpeza.contarGrupos(this.alvo(canalId, unidade, this.agora(), true)), sabeQuando };
+  }
+  async apagarGruposAntigos(p: { canalId: string; unidade: string; quem: Quem; confirmacao?: string }): Promise<number> {
+    if (!podeApagar(p.quem)) throw erro('Só a administração e a direção apagam os dados de um WhatsApp.', 403);
+    if (String(p.confirmacao ?? '').trim().toUpperCase() !== 'APAGAR') throw erro('Para apagar, digite APAGAR.', 400);
+    const r = await this.o.armazem.ler(p.canalId);
+    if (!r?.conectadoEm && !r?.trocaEm) throw erro('Ainda não sabemos quando o número novo conectou. Desconecte e conecte de novo pela tela e tente outra vez.', 409);
+    if (!this.o.limpeza.apagarGrupos) throw erro('Não disponível.', 501);
+    const n = await this.o.limpeza.apagarGrupos(this.alvo(p.canalId, p.unidade, this.agora(), true));
+    await this.auditar(p.quem, 'apagou os grupos do número antigo de um WhatsApp', p.canalId, { unidade: p.unidade, grupos: n });
+    return n;
+  }
+
   /** Tudo o que existe deste canal agora (botão "Apagar os dados deste WhatsApp"). */
   async dados(canalId: string, unidade: string): Promise<{ resumo: Resumo; ativas: number; arquivadas: number; aviso: string }> {
     const resumo = await this.o.limpeza.resumo(this.alvo(canalId, unidade, this.agora(), true));
@@ -258,6 +281,8 @@ export class TrocaNumero {
         t.feito = { conversas: t.feito.conversas + r.conversas, mensagens: t.feito.mensagens + r.mensagens, midias: t.feito.midias + r.midias, contatos: t.feito.contatos + r.contatos };
         await pausa();
       }
+      /* grupos do número antigo também saem (dono 23/11); os do chip novo (com mensagem depois da troca) ficam */
+      if (this.o.limpeza.apagarGrupos) t.grupos = await this.o.limpeza.apagarGrupos(alvo);
       t.estado = 'pronto';
     } catch (e) {
       t.estado = 'erro';
@@ -273,6 +298,7 @@ export class TrocaNumero {
       mensagens: t.feito.mensagens,
       midias: t.feito.midias,
       contatos: t.feito.contatos,
+      grupos: t.grupos ?? 0,
       terminou: t.estado === 'pronto',
     });
   }
@@ -360,6 +386,28 @@ export class LimpezaNumeroPostgres implements LimpezaNumero {
       valoresAlvo(a),
     );
     return rows[0] ?? zero();
+  }
+
+  async contarGrupos(a: AlvoNumero): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(
+      `with corte as (select coalesce((select coalesce(conectado_em, troca_em) from sintonia.whatsapp_numeros where canal_id = $2), $4::timestamptz) as em)
+       select count(*)::int as n from sintonia.grupos g, corte
+        where g.empresa_id = $1 and g.canal_id = $2 and g.unidade = $3 and g.criado_em < corte.em
+          and not exists (select 1 from sintonia.grupo_mensagens gm where gm.grupo_id = g.id and gm.em >= corte.em)`,
+      [a.empresaId, a.canalId, a.unidade, a.corte],
+    );
+    return rows[0]?.n ?? 0;
+  }
+  /** Grupos do número antigo: criados antes da troca e sem mensagem depois dela (o corte é a troca guardada, se houver). */
+  async apagarGrupos(a: AlvoNumero): Promise<number> {
+    const r = await this.pool.query(
+      `with corte as (select coalesce((select coalesce(conectado_em, troca_em) from sintonia.whatsapp_numeros where canal_id = $2), $4::timestamptz) as em)
+       delete from sintonia.grupos g using corte
+        where g.empresa_id = $1 and g.canal_id = $2 and g.unidade = $3 and g.criado_em < corte.em
+          and not exists (select 1 from sintonia.grupo_mensagens gm where gm.grupo_id = g.id and gm.em >= corte.em)`,
+      [a.empresaId, a.canalId, a.unidade, a.corte],
+    );
+    return r.rowCount ?? 0;
   }
 
   async arquivar(a: AlvoNumero, em: Date): Promise<number> {

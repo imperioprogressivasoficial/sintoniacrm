@@ -556,6 +556,20 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     return { ok: true, arquivadas: r.arquivadas ?? 0, trabalho: r.trabalho ? trabalhoJson(r.trabalho) : null };
   });
 
+  /* grupos do número antigo (dono 23/11): contar e apagar, sem tocar no que já chegou pelo número novo */
+  app.get('/api/conexoes/whatsapp/canais/:id/grupos-antigos', async (req) => {
+    await quemFez(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    return troca().gruposAntigos(id, lojaDoCanal(id));
+  });
+  app.post('/api/conexoes/whatsapp/canais/:id/grupos-antigos', async (req) => {
+    const q = await quemFez(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    const b = z.object({ confirmacao: z.string().max(20).optional() }).parse(req.body ?? {});
+    const n = await troca().apagarGruposAntigos({ canalId: id, unidade: lojaDoCanal(id), quem: q, ...(b.confirmacao ? { confirmacao: b.confirmacao } : {}) });
+    return { ok: true, grupos: n };
+  });
+
   app.get('/api/conexoes/whatsapp/apagando/:trabalho', async (req, reply) => {
     await quemFez(req);
     const t = troca().trabalho(z.string().uuid().parse((req.params as { trabalho: string }).trabalho));
