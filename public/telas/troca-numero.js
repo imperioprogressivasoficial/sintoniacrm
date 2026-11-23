@@ -23,15 +23,17 @@
   .tn-aviso span { flex: 1 1 220px; min-width: 0; }
   .tn-aviso .botao { padding: 8px 14px; font-size: 13.5px; }
   @media (max-width: 520px) { .tn-aviso { margin-left: 0; } }
+  .tn-aviso-topo { margin: 0 0 8px; }
+  body.cx-detalhe #tn-topo { display: none; }
   .tn-folha { text-align: left; }
-  .tn-folha h2 { text-align: center; }
+  .tn-folha h2 { text-align: center; padding: 0 34px; }
   .tn-folha .wa-sub { text-align: center; }
   .tn-nums { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: -4px; }
   .tn-nums span { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); color: var(--sub); }
   .tn-nums span b { color: var(--texto); font-weight: 700; }
   .tn-pergunta { font-size: 15px; font-weight: 700; color: var(--texto); text-align: center; margin: 2px 0 0; }
   .tn-ops { display: grid; gap: 8px; }
-  .tn-op { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .tn-op { all: unset; box-sizing: border-box; cursor: pointer; text-align: left; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--vidro-item); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
   .tn-op:hover { background: var(--vidro-ativo); }
   .tn-op:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .tn-op[aria-busy="true"] { opacity: .6; pointer-events: none; }
@@ -42,7 +44,7 @@
   .tn-op.perigo i { background: color-mix(in srgb, var(--erro) 13%, transparent); color: var(--erro); }
   .tn-op.perigo b { color: var(--erro); }
   @media (prefers-color-scheme: dark) { .tn-op i { color: #8fe9de; background: rgba(15, 252, 190, .1); } .tn-op.perigo i { color: var(--erro); background: color-mix(in srgb, var(--erro) 16%, transparent); } }
-  .tn-some { margin: 0; padding: 12px 14px 12px 32px; border-radius: 14px; background: color-mix(in srgb, var(--erro) 8%, var(--vidro-item)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erro) 30%, transparent); font-size: 14px; line-height: 1.7; color: var(--texto); }
+  .tn-some { text-align: left; margin: 0; padding: 12px 14px 12px 32px; border-radius: 14px; background: color-mix(in srgb, var(--erro) 8%, var(--vidro-item)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--erro) 30%, transparent); font-size: 14px; line-height: 1.7; color: var(--texto); }
   .tn-some b { font-weight: 700; }
   .tn-nota { font-size: 12.5px; line-height: 1.45; color: var(--sub); margin: 0; }
   .tn-campo { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--sub); }
@@ -270,5 +272,24 @@
     return lista;
   }
 
-  window.SintoniaTrocaNumero = { itens, abrir };
+  /* Na lista de conexões (catálogo), a troca pendente aparece logo no topo: ninguém precisa achar o canal para decidir. */
+  async function avisoNoTopo() {
+    const main = document.querySelector('main');
+    if (!main) return;
+    document.getElementById('tn-topo')?.remove();
+    const r = await fetch('/api/conexoes/whatsapp/canais').then((x) => (x.ok ? x.json() : null)).catch(() => null);
+    const pendentes = (r?.canais || []).filter((k) => k.troca);
+    if (!pendentes.length) return;
+    const caixa = el('div', { id: 'tn-topo' });
+    for (const k of pendentes) {
+      const b = el('button', { className: 'botao leve', type: 'button', textContent: 'Decidir' });
+      b.addEventListener('click', () => abrir(k, 'troca', avisoNoTopo));
+      caixa.append(el('div', { className: 'tn-aviso tn-aviso-topo' }, el('span', { textContent: `WhatsApp “${k.nome}”: outro número conectou. Falta decidir o que fazer com ${plural(k.troca.conversas, 'conversa', 'conversas')} do número anterior.` }), b));
+    }
+    main.prepend(caixa);
+  }
+  const iniciar = () => setTimeout(avisoNoTopo, 300);
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', iniciar); else iniciar();
+
+  window.SintoniaTrocaNumero = { itens, abrir, avisoNoTopo };
 })();
