@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 23/11 13h50: 69c7f06 no ar — "Validei meu número..." (formulário Meta) = anúncio.
+
 - 23/11 13h40: 60d26f1 no ar — origem das conversas antigas lê as PRIMEIRAS mensagens da cliente (repo.primeirasDaCliente).
 
 - 23/11 13h20: origem automática pelo texto da cliente (74663df no ar): `src/rastreio/pelo-texto.ts` (regras, sem IA) em Rastreio.aoMensagem quando não há anúncio/link, e `detectarSemOrigem` a cada 30 min nas conversas sem origem (inclui histórico importado). Palpite = origemPor 'ia' (anúncio/link real passa por cima).
