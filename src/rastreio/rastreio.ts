@@ -3,6 +3,7 @@ import type { MensagemRecebida } from '../channels/tipos.js';
 import type { Conversa } from '../domain.js';
 import type { ArmazemRastreio, Clique, LinkRastreado, NomesAnuncio, Origem } from './armazem.js';
 import type { Capi } from './capi.js';
+import { origemPeloTexto } from './pelo-texto.js';
 import { ALFABETO_REF, codigoNaMensagem, parametrosDaUrl, tirarCodigo } from './referencia.js';
 
 export interface DependenciasRastreio {
@@ -111,6 +112,14 @@ export class Rastreio {
     const link = clique ? await this.d.armazem.link(this.d.empresaId, clique.linkId) : undefined;
     const ref = msg.referencia;
     if (!ref && !clique) {
+      // origem-auto: a cliente disse de onde veio ("vi no Instagram", "a Ana me indicou"): palpite, só se não houver nada.
+      const palpite = origemPeloTexto(msg.texto);
+      if (palpite && !msg.rede) {
+        const o: Origem = { ...palpite, origemPor: 'ia', em: msg.em, primeiraMensagem: tirarCodigo(msg.texto).slice(0, 500) };
+        const gravou = await this.d.armazem.gravarOrigem(c.id, 'primeiro', o, 'se_vazio');
+        if (gravou) await this.d.armazem.gravarOrigem(c.id, 'ultimo', o, 'se_vazio');
+        return gravou ? o : undefined;
+      }
       // Messenger / Instagram Direct / TikTok sem anúncio: a própria rede é a origem (orgânico), só no primeiro toque.
       if (!msg.rede) return undefined;
       const org: Origem = { canal: 'organico', fonte: msg.rede, origemPor: 'automatico', em: msg.em, primeiraMensagem: tirarCodigo(msg.texto).slice(0, 500) };
@@ -169,6 +178,44 @@ export class Rastreio {
     if (o.adId && !o.adNome) void this.buscarNomes(o.adId);
     if (primeiro) await this.d.capi?.gerar(c.id, 'lead').catch((e) => this.log('Falha ao gerar o Lead da CAPI', String(e)));
     return o;
+  }
+
+  // ---------- origem-auto: conversas que já existiam (e o histórico importado) ----------
+
+  private conferidas = new Set<string>();
+
+  /**
+   * Conversas sem origem: lê as primeiras mensagens da cliente e grava o palpite (mesmas regras de origemPeloTexto).
+   * Em segundo plano, devagar; cada conversa é conferida uma vez por vez que o app sobe. Volta quantas ganharam origem.
+   */
+  async detectarSemOrigem(repo: { listarConversas(f?: { empresaId?: string }): Promise<Conversa[]>; mensagens(id: string, limite?: number): Promise<Array<{ texto: string; autor: string; em: Date }>> }, o: { pausaMs?: number; limite?: number } = {}): Promise<number> {
+    const todas = await repo.listarConversas({ empresaId: this.d.empresaId });
+    const faltam = todas.filter((c) => !this.conferidas.has(c.id));
+    if (!faltam.length) return 0;
+    let achadas = 0;
+    for (let i = 0; i < faltam.length && i < (o.limite ?? 20_000); i += 200) {
+      const bloco = faltam.slice(i, i + 200);
+      const com = await this.d.armazem.primeiros(bloco.map((c) => c.id));
+      for (const c of bloco) {
+        this.conferidas.add(c.id);
+        if (com.has(c.id)) continue;
+        const msgs = await repo.mensagens(c.id, 60).catch(() => []);
+        const daCliente = msgs.filter((m) => m.autor === 'cliente').sort((a, b) => new Date(a.em).getTime() - new Date(b.em).getTime()).slice(0, 15);
+        for (const m of daCliente) {
+          const p = origemPeloTexto(m.texto);
+          if (!p) continue;
+          const org: Origem = { ...p, origemPor: 'ia', em: new Date(m.em), primeiraMensagem: tirarCodigo(m.texto).slice(0, 500) };
+          if (await this.d.armazem.gravarOrigem(c.id, 'primeiro', org, 'se_vazio')) {
+            await this.d.armazem.gravarOrigem(c.id, 'ultimo', org, 'se_vazio');
+            achadas++;
+          }
+          break;
+        }
+      }
+      if (o.pausaMs) await new Promise((r) => setTimeout(r, o.pausaMs));
+    }
+    if (achadas) this.log('Origem descoberta pelas mensagens das clientes', { conversas: achadas });
+    return achadas;
   }
 
   // ---------- nomes do anúncio (Graph API) ----------

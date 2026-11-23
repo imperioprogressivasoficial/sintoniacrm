@@ -575,6 +575,12 @@ const rastreio = new Rastreio({
   graph: () => ({ token: conexoes.get('metaAdsToken') ?? conexoes.get('capiToken'), versao: configCapiDe(conexoes).versao }),
   log,
 });
+/* origem-auto: conversas sem origem (e o histórico importado) ganham a origem pelo que a cliente escreveu. */
+{
+  const rodar = () => rastreio.detectarSemOrigem(repo, { pausaMs: 200 }).catch((e) => log('Falha ao descobrir origens pelas mensagens', String(e)));
+  setTimeout(rodar, 180_000).unref();
+  setInterval(rodar, 30 * 60_000).unref();
+}
 // Estúdio de agentes de IA e "IA atende primeiro" (src/agentes-ia). Desligado, tudo segue com o agente de sempre.
 const agentesIa = montarAgentesIa({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
