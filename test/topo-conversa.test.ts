@@ -86,3 +86,12 @@ describe.skipIf(!temPostgres)('Pesquisar dentro da conversa (postgres)', () => {
     expect((await repo.buscarNaConversa(conversa.id, 'DESCONTO')).map((m) => m.texto)).toEqual(['desconto de 10 reais', 'desconto de 10% hoje']);
   });
 });
+
+describe('Faixa "Sincronizando suas conversas" (GET /api/sincronizando)', () => {
+  it('sem histórico chegando: nada ativo', async () => {
+    const { app, carla } = await montar();
+    const r = await app.inject({ method: 'GET', url: '/api/sincronizando', headers: { cookie: carla } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toEqual({ ativo: false, canais: [] });
+  });
+});

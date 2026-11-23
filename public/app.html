@@ -1983,7 +1983,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (!lista.length && !estado.conversasDoServidor && !estado.conversas.length) { if (!caixa.querySelector('.esq-li')) caixa.innerHTML = '<div class="esq-li" aria-hidden="true"><i></i><span><b></b><em></em></span><small></small></div>'.repeat(10); return; }
     if (!lista.length) {
       caixa.replaceChildren(...(cxTopo ? [cxTopo] : [])); linhasFz.clear();
-      const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
+      const v = el('div', { class: 'vazio' }, el('b', { text: estado.conversas.length ? 'Nenhuma conversa com esse filtro.' : window.SintoniaSincLista?.ativo?.() ? 'Trazendo suas conversas do WhatsApp…' : 'Nenhuma conversa ainda.', style: 'color:var(--texto);font-weight:500' }));
       if (!estado.conversas.length) v.append(el('span', { text: estado.situacao.numerosReais ? 'Assim que uma cliente chamar no WhatsApp, a conversa aparece aqui.' : 'Conecte o WhatsApp da loja em Configurações › Conexões. Para mostrar o sistema, use Configurações › Dados de demonstração.' }));
       else if (filtrosLigados()) v.append(el('button', { class: 'botao leve', text: 'Limpar filtros', onclick: limparFiltros }));
       caixa.append(v); return;
@@ -4020,7 +4020,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/produtos-lead.js" defer></script><!-- produtos-lead: produtos e serviços vinculados ao lead (ficha e cartão do Pipeline) -->
 <script src="/telas/conversa-ux.js" defer></script>
 <script src="/telas/papel-parede.js" defer></script><!-- conversa-extra: papel de parede das conversas -->
-<script src="/telas/conversa-extra.js" defer></script><script src="/telas/arquivadas-numero.js" defer></script><!-- trocar-numero: filtro "Arquivadas do número antigo" --><script src="/telas/topo-conversa.js" defer></script><script src="/telas/sair.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
+<script src="/telas/conversa-extra.js" defer></script><script src="/telas/arquivadas-numero.js" defer></script><!-- trocar-numero: filtro "Arquivadas do número antigo" --><script src="/telas/topo-conversa.js" defer></script><script src="/telas/sinc-lista.js" defer></script><script src="/telas/sair.js" defer></script><!-- conversa-extra: silenciar e arquivar conversas, foto da Serena --><!-- conversa-ux: ícones, ficha, chip de responsável, anel das fotos -->
 <script src="/telas/voltar-celular.js" defer></script><!-- rotas-celular: botão "Voltar" nas telas de dentro (celular) -->
 <!-- velocidade: estas telas não rodam na abertura; public/telas/sob-demanda.js baixa cada uma quando a pessoa abre (o ?v= da versão entra aqui como em qualquer script) -->
 <template id="telas-sob-demanda">

@@ -126,6 +126,11 @@ export class ImportadorHistorico {
     return this.progressos.get(instancia);
   }
 
+  /** Andamento de todos os canais (faixa "Sincronizando…" na lista de Conversas). */
+  todos(): Array<{ instancia: string } & ProgressoHistorico> {
+    return [...this.progressos].map(([instancia, p]) => ({ instancia, ...p }));
+  }
+
   /** Para depois do lote em andamento (desligamento). O que faltar continua ao subir de novo. */
   async encerrar(): Promise<void> {
     this.parar = true;

@@ -117,7 +117,7 @@ export interface DependenciasServidor {
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
   /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
-  historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'>;
+  historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'> & Partial<Pick<import('./app/historico.js').ImportadorHistorico, 'todos'>>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
   /* banco-seguranca: cabeçalhos de segurança, limites, auditoria e LGPD (src/seguranca/protecao.ts). Sem isto, valem os padrões. */
@@ -464,6 +464,17 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   /* Lupa do topo da conversa: pesquisa em todas as mensagens dela (não só nas 200 que a tela carrega). */
+  /* Faixa "Sincronizando suas conversas…" na lista de Conversas (dono 23/11): qualquer pessoa logada vê se o
+     histórico do WhatsApp ainda está chegando. Ativo = falta importar ou chegou algo nos últimos 25 s. */
+  app.get('/api/sincronizando', async () => {
+    const agora = Date.now();
+    const lista = [
+      ...(d.historico?.todos?.() ?? []),
+      ...[...progressoHistorico].map(([instancia, p]) => ({ instancia, ...p, faltam: 0 })),
+    ].map((p) => ({ canal: p.instancia, conversas: p.conversas, mensagens: p.mensagens, faltam: p.faltam ?? 0, ativo: (p.faltam ?? 0) > 0 || agora - new Date(p.em).getTime() < 25_000 }));
+    return { ativo: lista.some((x) => x.ativo), canais: lista.filter((x) => x.ativo) };
+  });
+
   app.get('/api/conversas/:id/busca', async (req) => {
     const conversa = await conversaVisivel(req);
     const q = String((req.query as { q?: unknown })?.q ?? '').trim().slice(0, 100);

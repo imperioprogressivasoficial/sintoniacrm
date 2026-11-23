@@ -182,6 +182,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/papel-parede.js': { arquivo: 'telas/papel-parede.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
   '/telas/conversa-extra.js': { arquivo: 'telas/conversa-extra.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
   '/telas/sair.js': { arquivo: 'telas/sair.js', tipo: 'text/javascript; charset=utf-8' }, // sair: janela com a chave de Disponível e animação de saída
+  '/telas/sinc-lista.js': { arquivo: 'telas/sinc-lista.js', tipo: 'text/javascript; charset=utf-8' }, // faixa "Sincronizando suas conversas" na lista
   '/telas/topo-conversa.js': { arquivo: 'telas/topo-conversa.js', tipo: 'text/javascript; charset=utf-8' }, // topo da conversa como o WhatsApp Web
   '/telas/chanfro.js': { arquivo: 'telas/chanfro.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/puxar.js': { arquivo: 'telas/puxar.js', tipo: 'text/javascript; charset=utf-8' },
