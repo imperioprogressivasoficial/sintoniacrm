@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-23 14:51 UTC (23/11, 11h51 na Bahia)
-commit: 82a1416
-pacote sha256: 251721d13f70eacba91a4b9f64e439efac2446689d1219d0bfed50cb7635d520
+data: 2026-11-23 14:56 UTC (23/11, 11h56 na Bahia)
+commit: 56100b8
+pacote sha256: 4b7fde37469849b3ab10daf580b252f55c8c941487b5df8e8540963300d5f1dc
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-82a1416.b64); pode apagar depois.
-observação: em cima do c628168. Entra: botão "Apagar todos os grupos deste WhatsApp" quando não dá para separar o número antigo.
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-56100b8.b64); pode apagar depois.
+observação: em cima do 82a1416. Entra: conectar WhatsApp com syncFullHistory (todo o histórico) — vale ao conectar de novo.

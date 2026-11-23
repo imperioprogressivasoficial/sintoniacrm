@@ -51,6 +51,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **23/11, 11h56 (Bahia), Claude Max — no ar o 56100b8:** conectar pede todo o histórico ao celular (syncFullHistory; instâncias existentes ganham a opção antes do QR). O histórico só vem na hora de parear: para o chip novo da Norte, desconectar e conectar de novo. Não publicar enquanto o histórico chega (o app reinicia e perde o webhook).
 - **23/11, 11h51 (Bahia), Claude Max — no ar o 82a1416:** Conexões › WhatsApp: "Apagar todos os grupos deste WhatsApp". Se os grupos voltarem, é porque o número conectado participa deles (a tela de Grupos sincroniza da Evolution): oferecer opção "não trazer grupos".
 - **23/11, 11h47 (Bahia), Claude Max — no ar o c628168:** faixa de sincronização na lista de Conversas (sinc-lista.js; cuidado: a classe "girando" já existe no app, por isso sl-girando).
 - **23/11, 11h37 (Bahia), Claude Max — no ar o c86b78c:** grupos do número antigo: botão próprio em Conexões (corte = whatsapp_numeros.conectado_em/troca_em). Atenção: o botão "Apagar os dados deste WhatsApp" apaga TODAS as conversas do canal até agora (inclusive do número novo).
