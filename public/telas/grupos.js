@@ -218,8 +218,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const r = await fetch('/api/conexoes/whatsapp/canais', { credentials: 'same-origin' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
       for (const k of r?.canais || []) {
         const g = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(k.id)}/grupos-antigos`, { credentials: 'same-origin' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
-        const n = g?.grupos || g?.todos || 0; if (!n) continue;
-        const todos = !g.grupos;
+        /* só quando o WhatsApp trocou de número e sobraram grupos do anterior (nunca "todos" de um WhatsApp que não trocou) */
+        const n = g?.sabeQuando ? (g.grupos || 0) : 0; if (!n) continue;
+        const todos = false;
         const b = el('button', { type: 'button', class: 'gp-antigos-bt', text: 'Apagar' });
         b.addEventListener('click', async () => {
           const c = window.prompt(`${todos ? `Apagar TODOS os ${n} grupos do WhatsApp “${k.nome || k.id}”` : `Apagar os ${n} grupos do número antigo de “${k.nome || k.id}”`}? As conversas de grupo e as mensagens deles somem da Sintonia (não sai de nenhum grupo no celular). Não dá para desfazer.\n\nPara confirmar, digite APAGAR:`);
