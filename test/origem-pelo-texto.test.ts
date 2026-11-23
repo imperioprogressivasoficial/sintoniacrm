@@ -26,3 +26,29 @@ describe('origem pelo que a cliente escreve', () => {
     for (const t of ['Oi, quanto custa a progressiva?', 'Tem horário amanhã?', 'ok', 'Bom dia!']) expect(origemPeloTexto(t)).toBeUndefined();
   });
 });
+
+import { ArmazemRastreioMemoria } from '../src/rastreio/armazem.js';
+import { Rastreio } from '../src/rastreio/rastreio.js';
+
+describe('conversas que já existiam', () => {
+  it('ganham a origem pelas primeiras mensagens da cliente, sem trocar a que já tinha', async () => {
+    const armazem = new ArmazemRastreioMemoria();
+    const r = new Rastreio({ armazem, empresaId: 'e1' });
+    await armazem.gravarOrigem('c2', 'primeiro', { canal: 'link', origemPor: 'automatico', em: new Date() }, 'substituir');
+    const msgs: Record<string, Array<{ texto: string; autor: string; em: Date }>> = {
+      c1: [{ texto: 'Oi', autor: 'cliente', em: new Date(1) }, { texto: 'a Ana me indicou', autor: 'cliente', em: new Date(2) }],
+      c2: [{ texto: 'vi no instagram', autor: 'cliente', em: new Date(1) }],
+      c3: [{ texto: 'quanto custa?', autor: 'cliente', em: new Date(1) }],
+    };
+    const repo = {
+      listarConversas: async () => ['c1', 'c2', 'c3'].map((id) => ({ id }) as never),
+      mensagens: async (id: string) => msgs[id] ?? [],
+    };
+    expect(await r.detectarSemOrigem(repo)).toBe(1);
+    const p = await armazem.primeiros(['c1', 'c2', 'c3']);
+    expect(p.get('c1')).toMatchObject({ canal: 'indicacao', indicadoPor: 'Ana', origemPor: 'ia' });
+    expect(p.get('c2')?.canal).toBe('link');
+    expect(p.has('c3')).toBe(false);
+    expect(await r.detectarSemOrigem(repo)).toBe(0);
+  });
+});

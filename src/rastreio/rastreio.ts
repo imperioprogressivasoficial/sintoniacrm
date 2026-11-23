@@ -188,7 +188,7 @@ export class Rastreio {
    * Conversas sem origem: lê as primeiras mensagens da cliente e grava o palpite (mesmas regras de origemPeloTexto).
    * Em segundo plano, devagar; cada conversa é conferida uma vez por vez que o app sobe. Volta quantas ganharam origem.
    */
-  async detectarSemOrigem(repo: { listarConversas(f?: { empresaId?: string }): Promise<Conversa[]>; mensagens(id: string, limite?: number): Promise<Array<{ texto: string; autor: string; em: Date }>> }, o: { pausaMs?: number; limite?: number } = {}): Promise<number> {
+  async detectarSemOrigem(repo: { listarConversas(f?: { empresaId?: string }): Promise<Conversa[]>; mensagens(id: string, limite?: number): Promise<Array<{ texto: string; autor: string; em: Date }>>; primeirasDaCliente?(id: string, limite: number): Promise<Array<{ texto: string; autor: string; em: Date }>> }, o: { pausaMs?: number; limite?: number } = {}): Promise<number> {
     const todas = await repo.listarConversas({ empresaId: this.d.empresaId });
     const faltam = todas.filter((c) => !this.conferidas.has(c.id));
     if (!faltam.length) return 0;
@@ -199,7 +199,7 @@ export class Rastreio {
       for (const c of bloco) {
         this.conferidas.add(c.id);
         if (com.has(c.id)) continue;
-        const msgs = await repo.mensagens(c.id, 60).catch(() => []);
+        const msgs = await (repo.primeirasDaCliente ? repo.primeirasDaCliente(c.id, 15) : repo.mensagens(c.id, 60)).catch(() => []);
         const daCliente = msgs.filter((m) => m.autor === 'cliente').sort((a, b) => new Date(a.em).getTime() - new Date(b.em).getTime()).slice(0, 15);
         for (const m of daCliente) {
           const p = origemPeloTexto(m.texto);

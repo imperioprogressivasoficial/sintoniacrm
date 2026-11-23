@@ -175,6 +175,8 @@ export interface Repositorio {
   /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
   rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** origem-auto: as primeiras mensagens da cliente na conversa (texto e hora), da mais antiga para a mais nova. */
+  primeirasDaCliente?(conversaId: string, limite: number): Promise<Array<{ texto: string; autor: string; em: Date }>>;
   /** menu-mensagem: uma mensagem pelo id (com os dados da mídia). */
   mensagemPorId?(id: string): Promise<Mensagem | undefined>;
   /** menu-mensagem: uma mensagem pelo id no canal (reação/apagou/editou que veio pelo webhook). */

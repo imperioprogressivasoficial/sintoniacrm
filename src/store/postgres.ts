@@ -492,6 +492,15 @@ export class RepositorioPostgres implements Repositorio {
     return rows.map(paraMensagem);
   }
 
+  /* origem-auto */
+  async primeirasDaCliente(conversaId: string, limite: number) {
+    const { rows } = await this.pool.query<{ texto: string; em: Date }>(
+      `select texto, em from sintonia.mensagens where conversa_id = $1 and autor = 'cliente' order by em asc, id asc limit $2`,
+      [conversaId, limite],
+    );
+    return rows.map((r) => ({ texto: r.texto ?? '', autor: 'cliente', em: r.em }));
+  }
+
   /* menu-mensagem */
   async mensagemPorId(id: string) {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return undefined;
