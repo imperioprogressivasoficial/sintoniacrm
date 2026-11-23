@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 23/11 13h20: origem automática pelo texto da cliente (74663df no ar): `src/rastreio/pelo-texto.ts` (regras, sem IA) em Rastreio.aoMensagem quando não há anúncio/link, e `detectarSemOrigem` a cada 30 min nas conversas sem origem (inclui histórico importado). Palpite = origemPor 'ia' (anúncio/link real passa por cima).
+
 - 23/11 12h47: histórico do WhatsApp robusto (1d73428 no ar). Horário longo {low,high} aceito; lote que não vira mensagem registra o motivo no log ("Histórico do WhatsApp fora do formato"); `src/app/puxar-historico.ts` busca TUDO o que a Evolution guardou (findMessages paginado, @lid resolvido por findChats/findContacts) 2 min depois do último messages.set, 3 min depois de conectar e no botão Sincronizar.
 - **23/11, 12h08 (Bahia), Claude Max — no ar o c68e850:** "Serena pausada" no filtro de Conversas (modelo 3); tela de Grupos avisa e apaga grupos do número antigo; registro "Histórico do WhatsApp chegou" para acompanhar a sincronização. Pendente: chip novo da Norte não trouxe histórico — reconectar depois do 56100b8.
 - **23/11, 11h56 (Bahia), Claude Max — no ar o 56100b8:** conectar pede todo o histórico ao celular (syncFullHistory; instâncias existentes ganham a opção antes do QR). O histórico só vem na hora de parear: para o chip novo da Norte, desconectar e conectar de novo. Não publicar enquanto o histórico chega (o app reinicia e perde o webhook).
