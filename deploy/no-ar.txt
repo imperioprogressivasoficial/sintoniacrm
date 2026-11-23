@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-23 15:08 UTC (23/11, 12h08 na Bahia)
-commit: c68e850
-pacote sha256: d36da15d4735c17794325511bbef096cb40fcfc69d96a7ae1ed2eb27909b042a
+data: 2026-11-23 15:13 UTC (23/11, 12h13 na Bahia)
+commit: f21898f
+pacote sha256: 9a0c100b1157825dff2587d80e953e088e1ce440e5d11ce842cf7c542ba01cde
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-c68e850.b64); pode apagar depois.
-observação: em cima do 56100b8. Entra: Serena pausada no filtro (sem faixa), aviso+botão de grupos antigos na tela de Grupos, log "Histórico do WhatsApp chegou".
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f21898f.b64); pode apagar depois.
+observação: em cima do c68e850. Entra: aviso de grupos só quando o WhatsApp trocou de número.
