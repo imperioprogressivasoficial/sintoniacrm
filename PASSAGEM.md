@@ -51,6 +51,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **23/11, 11h22 (Bahia), Claude Max — no ar o bba06af:** troca de número (src/conexoes/troca-numero.ts, migração 770, conversas.arquivada_em). Leitura do número na Evolution testada só com Evolution falsa: conferir com número real (ownerJid/wuid).
 - **22/11, 10h02 (Bahia), Claude Max — no ar o f890d29:** avisos "Serena assumiu…/Fulana voltou…" com a foto redonda (Serena ou a pessoa) no lugar do 🤖.
 - **22/11, 09h59 (Bahia), Claude Max — no ar o ba5ffab:** reações com todos os emojis e busca (window.SintoniaEmojis.seletor em menu-mensagem.js; dados em public/telas/emojis-dados.js, baixados só ao abrir). Apaguei no Postgres local as cópias de banco dos agentes (sintonia_galeria_*, sintonia_teste_<nome>) que deixavam a recuperação lenta.
 - **22/11, 00h54 (Bahia), Claude Max — no ar o a3d8037:** velocidade — telas fora da primeira vista carregam sob demanda (public/telas/sob-demanda.js; ao criar tela nova que não é da abertura, ponha o <script> dentro do <template id="telas-sob-demanda"> e no GRUPOS do sob-demanda.js) e miniatura desfocada das fotos (migração 750). Todas as demandas do dono feitas; pendências só com ele (ver mensagem de 22/11: número de vendas, CNPJ, Trinks, senha n8n, Evolution MESSAGES_UPDATE, segurança/Cloudflare, bolinha menor?, selo Meta).

@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-22 13:02 UTC (22/11, 10h02 na Bahia)
-commit: f890d29
-pacote sha256: e51ad0a7de54f57fc39aaf9d63290193031bfff0927b2bff9115bd8206bca698
+data: 2026-11-23 14:22 UTC (23/11, 11h22 na Bahia)
+commit: bba06af
+pacote sha256: 8bfe4e33bd2919ca56785ee72063f8f1910d356af1fef506febc0ca234118531
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f890d29.b64); pode apagar depois.
-observação: em cima do ba5ffab. Entra: avisos da conversa (🤖 …) com a foto redonda de quem é citado (avisoSistema em app.html).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-bba06af.b64); pode apagar depois.
+observação: em cima do f890d29. Entra: claude/trocar-numero (migração 770: troca de número do WhatsApp com Manter/Arquivar/Apagar, botão "Apagar os dados deste WhatsApp", arquivo da empresa).
