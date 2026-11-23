@@ -106,6 +106,8 @@
   }
 
   /* faixa no topo de Conversas */
+  #filtros .chip.sc-chip-pausa { background: var(--aviso, #fff4d6) !important; color: var(--aviso-txt, #6b4e00) !important; border-color: rgba(180,130,0,.3) !important; font-weight: 600; }
+  #filtros .chip.sc-chip-pausa img, #filtros .chip.sc-chip-pausa .luz { filter: grayscale(1); opacity: .75; }
   .sc-faixa { display: flex; align-items: center; gap: 10px; margin: 4px 12px 8px; padding: 9px 10px 9px 12px; border-radius: 14px; background: var(--aviso, #fff6db); color: var(--aviso-txt, #5e4b00); font-size: 13px; line-height: 1.35; }
   .sc-faixa[hidden] { display: none; }
   .sc-faixa > i { width: 20px; height: 20px; flex: none; display: grid; }
@@ -277,24 +279,29 @@
     botoes[0].focus();
   }
 
-  // ---------------------------------------------------------------- faixa de Conversas
+  // ---------------------------------------------------------------- aviso em Conversas (modelo 3, dono 23/11)
+  // Sem faixa grande: o filtro "IA atendendo" vira "Serena pausada" em amarelo enquanto ela está pausada.
+  // Tocar nele (pausada) pergunta se quer ligar de novo.
+  function textoDoChip(b) { return [...b.childNodes].reverse().find((n) => n.nodeType === 3 && n.data.trim()); }
   function faixa() {
-    const lista = document.querySelector('#v-conversas .lista');
-    const itens = document.getElementById('itens');
-    if (!lista || !itens) return;
-    let f = document.getElementById('sc-faixa');
-    const mostrar = Boolean(est?.pausada && est?.temChave);
-    if (!mostrar) { if (f) f.hidden = true; return; }
-    if (!f) {
-      f = el('div', { id: 'sc-faixa', class: 'sc-faixa', role: 'status' });
-      itens.before(f);
+    document.getElementById('sc-faixa')?.remove(); /* a faixa antiga não existe mais */
+    const b = document.querySelector('#filtros .chip[data-f="ia"]');
+    if (!b) return;
+    const pausadaAgora = Boolean(est?.pausada && est?.temChave);
+    const t = textoDoChip(b);
+    if (t && !b.dataset.scOriginal) b.dataset.scOriginal = t.data;
+    b.classList.toggle('sc-chip-pausa', pausadaAgora);
+    if (t) t.data = pausadaAgora ? 'Serena pausada' : (b.dataset.scOriginal || 'IA atendendo');
+    b.title = pausadaAgora ? `Serena pausada ${est.texto || ''}`.trim() + ' — a equipe atende tudo. Toque para ligar.' : '';
+    if (!b.dataset.scLigado) {
+      b.dataset.scLigado = '1';
+      b.addEventListener('click', (e) => {
+        if (!b.classList.contains('sc-chip-pausa')) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (!est?.podeMudar) { window.Sintonia?.ui?.toast?.('A Serena está pausada. Só a gestão liga de novo.'); return; }
+        if (confirm(`A Serena está pausada ${est.texto || ''}`.trim() + ' e a equipe está atendendo tudo.\n\nLigar a Serena de novo agora?')) mudar({ pausada: false }, 'Serena ligada de novo. Ela responde quem escreveu há menos de 30 min.');
+      }, true);
     }
-    f.hidden = false;
-    f.replaceChildren(...[
-      el('i', { html: IC.pausa }),
-      el('span', {}, el('b', { text: `Serena pausada ${est.texto || ''}`.trim() }), document.createTextNode(' — a equipe atende tudo.')),
-      est.podeMudar ? el('button', { type: 'button', text: 'Ligar', 'aria-label': 'Ligar a Serena de novo', onclick: () => mudar({ pausada: false }, 'Serena ligada de novo. Ela responde quem escreveu há menos de 30 min.') }) : null,
-    ].filter(Boolean));
   }
 
   // ---------------------------------------------------------------- chip da conversa
@@ -323,7 +330,7 @@
   setInterval(() => { if (document.visibilityState !== 'hidden') carregar(); }, 30_000);
   addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') carregar(); });
   // A lista de Conversas é desenhada de novo de vez em quando: a faixa volta para o lugar dela.
-  const obs = new MutationObserver(() => { if (est?.pausada && !document.getElementById('sc-faixa')) faixa(); });
+  const obs = new MutationObserver(() => { const ch = document.querySelector('#filtros .chip[data-f="ia"]'); if (ch && ch.classList.contains('sc-chip-pausa') !== Boolean(est?.pausada && est?.temChave)) faixa(); });
   const raiz = document.querySelector('#v-conversas .lista');
   if (raiz) obs.observe(raiz, { childList: true });
 })();

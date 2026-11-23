@@ -10,6 +10,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .gp { flex: 1; min-width: 0; min-height: 0; display: flex; }
   .gp .lista-topo .titulo-linha { display: flex; align-items: center; gap: 10px; }
   .gp .lista-topo .titulo-linha h1 { flex: 1; min-width: 0; }
+  .gp-antigos { margin: 4px 12px 8px; display: grid; gap: 6px; }
+  .gp-antigos[hidden] { display: none; }
+  .gp-antigos-linha { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--aviso, #fff4d6); color: var(--aviso-txt, #6b4e00); font-size: 13.5px; line-height: 1.35; }
+  .gp-antigos-linha span { flex: 1; min-width: 0; }
+  .gp-antigos-bt { all: unset; cursor: pointer; flex: none; padding: 7px 14px; border-radius: 999px; background: #dc2626; color: #fff; font-weight: 600; font-size: 13px; }
   .gp-sinc { all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--texto); background: var(--painel); flex: none; }
   .gp-sinc svg { width: 19px; height: 19px; }
   .gp-sinc:disabled { opacity: .5; cursor: default; }
@@ -196,12 +201,40 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const lista = el('div', { class: 'lista gp-lista' }, topo,
       el('div', { class: 'gp-arq-aviso', hidden: '', text: 'Grupos arquivados ficam aqui, mesmo quando chega mensagem nova. Eles não contam no número do menu.' }),
       el('div', { class: 'gp-buscando', hidden: '', role: 'status', text: 'Buscando todos os grupos do WhatsApp…' }),
+      avisoAntigos(),
       el('div', { class: 'itens gp-itens', role: 'list' }));
     const chat = el('div', { class: 'chat gp-chat' });
     s.raiz = el('div', { class: 'gp' }, lista, chat);
     s.caixa.replaceChildren(s.raiz);
     s.linhas.clear();
     desenharVazioChat();
+  }
+
+  /* Grupos do WhatsApp antigo (dono 23/11): aviso no topo da própria tela de Grupos, com o botão para apagar.
+     Só para quem pode apagar (administração/direção); some quando não há grupos do número anterior. */
+  function avisoAntigos() {
+    const caixa = el('div', { class: 'gp-antigos', hidden: '' });
+    (async () => {
+      const r = await fetch('/api/conexoes/whatsapp/canais', { credentials: 'same-origin' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+      for (const k of r?.canais || []) {
+        const g = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(k.id)}/grupos-antigos`, { credentials: 'same-origin' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+        const n = g?.grupos || g?.todos || 0; if (!n) continue;
+        const todos = !g.grupos;
+        const b = el('button', { type: 'button', class: 'gp-antigos-bt', text: 'Apagar' });
+        b.addEventListener('click', async () => {
+          const c = window.prompt(`${todos ? `Apagar TODOS os ${n} grupos do WhatsApp “${k.nome || k.id}”` : `Apagar os ${n} grupos do número antigo de “${k.nome || k.id}”`}? As conversas de grupo e as mensagens deles somem da Sintonia (não sai de nenhum grupo no celular). Não dá para desfazer.\n\nPara confirmar, digite APAGAR:`);
+          if (c == null) return;
+          const x = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(k.id)}/grupos-antigos`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmacao: c, todos }) });
+          const j = await x.json().catch(() => ({}));
+          if (!x.ok) { window.alert(j.erro || j.message || 'Não deu para apagar agora.'); return; }
+          window.alert(`Pronto: ${j.grupos} ${j.grupos === 1 ? 'grupo apagado' : 'grupos apagados'}.`);
+          location.reload();
+        });
+        caixa.append(el('div', { class: 'gp-antigos-linha' }, el('span', { text: `${n} ${n === 1 ? 'grupo' : 'grupos'} ${todos ? 'deste WhatsApp' : 'do número antigo'}${k.nome ? ` (${k.nome})` : ''} ainda aparecem aqui.` }), b));
+        caixa.hidden = false;
+      }
+    })();
+    return caixa;
   }
 
   function desenharVazioChat() {

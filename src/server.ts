@@ -275,6 +275,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       } catch (e) {
         log('Histórico do WhatsApp em formato estranho', String(e));
       }
+      log('Histórico do WhatsApp chegou', { instancia, mensagens: historico.length }); /* para acompanhar a sincronização nos registros */
       d.whatsappSaude?.aoMensagem(instancia);
       /* grupos: o histórico dos grupos vai para Conversas de grupo */
       d.grupos?.aoWebhook(corpo).catch((e) => log('Falha ao importar histórico dos grupos', String(e)));
