@@ -19,6 +19,9 @@ const TEXTO_DE_ANUNCIO = [
   /^ola!? (posso|pode) (obter|me dar|ter) mais informac(oes|ao) (sobre isso|sobre)/,
   /^ola!? quero saber mais( sobre isso| sobre)?[.!]?$/,
   /^(ola!? )?gostaria de saber mais sobre (isso|o anuncio)/,
+  // Formulário da Meta com confirmação do número pelo WhatsApp ("Olá! Validei meu número e gostaria de...").
+  /\bvalidei (o |meu |o meu )?(numero|telefone|whats(app)?)\b/,
+  /\b(vim|cheguei|venho) (pelo|do|atraves do) (anuncio|formulario)\b/,
 ];
 
 const ANUNCIO = /\b(anuncio|propaganda|patrocinad[oa]|publicidade)\b/;

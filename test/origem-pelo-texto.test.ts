@@ -5,6 +5,7 @@ describe('origem pelo que a cliente escreve', () => {
   it.each([
     ['Olá! Tenho interesse e queria mais informações, por favor.', 'anuncio_meta', 'meta'],
     ['vi o anúncio de vocês no instagram', 'anuncio_meta', 'instagram'],
+    ['Olá! Validei meu número e gostaria de fazer meu agendamento', 'anuncio_meta', 'meta'],
     ['Oi, vi vocês no Instagram', 'organico', 'instagram'],
     ['vim pelo insta', 'organico', 'instagram'],
     ['achei vocês no google', 'organico', 'google'],
