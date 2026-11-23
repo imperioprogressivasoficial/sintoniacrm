@@ -51,6 +51,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **23/11, 12h08 (Bahia), Claude Max — no ar o c68e850:** "Serena pausada" no filtro de Conversas (modelo 3); tela de Grupos avisa e apaga grupos do número antigo; registro "Histórico do WhatsApp chegou" para acompanhar a sincronização. Pendente: chip novo da Norte não trouxe histórico — reconectar depois do 56100b8.
 - **23/11, 11h56 (Bahia), Claude Max — no ar o 56100b8:** conectar pede todo o histórico ao celular (syncFullHistory; instâncias existentes ganham a opção antes do QR). O histórico só vem na hora de parear: para o chip novo da Norte, desconectar e conectar de novo. Não publicar enquanto o histórico chega (o app reinicia e perde o webhook).
 - **23/11, 11h51 (Bahia), Claude Max — no ar o 82a1416:** Conexões › WhatsApp: "Apagar todos os grupos deste WhatsApp". Se os grupos voltarem, é porque o número conectado participa deles (a tela de Grupos sincroniza da Evolution): oferecer opção "não trazer grupos".
 - **23/11, 11h47 (Bahia), Claude Max — no ar o c628168:** faixa de sincronização na lista de Conversas (sinc-lista.js; cuidado: a classe "girando" já existe no app, por isso sl-girando).
