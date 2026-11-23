@@ -236,7 +236,8 @@ export class TrocaNumero {
     }
     if (String(p.confirmacao ?? '').trim().toUpperCase() !== 'APAGAR') throw erro('Para apagar, digite APAGAR.', 400);
     if (this.rodando.has(p.canalId)) throw erro('Já estamos apagando os dados deste WhatsApp. Aguarde terminar.', 409);
-    const alvo = this.alvo(p.canalId, p.unidade, corte, true);
+    // Na troca: as que estavam na pergunta (as já arquivadas antes ficam; o botão "Apagar os dados" leva todas).
+    const alvo = this.alvo(p.canalId, p.unidade, corte, p.origem === 'tudo');
     const total = await this.o.limpeza.resumo(alvo);
     const t: Trabalho = { id: randomUUID(), canalId: p.canalId, estado: 'apagando', total, feito: zero(), inicio: this.agora() };
     this.trabalhos.set(t.id, t);

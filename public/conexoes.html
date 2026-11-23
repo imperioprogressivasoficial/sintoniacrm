@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
 <link rel="stylesheet" href="/ds.css">
 <script src="/telas/sincronizando.js" defer></script><!-- sincronizando -->
+<script src="/telas/troca-numero.js" defer></script><!-- trocar-numero: Manter/Arquivar/Apagar ao trocar o número e "Apagar os dados deste WhatsApp" -->
 <script src="/telas/email-conexoes.js" defer></script>
 <script src="/telas/anuncios-conexao.js" defer></script><!-- marketing -->
 <script src="/telas/logos-conexoes.js" defer></script>
@@ -757,9 +758,11 @@
     if (k.estado === 'conectando') return { selo: 'Conectando', cor: 'aviso', ponto: '', info: 'Conectando…' };
     return { selo: 'Não conectado', cor: '', ponto: '', info: 'Não conectado' };
   }
+  let canaisAtuais = []; /* trocar-numero */
   async function carregarLojas() {
     const caixa = $('lojas');
     let r; try { r = await api('/api/conexoes/whatsapp/canais'); } catch (x) { caixa.textContent = x.message; return; }
+    canaisAtuais = r.canais; /* trocar-numero */
     $('wa-sem-evolution').hidden = r.configurada;
     const eo = $('evo-ok'); if (eo) { eo.className = 'estado' + (r.configurada && !r.erro ? ' ok' : ' aviso'); eo.textContent = !r.configurada ? 'Falta configurar' : r.erro ? 'Sem resposta' : 'Ligado'; }
     if (!r.configurada) $('evo-servidor').open = true;
@@ -778,7 +781,8 @@
         b.addEventListener('click', () => reconectar(k, b));
         item.append(b);
       }
-      return item;
+      /* trocar-numero: aviso da troca pendente e o botão fixo "Apagar os dados deste WhatsApp" */
+      return window.SintoniaTrocaNumero ? el('div', { className: 'tn-canal' }, item, ...window.SintoniaTrocaNumero.itens(k, carregarLojas)) : item;
     }));
   }
   /** Reconectar: sem QR Code se a sessão ainda vale; senão abre o passo a passo (QR Code ou código). */
@@ -894,7 +898,11 @@
   const mostrarCodigo = (c) => { $('wa-cod').textContent = c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c; };
   async function pronto() {
     clearInterval(espera); tela('ok');
-    resumo = await api('/api/conexoes').catch(() => resumo); carregarLojas(); desenharEscolhas();
+    resumo = await api('/api/conexoes').catch(() => resumo);
+    /* trocar-numero: conectou outro número? pergunta o que fazer com as conversas do anterior */
+    const conectado = lojaAtual;
+    carregarLojas().then(() => { const k = canaisAtuais.find((x) => x.id === conectado); if (k?.troca) window.SintoniaTrocaNumero?.abrir(k, 'troca', carregarLojas); });
+    desenharEscolhas();
     sincronizar(lojaAtual);
   }
   // Depois de conectar: puxa as conversas recentes do WhatsApp, com a animação de sincronização.

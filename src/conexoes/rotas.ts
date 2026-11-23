@@ -11,7 +11,7 @@ import { NOMES_SISTEMA } from '../agenda/sistema.js';
 import type { AgendasDasUnidades } from '../agenda/unidades-agenda.js';
 import { campoCanal, campoDeUnidade, campoMeta, novoVerifyToken, unidadesWhatsApp, type BaseUnidade, type Conexoes, type NumeroCfg, type UnidadeWhatsApp } from './conexoes.js';
 import { existeUnidade, primeiraUnidade, unidadeDe, zUnidade } from '../unidades.js';
-import type { Quem, TrocaNumero } from './troca-numero.js';
+import { AVISO_COPIAS, type Quem, type TrocaNumero } from './troca-numero.js';
 
 export interface OpcoesConexoes {
   conexoes: Conexoes;
@@ -385,7 +385,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
         const t = trocas.get(n.canalId);
         return {
           // trocar-numero: outro número conectou e falta decidir o que fazer com as conversas do anterior.
-          troca: t ? { em: t.trocaEm.toISOString(), numeroAnterior: t.numeroAnterior, numeroNovo: t.numeroNovo, ...t.resumo } : null,
+          troca: t ? { em: t.trocaEm.toISOString(), numeroAnterior: t.numeroAnterior, numeroNovo: t.numeroNovo, ...t.resumo, aviso: AVISO_COPIAS } : null,
           id: n.canalId,
           nome: nomeDe(n, i),
           // Unidade que recebe as conversas deste número (Empresa › Unidades).
