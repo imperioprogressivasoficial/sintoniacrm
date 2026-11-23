@@ -409,6 +409,49 @@ export class EvolutionAdmin {
     return saida;
   }
 
+  /**
+   * puxar-historico: uma página das mensagens que a Evolution guardou desse número (POST /chat/findMessages), das mais
+   * novas para as mais antigas. Volta os registros como vieram (o mesmo formato do webhook) e quantas páginas há.
+   */
+  async paginaDeMensagens(nome: string, pagina: number, porPagina = 500): Promise<{ registros: unknown[]; paginas: number; total: number }> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const r = await this.chamar<Record<string, unknown>>('POST', `/chat/findMessages/${encodeURIComponent(nome)}`, { where: {}, page: pagina, offset: porPagina }, 120_000);
+    const caixa = (r?.messages && typeof r.messages === 'object' ? r.messages : r) as Record<string, unknown>;
+    const registros = Array.isArray(caixa?.records) ? caixa.records : Array.isArray(r) ? (r as unknown[]) : [];
+    const paginas = Number(caixa?.pages ?? 0) || (registros.length >= porPagina ? pagina + 1 : pagina);
+    return { registros, paginas, total: Number(caixa?.total ?? registros.length) || registros.length };
+  }
+
+  /**
+   * puxar-historico: "@lid" → JID do número (5571...@s.whatsapp.net), pelas conversas (última mensagem) e pelos
+   * contatos que a Evolution guardou. Serve para não perder as conversas de quem o WhatsApp mostra só pelo código.
+   */
+  async mapaLid(nome: string): Promise<Map<string, string>> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const inst = encodeURIComponent(nome);
+    const [chats, contatos] = await Promise.all([
+      this.chamar<unknown>('POST', `/chat/findChats/${inst}`, {}, 120_000).catch(() => []),
+      this.chamar<unknown>('POST', `/chat/findContacts/${inst}`, { where: {} }, 120_000).catch(() => []),
+    ]);
+    const t = (v: unknown) => (typeof v === 'string' ? v : '');
+    const pn = (v: string) => { const d = v.split('@')[0]?.split(':')[0]?.replace(/\D/g, '') ?? ''; return d.length >= 8 ? `${d}@s.whatsapp.net` : ''; };
+    const mapa = new Map<string, string>();
+    for (const c of (Array.isArray(chats) ? chats : []) as Array<Record<string, unknown>>) {
+      const jid = t(c.remoteJid);
+      if (!jid.endsWith('@lid')) continue;
+      const k = ((c.lastMessage as Record<string, unknown> | undefined)?.key ?? {}) as Record<string, unknown>;
+      const alt = pn(t(k.remoteJidAlt) || t(k.senderPn) || t(c.remoteJidAlt));
+      if (alt) mapa.set(jid, alt);
+    }
+    for (const c of (Array.isArray(contatos) ? contatos : []) as Array<Record<string, unknown>>) {
+      const jid = t(c.remoteJid) || t(c.id);
+      const lid = jid.endsWith('@lid') ? jid : t(c.lid);
+      const num = jid.endsWith('@s.whatsapp.net') ? jid : pn(t(c.remoteJidAlt) || t(c.senderPn) || t(c.phoneNumber) || t(c.jidAlt));
+      if (lid.endsWith('@lid') && num && !mapa.has(lid)) mapa.set(lid, num);
+    }
+    return mapa;
+  }
+
   /** Grupos que têm conversa guardada na Evolution (POST /chat/findChats, só "@g.us"): rápido, só jid e nome. */
   async chatsDeGrupo(nome: string): Promise<Array<{ jid: string; nome: string | null }>> {
     const chats = await this.chamar<unknown>('POST', `/chat/findChats/${encodeURIComponent(nome)}`, {}, 60_000);

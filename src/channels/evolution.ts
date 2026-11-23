@@ -23,13 +23,14 @@ const MensagemEvolution = z.object({
     participant: z.string().nullish(),
     participantAlt: z.string().nullish(),
     participantPn: z.string().nullish(),
-    fromMe: z.boolean().optional().default(false),
+    fromMe: z.boolean().nullish().transform((v) => v === true),
     id: z.string(),
   }),
   pushName: z.string().nullish(),
   // O conteúdo vem no formato do WhatsApp (Baileys); os tipos de mídia são lidos à mão em `lerConteudo`.
   message: z.record(z.string(), z.unknown()).nullish(),
-  messageTimestamp: z.union([z.number(), z.string()]).nullish(),
+  // No histórico (messages.set) o horário pode vir como número grande do WhatsApp: { low, high, unsigned }.
+  messageTimestamp: z.union([z.number(), z.string(), z.object({ low: z.number(), high: z.number().optional() }).passthrough().transform((l) => (l.high ?? 0) * 4294967296 + (l.low >>> 0))]).nullish(),
   // Evolution v2 repete aqui o contextInfo da mensagem (anúncio de clique para WhatsApp).
   contextInfo: z.record(z.string(), z.unknown()).nullish(),
 });
@@ -135,6 +136,10 @@ export function eventoEvolution(corpo: unknown): string {
   return typeof e === 'string' ? e.toLowerCase().replace(/_/g, '.') : '';
 }
 
+/** Quem quiser saber quando um histórico chegou fora do formato (o servidor registra). */
+let avisoFormato: ((info: unknown) => void) | undefined;
+export function aoFormatoEstranho(f: (info: unknown) => void): void { avisoFormato = f; }
+
 /** Mensagens do corpo (messages.upsert ou messages.set), cada uma lida sozinha: as fora do formato ficam de fora. */
 function mensagensDoCorpo(corpo: unknown): { instancia: string; lista: Array<z.infer<typeof MensagemEvolution>> } | null {
   const evento = eventoEvolution(corpo);
@@ -142,7 +147,14 @@ function mensagensDoCorpo(corpo: unknown): { instancia: string; lista: Array<z.i
   const bruto = corpo as { instance?: unknown; data?: unknown };
   if (typeof bruto.instance !== 'string') return null;
   const dados = Array.isArray(bruto.data) ? bruto.data : (bruto.data as { messages?: unknown } | undefined)?.messages ?? [bruto.data];
-  const lista = (Array.isArray(dados) ? dados : []).map((x) => MensagemEvolution.safeParse(x)).filter((x) => x.success).map((x) => x.data);
+  const lidos = (Array.isArray(dados) ? dados : []).map((x) => MensagemEvolution.safeParse(x));
+  const lista = lidos.filter((x) => x.success).map((x) => x.data);
+  // Diagnóstico: o lote veio cheio mas nada passou no formato (só os nomes dos campos e o motivo, sem conteúdo).
+  if (evento === 'messages.set' && !lista.length && lidos.length) {
+    const prim = (dados as unknown[])[0] as Record<string, unknown> | undefined;
+    const erro = lidos.find((x) => !x.success);
+    avisoFormato?.({ itens: lidos.length, campos: prim ? Object.keys(prim).slice(0, 15) : [], chave: prim && typeof prim.key === 'object' ? Object.keys(prim.key as object) : [], motivo: erro && !erro.success ? erro.error.issues.slice(0, 3).map((i) => `${i.path.join('.')}: ${i.message}`) : [] });
+  }
   return { instancia: bruto.instance, lista };
 }
 
@@ -152,12 +164,13 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
   const { lista } = lido;
   const r = { data: { instance: lido.instancia } };
   const saida: MensagemRecebida[] = [];
+  let semNumero = 0, semConteudo = 0;
   for (const m of lista) {
     // Contato identificado por LID ("…@lid"): o número verdadeiro vem em remoteJidAlt (ou senderPn).
     const jid = m.key.remoteJid.endsWith('@lid') ? (m.key.remoteJidAlt ?? m.key.senderPn ?? '') : m.key.remoteJid;
     const telefone = telefoneDoJid(jid);
     const conteudo = lerConteudo(m.message);
-    if (!telefone || !conteudo) continue;
+    if (!telefone || !conteudo) { if (!telefone) semNumero++; else semConteudo++; continue; }
     if (conteudo.anexo && !conteudo.anexo.base64 && !conteudo.anexo.ref) { const ref = refMidiaEvolution(m.key, m.message); if (ref) conteudo.anexo.ref = ref; }
     const ts = Number(m.messageTimestamp ?? 0);
     const referencia = m.key.fromMe ? undefined : referenciaDaEvolution(m);
@@ -172,6 +185,12 @@ export function lerWebhookEvolution(corpo: unknown): MensagemRecebida[] {
       ...(conteudo.anexo ? { anexo: conteudo.anexo } : {}),
       ...(referencia ? { referencia } : {}),
     });
+  }
+  // Diagnóstico do histórico: passou no formato mas nada virou mensagem (só contagens e tipos, sem conteúdo).
+  if (!saida.length && lista.length && eventoEvolution(corpo) === 'messages.set') {
+    const tipos: Record<string, number> = {};
+    for (const m of lista.slice(0, 200)) { const k = m.key.remoteJid.split('@')[1] ?? '?'; tipos[k] = (tipos[k] ?? 0) + 1; }
+    avisoFormato?.({ itens: lista.length, semNumero, semConteudo, tipos, mensagem: Object.keys(lista[0]?.message ?? {}).slice(0, 6) });
   }
   return saida;
 }

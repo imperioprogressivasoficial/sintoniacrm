@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
-import { ErroEnvioWhatsApp, eventoEvolution, lerAcoesEvolution, lerWebhookEvolution } from './channels/evolution.js';
+import { aoFormatoEstranho, ErroEnvioWhatsApp, eventoEvolution, lerAcoesEvolution, lerWebhookEvolution } from './channels/evolution.js';
 import type { SaudeWhatsApp } from './channels/whatsapp-saude.js';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -117,6 +117,8 @@ export interface DependenciasServidor {
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
   gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
   /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
+  /** puxar-historico: busca na Evolution tudo o que ela guardou do número (src/app/puxar-historico.ts). */
+  puxarHistorico?: Pick<import('./app/puxar-historico.js').PuxarHistorico, 'agendar' | 'andamento'>;
   historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'> & Partial<Pick<import('./app/historico.js').ImportadorHistorico, 'todos'>>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
@@ -194,6 +196,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   // Quando chegou o último webhook de cada número da API oficial (para a tela de Conexões mostrar se está chegando).
   const vistosMeta = new Map<string, Date>();
   /** Andamento do histórico do WhatsApp recebido depois de conectar (para a tela "Sincronizando"). */
+  aoFormatoEstranho((info) => log('Histórico do WhatsApp fora do formato', info));
   const progressoHistorico = new Map<string, { mensagens: number; conversas: number; em: Date }>();
   if (d.conexoes) registrarConexoes(app, { saude: d.whatsappSaude, ultimoWebhookMeta: (id) => vistosMeta.get(id), importarHistorico: (m) => d.sintonia.importarHistorico(m), progressoHistorico: (id) => d.historico?.progresso(id) ?? progressoHistorico.get(id), ...d.conexoes, auth: d.auth });
 
@@ -260,6 +263,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     // Conectou, caiu, aparelho removido no celular: só atualiza o estado (o aviso sai por trás).
     // trocar-numero: conectou (state "open"): guarda o número do canal e percebe se é outro.
     if (evento === 'connection.update') await d.conexoes?.trocaNumero?.aoWebhook(corpo);
+    // puxar-historico: conectou → daqui a 3 min busca na Evolution tudo o que ela guardou (pega o que o webhook perder).
+    if (evento === 'connection.update' && instancia && (corpo as { data?: { state?: unknown } }).data?.state === 'open') d.puxarHistorico?.agendar(instancia, 180_000);
     if (d.whatsappSaude?.aoWebhook(corpo)) return { ok: true };
     /* vistos: ✓ saiu, ✓✓ entregue, ✓✓ azul lida, microfone azul áudio ouvido (messages.update) */
     if (evento === 'messages.update') {
@@ -275,8 +280,10 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       } catch (e) {
         log('Histórico do WhatsApp em formato estranho', String(e));
       }
-      log('Histórico do WhatsApp chegou', { instancia, mensagens: historico.length }); /* para acompanhar a sincronização nos registros */
+      const dadosBrutos = (corpo as { data?: unknown }).data; const brutos = Array.isArray(dadosBrutos) ? dadosBrutos.length : Array.isArray((dadosBrutos as { messages?: unknown[] } | undefined)?.messages) ? (dadosBrutos as { messages: unknown[] }).messages.length : 0;
+      log('Histórico do WhatsApp chegou', { instancia, mensagens: historico.length, recebidas: brutos, campos: dadosBrutos && typeof dadosBrutos === 'object' && !Array.isArray(dadosBrutos) ? Object.keys(dadosBrutos).slice(0, 8) : 'lista' }); /* para acompanhar a sincronização */
       d.whatsappSaude?.aoMensagem(instancia);
+      d.puxarHistorico?.agendar(instancia); /* puxar-historico: 2 min depois do último pedaço, confere tudo na Evolution */
       /* grupos: o histórico dos grupos vai para Conversas de grupo */
       d.grupos?.aoWebhook(corpo).catch((e) => log('Falha ao importar histórico dos grupos', String(e)));
       // robustez: grava em lotes no banco e responde; o importador passa para as conversas por trás e continua de onde
@@ -472,7 +479,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const lista = [
       ...(d.historico?.todos?.() ?? []),
       ...[...progressoHistorico].map(([instancia, p]) => ({ instancia, ...p, faltam: 0 })),
-    ].map((p) => ({ canal: p.instancia, conversas: p.conversas, mensagens: p.mensagens, faltam: p.faltam ?? 0, ativo: (p.faltam ?? 0) > 0 || agora - new Date(p.em).getTime() < 25_000 }));
+    ].map((p) => ({ canal: p.instancia, conversas: p.conversas, mensagens: p.mensagens, faltam: p.faltam ?? 0, ativo: (p.faltam ?? 0) > 0 || Boolean(d.puxarHistorico?.andamento(p.instancia)?.rodando) || agora - new Date(p.em).getTime() < 25_000 }));
     return { ativo: lista.some((x) => x.ativo), canais: lista.filter((x) => x.ativo) };
   });
 

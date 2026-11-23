@@ -23,6 +23,8 @@ export interface OpcoesResgate {
   /** contato-nome: no fim da sincronização (ex.: puxar o nome dos contatos). Falha só vai para o log. */
   depois?: () => Promise<unknown>;
   log?: (msg: string, extra?: string) => void;
+  /** puxar-historico: "Sincronizar" busca TUDO o que a Evolution guardou do número (não só as recentes). */
+  puxarTudo?: (canal: string) => Promise<{ lidas: number; novas: number; erro?: string }>;
 }
 
 interface Rodada { rodando: boolean; inicio: Date | null; fim: Date | null; conversas: number; mensagens: number; midias: number; erro: string | null; numeros: number; feitos: number }
@@ -41,6 +43,13 @@ export function registrarResgate(app: FastifyInstance, o: OpcoesResgate): { sinc
     try {
       for (const canal of canais) {
         try {
+          if (o.puxarTudo) {
+            const t = await o.puxarTudo(canal);
+            if (t.erro) throw new Error(t.erro);
+            rodada.mensagens += t.novas;
+            rodada.feitos++;
+            continue;
+          }
           const brutas = await adm.historico(canal, { conversas: 300, porConversa: 40 });
           const r = await o.importar(lerWebhookEvolution({ event: 'messages.upsert', instance: canal, data: brutas }));
           rodada.mensagens += r.mensagens; rodada.conversas += r.conversas; rodada.midias += r.midias ?? 0;

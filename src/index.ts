@@ -54,6 +54,7 @@ import { FilaComReserva } from './fila/reserva.js';
 import { umaPorVez } from './util/relogio.js';
 import { FilaIa } from './app/fila-ia.js';
 import { FilaHistoricoPostgres, ImportadorHistorico } from './app/historico.js';
+import { PuxarHistorico } from './app/puxar-historico.js';
 import { acessosPara } from './auth/acessos.js';
 import { resolver as resolverPermissoes } from './auth/permissoes.js';
 import { criarPool, esperarBanco, ehErroDeConexao } from './store/banco.js';
@@ -777,6 +778,18 @@ const avisosReuniao = pool
 const importadorHistorico = pool
   ? new ImportadorHistorico({ fila: new FilaHistoricoPostgres(pool), importar: (m) => sintonia.importarHistorico(m), log })
   : undefined;
+/* puxar-historico: busca na Evolution tudo o que ela guardou do número e põe na mesma fila (nada se perde). */
+const puxarHistorico = importadorHistorico
+  ? new PuxarHistorico({
+      admin: () => {
+        const url = conexoes.get('evolutionUrl');
+        const chave = conexoes.get('evolutionApiKey');
+        return url && chave ? new EvolutionAdmin(url, chave) : undefined;
+      },
+      receber: (i, m) => importadorHistorico.receber(i, m),
+      log,
+    })
+  : undefined;
 /* meta-historico: conversas antigas do Instagram (Direct) e do Facebook (Messenger) ao conectar, com o andamento no banco. */
 /* trocar-numero: outro número conectado num canal (Manter / Arquivar / Apagar as conversas do anterior) */
 const trocaNumero = new TrocaNumero({
@@ -824,6 +837,7 @@ const app = criarServidor({
   /* banco-seguranca: auditoria das ações sensíveis, LGPD (exportar/apagar dados de cliente) e CSP (SINTONIA_CSP) */
   protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria, ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
+  ...(puxarHistorico ? { puxarHistorico } : {}),
   sintonia,
   repo,
   log,
@@ -1365,6 +1379,7 @@ registrarResgate(app, {
   canais: () => canaisEvolution(conexoes.numeros()).map((c) => c.canalId),
   importar: (m) => sintonia.importarHistorico(m),
   depois: () => nomesWhatsapp.rodar(), // contato-nome
+  ...(puxarHistorico ? { puxarTudo: (canal: string) => puxarHistorico.puxar(canal) } : {}),
   log,
 });
 /* integracoes: tela Integrações (/api/integracoes), API v1, MCP, /desenvolvedores e /openapi.json */
