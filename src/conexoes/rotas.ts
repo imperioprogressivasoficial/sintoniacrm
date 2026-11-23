@@ -565,8 +565,8 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
   app.post('/api/conexoes/whatsapp/canais/:id/grupos-antigos', async (req) => {
     const q = await quemFez(req);
     const id = IdCanal.parse((req.params as { id: string }).id);
-    const b = z.object({ confirmacao: z.string().max(20).optional() }).parse(req.body ?? {});
-    const n = await troca().apagarGruposAntigos({ canalId: id, unidade: lojaDoCanal(id), quem: q, ...(b.confirmacao ? { confirmacao: b.confirmacao } : {}) });
+    const b = z.object({ confirmacao: z.string().max(20).optional(), todos: z.boolean().optional() }).parse(req.body ?? {});
+    const n = await troca().apagarGruposAntigos({ canalId: id, unidade: lojaDoCanal(id), quem: q, todos: b.todos === true, ...(b.confirmacao ? { confirmacao: b.confirmacao } : {}) });
     return { ok: true, grupos: n };
   });
 

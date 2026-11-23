@@ -269,14 +269,15 @@
     const grupos = el('button', { className: 'tn-apagar', type: 'button', innerHTML: IC.apagar, hidden: true });
     fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(canal.id)}/grupos-antigos`, { credentials: 'same-origin' })
       .then((x) => (x.ok ? x.json() : null)).then((g) => {
-        if (!g?.grupos) return;
-        grupos.append(`Apagar os grupos do número antigo (${g.grupos})`); grupos.hidden = false;
+        if (g?.grupos) { grupos.dataset.todos = ''; grupos.append(`Apagar os grupos do número antigo (${g.grupos})`); grupos.hidden = false; }
+        else if (g?.todos) { grupos.dataset.todos = '1'; grupos.append(`Apagar todos os grupos deste WhatsApp (${g.todos})`); grupos.hidden = false; }
       }).catch(() => {});
     grupos.addEventListener('click', async () => {
-      const c = window.prompt('Os grupos do número antigo (as conversas de grupo e as mensagens deles) vão sumir da Sintonia. Isso não pode ser desfeito.\nOs grupos do número novo ficam.\n\nPara confirmar, digite APAGAR:');
+      const todos = grupos.dataset.todos === '1';
+      const c = window.prompt((todos ? 'Todos os grupos deste WhatsApp (as conversas de grupo e as mensagens deles) vão sumir da Sintonia.' : 'Os grupos do número antigo (as conversas de grupo e as mensagens deles) vão sumir da Sintonia. Os do número novo ficam.') + ' Isso não pode ser desfeito.\n\nPara confirmar, digite APAGAR:');
       if (c == null) return;
       try {
-        const r = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(canal.id)}/grupos-antigos`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmacao: c }) });
+        const r = await fetch(`/api/conexoes/whatsapp/canais/${encodeURIComponent(canal.id)}/grupos-antigos`, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ confirmacao: c, todos }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.erro || j.message || 'Não deu para apagar agora.');
         window.alert(`Pronto: ${j.grupos} ${j.grupos === 1 ? 'grupo apagado' : 'grupos apagados'}.`);

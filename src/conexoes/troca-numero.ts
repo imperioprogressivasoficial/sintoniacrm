@@ -75,6 +75,8 @@ export interface LimpezaNumero {
   /** Grupos do WhatsApp do número antigo (canal + loja, sem mensagem depois da troca). Devolve quantos saíram. */
   apagarGrupos?(alvo: AlvoNumero): Promise<number>;
   contarGrupos?(alvo: AlvoNumero): Promise<number>;
+  contarTodosGrupos?(alvo: AlvoNumero): Promise<number>;
+  apagarTodosGrupos?(alvo: AlvoNumero): Promise<number>;
 }
 
 export interface Quem {
@@ -204,20 +206,30 @@ export class TrocaNumero {
   }
 
   /** Grupos do número antigo (dono 23/11): os que existiam antes do número de agora conectar e não tiveram mensagem depois. */
-  async gruposAntigos(canalId: string, unidade: string): Promise<{ grupos: number; sabeQuando: boolean }> {
+  async gruposAntigos(canalId: string, unidade: string): Promise<{ grupos: number; todos: number; sabeQuando: boolean }> {
     const r = await this.o.armazem.ler(canalId);
     const sabeQuando = Boolean(r?.conectadoEm || r?.trocaEm);
-    if (!sabeQuando || !this.o.limpeza.contarGrupos) return { grupos: 0, sabeQuando };
-    return { grupos: await this.o.limpeza.contarGrupos(this.alvo(canalId, unidade, this.agora(), true)), sabeQuando };
+    const alvo = this.alvo(canalId, unidade, this.agora(), true);
+    const todos = this.o.limpeza.contarTodosGrupos ? await this.o.limpeza.contarTodosGrupos(alvo) : 0;
+    const grupos = sabeQuando && this.o.limpeza.contarGrupos ? await this.o.limpeza.contarGrupos(alvo) : 0;
+    return { grupos, todos, sabeQuando };
   }
-  async apagarGruposAntigos(p: { canalId: string; unidade: string; quem: Quem; confirmacao?: string }): Promise<number> {
+  /** `todos`: apaga todos os grupos deste WhatsApp (o dono pediu quando não dá para separar o número antigo do novo). */
+  async apagarGruposAntigos(p: { canalId: string; unidade: string; quem: Quem; confirmacao?: string; todos?: boolean }): Promise<number> {
     if (!podeApagar(p.quem)) throw erro('Só a administração e a direção apagam os dados de um WhatsApp.', 403);
     if (String(p.confirmacao ?? '').trim().toUpperCase() !== 'APAGAR') throw erro('Para apagar, digite APAGAR.', 400);
-    const r = await this.o.armazem.ler(p.canalId);
-    if (!r?.conectadoEm && !r?.trocaEm) throw erro('Ainda não sabemos quando o número novo conectou. Desconecte e conecte de novo pela tela e tente outra vez.', 409);
-    if (!this.o.limpeza.apagarGrupos) throw erro('Não disponível.', 501);
-    const n = await this.o.limpeza.apagarGrupos(this.alvo(p.canalId, p.unidade, this.agora(), true));
-    await this.auditar(p.quem, 'apagou os grupos do número antigo de um WhatsApp', p.canalId, { unidade: p.unidade, grupos: n });
+    const alvo = this.alvo(p.canalId, p.unidade, this.agora(), true);
+    let n: number;
+    if (p.todos) {
+      if (!this.o.limpeza.apagarTodosGrupos) throw erro('Não disponível.', 501);
+      n = await this.o.limpeza.apagarTodosGrupos(alvo);
+    } else {
+      const r = await this.o.armazem.ler(p.canalId);
+      if (!r?.conectadoEm && !r?.trocaEm) throw erro('Ainda não sabemos quando o número novo conectou. Use "Apagar todos os grupos deste WhatsApp".', 409);
+      if (!this.o.limpeza.apagarGrupos) throw erro('Não disponível.', 501);
+      n = await this.o.limpeza.apagarGrupos(alvo);
+    }
+    await this.auditar(p.quem, p.todos ? 'apagou todos os grupos de um WhatsApp' : 'apagou os grupos do número antigo de um WhatsApp', p.canalId, { unidade: p.unidade, grupos: n });
     return n;
   }
 
@@ -388,6 +400,14 @@ export class LimpezaNumeroPostgres implements LimpezaNumero {
     return rows[0] ?? zero();
   }
 
+  async contarTodosGrupos(a: AlvoNumero): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>('select count(*)::int as n from sintonia.grupos where empresa_id = $1 and canal_id = $2 and unidade = $3', [a.empresaId, a.canalId, a.unidade]);
+    return rows[0]?.n ?? 0;
+  }
+  async apagarTodosGrupos(a: AlvoNumero): Promise<number> {
+    const r = await this.pool.query('delete from sintonia.grupos where empresa_id = $1 and canal_id = $2 and unidade = $3', [a.empresaId, a.canalId, a.unidade]);
+    return r.rowCount ?? 0;
+  }
   async contarGrupos(a: AlvoNumero): Promise<number> {
     const { rows } = await this.pool.query<{ n: number }>(
       `with corte as (select coalesce((select coalesce(conectado_em, troca_em) from sintonia.whatsapp_numeros where canal_id = $2), $4::timestamptz) as em)
