@@ -11,6 +11,7 @@ import { NOMES_SISTEMA } from '../agenda/sistema.js';
 import type { AgendasDasUnidades } from '../agenda/unidades-agenda.js';
 import { campoCanal, campoDeUnidade, campoMeta, novoVerifyToken, unidadesWhatsApp, type BaseUnidade, type Conexoes, type NumeroCfg, type UnidadeWhatsApp } from './conexoes.js';
 import { existeUnidade, primeiraUnidade, unidadeDe, zUnidade } from '../unidades.js';
+import type { Quem, TrocaNumero } from './troca-numero.js';
 
 export interface OpcoesConexoes {
   conexoes: Conexoes;
@@ -36,6 +37,8 @@ export interface OpcoesConexoes {
   saude?: SaudeWhatsApp;
   /** Quando chegou o último webhook da Meta para o número (phone_number_id). */
   ultimoWebhookMeta?: (phoneNumberId: string) => Date | undefined;
+  /** trocar-numero: número de cada canal, troca detectada e o que fazer com as conversas do número anterior. */
+  trocaNumero?: TrocaNumero;
 }
 
 const PAPEIS_PERMITIDOS = new Set(['admin', 'direcao']);
@@ -108,10 +111,14 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
   const c = o.conexoes;
 
   async function quem(req: FastifyRequest): Promise<string> {
-    if (!o.auth) return 'teste';
+    return (await quemFez(req)).email;
+  }
+  /** trocar-numero: quem está mexendo (nome e papel vão para a auditoria). */
+  async function quemFez(req: FastifyRequest): Promise<Quem & { email: string }> {
+    if (!o.auth) return { email: 'teste', papel: 'admin', nome: 'teste' };
     const u = await usuarioDaRequisicao(req, o.auth);
     if (!u || !PAPEIS_PERMITIDOS.has(u.papel)) throw Object.assign(new Error('Só a administração mexe nas conexões'), { statusCode: 403 });
-    return u.email;
+    return { email: u.email, id: u.id, nome: u.nome, papel: u.papel };
   }
 
   function evolution(): EvolutionAdmin {
@@ -304,7 +311,9 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const unidades = await Promise.all(
       unidadesWhatsApp().map(async (u) => {
         try {
-          return { unidade: u, ...(await adm.info(`${PREFIXO_INSTANCIA}${u}`)) };
+          const info = await adm.info(`${PREFIXO_INSTANCIA}${u}`);
+          if (info.estado === 'conectada') await o.trocaNumero?.observar(info.nome, u, info.numero).catch(() => false); /* trocar-numero */
+          return { unidade: u, ...info };
         } catch (e) {
           return { unidade: u, nome: `${PREFIXO_INSTANCIA}${u}`, estado: 'erro', erro: String((e as Error).message).slice(0, 200) };
         }
@@ -354,13 +363,29 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     if (novos.length) await salvarCanais(todos, 'sistema');
     // O que a tela acabou de ler também atualiza a saúde (conectou: some a faixa na hora).
     for (const i of infos) if (i.estado === 'conectada') o.saude?.marcarConectado(i.nome);
+    /* trocar-numero: guarda o número de cada canal conectado; outro número no lugar do anterior = troca pendente */
+    const trocas = new Map<string, Awaited<ReturnType<TrocaNumero['situacao']>>>();
+    if (o.trocaNumero) {
+      for (const n of todos) {
+        const info = infos.find((x) => x.nome === n.canalId);
+        try {
+          if (info?.estado === 'conectada') await o.trocaNumero.observar(n.canalId, n.unidade, info.numero);
+          trocas.set(n.canalId, await o.trocaNumero.situacao(n.canalId, n.unidade));
+        } catch (e) {
+          req.log.warn({ erro: String(e) }, 'troca de número: falha ao conferir');
+        }
+      }
+    }
     return {
       configurada,
       erro,
       canais: todos.map((n, i) => {
         const info = infos.find((x) => x.nome === n.canalId);
         const s = o.saude?.canal(n.canalId);
+        const t = trocas.get(n.canalId);
         return {
+          // trocar-numero: outro número conectou e falta decidir o que fazer com as conversas do anterior.
+          troca: t ? { em: t.trocaEm.toISOString(), numeroAnterior: t.numeroAnterior, numeroNovo: t.numeroNovo, ...t.resumo } : null,
           id: n.canalId,
           nome: nomeDe(n, i),
           // Unidade que recebe as conversas deste número (Empresa › Unidades).
@@ -426,6 +451,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     const numero = numeroDe(req);
     if (!canaisSalvos().some((n) => n.canalId === id)) await salvarCanais([...canaisSalvos(), { canalId: id, unidade: unidadeDoCanal(req) }], autor);
     o.saude?.pareandoPelaPessoa(id);
+    await o.trocaNumero?.pareando(id, canalExistente(id).unidade); /* trocar-numero: a próxima conexão pode ser outro número */
     const r = await evolution().conectar(id, webhookDe(req), numero);
     if (r.estado === 'conectada') o.saude?.marcarConectado(id);
     return r;
@@ -488,6 +514,55 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     return { ok: true };
   });
 
+  // ---------------------------------------------------------------- trocar-numero
+  // Troca de número (Manter / Arquivar / Apagar as conversas do anterior) e o botão "Apagar os dados deste WhatsApp".
+  const troca = () => {
+    if (!o.trocaNumero) throw Object.assign(new Error('Indisponível neste servidor.'), { statusCode: 501 });
+    return o.trocaNumero;
+  };
+  const CorpoDecisao = z.object({
+    acao: z.enum(['manter', 'arquivar', 'apagar']),
+    confirmacao: z.string().max(20).optional(),
+  });
+  /** Canal salvo ou a instância antiga de uma loja ("sintonia-norte"): devolve a loja dele. */
+  const lojaDoCanal = (id: string): string => {
+    const n = c.numeros().find((x) => x.canalId === id);
+    if (!n) throw Object.assign(new Error('Canal não encontrado.'), { statusCode: 404 });
+    return n.unidade;
+  };
+  const trabalhoJson = (t: NonNullable<ReturnType<TrocaNumero['trabalho']>>) => ({
+    id: t.id, estado: t.estado, total: t.total, feito: t.feito, erro: t.erro ?? null, inicio: t.inicio.toISOString(), fim: t.fim?.toISOString() ?? null,
+  });
+
+  app.get('/api/conexoes/whatsapp/canais/:id/dados', async (req) => {
+    await quemFez(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    return troca().dados(id, lojaDoCanal(id));
+  });
+
+  app.post('/api/conexoes/whatsapp/canais/:id/troca', async (req) => {
+    const q = await quemFez(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    const b = CorpoDecisao.parse(req.body ?? {});
+    const r = await troca().decidir({ canalId: id, unidade: lojaDoCanal(id), acao: b.acao, quem: q, origem: 'troca', ...(b.confirmacao ? { confirmacao: b.confirmacao } : {}) });
+    return { ok: true, arquivadas: r.arquivadas ?? 0, trabalho: r.trabalho ? trabalhoJson(r.trabalho) : null };
+  });
+
+  app.post('/api/conexoes/whatsapp/canais/:id/dados', async (req) => {
+    const q = await quemFez(req);
+    const id = IdCanal.parse((req.params as { id: string }).id);
+    const b = CorpoDecisao.extend({ acao: z.enum(['arquivar', 'apagar']) }).parse(req.body ?? {});
+    const r = await troca().decidir({ canalId: id, unidade: lojaDoCanal(id), acao: b.acao, quem: q, origem: 'tudo', ...(b.confirmacao ? { confirmacao: b.confirmacao } : {}) });
+    return { ok: true, arquivadas: r.arquivadas ?? 0, trabalho: r.trabalho ? trabalhoJson(r.trabalho) : null };
+  });
+
+  app.get('/api/conexoes/whatsapp/apagando/:trabalho', async (req, reply) => {
+    await quemFez(req);
+    const t = troca().trabalho(z.string().uuid().parse((req.params as { trabalho: string }).trabalho));
+    if (!t) return reply.code(404).send({ erro: 'Não achamos esse andamento (o servidor pode ter reiniciado). Abra de novo para conferir o que falta.' });
+    return trabalhoJson(t);
+  });
+
   app.post('/api/conexoes/whatsapp/:unidade/conectar', async (req) => {
     const autor = await quem(req);
     const unidade = Unidade.parse((req.params as { unidade: string }).unidade);
@@ -496,6 +571,7 @@ export function registrarConexoes(app: FastifyInstance, o: OpcoesConexoes): void
     if (bruto && (bruto.length < 10 || bruto.length > 13)) throw Object.assign(new Error('Número inválido. Use DDD + número, ex.: 71 99999-9999.'), { statusCode: 400 });
     const numero = bruto ? (bruto.length <= 11 ? `55${bruto}` : bruto) : undefined;
     o.saude?.pareandoPelaPessoa(`${PREFIXO_INSTANCIA}${unidade}`);
+    await o.trocaNumero?.pareando(`${PREFIXO_INSTANCIA}${unidade}`, unidade); /* trocar-numero */
     const r = await evolution().conectar(`${PREFIXO_INSTANCIA}${unidade}`, webhookDe(req), numero);
     await definirNumero(unidade, true, autor);
     return r;

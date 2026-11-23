@@ -32,6 +32,7 @@ import { CanalMeta } from './channels/meta.js';
 import { canaisEvolution, numerosDasConexoes, opcoesWebhookMeta } from './conexoes/numeros.js';
 import { contaDaRede, contaHistoricoMeta, numerosSociais } from './conexoes/sociais.js';
 import { ArmazemHistoricoMetaMemoria, ArmazemHistoricoMetaPostgres, HistoricoMeta } from './conexoes/historico-meta.js';
+import { ArmazemNumerosMemoria, ArmazemNumerosPostgres, LimpezaNumeroMemoria, LimpezaNumeroPostgres, TrocaNumero } from './conexoes/troca-numero.js'; /* trocar-numero */
 import { ArmazemChamadasMemoria, ArmazemChamadasPostgres } from './ligacoes/chamadas.js';
 import { ehCanalSocial } from './channels/meta-social.js';
 import type { CanalWhatsApp, StatusRecebido } from './channels/tipos.js';
@@ -777,6 +778,15 @@ const importadorHistorico = pool
   ? new ImportadorHistorico({ fila: new FilaHistoricoPostgres(pool), importar: (m) => sintonia.importarHistorico(m), log })
   : undefined;
 /* meta-historico: conversas antigas do Instagram (Direct) e do Facebook (Messenger) ao conectar, com o andamento no banco. */
+/* trocar-numero: outro número conectado num canal (Manter / Arquivar / Apagar as conversas do anterior) */
+const trocaNumero = new TrocaNumero({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemNumerosPostgres(pool) : new ArmazemNumerosMemoria(),
+  limpeza: pool ? new LimpezaNumeroPostgres(pool) : new LimpezaNumeroMemoria(repo as RepositorioMemoria),
+  auditoria,
+  canais: () => conexoes.numeros().map((n) => ({ canalId: n.canalId, unidade: n.unidade })),
+  log,
+});
 const historicoMeta = new HistoricoMeta({
   armazem: pool ? new ArmazemHistoricoMetaPostgres(pool) : new ArmazemHistoricoMetaMemoria(),
   conta: (rede) => contaHistoricoMeta(conexoes, rede),
@@ -841,6 +851,7 @@ const app = criarServidor({
   conexoes: {
     conexoes,
     agendas,
+    trocaNumero /* trocar-numero */,
     historicoMeta /* meta-historico */,
     sincronizarGrupos: () => grupos.sincronizar(),
     testarIA: async (chave) => {
@@ -1063,7 +1074,7 @@ const cadastroEmpresa = registrarCadastro(app, {
       );
       return Boolean(rows[0]?.usada);
     }
-    return (await repo.listarConversas()).some((c) => c.empresaId === empresaId && c.unidade === id) || (await contas.listarUsuarios(empresaId)).some((u) => u.unidades.includes(id));
+    return (await repo.listarConversas({ incluirArquivadas: true })).some((c) => c.empresaId === empresaId && c.unidade === id) || (await contas.listarUsuarios(empresaId)).some((u) => u.unidades.includes(id));
   },
   // Unidade nova (ou desativada): canais de teste, agenda e números refeitos na hora.
   aoMudarUnidades: () => {

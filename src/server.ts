@@ -31,6 +31,7 @@ import { bahia, DIA, partesBahia } from './util/tempo.js';
 import { registrarContatos } from './contatos/rotas.js';
 import type { ArmazemContatos } from './contatos/contatos.js';
 import { registrarConexoes, type OpcoesConexoes } from './conexoes/rotas.js';
+import { registrarArquivadasNumero } from './conversa/arquivadas-numero.js'; /* trocar-numero */
 import { registrarWebhooksSociais, type OpcoesWebhooksSociais } from './conexoes/sociais.js';
 import { registrarRotasMidia } from './web/midias.js';
 import { agendar, agendaDaUnidade, ErroAgendamento, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
@@ -257,6 +258,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     const evento = eventoEvolution(corpo);
     const instancia = typeof (corpo as { instance?: unknown }).instance === 'string' ? String((corpo as { instance: string }).instance) : '';
     // Conectou, caiu, aparelho removido no celular: só atualiza o estado (o aviso sai por trás).
+    // trocar-numero: conectou (state "open"): guarda o número do canal e percebe se é outro.
+    if (evento === 'connection.update') await d.conexoes?.trocaNumero?.aoWebhook(corpo);
     if (d.whatsappSaude?.aoWebhook(corpo)) return { ok: true };
     /* vistos: ✓ saiu, ✓✓ entregue, ✓✓ azul lida, microfone azul áudio ouvido (messages.update) */
     if (evento === 'messages.update') {
@@ -693,6 +696,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   // ---------- Fotos, áudios, vídeos e documentos ----------
+  /* trocar-numero: Conversas › "Arquivadas do número antigo" (consultar e desarquivar) */
+  registrarArquivadasNumero(app, { repo: d.repo, empresaId: d.contatos?.empresaId ?? process.env.SINTONIA_EMPRESA_ID ?? 'imperio', ...(d.protecao?.auditoria ? { auditoria: d.protecao.auditoria } : {}) });
   if (d.pessoais) registrarConversasPessoais(app, { pessoais: d.pessoais, visiveis: async (req) => (await d.repo.listarConversas()).filter(visivelPara(req)) }); /* conversa-extra */
   if (d.contatos) registrarContatos(app, { contatos: d.contatos.armazem, empresaId: d.contatos.empresaId, conversaVisivel, renomear: (id, nome) => d.sintonia.renomearCliente(id, nome) });
   registrarRotasMidia(app, { sintonia: d.sintonia, repo: d.repo, midias: d.midias, agora: d.agora, conversaVisivel, quemDe: (req) => req.usuario });
