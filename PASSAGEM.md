@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 23/11 14h05: 60b0670 no ar — origem: textos dos links do dono (vim pelo anúncio/Google/site/bio do Instagram/direct do Instagram, "Olá, validei"); PUT /api/conversas/:id/origem (equipe marca/troca na ficha, botão "Marcar origem"). Depois (dono): puxar criativo/anúncio/campanha do rastreamento.
+
 - 23/11 13h50: 69c7f06 no ar — "Validei meu número..." (formulário Meta) = anúncio.
 
 - 23/11 13h40: 60d26f1 no ar — origem das conversas antigas lê as PRIMEIRAS mensagens da cliente (repo.primeirasDaCliente).
