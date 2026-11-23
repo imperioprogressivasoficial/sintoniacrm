@@ -51,6 +51,7 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 - Antes de cada publicação grande, rode o teste de carga: `node scripts/carga.mjs` (Postgres local; ~1 min; sai com erro se perder mensagem ou ficar lento — opções e limites no topo do arquivo).
 
 ## Onde parei
+- **23/11, 11h37 (Bahia), Claude Max — no ar o c86b78c:** grupos do número antigo: botão próprio em Conexões (corte = whatsapp_numeros.conectado_em/troca_em). Atenção: o botão "Apagar os dados deste WhatsApp" apaga TODAS as conversas do canal até agora (inclusive do número novo).
 - **23/11, 11h22 (Bahia), Claude Max — no ar o bba06af:** troca de número (src/conexoes/troca-numero.ts, migração 770, conversas.arquivada_em). Leitura do número na Evolution testada só com Evolution falsa: conferir com número real (ownerJid/wuid).
 - **22/11, 10h02 (Bahia), Claude Max — no ar o f890d29:** avisos "Serena assumiu…/Fulana voltou…" com a foto redonda (Serena ou a pessoa) no lugar do 🤖.
 - **22/11, 09h59 (Bahia), Claude Max — no ar o ba5ffab:** reações com todos os emojis e busca (window.SintoniaEmojis.seletor em menu-mensagem.js; dados em public/telas/emojis-dados.js, baixados só ao abrir). Apaguei no Postgres local as cópias de banco dos agentes (sintonia_galeria_*, sintonia_teste_<nome>) que deixavam a recuperação lenta.
