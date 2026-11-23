@@ -167,6 +167,8 @@ export class EvolutionAdmin {
         qrcode: true,
         // Conversas de grupo: os grupos do WhatsApp chegam à Sintonia (tela própria, sem IA nem funil).
         groupsIgnore: false,
+        // Ao conectar, o celular manda TODO o histórico de conversas (sem isso, só um pouco do recente). Dono 23/11.
+        syncFullHistory: true,
         number: numero,
         webhook: configWebhook,
       });
@@ -186,6 +188,7 @@ export class EvolutionAdmin {
         qrcode: true,
         // Conversas de grupo: os grupos do WhatsApp chegam à Sintonia (tela própria, sem IA nem funil).
         groupsIgnore: false,
+        syncFullHistory: true,
         webhook: configWebhook,
       });
       // Algumas versões da v2 ignoram o webhook na criação: garante com a rota própria.
@@ -193,6 +196,7 @@ export class EvolutionAdmin {
       if (criada.qrcode?.base64) return { qr: criada.qrcode.base64, estado: 'conectando' };
     } else {
       await this.chamar('POST', `/webhook/set/${encodeURIComponent(nome)}`, { webhook: configWebhook }).catch(() => {});
+      await this.historicoCompleto(nome).catch(() => {});
     }
     const r = await this.chamar<{ base64?: string }>('GET', `/instance/connect/${encodeURIComponent(nome)}`);
     return { qr: r.base64 ?? null, estado: 'conectando' };
@@ -308,6 +312,22 @@ export class EvolutionAdmin {
       },
     });
     return true;
+  }
+
+  /** Liga "trazer todo o histórico" (syncFullHistory) mantendo as outras opções. Vale na próxima vez que o celular conectar. */
+  async historicoCompleto(nome: string): Promise<void> {
+    if (!nome.startsWith(PREFIXO_INSTANCIA)) throw new Error('Só instâncias da Sintonia por aqui');
+    const atual = await this.chamar<Record<string, unknown> | null>('GET', `/settings/find/${encodeURIComponent(nome)}`);
+    if (atual?.syncFullHistory === true) return;
+    const campos = ['rejectCall', 'msgCall', 'groupsIgnore', 'alwaysOnline', 'readMessages', 'readStatus', 'wavoipToken'];
+    const corpo: Record<string, unknown> = { syncFullHistory: true };
+    for (const k of campos) if (atual && atual[k] !== undefined && atual[k] !== null) corpo[k] = atual[k];
+    corpo.rejectCall ??= false;
+    corpo.groupsIgnore ??= false;
+    corpo.alwaysOnline ??= false;
+    corpo.readMessages ??= false;
+    corpo.readStatus ??= false;
+    await this.chamar('POST', `/settings/set/${encodeURIComponent(nome)}`, corpo);
   }
 
   /**
