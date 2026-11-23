@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-23 14:37 UTC (23/11, 11h37 na Bahia)
-commit: c86b78c
-pacote sha256: ae8927713c1275d8a8a8bf1b044d2e3798f1843b75d0cacb591e1f77c2675257
+data: 2026-11-23 14:47 UTC (23/11, 11h47 na Bahia)
+commit: c628168
+pacote sha256: 8f7e5b3086b17fa72c089da91380d6d1562839a4b689e14a013c3216d74e7c22
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-c86b78c.b64); pode apagar depois.
-observação: em cima do bba06af. Entra: botão "Apagar os grupos do número antigo" (grupos de antes do número atual conectar; rota /api/conexoes/whatsapp/canais/:id/grupos-antigos).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-c628168.b64); pode apagar depois.
+observação: em cima do c86b78c. Entra: faixa "Sincronizando suas conversas do WhatsApp…" na lista de Conversas (public/telas/sinc-lista.js, GET /api/sincronizando).
