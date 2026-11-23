@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 23/11 13h40: 60d26f1 no ar — origem das conversas antigas lê as PRIMEIRAS mensagens da cliente (repo.primeirasDaCliente).
+
 - 23/11 13h20: origem automática pelo texto da cliente (74663df no ar): `src/rastreio/pelo-texto.ts` (regras, sem IA) em Rastreio.aoMensagem quando não há anúncio/link, e `detectarSemOrigem` a cada 30 min nas conversas sem origem (inclui histórico importado). Palpite = origemPor 'ia' (anúncio/link real passa por cima).
 
 - 23/11 12h47: histórico do WhatsApp robusto (1d73428 no ar). Horário longo {low,high} aceito; lote que não vira mensagem registra o motivo no log ("Histórico do WhatsApp fora do formato"); `src/app/puxar-historico.ts` busca TUDO o que a Evolution guardou (findMessages paginado, @lid resolvido por findChats/findContacts) 2 min depois do último messages.set, 3 min depois de conectar e no botão Sincronizar.
