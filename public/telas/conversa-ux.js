@@ -168,6 +168,10 @@
   #ficha.cux-ficha .ficha-form input:focus, #ficha.cux-ficha textarea:focus, #ficha.cux-ficha .ficha-form select:focus { outline: none; border-color: #3aa0ff; box-shadow: 0 0 0 3px rgba(58, 160, 255, .18); }
   #ficha.cux-ficha textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
   #ficha.cux-ficha .rodape-ficha { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  /* aud-telas: o rodapé fixo "Salvar" fica com a cara do próprio cartão (mesmo fundo, mesma largura, sem vidro solto) */
+  #ficha.cux-ficha .cux-cartao .ficha-form .rodape-ficha { margin: 0 -16px; padding: 10px 16px; background: linear-gradient(var(--cux-cartao), var(--cux-cartao)), var(--fundo);
+    -webkit-backdrop-filter: none; backdrop-filter: none; border-top: 1px solid var(--cux-borda); box-shadow: 0 -8px 14px -12px rgba(8, 36, 63, .18); }
+  html[data-tema="escuro"] #ficha.cux-ficha .cux-cartao .ficha-form .rodape-ficha { box-shadow: 0 -8px 14px -12px rgba(0, 0, 0, .5); }
   .cux-obs .cux-salvar { justify-self: end; }
   /* atendimento */
   #ficha.cux-ficha .cux-sem-titulo > summary { display: none; }

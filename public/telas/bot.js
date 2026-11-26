@@ -10,6 +10,7 @@
 window.SintoniaTelas = window.SintoniaTelas || {};
 (() => {
   const SVG = {
+    followup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/><path d="M12 8v4l2.5 2"/></svg>',
     robo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 16.5h5"/><circle cx="12" cy="3.5" r="1"/></svg>',
     raio: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.2 2.5 4.8 13.4c-.3.4 0 1 .5 1h5.2l-1.4 7.1c-.1.6.7.9 1 .4l8.4-10.9c.3-.4 0-1-.5-1h-5.2l1.4-7.1c.1-.6-.7-.9-1-.4Z"/></svg>',
     mais: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
@@ -88,6 +89,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .bt-abas { justify-self: start; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
   .bt-aba { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 18px; border-radius: 999px; font-size: 14.5px; font-weight: 650; color: var(--sub); }
   .bt-aba svg { width: 16px; height: 16px; }
+  @media (max-width: 420px) { .bt-abas { gap: 0; } .bt-aba { padding: 0 12px; gap: 6px; font-size: 14px; } } /* aud-telas: 3 abas cabem no celular */
   .bt-aba[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo); box-shadow: inset 0 0 0 1px var(--vidro-borda), 0 4px 14px rgba(16,110,190,.12); }
   html[data-tema="escuro"] .bt-aba[aria-pressed="true"] { background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
   .bt-botao { all: unset; cursor: pointer; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 750; font-size: 14.5px; white-space: nowrap;
@@ -492,12 +494,22 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     corpo.replaceChildren(...lista.map((f) => cartaoBot(f, () => desenhar(caixa, ui))));
   }
 
-  function abasAutomacoes(ativa) {
+  /* aud-telas: uma fileira só de abas — Automações · Follow-up · Bots (antes havia uma segunda fileira
+   * "Automações | Follow-up" logo abaixo, repetindo "Automações"). aoTrocar: troca de aba dentro da tela de Automações. */
+  function abasAutomacoes(ativa, aoTrocar) {
     estilo();
     const { el } = UI();
-    const ir = (v) => { if (v === ativa) return; UI().mostrar(v === 'bots' ? 'bot' : 'automacoes'); };
-    return el('div', { class: 'bt-abas', role: 'group', 'aria-label': 'Automações ou bots' },
+    const comFollowup = !!window.SintoniaTelas.followup && ehGestao();
+    const ir = (v) => {
+      if (v === ativa) return;
+      if (v === 'bots') return UI().mostrar('bot');
+      if (aoTrocar) return aoTrocar(v);
+      const au = window.SintoniaTelas.automacoes;
+      if (au?.irAba) au.irAba(v); else UI().mostrar('automacoes');
+    };
+    return el('div', { class: 'bt-abas', role: 'group', 'aria-label': comFollowup ? 'Automações, follow-up ou bots' : 'Automações ou bots' },
       el('button', { class: 'bt-aba', type: 'button', 'aria-pressed': String(ativa === 'automacoes'), onclick: () => ir('automacoes') }, el('span', { html: SVG.raio, style: 'display:grid;color:#f5b800' }), el('span', { text: 'Automações' })),
+      comFollowup ? el('button', { class: 'bt-aba', type: 'button', 'aria-pressed': String(ativa === 'followup'), onclick: () => ir('followup') }, el('span', { html: SVG.followup, style: 'display:grid' }), el('span', { text: 'Follow-up' })) : null,
       el('button', { class: 'bt-aba', type: 'button', 'aria-pressed': String(ativa === 'bots'), onclick: () => ir('bots') }, el('span', { html: SVG.robo, style: 'display:grid' }), el('span', { text: 'Bots' })));
   }
 
@@ -1370,5 +1382,5 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return ed;
   }
 
-  window.SintoniaTelas.bot = { desenhar, abrirEditor, escolherDaEtapa, iniciarNaConversa, novoBot, abasAutomacoes: (a) => abasAutomacoes(a) };
+  window.SintoniaTelas.bot = { desenhar, abrirEditor, escolherDaEtapa, iniciarNaConversa, novoBot, abasAutomacoes: (a, aoTrocar) => abasAutomacoes(a, aoTrocar) };
 })();

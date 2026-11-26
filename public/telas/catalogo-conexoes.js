@@ -29,7 +29,8 @@
   css.textContent = `
   :root { --cx-tile: #ffffff; --cx-tile-borda: rgba(8,36,63,.08); --cx-bt: #08243f; --cx-bt-txt: #fff; --cx-tiktok: #111; }
   html[data-tema="escuro"] { --cx-tile: #151a22; --cx-tile-borda: rgba(255,255,255,.08); --cx-bt: #fff; --cx-bt-txt: #05080d; --cx-tiktok: #fff; }
-  #catalogo { background: none !important; box-shadow: none !important; padding: 0 !important; }
+  #catalogo { background: none !important; box-shadow: none !important; padding: 16px !important; } /* aud-telas: respiro interno (busca e cartões não encostam na borda) */
+  #catalogo .cx-busca { margin-top: 0; }
   .cx-busca { display: flex; align-items: center; gap: 10px; height: 50px; border-radius: 16px; padding: 0 16px; margin: 4px 0 8px;
     background: var(--vidro-item, rgba(255,255,255,.7)); box-shadow: inset 0 0 0 1px var(--vidro-borda, rgba(8,36,63,.08)); }
   .cx-busca svg { width: 20px; height: 20px; flex: none; color: var(--sub); }

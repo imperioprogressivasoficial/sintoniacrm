@@ -284,7 +284,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       x.addEventListener('change', () => { s[chave] = x.value; s.pagina = 0; s.selecao.clear(); gravar(); desenhar(); });
       return x;
     };
-    const busca = el('input', { type: 'search', placeholder: 'Buscar por nome, telefone, empresa ou tag', 'aria-label': 'Buscar cliente', 'data-busca': 'p', value: s.busca });
+    // aud-telas: no celular o texto longo aparecia cortado ("Buscar por nome, tele"); lá fica só "Buscar cliente"
+    const curto = window.matchMedia?.('(max-width: 760px)').matches;
+    const busca = el('input', { type: 'search', placeholder: curto ? 'Buscar cliente' : 'Buscar por nome, telefone, empresa ou tag', title: 'Busca por nome, telefone, empresa ou tag', 'aria-label': 'Buscar cliente', 'data-busca': 'p', value: s.busca });
     busca.addEventListener('input', () => { s.busca = busca.value; s.pagina = 0; desenhar(); });
     const origens = [...new Set(pessoas().map(iconeOrigem))].sort((a, b) => (ORIGENS[a] || a).localeCompare(ORIGENS[b] || b, 'pt-BR'));
     const unidades = [...new Set(pessoas().map((c) => c.unidade).filter(Boolean))];

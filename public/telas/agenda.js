@@ -557,8 +557,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   const rotuloEv = (i) => `${ehReu(i) ? 'Reunião online: ' : ''}${tituloEv(i)}, ${diaLongo(i._dia)}, das ${hm(new Date(i.inicio))} às ${hm(new Date(i.fim))}${i.profissional ? ', com ' + i.profissional : ''}`;
   const jaFoi = (i) => new Date(i.fim) < new Date();
 
-  /** Colunas lado a lado para horários que se cruzam (como no calendário). */
-  function colunas(lista, H) {
+  /** Colunas lado a lado para horários que se cruzam (como no calendário).
+   * aud-telas: cada coluna tem largura mínima legível (COL_MIN). Quando não cabem todas, as últimas viram um
+   * "+N" que abre a lista daquele horário (maxCol = quantas colunas cabem no dia). */
+  const COL_MIN = 50;
+  function colunas(lista, H, maxCol = Infinity) {
     const min = (20 / H) * 60;
     const evs = lista.map((i) => ({ i, a: i._min, z: Math.max(i._fimMin, i._min + min) }));
     const out = [];
@@ -571,8 +574,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         cols[c] = e.z;
         e.col = c;
       }
-      for (const e of grupo) e.ncol = cols.length;
-      out.push(...grupo);
+      if (cols.length > maxCol) {
+        // aud-telas: mostra maxCol - 1 colunas e junta o resto num "+N" (na última vaga)
+        const vis = Math.max(1, maxCol - 1);
+        const escondidos = grupo.filter((e) => e.col >= vis);
+        const a = Math.min(...escondidos.map((e) => e.a)), z = Math.max(...escondidos.map((e) => e.z));
+        for (const e of grupo) e.ncol = maxCol;
+        out.push(...grupo.filter((e) => e.col < vis), { mais: escondidos.length, todos: grupo.map((e) => e.i), a, z, col: vis, ncol: maxCol });
+      } else {
+        for (const e of grupo) e.ncol = cols.length;
+        out.push(...grupo);
+      }
       grupo = [];
     };
     for (const e of evs) {
@@ -608,10 +620,14 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function paneGrade(ini, n, H) {
     const p = el('div', { class: 'ag-pane', style: `--n:${n}` });
     const agora = local(new Date());
+    // aud-telas: quantas colunas legíveis cabem num dia (largura da área menos a coluna das horas)
+    const largDia = ((s.conteudo?.clientWidth || 0) - (s.pc ? 64 : 54)) / n;
+    const maxCol = largDia > 0 ? Math.max(2, Math.floor(largDia / COL_MIN)) : Infinity;
     for (let k = 0; k < n; k++) {
       const d = somar(ini, k);
       const col = el('div', { class: 'ag-col', 'data-dia': d });
-      for (const e of colunas(doDia(d), H)) {
+      for (const e of colunas(doDia(d), H, maxCol)) {
+        if (e.mais) { col.append(botaoMais(e, d, H)); continue; }
         const i = e.i;
         const top = (e.a / 60) * H;
         const alt = Math.max(((i._fimMin - i._min) / 60) * H - 2, 18);
@@ -630,6 +646,41 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     return p;
   }
   const trilho = (panes) => el('div', { class: 'ag-janela' }, el('div', { class: 'ag-trilho' }, ...panes));
+
+  /* aud-telas: "+N" quando os horários que se cruzam não cabem lado a lado; abre a lista daquele horário. */
+  const hmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  function botaoMais(e, d, H) {
+    const top = (e.a / 60) * H;
+    const alt = Math.max(((e.z - e.a) / 60) * H - 2, 22);
+    return el('button', {
+      class: 'ag-ev ag-mais', type: 'button',
+      style: `top:${top}px;height:${alt}px;left:calc(${(e.col / e.ncol) * 100}% + 1px);width:calc(${100 / e.ncol}% - 3px)`,
+      'aria-label': `Mais ${e.mais} ${e.mais === 1 ? 'horário' : 'horários'} neste horário, ${diaLongo(d)}. Ver a lista`,
+      onclick: (ev) => { ev.stopPropagation(); if (!s.arrastou) abrirLista(d, e.todos); },
+    }, el('b', { text: `+${e.mais}` }), alt >= 44 ? el('span', { text: 'ver todos' }) : null);
+  }
+  function abrirLista(d, itens) {
+    const lista = [...itens].sort((x, y) => x._min - y._min);
+    const ini = Math.min(...lista.map((i) => i._min)), fim = Math.max(...lista.map((i) => i._fimMin));
+    const dl = el('dialog', { class: 'ag-dlg ag-folha ag-lista-hora', 'aria-label': `Horários de ${diaLongo(d)}` });
+    dl.append(
+      el('div', { class: 'ag-alca', 'aria-hidden': 'true' }),
+      el('div', { class: 'ag-folha-topo' }, el('button', { class: 'ag-ic', type: 'button', 'aria-label': 'Fechar', html: IC.fechar, onclick: () => dl.close() })),
+      el('div', { class: 'ag-lista-cab' }, el('h2', { text: diaLongo(d).replace(/^./, (c) => c.toUpperCase()) }),
+        el('p', { text: `${lista.length} horários entre ${hmMin(ini)} e ${hmMin(fim)}` })),
+      el('div', { class: 'ag-lista-itens' }, ...lista.map(cartao)),
+      el('div', { class: 'ag-acoes' }, el('button', { class: 'ag-bt ag-borda', type: 'button', html: IC.cal + '<span>Ver o dia inteiro</span>', onclick: () => {
+        dl.close(); s.foco = d;
+        if (s.vista !== 'dia') trocarVista('dia'); else desenharTudo();
+        const rolo = s.conteudo?.querySelector('.ag-rolo');
+        if (rolo) { rolo.scrollTop = Math.max(0, (ini / 60 - 0.5) * (s.pc ? 48 : 56)); s.rolagem = rolo.scrollTop; }
+      } })));
+    dl.addEventListener('click', (ev) => { if (ev.target === dl) dl.close(); });
+    dl.addEventListener('close', () => dl.remove());
+    ligarPuxarParaBaixo(dl);
+    document.body.append(dl);
+    dl.showModal();
+  }
 
   function vistaGrade() {
     const H = s.pc ? 48 : 56;

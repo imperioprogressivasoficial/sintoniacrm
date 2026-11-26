@@ -220,7 +220,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       } else {
         filhos.push(el('div', { class: 'cr-vazio' },
           el('b', { text: s.unidade || s.campanha ? 'Nada com esses filtros' : 'Nenhum lead de anúncio neste período' }),
-          el('p', { text: 'Quando uma cliente chama no WhatsApp por um anúncio de clique para WhatsApp, a Sintonia guarda o anúncio (imagem, título e texto) e mostra aqui quantas vieram, agendaram e compraram. Links rastreados com utm_content também entram.' })));
+          el('p', { text: 'Quando uma cliente chama no WhatsApp por um anúncio de clique para WhatsApp, a Sintonia guarda o anúncio (imagem, título e texto) e mostra aqui quantas vieram, agendaram e compraram. Links rastreados com o campo “Anúncio ou peça” preenchido também entram.' })));
       }
     }
     s.caixa.replaceChildren(el('div', { class: 'cr' }, ...filhos));

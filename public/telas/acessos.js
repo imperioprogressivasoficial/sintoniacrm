@@ -94,6 +94,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ac-quem div { min-width: 0; display: grid; } .ac-quem b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-quem small, .ac-tab td small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ac-tab .ac-botao { min-height: 36px; padding: 0 14px; font-size: 13.5px; white-space: nowrap; }
+  /* aud-telas: no celular, título "Equipe" em cima e os dois botões numa linha só, embaixo (antes quebravam em 2 linhas) */
+  @media (max-width: 760px) {
+    #equipe .cab { flex-wrap: wrap; justify-content: flex-start; gap: 10px 8px; }
+    #equipe .cab h1 { flex: 1 0 100%; margin: 0; }
+    #equipe .cab .botao { flex: 1 1 auto; white-space: nowrap; box-sizing: border-box; min-height: 44px; padding: 0 14px; display: inline-grid; place-items: center; font-size: 14px; }
+  }
   @media (max-width: 899px) {
     .ac-tab thead { display: none; }
     .ac-tab, .ac-tab tbody { display: grid; gap: 10px; }
@@ -517,6 +523,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     if (!caixa || !eu?.permissoes?.equipe) return;
     const cab = caixa.querySelector('.cab');
     if (!cab || cab.querySelector('.ac-entrar')) return;
+    if (!document.getElementById('estilo-acessos')) document.head.append(h('style', { id: 'estilo-acessos', text: CSS })); // aud-telas: arrumação do topo no celular
     cab.append(h('button', { class: 'botao ac-entrar', type: 'button', text: 'Usuários e acessos', onclick: () => abrir('pessoas') }));
   }
 

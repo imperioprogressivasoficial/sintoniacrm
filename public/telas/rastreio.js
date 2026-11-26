@@ -27,6 +27,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .ra-criativo small { display: block; font-size: 12.5px; color: var(--sub); line-height: 1.35; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ra-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 13.5px; }
   .ra-dl dt { color: var(--sub); }
+  .ra-tec { font-size: 11px; font-weight: 500; color: var(--sub); opacity: .75; margin-left: 6px; font-family: var(--fonte-mono, ui-monospace, monospace); letter-spacing: 0; white-space: nowrap; }
+  .ra-dl dt { max-width: 11em; } .ra-dl dt .ra-tec { display: block; margin: 1px 0 0; line-height: 1.2; }
+  .ra-rot { display: grid; gap: 1px; } .ra-rot .ra-tec { margin-left: 0; }
   .ra-dl dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-weight: 600; }
   .ra-vazio { font-size: 13.5px; color: var(--sub); line-height: 1.45; }
   .ra-filtro { display: inline-flex; }
@@ -181,6 +184,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       return;
     }
     const linha = (rot, v) => (v ? [el('dt', { text: rot }), el('dd', { text: v })] : []);
+    // aud-telas: rótulo simples, com o nome técnico em letra pequena ao lado (para quem monta os links)
+    const linhaT = (rot, tec, v) => (v ? [el('dt', {}, rot, el('small', { class: 'ra-tec', text: tec })), el('dd', { text: v })] : []);
     const filhos = [cab];
     if (o.canal === 'anuncio_meta') {
       const img = o.anuncioMiniatura || o.anuncioMidiaUrl;
@@ -197,11 +202,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       ...linha('Anúncio', o.adNome || o.adId),
       ...linha('Link', r.link ? `${r.link.nome} (/l/${r.link.codigo})` : ''),
       ...linha('Código', o.codigo),
-      ...linha('utm_source', o.utmSource), ...linha('utm_medium', o.utmMedium), ...linha('utm_campaign', o.utmCampaign), ...linha('utm_content', o.utmContent), ...linha('utm_term', o.utmTerm),
+      ...linhaT('De onde veio', 'utm_source', o.utmSource), ...linhaT('Tipo', 'utm_medium', o.utmMedium), ...linhaT('Campanha', 'utm_campaign', o.utmCampaign), ...linhaT('Anúncio ou peça', 'utm_content', o.utmContent), ...linhaT('Palavra-chave', 'utm_term', o.utmTerm),
       ...linha('Indicada por', o.indicadoPor),
       ...linha('Detalhe', o.canal !== 'link' ? o.detalhe : ''),
       ...linha('Clique do anúncio', o.ctwaClid ? 'registrado ✓ (vai para a API de Conversões)' : ''),
-      ...linha('fbclid / gclid', o.fbclid || o.gclid ? 'registrado ✓' : ''),
+      ...linhaT('Clique do anúncio (Meta/Google)', o.fbclid && o.gclid ? 'fbclid · gclid' : o.fbclid ? 'fbclid' : 'gclid', o.fbclid || o.gclid ? 'registrado ✓' : ''),
       ...linha('Chegou em', quando(o.em)),
       ...linha('Quem identificou', o.origemPor === 'automatico' ? 'Automático' : o.origemPor === 'ia' ? 'IA (pela conversa)' : 'Equipe'),
       ...linha('Primeira mensagem', o.primeiraMensagem ? `“${o.primeiraMensagem.slice(0, 140)}”` : ''));
@@ -266,16 +271,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const base = location.origin;
     const form = el('form', { class: 'ra-form', autocomplete: 'off' });
     const campo = (rot, nome, extra = {}) => el('label', { class: extra.largo ? 'ra-largo' : '' }, rot, el(extra.tag || 'input', { name: nome, ...extra.at }, ...(extra.opcoes || [])));
+    const rotT = (rot, tec) => el('span', { class: 'ra-rot' }, rot, el('small', { class: 'ra-tec', text: tec })); // aud-telas: sem jargão
     form.append(
       campo('Nome do link', 'nome', { at: { required: '', maxlength: '60', placeholder: 'Ex.: Link Bio Instagram' } }),
       campo('Unidade', 'unidade', { tag: 'select', opcoes: (u.unidadesAtivas ? u.unidadesAtivas().map((x) => [x.id, x.nome]) : Object.entries(u.UNIDADE || {})).map(([v, t]) => el('option', { value: v, text: t })) }),
       campo('WhatsApp da unidade (com DDD)', 'numero', { at: { required: '', inputmode: 'tel', placeholder: '71 99999-9999' } }),
       campo('Código no endereço (opcional)', 'codigo', { at: { maxlength: '40', placeholder: 'bio-insta', pattern: '[a-z0-9][a-z0-9-]{1,39}' } }),
       campo('Mensagem que a cliente envia', 'mensagem', { largo: true, at: { maxlength: '300', value: 'Olá! Vim pelo link e quero saber mais.' } }),
-      campo('utm_source', 'utmSource', { at: { placeholder: 'instagram' } }),
-      campo('utm_medium', 'utmMedium', { at: { placeholder: 'bio' } }),
-      campo('utm_campaign', 'utmCampaign', { at: { placeholder: 'promo-novembro' } }),
-      campo('utm_content', 'utmContent', { at: { placeholder: 'video-antes-depois' } }),
+      campo(rotT('De onde veio (ex.: instagram)', 'utm_source'), 'utmSource', { at: { placeholder: 'instagram' } }),
+      campo(rotT('Tipo (ex.: bio, stories)', 'utm_medium'), 'utmMedium', { at: { placeholder: 'bio' } }),
+      campo(rotT('Campanha', 'utm_campaign'), 'utmCampaign', { at: { placeholder: 'promo-novembro' } }),
+      campo(rotT('Anúncio ou peça', 'utm_content'), 'utmContent', { at: { placeholder: 'video-antes-depois' } }),
       el('div', { class: 'ra-largo', style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, el('button', { class: 'ra-botao', type: 'submit', text: 'Criar link' }), el('span', { class: 'ra-erro', id: 'ra-erro' })));
     const unid = form.elements.unidade; const num = form.elements.numero;
     const preencherNumero = () => { num.value = lembrado(NUMERO_CHAVE + unid.value); };
@@ -295,7 +301,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const url = `${base}/l/${l.codigo}`;
       const inp = el('input', { readonly: '', value: url, 'aria-label': `Endereço do link ${l.nome}` });
       return el('div', { class: 'ra-item' },
-        el('div', { class: 'ra-l1' }, el('b', { text: l.nome }), el('span', { text: [(u.UNIDADE && u.UNIDADE[l.unidade]) || l.unidade, l.utmSource && `utm_source=${l.utmSource}`, l.utmCampaign && `utm_campaign=${l.utmCampaign}`, l.ativo ? '' : 'desligado'].filter(Boolean).join(' · ') })),
+        el('div', { class: 'ra-l1' }, el('b', { text: l.nome }), el('span', { text: [(u.UNIDADE && u.UNIDADE[l.unidade]) || l.unidade, l.utmSource && `De onde veio: ${l.utmSource}`, l.utmCampaign && `Campanha: ${l.utmCampaign}`, l.ativo ? '' : 'desligado'].filter(Boolean).join(' · ') })),
         el('div', { class: 'ra-copia' }, inp, el('button', { class: 'ra-botao leve', type: 'button', text: 'Copiar', onclick: async () => { try { await navigator.clipboard.writeText(url); u.toast('Link copiado'); } catch { inp.select(); } } })),
         el('div', { class: 'ra-numeros' }, el('span', {}, el('b', { text: String(l.cliques) }), 'cliques'), el('span', {}, el('b', { text: String(l.leads) }), 'conversas'), el('span', {}, el('b', { text: l.cliques ? `${Math.round((l.leads / l.cliques) * 100)}%` : '—' }), 'viraram conversa'),
           el('button', { class: 'ra-botao leve', type: 'button', style: 'min-height:36px;padding:0 14px;margin-left:auto', text: l.ativo ? 'Desligar' : 'Ligar', onclick: async () => { try { await u.api(`/api/rastreio/links/${l.id}`, { method: 'PATCH', body: JSON.stringify({ ativo: !l.ativo }) }); carregarLinks(); } catch (x) { u.toast(x.message); } } })));
@@ -305,9 +311,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'ds-cab-tela' }, el('div', { class: 'ds-cab-txt' }, el('h1', { class: 'titulo-grande', text: 'Rastreamento e links' }),
         el('p', { text: 'Links que mostram de onde veio cada cliente: bio do Instagram, anúncio, site.' }))),
       el('section', { class: 'ra-painel', 'aria-label': 'Criar link rastreado' },
-        el('h2', {}, 'Criar link', el('small', { text: 'Cada clique ganha um código curto que vai na mensagem do WhatsApp. Quando a cliente envia, a conversa fica ligada ao clique (com as UTMs, fbclid e gclid).' })),
+        el('h2', {}, 'Criar link', el('small', { text: 'Cada clique ganha um código curto que vai na mensagem do WhatsApp. Quando a cliente envia, a conversa fica ligada ao clique (com os dados do link e do anúncio).' })),
         form,
-        el('p', { class: 'ra-dica', html: 'Dica: dá para acrescentar UTMs no próprio endereço, e elas valem por cima das do link: <code>/l/bio?utm_campaign=black-friday</code>. Nos anúncios da Meta, use <code>utm_source=meta&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>.' })),
+        el('p', { class: 'ra-dica', html: 'Dica: dá para mudar os dados do link no próprio endereço, e eles valem por cima dos que foram salvos: <code>/l/bio?utm_campaign=black-friday</code>. Nos anúncios da Meta, em “Parâmetros de URL”, use <code>utm_source=meta&amp;utm_campaign={{campaign.name}}&amp;utm_content={{ad.name}}</code>.' })),
       el('section', { class: 'ra-painel', 'aria-label': 'Links' }, el('h2', { text: 'Seus links' }), lista)));
   }
 

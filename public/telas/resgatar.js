@@ -11,7 +11,8 @@
   const $ = (id) => document.getElementById(id);
 
   const CSS = `
-  .rg-topo { display: flex; justify-content: center; margin: 6px 0 10px; }
+  .rg-topo { display: flex; justify-content: center; margin: 6px 0 10px; transition: margin-top .2s ease; }
+  @media (prefers-reduced-motion: reduce) { .rg-topo { transition: none; } }
   .rg-topo button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
     font: 500 12px/1.2 var(--fonte, system-ui); color: var(--sub); background: color-mix(in srgb, var(--fundo, #fff) 82%, transparent);
     box-shadow: inset 0 0 0 1px var(--linha, rgba(13,34,64,.12)); }
@@ -54,8 +55,24 @@
     bt.append(el('span', { text: 'Faltou alguma mensagem? Resgatar do WhatsApp' }));
     bt.addEventListener('click', () => resgatarConversa(bt));
     msgs.prepend(el('div', { class: 'rg-topo' }, bt));
+    afastarDaDica();
   }
-  const ligar = () => { const m = $('msgs'); if (!m) return setTimeout(ligar, 400); new MutationObserver(garantirAviso).observe(m, { childList: true }); garantirAviso(); };
+  /* aud-telas: a dica "Toque aqui para ver os dados da cliente" (#dica-ficha, app.html) aparece logo abaixo do topo e
+   * cobria este aviso. Enquanto ela aparece, o aviso desce o bastante para ficar à vista; quando ela some, volta. */
+  function afastarDaDica() {
+    const topo = $('msgs')?.querySelector(':scope > .rg-topo'); const dica = $('dica-ficha');
+    if (!topo) return;
+    topo.style.marginTop = '';
+    if (!dica || dica.hidden) return;
+    const falta = dica.getBoundingClientRect().bottom + 10 - topo.getBoundingClientRect().top;
+    if (falta > 0) topo.style.marginTop = `${Math.ceil(6 + falta)}px`;
+  }
+  const ligar = () => {
+    const m = $('msgs'); if (!m) return setTimeout(ligar, 400);
+    new MutationObserver(garantirAviso).observe(m, { childList: true }); garantirAviso();
+    const dica = $('dica-ficha');
+    if (dica) new MutationObserver(() => requestAnimationFrame(afastarDaDica)).observe(dica, { attributes: true, attributeFilter: ['hidden'] });
+  };
   ligar();
 
   // ---------- todas (⋯ da lista) ----------
