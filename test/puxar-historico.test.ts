@@ -43,3 +43,14 @@ describe('histórico do WhatsApp', () => {
     expect(recebidas.map((m) => m.telefone).sort()).toEqual(['5571966665555', '5571977776666', '5571977776666', '5571988887777'].sort());
   });
 });
+
+describe('tipos de mensagem que sumiam', () => {
+  const m = (message: Record<string, unknown>) => lerWebhookEvolution({ event: 'messages.upsert', instance: 'sintonia-x', data: { key: { remoteJid: '5571999990000@s.whatsapp.net', fromMe: false, id: 'Z' + JSON.stringify(message).length }, message, messageTimestamp: 1763900000 } });
+  it('localização, contato, enquete, resposta de botão e vídeo-recado viram mensagem', () => {
+    expect(m({ locationMessage: { degreesLatitude: -12.97, degreesLongitude: -38.5, name: 'Salvador Norte Shopping' } })[0]?.texto).toContain('Localização: Salvador Norte Shopping');
+    expect(m({ contactMessage: { displayName: 'Ana', vcard: 'BEGIN:VCARD\nTEL;type=CELL:+55 71 99999-0000\nEND:VCARD' } })[0]?.texto).toBe('👤 Contato: Ana (+55 71 99999-0000)');
+    expect(m({ pollCreationMessageV3: { name: 'Qual horário?' } })[0]?.texto).toBe('📊 Enquete: Qual horário?');
+    expect(m({ buttonsResponseMessage: { selectedDisplayText: 'Quero agendar' } })[0]?.texto).toBe('Quero agendar');
+    expect(m({ ptvMessage: { seconds: 5, mimetype: 'video/mp4' } })[0]?.anexo?.tipo).toBe('video');
+  });
+});

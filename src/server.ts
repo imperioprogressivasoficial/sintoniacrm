@@ -271,7 +271,7 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     // trocar-numero: conectou (state "open"): guarda o número do canal e percebe se é outro.
     if (evento === 'connection.update') await d.conexoes?.trocaNumero?.aoWebhook(corpo);
     // puxar-historico: conectou → daqui a 3 min busca na Evolution tudo o que ela guardou (pega o que o webhook perder).
-    if (evento === 'connection.update' && instancia && (corpo as { data?: { state?: unknown } }).data?.state === 'open') d.puxarHistorico?.agendar(instancia, 180_000);
+    if (evento === 'connection.update' && instancia && (corpo as { data?: { state?: unknown } }).data?.state === 'open') d.puxarHistorico?.agendar(instancia, 180_000, { seRecente: true });
     if (d.whatsappSaude?.aoWebhook(corpo)) return { ok: true };
     /* vistos: ✓ saiu, ✓✓ entregue, ✓✓ azul lida, microfone azul áudio ouvido (messages.update) */
     if (evento === 'messages.update') {

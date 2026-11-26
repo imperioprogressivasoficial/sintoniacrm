@@ -25,7 +25,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .esp-faixa .esp-ir { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; padding: 8px 0; }
   .esp-faixa .esp-ir span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .esp-faixa .esp-ir b { font-weight: 800; }
-  .esp-pulso { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,.7); animation: esp-pulso 1.4s ease-out infinite; }
+  .esp-pulso { width: 10px; height: 10px; flex: none; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
   @keyframes esp-pulso { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.7) } 100% { box-shadow: 0 0 0 10px rgba(255,255,255,0) } }
   @media (prefers-reduced-motion: reduce) { .esp-pulso { animation: none; } }
   .esp-faixa .esp-silenciar { flex: none; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.14); color: #fff; font: 700 12.5px/1 var(--fonte); cursor: pointer; }

@@ -179,7 +179,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .bt-no.aviso:not(.erro) { box-shadow: 0 0 0 1.5px rgba(245,184,0,.85); }
   .bt-no.sel.erro, .bt-no.sel.aviso { box-shadow: 0 0 0 2.5px var(--marca-menta), 0 0 0 5px rgba(255,122,89,.55); }
   .bt-no.passou { box-shadow: 0 0 0 2px color-mix(in srgb, var(--marca-menta) 75%, transparent); }
-  .bt-no.atual { box-shadow: 0 0 0 3px var(--marca-menta), 0 0 30px var(--marca-menta); animation: bt-pulso 1.6s ease-in-out infinite; }
+  .bt-no.atual { box-shadow: 0 0 0 3px var(--marca-menta), 0 0 30px var(--marca-menta); }
   @keyframes bt-pulso { 50% { box-shadow: 0 0 0 3px var(--marca-menta), 0 0 10px var(--marca-menta); } }
   @media (prefers-reduced-motion: reduce) { .bt-no.atual { animation: none; } .bt-card, .bt-botao { transition: none; } }
   .bt-no-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; }

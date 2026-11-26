@@ -70,8 +70,13 @@ export class PuxarHistorico {
     return this.andamentos.get(instancia);
   }
 
-  /** Puxa daqui a pouco (junta vários avisos seguidos num só). */
-  agendar(instancia: string, emMs = 120_000): void {
+  /**
+   * Puxa daqui a pouco (junta vários avisos seguidos num só). `seRecente` (reconexão): não repete se já puxou nas
+   * últimas 6 h — o WhatsApp religa sozinho várias vezes por dia e cada "conectou" disparava uma busca inteira.
+   */
+  agendar(instancia: string, emMs = 120_000, o: { seRecente?: boolean } = {}): void {
+    const ultimo = this.andamentos.get(instancia);
+    if (o.seRecente && ultimo?.fim && Date.now() - ultimo.fim.getTime() < 6 * 3600_000) return;
     clearTimeout(this.agendados.get(instancia));
     const t = setTimeout(() => {
       this.agendados.delete(instancia);

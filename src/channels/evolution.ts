@@ -73,6 +73,7 @@ const TIPOS: Array<[string, TipoAnexo]> = [
   ['imageMessage', 'imagem'],
   ['audioMessage', 'audio'],
   ['videoMessage', 'video'],
+  ['ptvMessage', 'video'], // vídeo-recado (bolinha)
   ['documentMessage', 'documento'],
   ['stickerMessage', 'figurinha'],
 ];
@@ -106,6 +107,32 @@ function lerConteudo(bruta: Obj | null | undefined): { texto: string; anexo?: An
     // Áudio ainda não é transcrito: o marcador deixa a equipe ver e a IA pedir em texto.
     return { texto: textoDoAnexo(tipo, legenda, nomeArquivo), anexo };
   }
+  return outrosTipos(msg);
+}
+
+/** auditoria 26/11: localização, contato, enquete e respostas de botão/lista viravam nada (a mensagem sumia). */
+function outrosTipos(msg: Obj): { texto: string } | null {
+  const loc = obj(msg.locationMessage) ?? obj(msg.liveLocationMessage);
+  if (loc) {
+    const lat = numero(loc.degreesLatitude), lng = numero(loc.degreesLongitude);
+    const nome = [texto(loc.name), texto(loc.address)].filter(Boolean).join(' · ');
+    return { texto: `📍 Localização${nome ? `: ${nome}` : ''}${lat !== undefined && lng !== undefined ? ` — https://maps.google.com/?q=${lat},${lng}` : ''}` };
+  }
+  const contato = obj(msg.contactMessage);
+  if (contato) {
+    const tel = /TEL[^:]*:([+\d\s()-]{8,})/.exec(String(contato.vcard ?? ''))?.[1]?.trim();
+    return { texto: `👤 Contato: ${texto(contato.displayName) ?? 'sem nome'}${tel ? ` (${tel})` : ''}` };
+  }
+  const contatos = obj(msg.contactsArrayMessage);
+  if (contatos) return { texto: `👥 ${Array.isArray(contatos.contacts) ? contatos.contacts.length : 'Vários'} contatos compartilhados` };
+  const enquete = obj(msg.pollCreationMessage) ?? obj(msg.pollCreationMessageV2) ?? obj(msg.pollCreationMessageV3);
+  if (enquete) return { texto: `📊 Enquete: ${texto(enquete.name) ?? ''}`.trim() };
+  const resposta =
+    texto(obj(msg.buttonsResponseMessage)?.selectedDisplayText) ??
+    texto(obj(msg.templateButtonReplyMessage)?.selectedDisplayText) ??
+    texto(obj(msg.listResponseMessage)?.title) ??
+    texto(obj(obj(msg.interactiveResponseMessage)?.body)?.text);
+  if (resposta) return { texto: resposta };
   return null;
 }
 

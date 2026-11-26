@@ -3795,7 +3795,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
       const grupo = item?.closest('.lt-grupo');
       const partes = [];
       if (grupo) partes.push(grupo.querySelector('.lt-cab .lt-rot').textContent);
-      const nome = item ? item.querySelector('.lt-rot')?.textContent : estado.vista === 'configuracoes' ? 'Conta' : estado.vista === 'conta' ? 'Conta' : estado.vista === 'acessos' ? 'Atendentes e acessos' : '';
+      const nome = item ? item.querySelector('.lt-rot')?.textContent : estado.vista === 'configuracoes' ? 'Configurações' : estado.vista === 'conta' ? 'Conta' : estado.vista === 'acessos' ? 'Atendentes e acessos' : '';
       if (nome && nome !== partes[0]) partes.push(nome);
       caixa.replaceChildren(...partes.flatMap((p, i) => [i ? el('span', { class: 'tp-sep', 'aria-hidden': 'true', text: '›' }) : null, el(i === partes.length - 1 ? 'b' : 'span', { text: p })].filter(Boolean)));
     }

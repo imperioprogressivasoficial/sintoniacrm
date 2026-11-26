@@ -242,7 +242,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
                background: var(--pn-cartao); box-shadow: inset 0 0 0 1px var(--pn-cartao-borda), var(--pn-cartao-sombra); }
   .pn-cartao::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--pn-g1), var(--pn-g2), transparent); opacity: .7; }
   .pn-cartao-cab { display: flex; align-items: flex-start; gap: 2px; min-width: 0; }
-  .pn-cartao-r { font-size: 12px; line-height: 1.35; padding-top: 2px; color: var(--sub); min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .pn-cartao-r { font-size: 12px; line-height: 1.35; padding-top: 2px; color: var(--sub); min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; hyphens: auto; overflow-wrap: anywhere; }
   .pn-cartao-cab .pn-ib { width: 22px; height: 22px; margin-left: auto; border-radius: 7px; }
   .pn-cartao-cab .pn-ib svg { width: 12px; height: 12px; }
   .pn-cartao-cab .pn-info { width: 18px; height: 18px; }

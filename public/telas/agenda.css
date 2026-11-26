@@ -145,7 +145,7 @@ html[data-tema="escuro"] .ag, html[data-tema="escuro"] dialog.ag-dlg {
 .ag-dcab.ag-passado b { color: var(--ag-sub); }
 .ag-g.ag-n1 .ag-dcab { justify-items: start; padding-left: 8px; grid-auto-flow: column; align-items: center; gap: 8px; }
 .ag-ptodo > div { min-width: 0; padding: 2px 1px 4px; display: grid; gap: 2px; align-content: start; border-left: 1px solid var(--ag-linha); min-height: 6px; }
-.ag-chip { all: unset; cursor: pointer; display: block; box-sizing: border-box; background: var(--c); color: var(--t); font-size: 12px; font-weight: 600; line-height: 20px; height: 20px; padding: 0 5px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.ag-chip { all: unset; cursor: pointer; display: block; box-sizing: border-box; background: var(--c); color: var(--t); font-size: 12px; font-weight: 600; line-height: 20px; height: 20px; padding: 0 5px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ag-rolo { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; position: relative; scrollbar-width: thin; }
 .ag-g-corpo { display: flex; position: relative; height: calc(24 * var(--h)); }
 .ag-horas { width: var(--gut); flex: none; position: relative; }

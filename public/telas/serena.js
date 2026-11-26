@@ -138,7 +138,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /* luz: anel menta que "respira" (só transform/opacity) */
   .srn-foto::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none; opacity: 0;
     background: radial-gradient(closest-side, transparent 72%, rgba(15,252,190,.55) 86%, rgba(15,252,190,0) 100%); }
-  .srn-foto.grande::after { opacity: .5; animation: srnRespira 3.2s ease-in-out infinite; }
+  .srn-foto.grande::after { opacity: .5; } /* parado: só pulsa enquanto pensa (dono: nada em loop) */
   .srn-foto.pensando::after { opacity: 1; animation: srnRespira 1.5s ease-in-out infinite; }
   @keyframes srnRespira { 0%, 100% { transform: scale(.94); opacity: .35; } 50% { transform: scale(1.14); opacity: 1; } }
 
