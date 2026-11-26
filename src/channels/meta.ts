@@ -15,7 +15,7 @@ import type {
   StatusRecebido,
 } from './tipos.js';
 import type { TipoAnexo } from '../domain.js';
-import { normalizarCelular } from '../util/telefone.js';
+import { normalizarTelefoneWhats } from '../util/telefone.js';
 import { ErroMidiaGrande, LIMITE_MIDIA, textoDoAnexo } from '../midia.js';
 import { referenciaDaMeta } from '../rastreio/referencia.js';
 
@@ -127,7 +127,7 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
     for (const change of entry.changes) {
       const v = change.value;
       for (const m of v.messages ?? []) {
-        const telefone = normalizarCelular(m.from);
+        const telefone = normalizarTelefoneWhats(m.from);
         if (!telefone) continue;
         const textoSimples = m.text?.body ?? m.button?.text ?? m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title;
         const midia = textoSimples ? null : lerMidia(m);
@@ -165,7 +165,7 @@ export function lerAcoesMeta(corpo: unknown): AcaoRecebida[] {
     for (const m of bruto.entry[i]?.changes[j]?.value.messages ?? []) {
       if (m.type !== 'reaction') continue;
       const reacao = m.reaction as { message_id?: unknown; emoji?: unknown } | undefined;
-      const telefone = normalizarCelular(String(m.from ?? ''));
+      const telefone = normalizarTelefoneWhats(String(m.from ?? ''));
       if (!telefone || typeof reacao?.message_id !== 'string') continue;
       saida.push({ canalId: change.value.metadata.phone_number_id, telefone, alvoIdExterno: reacao.message_id, deMim: false, tipo: 'reacao', emoji: typeof reacao.emoji === 'string' ? reacao.emoji.slice(0, 16) : '', em: new Date(Number(m.timestamp ?? 0) * 1000 || Date.now()) });
     }

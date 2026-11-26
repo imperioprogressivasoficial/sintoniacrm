@@ -299,6 +299,13 @@ export class Sintonia {
         return true;
       }
 
+      // aud-numeros: dois WhatsApps na mesma unidade dividem a conversa (uma por unidade + telefone). Se a cliente
+      // escreveu por outro número, as respostas (IA e equipe) passam a sair pelo número que ela usou por último.
+      // Só mensagem nova da cliente troca (o histórico importado e as mensagens atrasadas não mexem).
+      if (conversa.canalId !== numero.canalId && (!conversa.ultimaMensagemCliente || msg.em.getTime() >= conversa.ultimaMensagemCliente.getTime())) {
+        this.log('Cliente escreveu por outro número da unidade: respostas passam a sair por ele', { conversa: conversa.id, de: conversa.canalId, para: numero.canalId });
+        conversa.canalId = numero.canalId;
+      }
       // etapa-entrada: lead novo (a cliente escreveu primeiro) nasce na "Entrada de leads".
       if (criada.nova && conversa.etapa === 'novo_lead') conversa.etapa = 'entrada';
       // automacao-vendas: origem "cliente" = a cliente escreveu primeiro (o rodízio de leads só distribui estas).

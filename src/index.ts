@@ -844,6 +844,12 @@ const app = criarServidor({
   protecao: { empresaId: cfg.SINTONIA_EMPRESA_ID, auditoria, ...(pool ? { dadosCliente: new DadosCliente(pool) } : {}), https: cfg.COOKIE_SEGURO === '1', csp: modoCsp() },
   ...(importadorHistorico ? { historico: importadorHistorico } : {}),
   ...(puxarHistorico ? { puxarHistorico } : {}),
+  /* aud-numeros: mensagem ao vivo de contato "@lid" sem número: o servidor completa com o mapa da Evolution */
+  mapaLid: (instancia: string) => {
+    const url = conexoes.get('evolutionUrl');
+    const chave = conexoes.get('evolutionApiKey');
+    return url && chave ? new EvolutionAdmin(url, chave).mapaLid(instancia) : Promise.resolve(new Map<string, string>());
+  },
   sintonia,
   repo,
   log,

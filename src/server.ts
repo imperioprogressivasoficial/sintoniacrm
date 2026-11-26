@@ -41,6 +41,7 @@ import { fontePainelPara } from './painel/painel.js';
 import { cabecalhoNotificacoes, problemasDaSituacao, registrarNotificacoes, type OpcoesNotificacoes } from './notificacoes/rotas.js';
 import { zUnidade } from './unidades.js';
 import { registrarProtecao, type OpcoesProtecao } from './seguranca/protecao.js'; /* banco-seguranca */
+import { CacheLid } from './channels/lid-cache.js'; /* aud-numeros */
 
 export interface DependenciasServidor {
   sintonia: Sintonia;
@@ -119,6 +120,8 @@ export interface DependenciasServidor {
   /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
   /** puxar-historico: busca na Evolution tudo o que ela guardou do número (src/app/puxar-historico.ts). */
   puxarHistorico?: Pick<import('./app/puxar-historico.js').PuxarHistorico, 'agendar' | 'andamento'>;
+  /** aud-numeros: mapa "@lid" → número de uma instância da Evolution (EvolutionAdmin.mapaLid), para completar mensagens ao vivo sem número. */
+  mapaLid?: (instancia: string) => Promise<Map<string, string>>;
   historico?: Pick<import('./app/historico.js').ImportadorHistorico, 'receber' | 'progresso'> & Partial<Pick<import('./app/historico.js').ImportadorHistorico, 'todos'>>;
   /* grupos: mensagens de grupo do WhatsApp (src/grupos) saem do webhook para tabelas próprias, nunca viram conversa de cliente */
   grupos?: { aoWebhook(corpo: unknown): Promise<number> };
@@ -259,10 +262,12 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   };
   // Responde rápido: mensagens vão para a fila, histórico e eventos de conexão são tratados por trás.
   // O histórico (MESSAGES_SET) pode ser grande: aceita até 40 MB.
+  /* aud-numeros: contato "@lid" sem número na mensagem ao vivo: completa pelo mapa da Evolution (cache por instância) */
+  const cacheLid = d.mapaLid ? new CacheLid({ buscar: d.mapaLid, log }) : undefined;
   app.post('/webhooks/evolution', { bodyLimit: 40 * 1024 * 1024 }, async (req, reply) => {
     if (!d.evolution) return reply.code(404).send();
     if (d.evolution.token && !tokenConfere(req.headers['x-sintonia-token'], d.evolution.token)) return reply.code(401).send();
-    const corpo = req.body;
+    let corpo = req.body;
     // Corpo estranho (vazio, lista, texto): aceita e ignora, para a Evolution não ficar reenviando.
     if (!corpo || typeof corpo !== 'object' || Array.isArray(corpo)) return { ignorado: true };
     const evento = eventoEvolution(corpo);
@@ -307,6 +312,8 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       }).catch((e) => log('Falha ao importar histórico do WhatsApp', String(e)));
       return { historico: historico.length };
     }
+    // aud-numeros: antes de ler, completa os "@lid" sem número (espera no máximo ~3 s pelo mapa; sem ele, segue).
+    if (evento === 'messages.upsert' && cacheLid) corpo = (await cacheLid.completar(corpo)) as typeof corpo;
     let mensagens: MensagemRecebida[] = [];
     try {
       mensagens = d.evolution.canal.lerWebhook(corpo);

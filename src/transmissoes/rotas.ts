@@ -106,7 +106,7 @@ export function registrarTransmissoes(app: FastifyInstance, o: OpcoesRotasTransm
 
   app.post('/api/transmissoes/descadastro', tratar(async (req) => {
     exigeGestao(req);
-    const b = z.object({ telefone: z.string().regex(/^\d{12,13}$/), sair: z.boolean() }).parse(req.body);
+    const b = z.object({ telefone: z.string().regex(/^\d{8,15}$/), sair: z.boolean() }).parse(req.body);
     if (b.sair) await t.descadastrar(b.telefone, `Marcado por ${quem(req)}`);
     else await t.voltarAReceber(b.telefone);
     return { ok: true };
