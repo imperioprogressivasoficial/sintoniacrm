@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { podeVer } from '../auth/acesso.js';
+import { ehGestor, podeVer } from '../auth/acesso.js';
 import type { EvolutionAdmin } from '../channels/evolution-admin.js';
 import { lerWebhookEvolution } from '../channels/evolution.js';
 import type { MensagemRecebida } from '../channels/tipos.js';
@@ -84,7 +84,9 @@ export function registrarResgate(app: FastifyInstance, o: OpcoesResgate): { sinc
     return { encontradas: lidas.length, novas: r.mensagens, midias: r.midias ?? 0 };
   });
 
-  app.post('/api/whatsapp/sincronizar', async () => {
+  app.post('/api/whatsapp/sincronizar', async (req) => {
+    // auditoria 26/11: buscar o histórico de todos os números pesa na Evolution e no banco: só a gestão.
+    if (req.usuario && !ehGestor(req.usuario)) throw erro('Só a gestão pode sincronizar o WhatsApp. Para uma conversa, use "Resgatar do WhatsApp".', 403);
     if (rodada.rodando) return { ...rodada, jaRodando: true };
     if (!o.admin()) throw erro('O WhatsApp não oficial não está configurado em Conexões.', 409);
     if (!o.canais().length) throw erro('Nenhum WhatsApp conectado.', 409);

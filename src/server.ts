@@ -188,6 +188,13 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
   registrarCompressao(app); /* fluidez2: HTML, CSS, JS e JSON saem comprimidos (brotli/gzip) */
 
+  // auditoria 26/11: caminho com letra/número "escondido" em %XX (ex.: /%61pi/conversas = /api/conversas). O roteador
+  // decodifica e acha a rota, mas o login, as permissões, os limites e a auditoria comparam o caminho como veio e não
+  // reconheciam /api. Navegador e app nunca mandam isso: recusa antes de tudo.
+  app.addHook('onRequest', async (req, reply) => {
+    const caminho = req.url.split('?')[0] ?? '';
+    if (/%(?:[46][1-9a-f]|[57][0-9a]|3[0-9]|2[de]|5f|7e)/i.test(caminho)) return reply.code(400).send({ erro: 'Endereço inválido.' });
+  });
   // Login antes de tudo: o bloqueio da API vale para todas as rotas registradas depois.
   if (d.auth) registrarAuth(app, d.auth);
   /* banco-seguranca: depois do login (os limites e a auditoria sabem quem é a pessoa) e antes das outras rotas */

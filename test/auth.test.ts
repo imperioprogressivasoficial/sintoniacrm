@@ -33,6 +33,13 @@ async function montar(contas: Contas = new ContasMemoria()) {
 }
 
 describe('Login', () => {
+  it('caminho com letra escondida em %XX (/%61pi) não passa pelo login', async () => {
+    const { app } = await montar();
+    for (const url of ['/%61pi/conversas', '/%61pi/painel', '/api/conversas/x/%65nviar', '/api/p%61inel']) {
+      expect((await app.inject({ url })).statusCode).toBe(400);
+    }
+    expect((await app.inject({ url: '/api/conversas' })).statusCode).toBe(401);
+  });
   it('sem login a API recusa; com login libera; ao sair, fecha', async () => {
     const { app, entrar, cookieDe } = await montar();
     expect((await app.inject({ url: '/api/conversas' })).statusCode).toBe(401);

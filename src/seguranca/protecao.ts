@@ -121,7 +121,7 @@ const REGRAS_AUDITORIA: RegraAuditoria[] = [
   { metodo: /^(POST|PATCH|DELETE)$/, caminho: /^\/api\/integracoes\/(chaves|webhooks)/, acao: 'mudou chaves de API ou webhooks' },
   { metodo: /^POST$/, caminho: /^\/api\/auth\/senha$/, acao: 'trocou a própria senha' },
   { metodo: /^(POST|DELETE)$/, caminho: /^\/api\/auth\/sessoes/, acao: 'saiu de aparelhos' },
-  { metodo: /^(GET|POST)$/, caminho: /^\/api\/leads\/exportar|^\/api\/relatorios\/[^/]+\/csv/, acao: 'exportou dados' },
+  { metodo: /^(GET|POST)$/, caminho: /^\/api\/leads\/exportar|^\/api\/relatorios\/[^/]+\/csv|^\/api\/conversas\/[^/]+\/exportar/, acao: 'exportou dados' },
   { metodo: /^POST$/, caminho: /^\/api\/leads\/importar$/, acao: 'importou leads' },
   { metodo: /^POST$/, caminho: /^\/api\/leads\/mesclar$/, acao: 'juntou leads duplicados' },
   { metodo: /^DELETE$/, caminho: /^\/api\/conversas\/[^/]+$/, acao: 'apagou conversa' },
@@ -202,7 +202,7 @@ export function registrarProtecao(app: FastifyInstance, o: OpcoesProtecao): void
 
   // ---------------------------------------------------------------- 3. limite nas rotas sensíveis (depois do login)
   const regrasLimite: RegraLimite[] = [
-    { metodo: /^(GET|POST)$/, caminho: /^\/api\/leads\/exportar|^\/api\/relatorios\/[^/]+\/csv|^\/api\/lgpd\/cliente\/exportar/, janela: new Janela(LIMITES_SENSIVEIS.exportar.maximo, LIMITES_SENSIVEIS.exportar.janelaMs), mensagem: 'Muitas exportações seguidas. Espere alguns minutos e tente de novo.' },
+    { metodo: /^(GET|POST)$/, caminho: /^\/api\/leads\/exportar|^\/api\/relatorios\/[^/]+\/csv|^\/api\/lgpd\/cliente\/exportar|^\/api\/conversas\/[^/]+\/exportar/, janela: new Janela(LIMITES_SENSIVEIS.exportar.maximo, LIMITES_SENSIVEIS.exportar.janelaMs), mensagem: 'Muitas exportações seguidas. Espere alguns minutos e tente de novo.' },
     { metodo: /^POST$/, caminho: /^\/api\/lgpd\/cliente\/anonimizar/, janela: new Janela(LIMITES_SENSIVEIS.dadosCliente.maximo, LIMITES_SENSIVEIS.dadosCliente.janelaMs), mensagem: 'Muitos pedidos de apagar dados seguidos. Espere e tente de novo.' },
     { metodo: /^(POST|PUT|PATCH|DELETE)$/, caminho: /^\/api\/(conexoes|acessos|integracoes\/chaves)/, janela: new Janela(LIMITES_SENSIVEIS.configuracao.maximo, LIMITES_SENSIVEIS.configuracao.janelaMs), mensagem: 'Muitas mudanças seguidas nas configurações. Espere alguns minutos.' },
   ];
