@@ -94,7 +94,8 @@ export function opcoesWebhookMeta(
     canal: LEITOR_META,
     verifyTokens: [...conexoes.verifyTokensMeta(), ...(ambiente.verifyToken ? [ambiente.verifyToken] : [])],
     segredos,
-    semAssinatura: Boolean(ambiente.temNumerosMeta && !ambiente.appSecret),
+    // auditoria 26/11: sem App Secret, nada entra (antes, número Meta no ambiente sem App Secret aceitava qualquer POST).
+    semAssinatura: false,
     ...(status ? { status } : {}),
   };
 }

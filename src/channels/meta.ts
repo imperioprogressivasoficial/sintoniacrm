@@ -90,6 +90,30 @@ const WebhookMeta = z.object({
     }),
   ),
 });
+/**
+ * auditoria 26/11: um item fora do formato (uma "change" sem metadata, uma mensagem de tipo novo com campo diferente)
+ * derrubava o lote inteiro e a Meta recebia 200: as outras mensagens se perdiam. Aqui cada mudança, mensagem, status e
+ * contato é conferido sozinho; só o que está fora do formato fica de fora.
+ */
+type O = Record<string, unknown>;
+const ehObj = (v: unknown): v is O => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+function limparCorpoMeta(corpo: unknown): unknown {
+  if (!ehObj(corpo) || corpo.object !== 'whatsapp_business_account' || !Array.isArray(corpo.entry)) return corpo;
+  const valido = (value: O) => WebhookMeta.safeParse({ object: corpo.object, entry: [{ changes: [{ value }] }] }).success;
+  const entry = corpo.entry.filter(ehObj).map((e) => ({
+    ...e,
+    changes: (Array.isArray(e.changes) ? e.changes : []).filter(ehObj).flatMap((ch) => {
+      const v = ch.value;
+      if (!ehObj(v) || !ehObj(v.metadata) || typeof v.metadata.phone_number_id !== 'string') return [];
+      const base: O = { metadata: { phone_number_id: v.metadata.phone_number_id } };
+      const lista = (k: 'messages' | 'statuses' | 'contacts') => (Array.isArray(v[k]) ? (v[k] as unknown[]) : []).filter((x) => valido({ ...base, [k]: [x] }));
+      return [{ ...ch, value: { ...v, metadata: base.metadata, messages: lista('messages'), statuses: lista('statuses'), contacts: lista('contacts') } }];
+    }),
+  }));
+  return { ...corpo, entry };
+}
+const lerCorpoMeta = (corpo: unknown) => WebhookMeta.safeParse(limparCorpoMeta(corpo));
+
 type MensagemMeta = NonNullable<z.infer<typeof WebhookMeta>['entry'][number]['changes'][number]['value']['messages']>[number];
 
 const TIPOS: Array<['image' | 'audio' | 'video' | 'document' | 'sticker', TipoAnexo]> = [
@@ -120,7 +144,7 @@ function lerMidia(m: MensagemMeta): { texto: string; anexo: AnexoRecebido } | nu
 }
 
 export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
-  const r = WebhookMeta.safeParse(corpo);
+  const r = lerCorpoMeta(corpo);
   if (!r.success) return [];
   const saida: MensagemRecebida[] = [];
   for (const entry of r.data.entry) {
@@ -157,9 +181,9 @@ export function lerWebhookMeta(corpo: unknown): MensagemRecebida[] {
  * A API oficial não avisa quando a cliente apaga ou edita.
  */
 export function lerAcoesMeta(corpo: unknown): AcaoRecebida[] {
-  const r = WebhookMeta.safeParse(corpo);
+  const r = lerCorpoMeta(corpo);
   if (!r.success) return [];
-  const bruto = corpo as { entry: Array<{ changes: Array<{ value: { messages?: Array<Record<string, unknown>> } }> }> };
+  const bruto = limparCorpoMeta(corpo) as { entry: Array<{ changes: Array<{ value: { messages?: Array<Record<string, unknown>> } }> }> };
   const saida: AcaoRecebida[] = [];
   r.data.entry.forEach((entry, i) => entry.changes.forEach((change, j) => {
     for (const m of bruto.entry[i]?.changes[j]?.value.messages ?? []) {
@@ -177,7 +201,7 @@ export function lerAcoesMeta(corpo: unknown): AcaoRecebida[] {
 const STATUS: Record<string, StatusEntrega> = { sent: 'enviada', delivered: 'entregue', read: 'lida', played: 'ouvida', failed: 'falhou' };
 
 export function lerStatusMeta(corpo: unknown): StatusRecebido[] {
-  const r = WebhookMeta.safeParse(corpo);
+  const r = lerCorpoMeta(corpo);
   if (!r.success) return [];
   const saida: StatusRecebido[] = [];
   for (const entry of r.data.entry) {
@@ -202,7 +226,7 @@ export function lerStatusMeta(corpo: unknown): StatusRecebido[] {
 
 /** Todos os phone_number_id citados no corpo (para conferir quem pode assinar cada um). */
 export function numerosDoWebhook(corpo: unknown): string[] {
-  const r = WebhookMeta.safeParse(corpo);
+  const r = lerCorpoMeta(corpo);
   if (!r.success) return [];
   return [...new Set(r.data.entry.flatMap((e) => e.changes.map((c) => c.value.metadata.phone_number_id)))];
 }
