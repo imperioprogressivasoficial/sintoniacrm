@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 26/11 18h05: auditoria. 5dc5ef6 no ar: recusa /%61pi (login contornável pelo roteador que decodifica; o Traefik já normalizava em produção), sincronizar só gestão, exportar conversa auditado. Evolution (projeto Docker "evolution") com DATABASE_SAVE_* = false: puxar histórico/resgate/mapa @lid leem 0 — ligar precisa do OK do Bruno.
+
 - 23/11 14h05: 60b0670 no ar — origem: textos dos links do dono (vim pelo anúncio/Google/site/bio do Instagram/direct do Instagram, "Olá, validei"); PUT /api/conversas/:id/origem (equipe marca/troca na ficha, botão "Marcar origem"). Depois (dono): puxar criativo/anúncio/campanha do rastreamento.
 
 - 23/11 13h50: 69c7f06 no ar — "Validei meu número..." (formulário Meta) = anúncio.
