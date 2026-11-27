@@ -147,6 +147,28 @@ export interface GanchosSintonia {
 
 const FOLLOWUPS: Tarefa['tipo'][] = ['followup_1h', 'followup_1d', 'followup_3d'];
 
+/** aud-ia: quem mandou uma mensagem cujo envio ficou sem confirmação (é como o eco dela é gravado). */
+interface EcoEsperado {
+  autor: 'ia' | 'equipe';
+  autorNome?: string;
+  /** Hora com que a mensagem entra na conversa (mantém a ordem das partes). */
+  em?: Date;
+}
+interface EnvioIncerto extends EcoEsperado {
+  conversaId: string;
+  texto: string;
+  /** Quando o envio começou e até quando o eco é esperado (relógio da Sintonia, ms). */
+  desde: number;
+  ate: number;
+}
+/** aud-ia: o eco do WhatsApp traz a hora em segundos (cortados) e os relógios podem diferir um pouco. */
+const FOLGA_ECO_MS = 5_000;
+/** aud-ia: quanto tempo o eco de um envio sem confirmação é esperado antes do aviso na conversa. */
+export const ESPERA_ECO_INCERTO_MS = 5 * 60_000;
+export const AVISO_ENVIO_INCERTO = 'Não sabemos se esta mensagem chegou: confira no WhatsApp.';
+/** aud-ia: texto comparável entre o que enviamos e o eco (espaços, quebras e caracteres invisíveis não contam). */
+export const textoDoEco = (t: string) => t.normalize('NFC').replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+
 /**
  * Quando a Sintonia "viu" a mensagem da cliente: o mais tarde entre a hora do WhatsApp e agora.
  * Se a cliente manda duas mensagens seguidas, a resposta à primeira pode sair depois da hora
@@ -173,8 +195,17 @@ export class Sintonia {
   private readonly trava: Trava;
   /** Envios em andamento: a Evolution pode avisar do nosso próprio envio antes de ele retornar o id. */
   private readonly enviando = new Map<string, number>();
-  /** Envios sem confirmação (tempo esgotado): se o eco chegar, a mensagem saiu e é gravada na conversa. */
-  private readonly incertos = new Set<string>();
+  /**
+   * aud-ia: eco que chegou com o envio ainda em andamento. Se o envio terminar em "tempo esgotado", o eco já provou
+   * que a mensagem saiu: vale como enviada (com o id do eco), sem aviso e sem duplicar.
+   */
+  private readonly ecoEmVoo = new Map<string, { idExterno: string; vistoEm: number }>();
+  /**
+   * Envios sem confirmação (tempo esgotado). aud-ia: se o eco chegar, ele é gravado como mensagem de quem mandou
+   * (a IA continua ligada: não é "a equipe respondeu pelo celular"); se não chegar, fica um aviso na conversa.
+   * Nunca são reenviados sozinhos (podem ter saído).
+   */
+  private readonly incertos = new Map<string, EnvioIncerto>();
   private readonly agora: () => Date;
   private readonly regras: RegrasAtendimento;
   private readonly log: (msg: string, extra?: unknown) => void;
@@ -224,13 +255,22 @@ export class Sintonia {
       return;
     }
     // A própria Sintonia enviou: a Evolution devolve como fromMe. Ignorar.
+    let nomeDoEco: string | undefined;
     if (msg.deMim) {
       if (await this.d.repo.foiEnviadoPorNos(msg.idExterno)) return;
       const chave = this.chaveEnvio(msg.canalId, msg.telefone, msg.texto);
-      if (this.enviando.has(chave)) {
+      const incerto = this.incertoDoEco(chave, msg);
+      if (incerto) {
+        // aud-ia: envio que deu "tempo esgotado" mas saiu: entra na conversa como de quem mandou (uma vez só).
+        this.incertos.delete(chave);
         this.enviando.delete(chave);
-        // Envio que deu "tempo esgotado" mas saiu: grava (como do celular da loja) para ninguém mandar de novo.
-        if (!this.incertos.delete(chave)) return;
+        if (incerto.autor === 'ia') return void (await this.gravarEcoDaIa(incerto, msg));
+        nomeDoEco = incerto.autorNome; // a atendente mandou pela Sintonia: segue como resposta dela
+      } else if (this.enviando.has(chave)) {
+        // Eco antes de o envio retornar: é o nosso. Fica anotado caso o envio termine em "tempo esgotado".
+        this.enviando.delete(chave);
+        this.ecoEmVoo.set(chave, { idExterno: msg.idExterno, vistoEm: Date.now() });
+        return;
       }
     }
 
@@ -265,7 +305,7 @@ export class Sintonia {
         id: mensagemId,
         conversaId: conversa.id,
         autor: msg.deMim ? 'equipe' : 'cliente',
-        autorNome: msg.deMim ? await this.quemPeloCelular(conversa) : undefined,
+        autorNome: msg.deMim ? nomeDoEco || (await this.quemPeloCelular(conversa)) : undefined,
         texto: this.d.rastreio ? this.d.rastreio.textoParaGuardar(msg) : msg.texto,
         em: msg.em,
         idExterno: msg.idExterno,
@@ -479,8 +519,8 @@ export class Sintonia {
     const espera = this.tempoDeResposta(c, agora);
     const citada = opcoes.citada;
     const id = citada
-      ? await this.enviarCom(c, texto, (n) => (n.canal.enviarCitando ? n.canal.enviarCitando(n.canalId, c.telefone, texto, citada) : n.canal.enviarTexto(n.canalId, c.telefone, texto)))
-      : await this.enviar(c, texto);
+      ? await this.enviarCom(c, texto, (n) => (n.canal.enviarCitando ? n.canal.enviarCitando(n.canalId, c.telefone, texto, citada) : n.canal.enviarTexto(n.canalId, c.telefone, texto)), { eco: { autor: 'equipe', autorNome: atendente } })
+      : await this.enviar(c, texto, { autor: 'equipe', autorNome: atendente });
     await this.d.repo.adicionarMensagem({ ...(opcoes.id ? { id: opcoes.id } : {}), conversaId: c.id, autor: 'equipe', autorNome: atendente, texto, em: agora, idExterno: id });
     await this.depoisDoEnvioDaEquipe(c, agora, atendente, espera, regras, quem);
     return true;
@@ -725,7 +765,7 @@ export class Sintonia {
   async enviarAutomatico(c: Conversa, texto: string, autorNome: string): Promise<string> {
     // Nunca antes da última mensagem da cliente: a resposta automática conta como resposta a ela.
     const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
-    const id = await this.enviar(c, texto);
+    const id = await this.enviar(c, texto, { autor: 'ia', autorNome, em: agora });
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', autorNome, texto, em: agora, idExterno: id });
     c.ultimaMensagemIa = agora;
     c.atualizadaEm = agora;
@@ -739,7 +779,7 @@ export class Sintonia {
    */
   async enviarTransmissao(c: Conversa, texto: string, envio: (n: NumeroConectado) => Promise<EnvioResultado>, autorNome: string, modelo: boolean): Promise<string> {
     const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
-    const id = await this.enviarCom(c, texto, envio, { modelo });
+    const id = await this.enviarCom(c, texto, envio, { modelo, eco: { autor: 'ia', autorNome, em: agora } });
     await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', autorNome, texto, em: agora, idExterno: id });
     c.ultimaMensagemIa = agora;
     c.atualizadaEm = agora;
@@ -761,7 +801,7 @@ export class Sintonia {
     const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
     const legenda = midia.tipo === 'audio' ? undefined : midia.legenda?.trim() || undefined;
     const texto = textoDoAnexo(midia.tipo, legenda, midia.tipo === 'documento' ? midia.nomeArquivo : undefined);
-    const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }));
+    const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }), { eco: { autor: 'ia', autorNome, em: agora } });
     const mensagemId = randomUUID();
     const anexo: Anexo = { tipo: midia.tipo, mimetype: midia.mimetype, tamanho: midia.conteudo.length, situacao: 'pendente' };
     if (midia.nomeArquivo) anexo.nomeArquivo = midia.nomeArquivo;
@@ -810,6 +850,7 @@ export class Sintonia {
   // ---------- relógio: reavaliações, lembretes e follow-ups ----------
 
   async tick(): Promise<void> {
+    await this.conferirIncertos().catch((e) => this.log('Falha ao conferir envios sem confirmação', String(e)));
     const agora = this.agora();
     const tarefas = await this.d.repo.reivindicarTarefas(agora);
     // robustez: com a fila da IA, as reavaliações vão para ela (várias em paralelo, no limite da fila) e o relógio
@@ -1056,10 +1097,13 @@ export class Sintonia {
         // ia-completa: sem markdown e em até 3 mensagens curtas.
         const partes = partirParaWhatsApp(r.texto);
         const enviadas = await this.enviarPartes(depois, partes, enviadoEm);
-        if (enviadas.erro) {
+        const usadas = Sintonia.usadas(enviadas);
+        // aud-ia: só a parte sem confirmação ("tempo esgotado") e era a última: conta como respondida, sem reenvio.
+        if (enviadas.erro && usadas < partes.length) {
           // ia-completa: o WhatsApp não aceitou (desconectado). O que a IA fez vale; a resposta espera para ser reenviada.
-          this.naoEnviadas.set(depois.id, { partes: partes.slice(enviadas.n), marco, criadaEm: enviadoEm.getTime() });
-          if (enviadas.n > 0) {
+          // aud-ia: a parte sem confirmação fica de fora (pode ter saído); só as que nem foram tentadas esperam.
+          this.naoEnviadas.set(depois.id, { partes: partes.slice(usadas), marco, criadaEm: enviadoEm.getTime() });
+          if (usadas > 0) {
             depois.ultimaMensagemIa = enviadoEm;
             depois.atualizadaEm = enviadoEm;
             await this.primeiraResposta(depois, 'ia');
@@ -1121,20 +1165,27 @@ export class Sintonia {
    * ia-completa: envia as partes da resposta em ordem. Para na primeira que falhar e devolve quantas saíram e o erro
    * (as que saíram ficam gravadas na conversa).
    */
-  private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown }> {
+  private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown; incerta?: boolean }> {
     partes = await this.assinarPartes(partes);
     let n = 0;
     for (const texto of partes) {
+      // Cada parte 1 ms depois da anterior: a ordem na tela é a ordem em que saíram.
+      const emParte = new Date(em.getTime() + n);
       try {
-        const id = await this.enviar(c, texto);
-        // Cada parte 1 ms depois da anterior: a ordem na tela é a ordem em que saíram.
-        await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto, em: new Date(em.getTime() + n), idExterno: id });
+        const id = await this.enviar(c, texto, { autor: 'ia', em: emParte });
+        await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', texto, em: emParte, idExterno: id });
         n++;
       } catch (erro) {
-        return { n, erro };
+        // aud-ia: "tempo esgotado" = pode ter saído. Essa parte nunca é reenviada (o eco grava; sem eco, fica aviso).
+        return { n, erro, incerta: (erro as { codigo?: string }).codigo === 'incerto' };
       }
     }
     return { n };
+  }
+
+  /** aud-ia: partes já resolvidas (saíram, ou ficaram sem confirmação e não podem ser reenviadas). */
+  private static usadas(e: { n: number; incerta?: boolean }): number {
+    return e.n + (e.incerta ? 1 : 0);
   }
 
   /**
@@ -1144,7 +1195,8 @@ export class Sintonia {
   private async reenviarPendente(c: Conversa): Promise<boolean> {
     const p = this.naoEnviadas.get(c.id);
     if (!p) return false;
-    const valeAinda = c.ultimaMensagemCliente?.getTime() === p.marco && (c.ultimaMensagemEquipe?.getTime() ?? 0) < p.criadaEm;
+    // aud-ia: com folga (o eco do celular vem em segundos cortados): mensagem da equipe no mesmo instante também barra.
+    const valeAinda = c.ultimaMensagemCliente?.getTime() === p.marco && (c.ultimaMensagemEquipe?.getTime() ?? 0) < p.criadaEm - FOLGA_ECO_MS;
     if (!valeAinda) {
       this.naoEnviadas.delete(c.id);
       return false;
@@ -1154,21 +1206,22 @@ export class Sintonia {
       if (!d) return { n: 0 };
       const em = this.agora();
       const e = await this.enviarPartes(d, p.partes, em);
-      if (e.n > 0) {
+      const usadas = Sintonia.usadas(e);
+      if (usadas > 0) {
         d.ultimaMensagemIa = em;
         d.atualizadaEm = em;
         await this.primeiraResposta(d, 'ia');
         await this.d.repo.salvarConversa(d);
       }
-      if (e.erro) {
-        p.partes = p.partes.slice(e.n);
+      if (e.erro && usadas < p.partes.length) {
+        p.partes = p.partes.slice(usadas);
         return e;
       }
       this.naoEnviadas.delete(c.id);
       await this.evento('ia_respondeu', d, { reenvio: true });
       await this.d.repo.cancelarTarefas(d.id, ['reavaliar']);
       await this.programarFollowups(d, em);
-      return e;
+      return { n: usadas };
     });
     if (r.erro) throw r.erro;
     return true;
@@ -1203,7 +1256,7 @@ export class Sintonia {
       if (modo === 'responder' && d.modo !== 'humano') {
         const em = this.agora();
         const e = await this.enviarPartes(d, [textoPassagem((await this.equipeDe(d)).equipe)], em);
-        if (e.n) d.ultimaMensagemIa = em;
+        if (Sintonia.usadas(e)) d.ultimaMensagemIa = em;
       }
       await this.aplicarAcoes(d, [{ tipo: 'passar_para_humano', motivo: 'A IA chegou ao limite de uso desta conversa hoje (proteção de custo).' }], 'ia');
       await this.d.repo.salvarConversa(d);
@@ -1461,8 +1514,8 @@ export class Sintonia {
     return n;
   }
 
-  private enviar(c: Conversa, texto: string): Promise<string> {
-    return this.enviarCom(c, texto, (n) => n.canal.enviarTexto(n.canalId, c.telefone, texto));
+  private enviar(c: Conversa, texto: string, eco?: EcoEsperado): Promise<string> {
+    return this.enviarCom(c, texto, (n) => n.canal.enviarTexto(n.canalId, c.telefone, texto), { ...(eco ? { eco } : {}) });
   }
 
   /**
@@ -1473,16 +1526,19 @@ export class Sintonia {
     c: Conversa,
     texto: string,
     envio: (n: NumeroConectado) => Promise<EnvioResultado>,
-    opcoes: { modelo?: boolean } = {},
+    opcoes: { modelo?: boolean; eco?: EcoEsperado } = {},
   ): Promise<string> {
     const n = this.numeroDa(c);
     if (TIPOS_COM_JANELA_24H.includes(n.canal.tipo) && !opcoes.modelo && !this.janelaDa(c).aberta) {
       throw Object.assign(new Error(n.canal.tipo === 'meta' ? FORA_DA_JANELA : FORA_DA_JANELA_SOCIAL), { statusCode: 422, codigo: 'fora_da_janela' });
     }
     const chave = this.chaveEnvio(n.canalId, c.telefone, texto);
+    const desde = this.agora().getTime();
     this.enviando.set(chave, Date.now());
+    this.ecoEmVoo.delete(chave);
     try {
       const r = await envio(n);
+      this.ecoEmVoo.delete(chave);
       await this.d.repo.registrarEnviadoPorNos(r.idExterno);
       // Respondeu: a cliente vê os dois tiques azuis na mensagem dela (onde o canal permite).
       if (n.canal.marcarLida && !opcoes.modelo) this.marcarLida(c.id).catch((e) => this.log('Falha ao marcar como lida', String(e)));
@@ -1490,15 +1546,61 @@ export class Sintonia {
       setTimeout(() => this.enviando.delete(chave), 60_000).unref?.();
       return r.idExterno;
     } catch (e) {
+      this.enviando.delete(chave); // não saiu: uma mensagem igual mandada pelo celular não pode sumir
+      const visto = this.ecoEmVoo.get(chave);
+      this.ecoEmVoo.delete(chave);
       if ((e as { codigo?: string }).codigo === 'incerto') {
-        // Pode ter saído: se o eco chegar nos próximos minutos, ele entra na conversa.
-        this.incertos.add(chave);
-        setTimeout(() => {
-          this.enviando.delete(chave);
-          this.incertos.delete(chave);
-        }, 5 * 60_000).unref?.();
-      } else this.enviando.delete(chave); // não saiu: uma mensagem igual mandada pelo celular não pode sumir
+        // aud-ia: o eco já chegou durante o envio: a mensagem saiu. Vale como enviada (quem chama grava uma vez).
+        if (visto) {
+          await this.d.repo.registrarEnviadoPorNos(visto.idExterno);
+          return visto.idExterno;
+        }
+        // Pode ter saído: se o eco chegar nos próximos minutos, ele entra na conversa; senão, fica um aviso.
+        const eco = opcoes.eco ?? { autor: 'equipe' as const };
+        this.incertos.set(chave, { ...eco, conversaId: c.id, texto, desde, ate: desde + ESPERA_ECO_INCERTO_MS });
+        if (this.incertos.size > 5000) this.incertos.delete(this.incertos.keys().next().value!);
+      }
       throw e;
+    }
+  }
+
+  /** aud-ia: o envio sem confirmação que este eco confirma (mesmo número, mesmo texto, dentro da janela), se houver. */
+  private incertoDoEco(chave: string, msg: MensagemRecebida): EnvioIncerto | undefined {
+    const i = this.incertos.get(chave);
+    if (!i) return undefined;
+    // Hora do eco em segundos (o WhatsApp corta os milissegundos), com folga para relógios um pouco diferentes.
+    if (Math.floor(msg.em.getTime() / 1000) < Math.floor((i.desde - FOLGA_ECO_MS) / 1000)) return undefined;
+    return i;
+  }
+
+  /** aud-ia: o eco de uma mensagem da IA que deu "tempo esgotado": grava como da IA (sem desligar a IA da conversa). */
+  private async gravarEcoDaIa(i: EnvioIncerto, msg: MensagemRecebida): Promise<void> {
+    await this.mutar(i.conversaId, async (c) => {
+      const em = i.em ?? msg.em;
+      const gravou = await this.d.repo.adicionarMensagem({ conversaId: c.id, autor: 'ia', ...(i.autorNome ? { autorNome: i.autorNome } : {}), texto: i.texto, em, idExterno: msg.idExterno });
+      await this.d.repo.registrarEnviadoPorNos(msg.idExterno);
+      if (gravou && (c.ultimaMensagemIa?.getTime() ?? 0) < em.getTime()) {
+        c.ultimaMensagemIa = em;
+        c.atualizadaEm = this.agora();
+        await this.d.repo.salvarConversa(c);
+      }
+    });
+  }
+
+  /**
+   * aud-ia: envios sem confirmação cujo eco não chegou a tempo: nada é reenviado (pode ter saído); fica um aviso na
+   * conversa para a equipe conferir no WhatsApp. Roda no relógio (tick).
+   */
+  private async conferirIncertos(): Promise<void> {
+    const agora = this.agora().getTime();
+    for (const [chave, v] of this.ecoEmVoo) if (Date.now() - v.vistoEm > 10 * 60_000) this.ecoEmVoo.delete(chave);
+    for (const [chave, i] of [...this.incertos]) {
+      if (i.ate > agora) continue;
+      this.incertos.delete(chave);
+      this.log('Envio sem confirmação e sem eco: fica o aviso na conversa', { conversa: i.conversaId });
+      await this.d.repo
+        .adicionarMensagem({ conversaId: i.conversaId, autor: 'sistema', texto: `${AVISO_ENVIO_INCERTO}\n“${i.texto}”`, em: this.agora() })
+        .catch((e) => this.log('Falha ao anotar o envio sem confirmação', String(e)));
     }
   }
 
@@ -1511,18 +1613,28 @@ export class Sintonia {
     this.enviando.set(chave, Date.now());
     try {
       const r = await n.canal.enviarTexto(n.canalId, telefone, texto);
+      this.ecoEmVoo.delete(chave);
       await this.d.repo.registrarEnviadoPorNos(r.idExterno);
       setTimeout(() => this.enviando.delete(chave), 60_000).unref?.();
       return r.idExterno;
     } catch (e) {
-      if ((e as { codigo?: string }).codigo === 'incerto') setTimeout(() => this.enviando.delete(chave), 5 * 60_000).unref?.();
-      else this.enviando.delete(chave);
+      if ((e as { codigo?: string }).codigo === 'incerto') {
+        // aud-ia: o eco já chegou durante o envio: saiu.
+        const visto = this.ecoEmVoo.get(chave);
+        this.ecoEmVoo.delete(chave);
+        if (visto) {
+          this.enviando.delete(chave);
+          await this.d.repo.registrarEnviadoPorNos(visto.idExterno);
+          return visto.idExterno;
+        }
+        setTimeout(() => this.enviando.delete(chave), 5 * 60_000).unref?.();
+      } else this.enviando.delete(chave);
       throw e;
     }
   }
 
   private chaveEnvio(canalId: string, telefone: string, texto: string): string {
-    return `${canalId}|${telefone}|${texto.trim()}`;
+    return `${canalId}|${telefone}|${textoDoEco(texto)}`;
   }
 
   private evento(tipo: Parameters<Repositorio['registrarEvento']>[0]['tipo'], c: Conversa, dados?: Record<string, unknown>) {
