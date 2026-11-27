@@ -113,6 +113,12 @@ import { registrarComercial } from './comercial/rotas.js';
 import { FonteDesempenhoMemoria, FonteDesempenhoPostgres } from './desempenho/fonte.js';
 import { registrarDesempenho } from './desempenho/rotas.js';
 import { registrarEconomiaIa } from './economia-ia/rotas.js'; // calculadora
+/* ia-aprende: a IA aprende com as conversas da equipe e com os documentos do dono (Inteligência › Treinamento) */
+import { Aprender } from './aprender/aprender.js';
+import { ArmazemAprenderMemoria, ArmazemAprenderPostgres } from './aprender/armazem.js';
+import { FonteConversasPostgres, FonteConversasRepo } from './aprender/fonte.js';
+import { IaAprender } from './aprender/ia.js';
+import { registrarAprender } from './aprender/rotas.js';
 import { FonteAnalisesMemoria, FonteAnalisesPostgres } from './analises/fonte.js';
 import { OrigensConversa } from './analises/origens.js';
 import { registrarAnalises } from './analises/rotas.js';
@@ -1156,6 +1162,23 @@ registrarDesempenho(app, {
   },
   agora: () => new Date(),
 });
+/* ia-aprende: estuda as conversas da equipe (segundo plano, retoma depois de reiniciar) e vira memória da IA que atende. */
+const aprender = new Aprender({
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  armazem: pool ? new ArmazemAprenderPostgres(pool) : new ArmazemAprenderMemoria(),
+  fonte: pool ? new FonteConversasPostgres(pool, repo) : new FonteConversasRepo(repo, async (e) => (await contas.listarUsuarios(e)).map((u) => u.nome)),
+  base,
+  ia: new IaAprender(claude, () => cfg.SINTONIA_MODELO),
+  iaLigada: () => iaLigada,
+  modelo: () => cfg.SINTONIA_MODELO,
+  log,
+});
+base.usarAprendido(() => aprender.memoria());
+registrarAprender(app, { aprender: (e) => (e === aprender.empresaId ? aprender : undefined), empresaId: cfg.SINTONIA_EMPRESA_ID });
+const rodadaAprender = umaPorVez('aprender com a equipe', () => aprender.tick(), log);
+// Primeira volta logo depois de subir (retoma o que parou; na primeira vez estuda sozinha se houver conversas da equipe).
+setTimeout(() => void rodadaAprender(), 20_000).unref();
+setInterval(() => void rodadaAprender(), 10 * 60_000).unref();
 /* calculadora: Inteligência › Quanto economiza (números reais da IA × custo de uma pessoa; não vende nada). */
 registrarEconomiaIa(app, {
   fonte: pool ? new FonteDesempenhoPostgres(pool) : new FonteDesempenhoMemoria(repo),

@@ -565,6 +565,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('span', { class: 'iax-pend', text: String(pend.length) }),
           el('span', {}, el('b', { text: pend.length === 1 ? 'Falta preencher 1 trecho. ' : `Faltam preencher ${pend.length} trechos. ` }),
             el('span', { text: 'Onde está [PREENCHER] a IA não inventa: ela chama a equipe.' }))));
+        /* ia-aprende: "Aprender com a equipe" e "Enviar PDF ou texto" (/telas/aprender.js) */
+        if (gestor && window.SintoniaTelas.aprender) blocoTrein.append(window.SintoniaTelas.aprender.cartao(ui));
         blocoTrein.append(el('div', { class: 'iax-cartao' },
           ...(secoes.length ? secoes.map((s) => el('button', { class: 'iax-linha', type: 'button', onclick: () => editarSecao(s) },
             el('span', { class: 'iax-txt' }, el('b', { text: s.titulo }), el('span', { text: resumo(s.conteudo) || 'Vazia' })),
