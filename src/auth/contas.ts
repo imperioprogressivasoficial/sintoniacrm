@@ -18,7 +18,12 @@ export interface Usuario {
 
 export interface UsuarioComSenha extends Usuario {
   senhaHash: string;
+  /** primeiro-acesso: a conta nasceu sem senha (convite ou semente) e ninguém criou uma ainda. */
+  semSenha?: boolean;
 }
+
+/** primeiro-acesso: dados para criar a pessoa. `semSenha` marca quem ainda vai criar a própria senha. */
+export type NovoUsuario = Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string; semSenha?: boolean };
 
 export interface Interessado {
   nome: string;
@@ -40,7 +45,7 @@ export interface LeadSite extends Interessado {
 export type ResultadoAgenda = 'ok' | 'nao-achou' | 'ocupado' | 'ja-agendado';
 
 export interface Contas {
-  criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }): Promise<Usuario>;
+  criarUsuario(u: NovoUsuario): Promise<Usuario>;
   buscarPorEmail(email: string): Promise<UsuarioComSenha | undefined>;
   /** Cria a sessão e devolve o token (só o resumo dele fica guardado). */
   criarSessao(usuarioId: string, expiraEm: Date): Promise<string>;
@@ -62,6 +67,7 @@ export interface Contas {
   atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome' | 'email'>>): Promise<Usuario | undefined>;
   /** usuarios: apaga a pessoa (só quem não tem histórico; quem confere é a rota). Devolve se apagou. */
   apagarUsuario(id: string): Promise<boolean>;
+  /** Grava a senha (e a conta deixa de estar "sem senha"). */
   definirSenha(id: string, senhaHash: string): Promise<void>;
   /** Encerra todas as sessões da usuária, menos a do token informado (se houver). */
   encerrarSessoesDe(usuarioId: string, excetoToken?: string): Promise<void>;
@@ -91,13 +97,13 @@ export class ContasMemoria implements Contas {
   interessados: Interessado[] = [];
   leadsSite: (LeadSite & { id: string; tokenHash: string; demoEm?: Date; demoMarcadaEm?: Date })[] = [];
 
-  async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
+  async criarUsuario(u: NovoUsuario) {
     if (this.usuarios.some((x) => x.email.toLowerCase() === u.email.toLowerCase())) {
       throw new Error('Já existe um usuário com esse e-mail.');
     }
-    const novo: UsuarioComSenha = { ...u, id: randomUUID(), ativo: true };
+    const novo: UsuarioComSenha = { ...u, semSenha: Boolean(u.semSenha), id: randomUUID(), ativo: true };
     this.usuarios.push(novo);
-    const { senhaHash: _, ...publico } = novo;
+    const { senhaHash: _, semSenha: _s, ...publico } = novo;
     return publico;
   }
 
@@ -116,7 +122,7 @@ export class ContasMemoria implements Contas {
     if (!s || s.expiraEm.getTime() <= agora.getTime()) return undefined;
     const u = this.usuarios.find((x) => x.id === s.usuarioId && x.ativo);
     if (!u) return undefined;
-    const { senhaHash: _, ...publico } = u;
+    const { senhaHash: _, semSenha: _s, ...publico } = u;
     return publico;
   }
 
@@ -152,7 +158,7 @@ export class ContasMemoria implements Contas {
   async listarUsuarios(empresaId: string) {
     return this.usuarios
       .filter((u) => u.empresaId === empresaId)
-      .map(({ senhaHash: _, ...publico }) => publico)
+      .map(({ senhaHash: _, semSenha: _s, ...publico }) => publico)
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }
 
@@ -172,13 +178,16 @@ export class ContasMemoria implements Contas {
     if (campos.papel !== undefined) u.papel = campos.papel;
     if (campos.unidades !== undefined) u.unidades = [...campos.unidades];
     if (campos.ativo !== undefined) u.ativo = campos.ativo;
-    const { senhaHash: _, ...publico } = u;
+    const { senhaHash: _, semSenha: _s, ...publico } = u;
     return { ...publico, unidades: [...publico.unidades] };
   }
 
   async definirSenha(id: string, senhaHash: string) {
     const u = this.usuarios.find((x) => x.id === id);
-    if (u) u.senhaHash = senhaHash;
+    if (u) {
+      u.senhaHash = senhaHash;
+      u.semSenha = false;
+    }
   }
 
   async apagarUsuario(id: string) {
@@ -221,6 +230,7 @@ interface LinhaUsuario {
   papel: Papel;
   unidades: string[];
   ativo: boolean;
+  sem_senha?: boolean;
 }
 
 const paraUsuario = (l: LinhaUsuario): Usuario => ({
@@ -236,12 +246,12 @@ const paraUsuario = (l: LinhaUsuario): Usuario => ({
 export class ContasPostgres implements Contas {
   constructor(readonly pool: pg.Pool) {}
 
-  async criarUsuario(u: Omit<Usuario, 'id' | 'ativo'> & { senhaHash: string }) {
+  async criarUsuario(u: NovoUsuario) {
     try {
       const { rows } = await this.pool.query<LinhaUsuario>(
-        `insert into sintonia.usuarios (id, empresa_id, nome, email, senha_hash, papel, unidades)
-         values ($1, $2, $3, $4, $5, $6, $7) returning *`,
-        [randomUUID(), u.empresaId, u.nome, u.email, u.senhaHash, u.papel, u.unidades],
+        `insert into sintonia.usuarios (id, empresa_id, nome, email, senha_hash, papel, unidades, sem_senha)
+         values ($1, $2, $3, $4, $5, $6, $7, $8) returning *`,
+        [randomUUID(), u.empresaId, u.nome, u.email, u.senhaHash, u.papel, u.unidades, Boolean(u.semSenha)],
       );
       return paraUsuario(rows[0]!);
     } catch (e) {
@@ -252,7 +262,7 @@ export class ContasPostgres implements Contas {
 
   async buscarPorEmail(email: string) {
     const { rows } = await this.pool.query<LinhaUsuario>('select * from sintonia.usuarios where lower(email) = lower($1)', [email]);
-    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
+    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash, semSenha: Boolean(rows[0].sem_senha) } : undefined;
   }
 
   async criarSessao(usuarioId: string, expiraEm: Date) {
@@ -333,7 +343,7 @@ export class ContasPostgres implements Contas {
 
   async buscarPorId(id: string) {
     const { rows } = await this.pool.query<LinhaUsuario>('select * from sintonia.usuarios where id = $1', [id]);
-    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash } : undefined;
+    return rows[0] ? { ...paraUsuario(rows[0]), senhaHash: rows[0].senha_hash, semSenha: Boolean(rows[0].sem_senha) } : undefined;
   }
 
   async atualizarUsuario(id: string, campos: Partial<Pick<Usuario, 'papel' | 'unidades' | 'ativo' | 'nome' | 'email'>>) {
@@ -358,7 +368,7 @@ export class ContasPostgres implements Contas {
   }
 
   async definirSenha(id: string, senhaHash: string) {
-    await this.pool.query('update sintonia.usuarios set senha_hash = $2 where id = $1', [id, senhaHash]);
+    await this.pool.query('update sintonia.usuarios set senha_hash = $2, sem_senha = false where id = $1', [id, senhaHash]);
   }
 
   async encerrarSessoesDe(usuarioId: string, excetoToken?: string) {

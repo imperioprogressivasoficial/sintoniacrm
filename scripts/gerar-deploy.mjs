@@ -104,6 +104,23 @@ try {
   const emailSuporte = (process.env.SINTONIA_EMAIL_SUPORTE ?? '').trim();
   if (emailSuporte && !/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(emailSuporte)) throw new Error('SINTONIA_EMAIL_SUPORTE inválido');
 
+  /* primeiro-acesso: equipe inicial (lida do ambiente na hora de gerar; sem a variável, não aparece no compose).
+     JSON [{nome, email, papel, unidades}]: o app cria só quem ainda não existe, sem senha. Nada de dados pessoais no
+     repositório: a lista vem só do ambiente de quem gera. Exemplo:
+       SINTONIA_EQUIPE_INICIAL='[{"nome":"Ana Lima","email":"ana@exemplo.com","papel":"atendente","unidades":["sumare"]}]' */
+  let equipeInicial = '';
+  if ((process.env.SINTONIA_EQUIPE_INICIAL ?? '').trim()) {
+    let lista;
+    try {
+      lista = JSON.parse(process.env.SINTONIA_EQUIPE_INICIAL);
+    } catch {
+      throw new Error('SINTONIA_EQUIPE_INICIAL: não é um JSON válido');
+    }
+    if (!Array.isArray(lista)) throw new Error('SINTONIA_EQUIPE_INICIAL: precisa ser uma lista [ {nome, email, papel, unidades} ]');
+    // Aspas simples do YAML (' vira '') e $ dobrado (o Docker Compose lê $ como variável).
+    equipeInicial = `      SINTONIA_EQUIPE_INICIAL: '${JSON.stringify(lista).replaceAll("'", "''").replaceAll('$', '$$$$')}'\n`;
+  }
+
   const receita = (`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
 ${comEvolution ? `  chave-evolution:
@@ -152,7 +169,7 @@ ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       SINTONIA_URL_PUBLICA: https://${DOMINIO}
       SINTONIA_WHATSAPP_VENDAS: "${whatsappVendas}"
       SINTONIA_EMAIL_SUPORTE: "${emailSuporte}"
-${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
+${equipeInicial}${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node
 ${comEvolution ? '      - chave:/chave:ro\n' : ''}    networks:

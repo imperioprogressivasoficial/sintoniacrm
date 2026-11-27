@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<style>html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}</style>
+<script>/* Sem zoom com os dedos nem com toque duplo: a ferramenta já se ajusta à tela. */(()=>{const nao=(e)=>e.preventDefault();['gesturestart','gesturechange','gestureend'].forEach((t)=>document.addEventListener(t,nao,{passive:false}));document.addEventListener('touchmove',(e)=>{if(e.touches.length>1||(e.scale&&e.scale!==1))e.preventDefault()},{passive:false});})();</script>
+<!-- primeiro-acesso: o mesmo tema do app (claro, escuro ou o do aparelho), antes de desenhar. -->
+<script>(()=>{let t='auto';try{t=localStorage.getItem('sintonia.tema')||'auto'}catch{}const e=t==='escuro'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.tema=e?'escuro':'claro'})();</script>
+<script src="/telas/atualizando.js"></script>
+<title>Primeiro acesso · Sintonia CRM</title>
+<meta name="theme-color" content="#106EBE">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icone-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sintonia">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Sintony:wght@700&display=swap">
+<link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/abertura.css">
+<meta name="referrer" content="no-referrer">
+<style>
+  /* primeiro-acesso: mesmo visual do /entrar (noite azul à esquerda, cartão de vidro à direita) */
+  .lado-form { align-content: center; gap: 14px; }
+  .lado-form .miudo a, .lado-form .link { color: #106EBE; font-weight: 600; text-decoration: none; }
+  .lado-form .miudo a:hover, .lado-form .link:hover { text-decoration: underline; }
+  .pa-passos { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--cinza); letter-spacing: .02em; }
+  .pa-passos i { width: 26px; height: 4px; border-radius: 999px; background: rgba(16,110,190,.16); }
+  .pa-passos i.feito { background: linear-gradient(90deg, #106ebe, #3aa0ff); }
+  .pa-quem { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(16,110,190,.08); font-size: 14px; font-weight: 600; min-width: 0; }
+  .pa-quem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pa-quem button { all: unset; cursor: pointer; color: #106EBE; font-weight: 700; font-size: 13px; flex: none; }
+  .pa-olho { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; border-radius: 10px; background: none; color: #106EBE; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .pa-olho svg { width: 22px; height: 22px; }
+  .senha input { padding-right: 52px; }
+  .lado-form .forca { height: 4px; border-radius: 999px; background: rgba(16,110,190,.12); overflow: hidden; }
+  .lado-form .forca span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #3aa0ff, #0ffcbe); transition: width .25s ease; }
+  .regras { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--cinza); }
+  .regras li { display: flex; align-items: center; gap: 8px; }
+  .regras li::before { content: ''; width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px #b9c6d3; }
+  .regras li.ok { color: #087a5c; font-weight: 600; }
+  .regras li.ok::before { box-shadow: none; background: #19c3a6 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E") center/11px no-repeat; }
+  .pa-saidas { display: grid; gap: 8px; }
+  .pa-saida { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 14.5px; color: var(--tinta); background: rgba(255,255,255,.55); box-shadow: inset 0 0 0 1px var(--linha); }
+  .pa-saida b { color: #106EBE; font-weight: 700; white-space: nowrap; }
+  .pa-saida:hover { box-shadow: inset 0 0 0 1.5px #106EBE; }
+  .pa-fechado { display: grid; gap: 12px; }
+  .pa-icone { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(16,110,190,.1); color: #106EBE; }
+  .pa-icone svg { width: 26px; height: 26px; }
+  .aviso.neutro { background: rgba(16,110,190,.1); color: var(--tinta); font-weight: 600; }
+  [hidden] { display: none !important; }
+  /* celular: topo azul mais baixo, para o cartão aparecer sem rolar */
+  @media (max-width: 860px) {
+    .lado-azul { gap: 18px; padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: 32px; }
+    .lado-azul h1 { font-size: clamp(28px, 8vw, 34px); margin-bottom: 0; }
+    .lado-azul p { display: none; }
+    .lado-azul .arco { width: 180px; height: 180px; border-width: 24px; right: -80px; bottom: -90px; }
+    .lado-form { padding-top: 20px; align-content: start; }
+  }
+
+  /* escuro: as mesmas cores do app (noite azul, vidro escuro, menta nos destaques) */
+  html[data-tema="escuro"] { --tinta: #e6f0fa; --cinza: #9fb3c8; --linha: rgba(255,255,255,.14); --papel: #0b2441; color-scheme: dark; }
+  html[data-tema="escuro"] body { background: #04172b; }
+  html[data-tema="escuro"] .lado-form { background: radial-gradient(760px 560px at 100% 40%, rgba(15,252,190,.10), transparent 60%), radial-gradient(900px 620px at 0% 0%, rgba(16,110,190,.28), transparent 60%), #061a30; }
+  html[data-tema="escuro"] .lado-form .cartao { background: rgba(12,35,64,.78); border-color: rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.45); }
+  html[data-tema="escuro"] .campo input { background: rgba(255,255,255,.06); color: var(--tinta); border-color: rgba(255,255,255,.16); }
+  html[data-tema="escuro"] .campo input:focus { background: rgba(255,255,255,.09); border-color: #3aa0ff; }
+  html[data-tema="escuro"] .lado-form .miudo a, html[data-tema="escuro"] .lado-form .link, html[data-tema="escuro"] .pa-quem button,
+  html[data-tema="escuro"] .pa-olho, html[data-tema="escuro"] .pa-saida b, html[data-tema="escuro"] .senha button { color: #0ffcbe; }
+  html[data-tema="escuro"] .pa-quem, html[data-tema="escuro"] .pa-icone { background: rgba(58,160,255,.14); }
+  html[data-tema="escuro"] .pa-icone { color: #0ffcbe; }
+  html[data-tema="escuro"] .pa-saida { background: rgba(255,255,255,.05); }
+  html[data-tema="escuro"] .pa-saida:hover { box-shadow: inset 0 0 0 1.5px #0ffcbe; }
+  html[data-tema="escuro"] .regras li.ok { color: #6ff0cf; }
+  html[data-tema="escuro"] .regras li::before { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); }
+  html[data-tema="escuro"] .aviso.erro { background: rgba(255,90,90,.14); color: #ffb4b4; }
+  html[data-tema="escuro"] .aviso.neutro { background: rgba(58,160,255,.14); }
+  html[data-tema="escuro"] .pa-passos i { background: rgba(255,255,255,.14); }
+  html[data-tema="escuro"] .pa-passos i.feito { background: linear-gradient(90deg, #3aa0ff, #0ffcbe); }
+</style>
+</head>
+<body>
+<div class="tela-login">
+  <section class="lado-azul">
+    <div class="arco" aria-hidden="true"></div>
+    <a class="logo" href="/" aria-label="Sintonia CRM, início"><img src="/simbolo-escuro.png" alt="" width="40" height="40" style="filter:drop-shadow(0 4px 14px rgba(15,252,190,.35))"><span>sintonia<b>.</b></span></a>
+    <div>
+      <h1>Boas-vindas à equipe. <em>Seu acesso começa aqui.</em></h1>
+      <p>Digite o e-mail que a gestão cadastrou, crie a sua senha e pronto: você já entra.</p>
+    </div>
+    <span></span>
+  </section>
+
+  <section class="lado-form">
+    <!-- carregando / passo 1: e-mail -->
+    <form class="cartao" id="passo-email" novalidate>
+      <div class="pa-passos" aria-hidden="true"><i class="feito"></i><i></i><span>Passo 1 de 2</span></div>
+      <div>
+        <h2>Primeiro acesso</h2>
+        <p class="sub">Comece pelo seu e-mail de trabalho.</p>
+      </div>
+      <div class="campo"><label for="email">E-mail</label><input id="email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
+      <div id="aviso-email" role="status" aria-live="polite"></div>
+      <button class="botao botao-azul" type="submit" id="continuar" disabled>Continuar</button>
+      <div class="pa-saidas" id="saidas-email" hidden>
+        <a class="pa-saida" href="/entrar">Já tenho senha <b>Entrar →</b></a>
+        <a class="pa-saida" href="/esqueci-senha" data-esqueci>Esqueci minha senha <b>Criar nova →</b></a>
+      </div>
+      <p class="miudo" id="ja-tenho">Já criou sua senha? <a href="/entrar">Entrar</a></p>
+    </form>
+
+    <!-- passo 2: criar a senha -->
+    <form class="cartao" id="passo-senha" novalidate hidden>
+      <div class="pa-passos" aria-hidden="true"><i class="feito"></i><i class="feito"></i><span>Passo 2 de 2</span></div>
+      <div>
+        <h2 id="ola">Crie a sua senha</h2>
+        <p class="sub">Crie a senha que você vai usar para entrar daqui em diante.</p>
+      </div>
+      <div class="pa-quem"><span id="quem-email"></span><button type="button" id="trocar-email">Trocar</button></div>
+      <div class="campo">
+        <label for="senha">Nova senha</label>
+        <div class="senha"><input id="senha" name="senha" type="password" autocomplete="new-password" minlength="10" required><button type="button" class="pa-olho" id="ver-senha" aria-controls="senha senha2" aria-label="Mostrar a senha" aria-pressed="false"></button></div>
+      </div>
+      <div class="forca" aria-hidden="true"><span id="forca"></span></div>
+      <div class="campo"><label for="senha2">Repita a senha</label><input id="senha2" name="senha2" type="password" autocomplete="new-password" required></div>
+      <ul class="regras" id="regras" aria-live="polite">
+        <li data-r="tam">Pelo menos 10 caracteres</li>
+        <li data-r="mix">Letras e números</li>
+        <li data-r="igual">As duas senhas iguais</li>
+      </ul>
+      <div id="aviso-senha" role="status" aria-live="polite"></div>
+      <button class="botao botao-azul" type="submit" id="criar" disabled>Criar senha e entrar</button>
+    </form>
+
+    <!-- acesso ainda não liberado (ou prazo encerrado) -->
+    <div class="cartao pa-fechado" id="fechado" hidden>
+      <span class="pa-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2"/></svg></span>
+      <div>
+        <h2 id="fechado-titulo">Acesso ainda não liberado</h2>
+        <p class="sub" id="fechado-texto">O acesso da equipe ainda não foi liberado. Aguarde o aviso da gestão e tente de novo.</p>
+      </div>
+      <div class="pa-saidas">
+        <a class="pa-saida" href="/entrar">Já tenho senha <b>Entrar →</b></a>
+        <a class="pa-saida" href="/esqueci-senha">Esqueci minha senha <b>Criar nova →</b></a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="abertura" id="abertura" role="status" aria-live="polite" aria-label="Abrindo o aplicativo" hidden>
+  <div class="ab-topo" aria-hidden="true"><span></span></div>
+  <div class="ab-brilho" aria-hidden="true"><img src="/simbolo-escuro.png" alt="" width="104" height="104" decoding="async"></div><span class="ab-nome" aria-hidden="true">sintonia<i>.</i></span>
+  <p class="ab-texto">Abrindo o aplicativo<small>Senha criada</small></p>
+</div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const OLHO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const OLHO_FECHADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3 3.7M6.6 6.7C4 8.4 2.5 12 2.5 12S6 18.5 12 18.5c1.7 0 3.2-.5 4.4-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  const aviso = (id, tipo, texto) => { const a = $(id); a.className = texto ? `aviso ${tipo}` : ''; a.textContent = texto || ''; };
+  let email = '';
+
+  const fechado = (motivo, texto) => {
+    $('passo-email').hidden = true; $('passo-senha').hidden = true; $('fechado').hidden = false;
+    $('fechado-titulo').textContent = motivo === 'encerrada' ? 'O prazo terminou' : 'Acesso ainda não liberado';
+    if (texto) $('fechado-texto').textContent = texto;
+  };
+  const espera = (j) => j && j.esperaSeg ? ` Tente de novo às ${new Date(Date.now() + j.esperaSeg * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : '';
+
+  // O link de "Esqueci minha senha" leva o e-mail já digitado.
+  document.querySelectorAll('[data-esqueci]').forEach((a) => a.addEventListener('click', (e) => {
+    if (!email && !$('email').value.trim()) return;
+    e.preventDefault(); location.href = '/esqueci-senha?email=' + encodeURIComponent(email || $('email').value.trim());
+  }));
+
+  fetch('/api/auth/primeiro-acesso').then((r) => r.json()).then((j) => {
+    if (!j.liberado) return fechado(j.motivo, j.mensagem);
+    $('continuar').disabled = false; $('email').focus();
+  }).catch(() => { $('continuar').disabled = false; });
+
+  // ---- passo 1
+  $('passo-email').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = $('email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return aviso('aviso-email', 'erro', 'Digite um e-mail válido.');
+    const b = $('continuar'); b.disabled = true; b.textContent = 'Conferindo…';
+    aviso('aviso-email', '', '');
+    try {
+      const r = await fetch('/api/auth/primeiro-acesso/email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: v }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.fechado) return fechado(j.motivo, j.mensagem);
+      if (!r.ok) { aviso('aviso-email', 'erro', (j.erro || 'Não deu certo agora.') + espera(j)); return; }
+      if (!j.ok) { aviso('aviso-email', 'neutro', j.mensagem); $('saidas-email').hidden = false; $('ja-tenho').hidden = true; return; }
+      email = v;
+      $('ola').textContent = j.nome ? `Oi, ${j.nome}!` : 'Crie a sua senha';
+      $('quem-email').textContent = v;
+      $('passo-email').hidden = true; $('passo-senha').hidden = false; $('senha').focus();
+    } catch { aviso('aviso-email', 'erro', 'Sem conexão. Tente de novo.'); }
+    finally { b.disabled = false; b.textContent = 'Continuar'; }
+  });
+
+  // ---- passo 2
+  const olho = $('ver-senha');
+  olho.innerHTML = OLHO;
+  olho.addEventListener('click', () => {
+    const mostrar = $('senha').type === 'password';
+    $('senha').type = $('senha2').type = mostrar ? 'text' : 'password';
+    olho.innerHTML = mostrar ? OLHO_FECHADO : OLHO;
+    olho.setAttribute('aria-pressed', String(mostrar));
+    olho.setAttribute('aria-label', mostrar ? 'Esconder a senha' : 'Mostrar a senha');
+  });
+  $('trocar-email').addEventListener('click', () => { $('passo-senha').hidden = true; $('passo-email').hidden = false; $('email').focus(); });
+  // As regras ficam verdes enquanto digita (as mesmas que o servidor confere: 10+ caracteres, letras e números).
+  const conferir = () => {
+    const v = $('senha').value, v2 = $('senha2').value;
+    const r = { tam: v.length >= 10, mix: /[a-z]/i.test(v) && /\d/.test(v), igual: v.length > 0 && v === v2 };
+    for (const li of document.querySelectorAll('#regras li')) li.classList.toggle('ok', !!r[li.dataset.r]);
+    let n = Math.min(v.length / 14, 1) * 0.6;
+    if (r.mix) n += 0.25; if (/[^a-z0-9]/i.test(v) || (/[A-Z]/.test(v) && /[a-z]/.test(v))) n += 0.15;
+    $('forca').style.width = Math.round(Math.min(1, n) * 100) + '%';
+    $('criar').disabled = !(r.tam && r.mix && r.igual);
+    return r.tam && r.mix && r.igual;
+  };
+  $('senha').addEventListener('input', conferir); $('senha2').addEventListener('input', conferir);
+
+  const abrirApp = () => {
+    const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('passo-senha').classList.add('saindo'); document.querySelector('.lado-azul')?.classList.add('saindo');
+    const ab = $('abertura');
+    setTimeout(() => { ab.hidden = false; ab.style.setProperty('--ab-p', '0.4'); setTimeout(() => ab.style.setProperty('--ab-p', '0.72'), 300); }, reduz ? 100 : 360);
+    setTimeout(() => { try { sessionStorage.setItem('sintonia.abertura', String(Date.now())); } catch {} location.href = '/app'; }, reduz ? 450 : 1300);
+  };
+  $('passo-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!conferir()) return aviso('aviso-senha', 'erro', 'Confira as regras da senha.');
+    const b = $('criar'); b.disabled = true; b.textContent = 'Criando…';
+    try {
+      const r = await fetch('/api/auth/primeiro-acesso', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, senha: $('senha').value }) });
+      const j = await r.json().catch(() => ({}));
+      if (j.fechado) return fechado(j.motivo, j.mensagem);
+      if (r.ok && j.ok) return abrirApp();
+      if (r.ok) { $('passo-senha').hidden = true; $('passo-email').hidden = false; aviso('aviso-email', 'neutro', j.mensagem); $('saidas-email').hidden = false; $('ja-tenho').hidden = true; return; }
+      aviso('aviso-senha', 'erro', (j.erro || 'Não deu certo agora.') + espera(j));
+    } catch { aviso('aviso-senha', 'erro', 'Sem conexão. Tente de novo.'); }
+    b.disabled = false; b.textContent = 'Criar senha e entrar';
+  });
+})();
+</script>
+</body>
+</html>

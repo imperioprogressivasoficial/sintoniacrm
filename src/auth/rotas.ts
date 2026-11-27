@@ -10,6 +10,7 @@ import { conferirSenha, gerarHash, senhaFraca } from './senha.js';
 import { LimiteLogin, mensagemBloqueio, type BloqueioConta } from './limite-login.js';
 import { diasDemonstracao, horarioValido, janelaDemonstracao } from '../vendas/demonstracao.js';
 import { ROTAS_PUBLICAS_SEM_PAGAMENTO } from '../publico/publico.js';
+import { armazemPrimeiroAcessoPara, registrarPrimeiroAcesso, ROTAS_PUBLICAS_PRIMEIRO_ACESSO, type ArmazemPrimeiroAcesso } from './primeiro-acesso.js';
 
 export const COOKIE = 'sintonia_sessao';
 
@@ -27,6 +28,10 @@ export interface OpcoesAuth {
   avisarBloqueio?: (u: Usuario, b: BloqueioConta) => Promise<void>;
   /** usuarios: telefone da pessoa (o mesmo da Conta › Perfil), para mandar convite e link pelo WhatsApp. */
   telefones?: TelefonesEquipe;
+  /** primeiro-acesso: onde fica a chave "Primeiro acesso pelo link" (padrão: escolhido pelo tipo de `contas`). */
+  primeiroAcesso?: ArmazemPrimeiroAcesso;
+  /** primeiro-acesso: empresa atendida por este servidor (padrão: SINTONIA_EMPRESA_ID ou "imperio"). */
+  empresaPadrao?: string;
 }
 
 /** Envio do link de redefinição. Sem nenhum canal, a tela orienta a pedir à administração. */
@@ -43,7 +48,7 @@ export const VALIDADE_ESQUECI_MIN = 60;
 export const RESPOSTA_ESQUECI = 'Se houver uma conta com esse e-mail, enviamos um link para criar uma nova senha. Ele vale por 1 hora.';
 
 /** Rotas da API que não pedem login. */
-const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/auth/esqueci', '/api/auth/esqueci/canais', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao', /* sem-pagamento: contato público e a recusa de cadastro */ ...ROTAS_PUBLICAS_SEM_PAGAMENTO]);
+const PUBLICAS = new Set(['/api/auth/entrar', '/api/auth/sair', '/api/contato', '/api/auth/convite', '/api/auth/esqueci', '/api/auth/esqueci/canais', '/api/leads-site', '/api/leads-site/horarios', '/api/leads-site/demonstracao', /* sem-pagamento: contato público e a recusa de cadastro */ ...ROTAS_PUBLICAS_SEM_PAGAMENTO, /* primeiro-acesso */ ...ROTAS_PUBLICAS_PRIMEIRO_ACESSO]);
 /** O que quem precisa trocar a senha (ou está fora do horário) ainda pode chamar. */
 const SEMPRE = new Set(['/api/auth/eu', '/api/auth/senha', '/api/auth/sair']);
 
@@ -52,6 +57,9 @@ declare module 'fastify' {
     usuario?: Usuario;
   }
 }
+
+/** primeiro-acesso: a gestão (gerente, direção, administração) pode deixar a foto de perfil para depois. */
+export const podePularFoto = (u: Pick<Usuario, 'papel'>) => u.papel === 'gerente' || u.papel === 'direcao' || u.papel === 'admin';
 
 export function lerCookie(req: FastifyRequest, nome: string): string | undefined {
   const bruto = req.headers.cookie;
@@ -163,6 +171,17 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     if (p && !r.perms[p]) return reply.code(403).send({ erro: 'Você não tem permissão para isso. Fale com a gestão.' });
   });
 
+  /** Cria a sessão, registra o acesso (aparelho e endereço) e põe o cookie. */
+  const abrirSessao = async (req: FastifyRequest, reply: FastifyReply, u: Usuario) => {
+    const token = await o.contas.criarSessao(u.id, new Date(agora().getTime() + horas * 3600_000));
+    if (acessos) {
+      await acessos.registrarAcesso(u.id, agora());
+      const aparelho = String(req.headers['user-agent'] ?? '').slice(0, 200) || undefined;
+      await acessos.marcarSessao(token, { em: agora(), ip: req.ip, ...(aparelho ? { aparelho } : {}) });
+    }
+    reply.header('set-cookie', cookie(token, horas * 3600));
+  };
+
   const Entrar = z.object({ email: z.string().trim().email().max(200), senha: z.string().min(1).max(200) });
   app.post('/api/auth/entrar', async (req, reply) => {
     const b = Entrar.safeParse(req.body);
@@ -190,13 +209,7 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
     if (extras && !dentroDoHorario(extras.horario, agora())) {
       return reply.code(403).send({ erro: 'Seu acesso está liberado só no seu horário de trabalho.', foraDoHorario: true });
     }
-    const token = await o.contas.criarSessao(u.id, new Date(t + horas * 3600_000));
-    if (acessos) {
-      await acessos.registrarAcesso(u.id, agora());
-      const aparelho = String(req.headers['user-agent'] ?? '').slice(0, 200) || undefined;
-      await acessos.marcarSessao(token, { em: agora(), ip: req.ip, ...(aparelho ? { aparelho } : {}) });
-    }
-    reply.header('set-cookie', cookie(token, horas * 3600));
+    await abrirSessao(req, reply, u);
     return { nome: u.nome, papel: u.papel, ...(extras?.trocarSenha ? { trocarSenha: true } : {}) };
   });
 
@@ -245,7 +258,12 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   app.get('/api/auth/eu', async (req) => {
     const u = req.usuario!;
     const r = await resolverDe(u);
-    return { id: u.id, nome: u.nome, email: u.email, papel: u.papel, unidades: u.unidades, permissoes: r.perms, trocarSenha: r.trocarSenha };
+    /* primeiro-acesso: quem não tem foto de perfil é chamado a pôr uma logo ao entrar. Só a gestão pode deixar para depois. */
+    const temFoto = await o.contas
+      .fotosDaEmpresa(u.empresaId)
+      .then((m) => m.has(u.id))
+      .catch(() => true);
+    return { id: u.id, nome: u.nome, email: u.email, papel: u.papel, unidades: u.unidades, permissoes: r.perms, trocarSenha: r.trocarSenha, pedirFoto: !temFoto, podePularFoto: podePularFoto(u) };
   });
 
   // Trocar a própria senha: pede a atual; as outras sessões dela são encerradas (esta continua).
@@ -314,6 +332,19 @@ export function registrarAuth(app: FastifyInstance, o: OpcoesAuth): void {
   }
 
   registrarEquipe(app, o.contas);
+  /* primeiro-acesso: link único da equipe (/primeiro-acesso) e a chave em Usuários e acessos */
+  if (acessos)
+    registrarPrimeiroAcesso(app, {
+      contas: o.contas,
+      acessos,
+      armazem: o.primeiroAcesso ?? armazemPrimeiroAcessoPara(o.contas),
+      agora,
+      empresaPadrao: o.empresaPadrao ?? (process.env.SINTONIA_EMPRESA_ID || 'imperio'),
+      abrirSessao,
+      aoDefinirSenha: (u) => limiteLogin.liberarConta(u.email),
+      linkBase,
+      invalidar,
+    });
   if (acessos)
     registrarUsuarios(app, {
       contas: o.contas,

@@ -318,6 +318,8 @@ export function registrarUsuarios(app: FastifyInstance, o: OpcoesUsuarios): void
         unidades: b.data.unidades,
         // Convite: senha aleatória que ninguém sabe, até a pessoa criar a dela pelo link.
         senhaHash: await gerarHash(b.data.senha ?? randomBytes(24).toString('base64url')),
+        // primeiro-acesso: quem é convidado ainda vai criar a própria senha (pelo convite ou pelo link único).
+        semSenha: convite,
       });
     } catch (e) {
       if (/Já existe/.test((e as Error).message)) return reply.code(409).send({ erro: 'Já existe uma pessoa com esse e-mail.' });
