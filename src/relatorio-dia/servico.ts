@@ -255,6 +255,25 @@ export class RelatorioDia {
     }
   }
 
+  /**
+   * relatorio-equipe: manda um relatório na hora para estes destinatários, uma vez só por `referencia`
+   * (reiniciar o app não manda de novo). Devolve quantos saíram.
+   */
+  async enviarAgora(rel: TipoRelatorio, referencia: string, destinos: Array<Pick<Destinatario, 'tipo' | 'destino' | 'nome'>>): Promise<number> {
+    const agora = this.agora();
+    const { cfg } = await this.d.armazem.lerConfig(this.d.empresaId);
+    const ja = await this.d.armazem.registrados(this.d.empresaId, 'avulso', referencia);
+    const faltam = destinos.filter((x) => !ja.has(chaveDestino(x)));
+    if (!faltam.length) return 0;
+    const texto = await this.texto(rel, cfg, agora);
+    let n = 0;
+    for (const x of faltam) {
+      const id = await this.d.armazem.reservar({ empresaId: this.d.empresaId, relatorio: 'avulso', referencia, destino: chaveDestino(x), destinoNome: x.nome || null, texto, agora });
+      if (id && (await this.mandar(id, x, texto, cfg.unidadeEnvio))) n++;
+    }
+    return n;
+  }
+
   /** "Enviar teste para mim": sai na hora (é pedido da pessoa), uma vez por minuto por relatório. */
   async enviarTeste(rel: TipoRelatorio, telefone: string, nome: string, cfg?: ConfigEnvio): Promise<{ texto: string; enviado: boolean; erro: string | null }> {
     const agora = this.agora();

@@ -121,6 +121,14 @@ try {
     equipeInicial = `      SINTONIA_EQUIPE_INICIAL: '${JSON.stringify(lista).replaceAll("'", "''").replaceAll('$', '$$$$')}'\n`;
   }
 
+  /* relatorio-equipe: quem recebe os relatórios pelo WhatsApp (só do ambiente; números fora do repositório). */
+  let relatorioInicial = '';
+  if ((process.env.SINTONIA_RELATORIO_INICIAL ?? '').trim()) {
+    let v;
+    try { v = JSON.parse(process.env.SINTONIA_RELATORIO_INICIAL); } catch { throw new Error('SINTONIA_RELATORIO_INICIAL: não é um JSON válido'); }
+    relatorioInicial = `      SINTONIA_RELATORIO_INICIAL: '${JSON.stringify(v).replaceAll("'", "''").replaceAll('$', '$$$$')}'\n`;
+  }
+
   const receita = (`# Gerado por scripts/gerar-deploy.mjs (pacote sha256 ${soma}). Não edite à mão: gere de novo.
 services:
 ${comEvolution ? `  chave-evolution:
@@ -169,7 +177,7 @@ ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       SINTONIA_URL_PUBLICA: https://${DOMINIO}
       SINTONIA_WHATSAPP_VENDAS: "${whatsappVendas}"
       SINTONIA_EMAIL_SUPORTE: "${emailSuporte}"
-${equipeInicial}${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
+${equipeInicial}${relatorioInicial}${process.env.ADMIN_EMAIL ? `      ADMIN_NOME: ${process.env.ADMIN_NOME ?? 'Administrador'}\n      ADMIN_EMAIL: ${process.env.ADMIN_EMAIL}\n      ADMIN_SENHA_HASH: '${String(process.env.ADMIN_SENHA_HASH).replaceAll('$', '$$$$')}'\n` : ''}${PACOTE_URL ? '' : pedacos.map((p, i) => `      PACOTE_${i + 1}: ${p}`).join('\n')}
     volumes:
       - app:/home/node
 ${comEvolution ? '      - chave:/chave:ro\n' : ''}    networks:

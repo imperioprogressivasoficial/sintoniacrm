@@ -8,6 +8,9 @@ import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { nomeOuTelefone } from '../contatos/nome.js';
 
+/** Para quem a atendente (sem ser gestão) pode criar tarefa, além dela mesma. */
+const PARA_QUEM_ATENDENTE = new Set(['admin', 'direcao', 'gerente', 'recepcionista']);
+
 /**
  * Rotina do vendedor (Agenda › Rotina): "o vendedor tem rotinas e tarefas que precisa fazer, para não se perder".
  * - Tarefas: título, prazo, responsável, conversa ligada, prioridade, feita/não feita.
@@ -122,9 +125,9 @@ export function registrarRotina(app: FastifyInstance, o: OpcoesRotina): void {
     return req.usuario;
   };
   /** Pessoas ativas da empresa (para nomes e para escolher responsável). */
-  const equipe = async (u: Usuario): Promise<Array<{ id: string; nome: string }>> => {
+  const equipe = async (u: Usuario): Promise<Array<{ id: string; nome: string; papel?: string }>> => {
     const todos = o.contas ? await o.contas.listarUsuarios(u.empresaId) : [];
-    const lista = todos.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }));
+    const lista: Array<{ id: string; nome: string; papel?: string }> = todos.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome, papel: p.papel }));
     if (!lista.some((p) => p.id === u.id)) lista.push({ id: u.id, nome: u.nome });
     return lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   };
@@ -139,8 +142,10 @@ export function registrarRotina(app: FastifyInstance, o: OpcoesRotina): void {
   const responsavelValido = async (u: Usuario, id: string | undefined | null): Promise<string> => {
     const r = id || u.id;
     if (r === u.id) return r;
-    if (!ehGestor(u)) throw erro(403, 'Você só pode criar tarefas e rotinas para você.');
-    if (!(await equipe(u)).some((p) => p.id === r)) throw erro(400, 'Essa pessoa não está na equipe.');
+    const p = (await equipe(u)).find((x) => x.id === r);
+    if (!p) throw erro(400, 'Essa pessoa não está na equipe.');
+    // dono 27/11: a atendente também cria tarefa para a gestão (administração, direção, gerência) e para a recepção.
+    if (!ehGestor(u) && !PARA_QUEM_ATENDENTE.has(p.papel ?? '')) throw erro(403, 'Você pode criar tarefas para você, para a gestão e para a recepção.');
     return r;
   };
   /** Conversa ligada: tem que ser da empresa e visível para quem está criando. */
@@ -187,7 +192,7 @@ export function registrarRotina(app: FastifyInstance, o: OpcoesRotina): void {
     const nomes = new Map(pessoas.map((p) => [p.id, p.nome]));
     return {
       visao, contagem: conta.rows[0], tarefas: rows.map((r) => linhaTarefa(r, agoraJa, nomes)),
-      gestor: ehGestor(u), eu: u.id, equipe: ehGestor(u) ? pessoas : pessoas.filter((p) => p.id === u.id),
+      gestor: ehGestor(u), eu: u.id, equipe: (ehGestor(u) ? pessoas : pessoas.filter((p) => p.id === u.id || PARA_QUEM_ATENDENTE.has(p.papel ?? ''))).map(({ id, nome }) => ({ id, nome })),
     };
   });
 

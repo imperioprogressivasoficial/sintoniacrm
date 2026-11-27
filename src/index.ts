@@ -122,6 +122,7 @@ import { ArmazemEnvioRelatorioMemoria, ArmazemEnvioRelatorioPostgres } from './r
 import { FonteRelatorioDiaMemoria, FonteRelatorioDiaPostgres } from './relatorio-dia/fonte.js';
 import { registrarRelatorioDia } from './relatorio-dia/rotas.js';
 import { RelatorioDia } from './relatorio-dia/servico.js';
+import { semearRelatorio } from './relatorio-dia/semente.js';
 /* perdas-saude: motivo de perda obrigatório, relatório de perdas e painel de saúde da gestão */
 import { Perdas } from './perdas/perdas.js';
 import { ArmazemPerdasMemoria, ArmazemPerdasPostgres } from './perdas/armazem.js';
@@ -1201,6 +1202,11 @@ const relatorioDia = new RelatorioDia({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   log,
 });
+/* relatorio-equipe: quem recebe os relatórios (vem do ambiente na publicação) e o envio de agora; espera o WhatsApp conectar */
+setTimeout(() => {
+  void semearRelatorio({ armazem: armazemRelatorioDia, servico: relatorioDia, empresaId: cfg.SINTONIA_EMPRESA_ID, bruto: process.env.SINTONIA_RELATORIO_INICIAL, log,
+    pessoa: async (email) => { const u = await contas.buscarPorEmail(email); return u ? { id: u.id, nome: u.nome, telefone: (await perfisUsuario.ler(u.id)).telefone ?? '' } : undefined; } }).catch((e) => log('Relatórios automáticos: falha ao aplicar a configuração inicial', String(e)));
+}, 20_000).unref();
 registrarRelatorioDia(app, {
   servico: relatorioDia,
   armazem: armazemRelatorioDia,

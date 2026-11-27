@@ -67,6 +67,10 @@ describe.skipIf(!temPostgres)('Rotina: tarefas e checklist (Postgres)', () => {
     expect((await chamar('davi', 'POST', '/api/rotina/tarefas', { titulo: 'Tarefa do Davi', venceEm: null })).statusCode).toBe(200);
     // vendedor não cria para outra pessoa
     expect((await chamar('carla', 'POST', '/api/rotina/tarefas', { titulo: 'Para o Davi', responsavelId: ids.davi })).statusCode).toBe(403);
+    // dono 27/11: atendente cria tarefa para a gestão (e a recepção), não para outra atendente
+    const paraBruno = await chamar('carla', 'POST', '/api/rotina/tarefas', { titulo: 'Para o Bruno', responsavelId: ids.bruno });
+    expect(paraBruno.statusCode).toBe(200);
+    expect((await chamar('carla', 'DELETE', `/api/rotina/tarefas/${paraBruno.json().id ?? paraBruno.json().tarefa?.id}`)).statusCode).toBe(200);
     // gestor cria para alguém da equipe, mas não para pessoa de fora
     expect((await chamar('bruno', 'POST', '/api/rotina/tarefas', { titulo: 'Atualizar o funil', responsavelId: ids.carla, venceEm: '2026-11-23T10:00:00-03:00' })).statusCode).toBe(200);
     expect((await chamar('bruno', 'POST', '/api/rotina/tarefas', { titulo: 'Inventado', responsavelId: 'nao-existe' })).statusCode).toBe(400);

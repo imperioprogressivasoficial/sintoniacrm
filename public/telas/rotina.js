@@ -272,7 +272,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const padrao = new Date(Date.now() + 3600_000);
     const data = el('input', { type: 'date', value: venc ? diaBahia(venc) : x ? '' : diaBahia(new Date()) });
     const horaIn = el('input', { type: 'time', value: venc ? hora(venc) : x ? '' : `${String(Number(hora(padrao).slice(0, 2))).padStart(2, '0')}:00` });
-    const resp = ctx.gestor ? (() => {
+    const resp = ctx.gestor || (ctx.equipe || []).length > 1 ? (() => { /* dono 27/11: a atendente também escolhe gestão e recepção */
       const s = el('select', {}, ...ctx.equipe.map((p) => el('option', { value: p.id, text: p.id === ctx.eu ? `${p.nome} (eu)` : p.nome })));
       s.value = v.responsavelId || ctx.eu; return s;
     })() : null;
