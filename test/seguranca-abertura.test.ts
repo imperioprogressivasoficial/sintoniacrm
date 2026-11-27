@@ -156,17 +156,22 @@ async function subir(banco?: string) {
 async function parar(banco?: string) {
   const p = app;
   app = undefined;
+  const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
   if (p && p.exitCode === null) {
     const saiu = new Promise((r) => p.once('exit', r));
     p.kill('SIGKILL');
-    await saiu;
+    await Promise.race([saiu, espera(10_000)]);
   }
   if (pasta) rmSync(pasta, { recursive: true, force: true });
+  // Apagar o banco da varredura é só arrumação (a próxima varredura apaga antes de criar): nunca segura o teste.
   if (banco) {
     const c = new pg.Client({ connectionString: URL_PG });
-    await c.connect();
-    await c.query(`drop database if exists "${banco}" with (force)`).catch(() => undefined);
-    await c.end();
+    const apagar = c
+      .connect()
+      .then(() => c.query(`drop database if exists "${banco}" with (force)`))
+      .catch(() => undefined)
+      .finally(() => c.end().catch(() => undefined));
+    await Promise.race([apagar, espera(20_000)]);
   }
 }
 
@@ -203,7 +208,7 @@ const NAO_CHAMAR = /^(POST \/api\/auth\/sair|POST \/api\/auth\/sessoes|DELETE \/
 
 describe.each(modos)('Abertura para a equipe: varredura de todas as rotas como atendente da Sumaré ($nome)', (modo) => {
   beforeAll(() => subir(modo.banco), 120_000);
-  afterAll(() => parar(modo.banco), 30_000);
+  afterAll(() => parar(modo.banco), 60_000);
 
   it('o app de verdade registra as rotas da API (lista tirada do próprio Fastify)', () => {
     expect(rotas.length).toBeGreaterThan(400);
