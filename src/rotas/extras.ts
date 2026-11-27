@@ -14,6 +14,7 @@ import type { Contas } from '../auth/contas.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { agendamentosEntre } from '../agenda/agenda-dia.js';
 import { conversasDasClientes, mesclarAgenda, type AgendaExterna } from '../agenda/agenda-externa.js';
+import { maisUsadosDaUnidade } from '../agenda/mais-usados.js'; // agendar-compacto
 import { ErroLeads, PedidoImportacao, unidadesLeads, type Leads } from '../leads/leads.js';
 import { ICONES } from '../rastreio/rastreio.js';
 import { PERIODOS_RELATORIO, RELATORIOS, type NomeRelatorio, type Relatorios } from '../relatorios/relatorios.js';
@@ -180,6 +181,15 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
     unidade: Unidade.optional(),
     profissional: z.string().max(80).optional(),
   });
+  /* agendar-compacto: serviços e profissionais mais marcados na unidade (últimos 120 dias), para o Agendar da
+     conversa mostrar estes primeiro. Quem não vê a unidade recebe listas vazias (a tela cai na ordem alfabética). */
+  app.get('/api/agenda/mais-usados', async (req) => {
+    const { unidade } = z.object({ unidade: Unidade }).parse(req.query);
+    const unidades = req.usuario ? escopoDe(req.usuario).unidades : undefined;
+    if (unidades && !unidades.includes(unidade)) return { servicos: [], profissionais: [] };
+    return maisUsadosDaUnidade(o.repo, o.empresaId, unidade, new Date(agora().getTime() - 120 * DIA));
+  });
+
   app.get('/api/agenda/agendamentos', async (req) => {
     const q = AgendaQ.parse(req.query);
     const u = req.usuario;

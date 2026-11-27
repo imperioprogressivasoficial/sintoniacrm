@@ -142,6 +142,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/logos-conexoes.js': { arquivo: 'telas/logos-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/catalogo-conexoes.js': { arquivo: 'telas/catalogo-conexoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agenda.js': { arquivo: 'telas/agenda.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/agendar-compacto.js': { arquivo: 'telas/agendar-compacto.js', tipo: 'text/javascript; charset=utf-8' }, // agendar-compacto: Agendar da conversa com busca
   '/telas/agenda.css': { arquivo: 'telas/agenda.css', tipo: 'text/css; charset=utf-8' },
   '/telas/notificacoes.js': { arquivo: 'telas/notificacoes.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/instalar.js': { arquivo: 'telas/instalar.js', tipo: 'text/javascript; charset=utf-8' },

@@ -304,6 +304,28 @@ for (const amb of ambientes) {
       expect((await g.como(g.gente.bia, 'GET', '/api/agenda/agendamentos?unidade=sumare')).statusCode).toBe(403);
     });
 
+    it('agenda: serviços e profissionais mais marcados da unidade (Agendar compacto)', async () => {
+      const g = await montar();
+      const joana = await g.conversa('norte', 'Joana');
+      const marta = await g.conversa('norte', 'Marta');
+      const paula = await g.conversa('sumare', 'Paula');
+      const ag = (id: string, trinksId: number, unidade: 'norte' | 'sumare', servico: string, profissional?: string) =>
+        g.sintonia.equipeAgendou(id, { tipo: 'agendou', clienteTrinksId: 5, agendamento: { trinksId, unidade, servico, profissional, inicio: quinta(19), duracaoMin: 60 } }, 'Carla Lima', g.gente.carla);
+      await ag(joana.id, 1, 'norte', 'Escova', 'Lia');
+      await ag(marta.id, 2, 'norte', 'Progressiva', 'Rafa');
+      await ag(joana.id, 3, 'norte', 'PROGRESSIVA', 'Lia'); // maiúsculas não separam
+      await ag(paula.id, 4, 'sumare', 'Hidratação', 'Bia');
+      const r = (await g.como(g.gente.admin, 'GET', '/api/agenda/mais-usados?unidade=norte')).json();
+      expect(r.servicos.map((x: { nome: string; vezes: number }) => [x.nome.toLowerCase(), x.vezes])).toEqual([['progressiva', 2], ['escova', 1]]);
+      expect(r.profissionais).toEqual([{ nome: 'Lia', vezes: 2 }, { nome: 'Rafa', vezes: 1 }]);
+      // Atendente do Norte não vê o Sumaré: listas vazias (a tela usa a ordem alfabética).
+      expect((await g.como(g.gente.bia, 'GET', '/api/agenda/mais-usados?unidade=sumare')).json()).toEqual({ servicos: [], profissionais: [] });
+      expect((await g.como(g.gente.admin, 'GET', '/api/agenda/mais-usados?unidade=sumare')).json().servicos).toEqual([{ nome: 'Hidratação', vezes: 1 }]);
+      // Mais de 120 dias depois, não conta mais.
+      g.mover(new Date(quinta(10).getTime() + 121 * 864e5));
+      expect((await g.como(g.gente.admin, 'GET', '/api/agenda/mais-usados?unidade=norte')).json().servicos).toEqual([]);
+    });
+
     it('agenda: junta o que foi marcado direto no Trinks, sem repetir, e acha a conversa pelo celular', async () => {
       const doTrinks: AgendamentoDaAgenda[] = [];
       const pedidos: string[] = [];
