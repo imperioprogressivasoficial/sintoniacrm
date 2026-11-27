@@ -2,6 +2,8 @@
 
 Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 
+Ideias guardadas para depois (não são tarefas abertas): [IDEIAS.md](IDEIAS.md).
+
 ## Regras de trabalho
 - Terminou e testou: **publica sem perguntar** e avisa o que entrou (pedido do dono em 20/11).
 - Por enquanto o WhatsApp é só pela **API não oficial (Evolution)**. A oficial (Meta) fica para depois.
