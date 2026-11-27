@@ -160,19 +160,29 @@ describe.each(ambientes)('Treinamento da IA: base de conhecimento ($nome)', (amb
 describe('Base de conhecimento: semente e histórico', () => {
   it('as seções do knowledge/imperio.md viram a semente', () => {
     const s = secoesDoMarkdown(carregarBase());
-    expect(s.map((x) => x.chave)).toEqual(['quem-somos', 'jeito-de-falar', 'servicos', 'regras-comerciais', 'quando-passar-para-uma-pessoa-da-equipe', 'perguntas-frequentes']);
+    expect(s.map((x) => x.chave)).toEqual(['quem-somos', 'jeito-de-falar', 'roteiro-de-atendimento-ate-agendar', 'tabela-liso-infinito', 'mensagens-prontas', 'regras-comerciais', 'outros-assuntos', 'objecoes-mais-comuns', 'quando-passar-para-uma-pessoa-da-equipe', 'etapas-do-funil', 'pos-venda', 'glossario-do-comercial', 'perguntas-frequentes']);
     expect(s[0]!.conteudo).toContain('Salvador Norte Shopping');
   });
 
-  it('guarda só as últimas versões e não semeia de novo quem já tem base', async () => {
+  it('arquivo novo atualiza só o que a equipe nunca editou e tira a seção antiga que não existe mais', async () => {
+    const armazem = new ArmazemBaseMemoria();
+    const v1 = new BaseConhecimento(armazem, 'imperio', () => '## A\nx\n## Velha\nz\n## C\nc', { cacheMs: 0 });
+    await v1.secoes();
+    await v1.editar('c', { conteudo: 'editado pela equipe' }, 'eu');
+    const v2 = new BaseConhecimento(armazem, 'imperio', () => '## A\nx2\n## C\nc2\n## D\nd', { cacheMs: 0 });
+    expect((await v2.secoes()).map((x) => [x.chave, x.conteudo])).toEqual([['a', 'x2'], ['c', 'editado pela equipe'], ['d', 'd']]);
+  });
+
+  it('guarda só as últimas versões e não mexe no que a equipe editou', async () => {
     const armazem = new ArmazemBaseMemoria();
     const b = new BaseConhecimento(armazem, 'imperio', () => '## A\nx', { cacheMs: 0 });
     for (let i = 0; i < VERSOES_GUARDADAS + 5; i++) await b.editar('a', { conteudo: `v${i}` }, 'eu');
     const h = await b.historico('a', 100);
     expect(h).toHaveLength(VERSOES_GUARDADAS);
     expect(h[0]!.conteudo).toBe(`v${VERSOES_GUARDADAS + 4}`);
-    const outra = new BaseConhecimento(armazem, 'imperio', () => '## B\ny', { cacheMs: 0 });
-    expect((await outra.secoes()).map((x) => x.chave)).toEqual(['a']);
+    // Arquivo novo: a seção editada pela equipe fica como está; a seção nova do arquivo entra.
+    const outra = new BaseConhecimento(armazem, 'imperio', () => '## A\nnovo\n## B\ny', { cacheMs: 0 });
+    expect((await outra.secoes()).map((x) => [x.chave, x.conteudo])).toEqual([['a', `v${VERSOES_GUARDADAS + 4}`], ['b', 'y']]);
     expect(montarTexto([], [])).toContain('[PREENCHER]');
   });
 });

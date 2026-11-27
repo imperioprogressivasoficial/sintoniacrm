@@ -235,7 +235,7 @@ const CABECALHO = `# Base de conhecimento da IA
 
 > Trechos marcados com [PREENCHER] ainda não foram preenchidos pela equipe: não invente essas informações;
 > diga que vai confirmar e chame alguém da equipe (passar_para_humano).
-> Preços e duração dos serviços NÃO ficam aqui: leia sempre do Trinks.`;
+> Horários livres, profissionais e duração vêm sempre do Trinks. Preço: use o que estiver escrito nesta base.`;
 
 const ordenarSecoes = (l: Secao[]) => l.sort((a, b) => a.ordem - b.ordem || a.titulo.localeCompare(b.titulo, 'pt-BR'));
 const ordenarPerguntas = (l: Pergunta[]) => l.sort((a, b) => a.ordem - b.ordem || a.criadaEm.getTime() - b.criadaEm.getTime());
@@ -288,10 +288,26 @@ export class BaseConhecimento {
   }
 
   private async semear(): Promise<void> {
-    if ((await this.armazem.secoes(this.empresaId)).length) return;
+    const atuais = await this.armazem.secoes(this.empresaId);
     const em = this.agora();
-    for (const [i, s] of secoesDoMarkdown(this.semente()).entries()) {
-      await this.armazem.gravarSecao(this.empresaId, { ...s, ordem: i, atualizadaEm: em, atualizadaPor: 'semente' }, true);
+    const novas = secoesDoMarkdown(this.semente());
+    if (!atuais.length) {
+      for (const [i, s] of novas.entries()) {
+        await this.armazem.gravarSecao(this.empresaId, { ...s, ordem: i, atualizadaEm: em, atualizadaPor: 'semente' }, true);
+      }
+      return;
+    }
+    // treinar-ia (27/11): o arquivo mudou (script oficial do comercial). Entra o que é novo e atualiza só o que a equipe
+    // nunca editou (ainda "semente"); seção que a equipe editou fica como ela deixou.
+    for (const [i, s] of novas.entries()) {
+      const a = atuais.find((x) => x.chave === s.chave);
+      if (!a) await this.armazem.gravarSecao(this.empresaId, { ...s, ordem: i, atualizadaEm: em, atualizadaPor: 'semente' }, true);
+      else if (a.atualizadaPor === 'semente' && (a.conteudo !== s.conteudo || a.titulo !== s.titulo || a.ordem !== i)) {
+        await this.armazem.gravarSecao(this.empresaId, { ...a, titulo: s.titulo, conteudo: s.conteudo, ordem: i, atualizadaEm: em, atualizadaPor: 'semente' });
+      }
+    }
+    for (const a of atuais) {
+      if (a.atualizadaPor === 'semente' && !novas.some((s) => s.chave === a.chave)) await this.armazem.apagarSecao(this.empresaId, a.chave);
     }
   }
 
