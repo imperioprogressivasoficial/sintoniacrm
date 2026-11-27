@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 18h35: 4bd4691 no ar — atendente cria tarefa para gestão/recepção; SINTONIA_RELATORIO_INICIAL (destinatários por e-mail → WhatsApp do perfil, reconfere a cada 10 min; agora=fechamento de 27/11). Bruno, Tássia e Vinícius ainda SEM WhatsApp no perfil. SINTONIA_EQUIPE_INICIAL saiu do compose (limite de 8192 letras da Hostinger; todos já criados).
+
 - 27/11 17h44: republicado só para aplicar a senha provisória da Tássia (mesmo pacote).
 
 - 27/11 17h38: e7319e4 no ar — senha provisória da Andreza (senhaProvisoriaHash na SINTONIA_EQUIPE_INICIAL, só o hash; troca obrigatória ao entrar). A senha em texto ficou só no scratchpad da sessão e foi passada ao dono.
