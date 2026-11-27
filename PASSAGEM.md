@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 17h38: e7319e4 no ar — senha provisória da Andreza (senhaProvisoriaHash na SINTONIA_EQUIPE_INICIAL, só o hash; troca obrigatória ao entrar). A senha em texto ficou só no scratchpad da sessão e foi passada ao dono.
+
 - 27/11 16h30: bf575d5 no ar — equipe inicial (SINTONIA_EQUIPE_INICIAL vem do ambiente na hora de gerar; a lista fica fora do repositório), /primeiro-acesso com chave "Primeiro acesso pelo link" DESLIGADA (o dono liga em Usuários e acessos; fecha em 14 dias), foto de perfil ao entrar, Agendar compacto (5 + busca), áudio segurando e menu de segurar mensagem tipo WhatsApp, vistoria (prévia apagada, voltar, emoji no computador…), segurança da abertura (XSS do anúncio do simulador, SVG do bot, reuniões por atendente, simulador por unidade, conferir e-mail, câmera/microfone só no /app). Decisões pendentes do dono: atendente edita scripts de venda? ranking mostra valor vendido dos colegas? CSP em modo bloquear.
 
 - 27/11: ffd6c75 no ar — auditoria corrigida: IA sem duplicar no envio incerto (aud-ia), conversa troca para o número por onde a cliente escreveu, número estrangeiro/fixo aceito, cache @lid ao vivo (aud-numeros), Meta por item e sem App Secret recusa, telas (agenda +N, dica x resgate, rodapé ficha, rótulos simples no Rastreamento, Conexões, Equipe/Clientes/Automações). Evolution: dono disse NÃO MEXER (é compartilhada com o Espaço Rainha) — histórico/resgate/@lid pela Evolution continuam sem dados.
