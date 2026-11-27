@@ -69,7 +69,7 @@ const MUDA = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const GESTAO = new Set(['admin', 'direcao']);
 
 /** Limite de uso por pessoa (ou endereço, sem login) numa janela de tempo. */
-class Janela {
+export class Janela {
   private readonly usos = new Map<string, number[]>();
   constructor(
     readonly maximo: number,

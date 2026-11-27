@@ -56,6 +56,7 @@ import { FilaIa } from './app/fila-ia.js';
 import { FilaHistoricoPostgres, ImportadorHistorico } from './app/historico.js';
 import { PuxarHistorico } from './app/puxar-historico.js';
 import { acessosPara } from './auth/acessos.js';
+import { semearEquipe } from './auth/primeiro-acesso.js'; /* primeiro-acesso */
 import { resolver as resolverPermissoes } from './auth/permissoes.js';
 import { criarPool, esperarBanco, ehErroDeConexao } from './store/banco.js';
 import { homedir } from 'node:os';
@@ -288,6 +289,12 @@ if (cfg.ADMIN_EMAIL && (cfg.ADMIN_SENHA || cfg.ADMIN_SENHA_HASH)) {
     log(`Administrador ${cfg.ADMIN_EMAIL} criado.`);
   }
 }
+
+/* primeiro-acesso: equipe inicial (SINTONIA_EQUIPE_INICIAL = JSON [{nome, email, papel, unidades}]). Cria só quem ainda
+   não existe (pelo e-mail), sem senha, e nunca altera quem já existe. Cada pessoa cria a senha em /primeiro-acesso. */
+await semearEquipe({ contas, acessos: acessosPara(contas), empresaId: cfg.SINTONIA_EMPRESA_ID, bruto: process.env.SINTONIA_EQUIPE_INICIAL, log }).catch((e) =>
+  log('Falha ao cadastrar a equipe inicial', String(e)),
+);
 
 // Conexões: o que for salvo na tela vale por cima do ambiente, e é aplicado na hora.
 /* robustez: chave própria do cofre (SINTONIA_COFRE_CHAVE ou SINTONIA_COFRE_CHAVE_ARQUIVO), sem perder o que já foi

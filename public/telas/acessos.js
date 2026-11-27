@@ -108,6 +108,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     .ac-tab td[data-r]::before { content: attr(data-r) ": "; color: var(--sub); font-size: 12.5px; }
     .ac-tab td.ac-fim { grid-column: 2; grid-row: 2 / span 4; align-self: center; }
   }
+  /* primeiro-acesso: chave "Primeiro acesso pelo link", o link para a equipe e quem ainda não entrou */
+  .ac-pa-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .ac-pa-cab h2 { flex: 1; min-width: 0; }
+  .ac-pa-cab > label { flex: none; display: inline-flex; }
+  .ac-pa-cab .ac-chave { display: inline-block; margin-top: 2px; }
+  .ac-pa-link { display: grid; gap: 10px; min-width: 0; }
+  .ac-pa-faltam { display: grid; gap: 0; min-width: 0; }
+  .ac-pa-pessoa { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--vidro-borda); min-width: 0; }
+  .ac-pa-pessoa:first-child { border-top: 0; }
+  .ac-pa-pessoa div { min-width: 0; flex: 1; display: grid; } .ac-pa-pessoa b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-pa-pessoa small { font-size: 12.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-pa-pessoa .ac-selo { flex: none; }
+  .ac-pa-mais { all: unset; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--marca-azul, #106ebe); padding: 6px 2px; }
+  html[data-tema="escuro"] .ac-pa-mais { color: var(--marca-menta, #0ffcbe); }
   .ac-matriz-caixa { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
   .ac-matriz { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; min-width: 760px; }
   .ac-matriz th:first-child { width: 24%; }
@@ -266,6 +280,52 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       h('thead', {}, h('tr', {}, ...['Pessoa', 'Papel', 'Unidades', 'Vê conversas', 'Último acesso', 'Situação', ''].map((t) => h('th', { text: t })))),
       h('tbody', {}, ...linhas));
   }
+  /* primeiro-acesso: um link só para a equipe toda (/primeiro-acesso). Desligado por padrão; só a administração e a
+     direção ligam; fecha sozinho depois de 14 dias. Mostra o link (copiar / WhatsApp) e quem ainda não entrou. */
+  function painelPrimeiroAcesso() {
+    const caixa = h('section', { class: 'ac-painel', id: 'ac-primeiro-acesso', 'aria-busy': 'true' }, h('h2', {}, 'Primeiro acesso pelo link', h('small', { text: 'Carregando…' })));
+    let verTodos = false;
+    const desenharPa = (r) => {
+      caixa.removeAttribute('aria-busy');
+      const ligar = async (v) => {
+        try { desenharPa(await enviar('/api/acessos/primeiro-acesso', 'PUT', { ligado: v })); toast(v ? 'Primeiro acesso liberado.' : 'Primeiro acesso desligado.'); }
+        catch (x) { toast(x.message); desenharPa(r); }
+      };
+      const cab = h('div', { class: 'ac-pa-cab' },
+        h('h2', {}, 'Primeiro acesso pelo link', h('small', { text: 'Um link só para a equipe toda: a pessoa digita o e-mail, cria a senha e já entra. Vale para quem foi cadastrado e ainda não criou senha.' })),
+        h('label', { title: r.podeMudar ? '' : 'Só a direção e a administração ligam e desligam' }, chave(r.ligado, ligar, !r.podeMudar)));
+      cab.querySelector('input')?.setAttribute('aria-label', 'Primeiro acesso pelo link');
+      const partes = [cab];
+      if (r.ligado) {
+        const caixaLink = h('div', { class: 'ac-link', text: r.link });
+        const copiar = h('button', { class: 'ac-botao', type: 'button', html: SVG_COPIAR, onclick: async () => {
+          try { await navigator.clipboard.writeText(r.texto); copiar.lastChild.textContent = 'Copiado ✓'; toast('Link e mensagem copiados.'); }
+          catch { const sel = getSelection(); const rg = document.createRange(); rg.selectNodeContents(caixaLink); sel.removeAllRanges(); sel.addRange(rg); toast('Link selecionado: copie com o menu do aparelho.'); }
+        } }, h('span', { text: 'Copiar link' }));
+        const zap = h('a', { class: 'ac-botao ac-zap', href: r.whatsapp, target: '_blank', rel: 'noopener', html: SVG_ZAP }, h('span', { text: 'Mandar no WhatsApp' }));
+        partes.push(avisoEnvio('ok', `Liberado até ${ateQuando(r.ate)}. Depois disso fecha sozinho${r.ligadoPor ? ` (ligado por ${r.ligadoPor})` : ''}.`),
+          h('div', { class: 'ac-pa-link' }, caixaLink, h('div', { class: 'ac-acoes' }, copiar, zap)));
+      } else if (r.situacao === 'encerrada') {
+        partes.push(avisoEnvio('atencao', `O prazo de ${r.dias} dias terminou. Quem abrir o link vê que o prazo acabou.${r.podeMudar ? ' Ligue de novo para liberar por mais ' + r.dias + ' dias.' : ''}`));
+      } else {
+        partes.push(avisoEnvio('', `Desligado. Quem abrir o link vê que o acesso ainda não foi liberado.${r.podeMudar ? ` Quando a equipe estiver pronta, ligue a chave: fica liberado por ${r.dias} dias.` : ' A direção ou a administração liberam quando a equipe estiver pronta.'}`));
+      }
+      const faltam = r.faltam || [];
+      if (faltam.length) {
+        const lista = verTodos ? faltam : faltam.slice(0, 6);
+        partes.push(h('p', { class: 'ac-grupo', text: `Ainda não entraram (${faltam.length})` }),
+          h('div', { class: 'ac-pa-faltam' }, ...lista.map((p) => h('div', { class: 'ac-pa-pessoa' }, rosto(p.id, siglaDe(p.nome)),
+            h('div', {}, h('b', { text: p.nome }), h('small', { text: `${PAPEL[p.papel] || p.papel} · ${p.email}` })),
+            p.podeUsar ? h('span', { class: 'ac-selo menta', text: 'Pode usar o link' }) : h('span', { class: 'ac-selo', title: 'Já tem senha: entra pela tela Entrar (ou peça uma senha nova).', text: 'Já tem senha' })))),
+          faltam.length > 6 ? h('button', { class: 'ac-pa-mais', type: 'button', text: verTodos ? 'Mostrar menos' : `Ver todos (${faltam.length})`, onclick: () => { verTodos = !verTodos; desenharPa(r); } }) : null);
+      } else {
+        partes.push(h('p', { class: 'ac-dica', text: 'Todo mundo da equipe já entrou pelo menos uma vez.' }));
+      }
+      caixa.replaceChildren(...partes.filter(Boolean));
+    };
+    api('/api/acessos/primeiro-acesso').then(desenharPa).catch(() => caixa.remove());
+    return caixa;
+  }
   function telaPessoas() {
     if (naVista) {
       const ativas = dados.pessoas.filter((p) => p.ativo).length;
@@ -273,6 +333,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         dados.envio && !dados.envio.email && eu?.papel && ['admin', 'direcao'].includes(eu.papel)
           ? avisoEnvio('atencao', 'Convites e senhas novas saem por link: você copia ou manda pelo WhatsApp. Para irem também por e-mail, ligue o e-mail do sistema em Conexões › E-mail.')
           : null,
+        painelPrimeiroAcesso(), /* primeiro-acesso */
         h('section', { class: 'ac-painel' }, h('h2', {}, 'Como funciona o acesso', h('small', { text: 'Convide por link (a pessoa cria a própria senha). O papel diz o que ela pode fazer; as unidades dizem de onde ela vê as conversas. Toque numa pessoa para mudar.' })), resumoPapeis()),
         h('section', { class: 'ac-painel' }, h('h2', {}, `${dados.pessoas.length} pessoas · ${ativas} ativas`, h('small', { text: eu?.papel === 'gerente' ? 'Quem trabalha nas suas unidades. Você cadastra atendentes e recepcionistas.' : 'Quem entra no Sintonia, o que cada pessoa vê e quando.' })), tabelaPessoas()));
     }
@@ -286,7 +347,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         p.trocarSenha ? h('span', { class: 'ac-selo', text: 'Troca de senha pendente' }) : null,
         p.horario ? h('span', { class: 'ac-selo', text: `${p.horario.inicio}–${p.horario.fim}` }) : null,
         Object.keys(p.ajustes || {}).length ? h('span', { class: 'ac-selo menta', text: 'Permissões próprias' }) : null)));
-    return h('section', { class: 'ac-painel' }, h('h2', {}, `${dados.pessoas.length} pessoas`, h('small', { text: eu.papel === 'gerente' ? 'Quem trabalha nas suas unidades. Você cadastra atendentes e recepcionistas.' : 'Quem entra no Sintonia, o que cada pessoa vê e quando.' })), h('div', { class: 'ac-lista' }, ...cartoes));
+    return h('div', { style: 'display:grid;gap:16px;min-width:0' }, painelPrimeiroAcesso(), /* primeiro-acesso */ h('section', { class: 'ac-painel' }, h('h2', {}, `${dados.pessoas.length} pessoas`, h('small', { text: eu.papel === 'gerente' ? 'Quem trabalha nas suas unidades. Você cadastra atendentes e recepcionistas.' : 'Quem entra no Sintonia, o que cada pessoa vê e quando.' })), h('div', { class: 'ac-lista' }, ...cartoes)));
   }
 
   function listaPermissoes(perms, aoMudar, podeMudar) {

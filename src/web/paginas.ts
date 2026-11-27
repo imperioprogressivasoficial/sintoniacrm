@@ -13,6 +13,9 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/convite': { arquivo: 'convite.html', tipo: 'text/html; charset=utf-8' },
   '/esqueci-senha': { arquivo: 'esqueci-senha.html', tipo: 'text/html; charset=utf-8' },
   '/nova-senha': { arquivo: 'nova-senha.html', tipo: 'text/html; charset=utf-8' },
+  /* primeiro-acesso: link único da equipe (e-mail → criar senha → entra) e a foto de perfil logo ao entrar */
+  '/primeiro-acesso': { arquivo: 'primeiro-acesso.html', tipo: 'text/html; charset=utf-8' },
+  '/telas/foto-perfil.js': { arquivo: 'telas/foto-perfil.js', tipo: 'text/javascript; charset=utf-8' },
   /* sem-pagamento: páginas pedidas pela App Store (privacidade, termos, suporte) e o contato público (WhatsApp de vendas) */
   '/privacidade': { arquivo: 'privacidade.html', tipo: 'text/html; charset=utf-8' },
   '/termos': { arquivo: 'termos.html', tipo: 'text/html; charset=utf-8' },
@@ -260,11 +263,12 @@ export function registrarPaginas(app: FastifyInstance, auth?: OpcoesAuth): void 
 
   for (const [rota, { arquivo, tipo }] of Object.entries(ARQUIVOS)) {
     app.get(rota, async (req, reply) => {
-      if (auth && (rota === '/app' || rota === '/conexoes' || rota === '/entrar')) {
+      if (auth && (rota === '/app' || rota === '/conexoes' || rota === '/entrar' || rota === '/primeiro-acesso')) {
         const u = await usuarioDaRequisicao(req, auth);
         if ((rota === '/app' || rota === '/conexoes') && !u) return reply.redirect('/entrar');
         if (rota === '/conexoes' && u && u.papel !== 'admin' && u.papel !== 'direcao') return reply.redirect('/app');
         /* rotas-fontes: quem já entrou e caiu no /entrar?volta=/app/... volta para onde estava */
+        if (rota === '/primeiro-acesso' && u) return reply.redirect('/app');
         if (rota === '/entrar' && u) return reply.redirect(voltaSegura((req.query as Record<string, unknown> | undefined)?.volta) ?? '/app');
       }
       reply
