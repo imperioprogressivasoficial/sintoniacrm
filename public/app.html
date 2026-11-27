@@ -221,13 +221,7 @@
   .visor .palco { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px 16px 24px; }
   .visor .palco img { max-width: 100%; max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); object-fit: contain; }
   .visor .legenda-visor { text-align: center; padding: 0 16px calc(18px + env(safe-area-inset-bottom)); font-size: 15px; white-space: pre-wrap; }
-  /* gravação de áudio e prévia de envio */
-  .compor .gravando { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 4px; }
-  .compor .gravando .ponto { width: 10px; height: 10px; border-radius: 50%; background: var(--gravando); animation: piscar 1s ease-in-out infinite; }
-  @keyframes piscar { 50% { opacity: .25; } }
-  .compor .gravando .relogio { font-size: 17px; font-variant-numeric: tabular-nums; min-width: 44px; }
-  .compor .gravando .dica { flex: 1; color: var(--sub); font-size: 14px; }
-  .compor.gravando > #mais, .compor.gravando > .caixa, .compor.gravando > #enviar { display: none !important; }
+  /* prévia de envio (a gravação de áudio fica em telas/gravar-audio.js) */
   #d-midia { width: min(560px, calc(100vw - 24px)); }
   #d-midia .previa-midia { display: grid; place-items: center; background: var(--painel); border-radius: 10px; min-height: 160px; max-height: 52vh; overflow: hidden; }
   #d-midia .previa-midia img, #d-midia .previa-midia video { max-width: 100%; max-height: 52vh; display: block; object-fit: contain; }
@@ -510,7 +504,6 @@
   .linha-compor .modo[data-m="copiloto"] i { background: var(--marca-azul); }
   .falar { background: var(--texto) !important; color: var(--fundo) !important; width: 46px !important; height: 46px !important; margin: 0 0 0 4px !important; }
   #enviar:not(.mic-vazio) { background: var(--marca-gradiente) !important; color: #fff !important; box-shadow: var(--brilho-azul); }
-  .compor.gravando > .caixa, .compor.gravando > .linha-compor { display: none !important; }
   .menu-mais { bottom: 104px; }
 
   /* folha "Selecionar modo" (sobe de baixo, como no iPhone) */
@@ -1423,11 +1416,6 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, body *::-webkit-scrollbar { di
               <button class="icone" id="camera" title="Foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.4-2h4.6l1.4 2h1.8A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Z"/><circle cx="12" cy="12.5" r="3.5"/></svg></button>
               <button class="icone falar" id="enviar" title="Gravar áudio"><svg id="ic-mic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 1 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Zm6-3.5a.9.9 0 0 0-1.8 0 4.2 4.2 0 0 1-8.4 0 .9.9 0 0 0-1.8 0 6 6 0 0 0 5.1 5.9V20H8.5a.9.9 0 0 0 0 1.8h7a.9.9 0 0 0 0-1.8h-2.6v-3.1A6 6 0 0 0 18 11Z"/></svg><svg id="ic-enviar" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
             </div>
-            <div class="gravando" id="gravando" hidden>
-              <button class="icone" id="grav-cancelar" title="Cancelar gravação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg></button>
-              <span class="ponto"></span><span class="relogio" id="grav-tempo">0:00</span><span class="dica">Gravando…</span>
-              <button class="icone falar" id="grav-enviar" title="Parar e enviar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l-.01 6.53L15 12 3.39 13.87Z"/></svg></button>
-            </div>
             <input type="file" id="arq-foto" accept="image/*,video/*" hidden>
             <input type="file" id="arq-doc" hidden>
             <div class="menu-mais" id="menu-mais" hidden>
@@ -2252,7 +2240,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   }
   async function abrir(id) {
     { const c = estado.conversas.find((x) => x.id === id); if (c) { c.lidaAte = new Date().toISOString(); c.marcadaNaoLida = false; } }
-    if (grav.rec) pararGravacao(true);
+    window.SintoniaGravar?.cancelar({ rapido: true }); /* gestos-whats: trocou de conversa, a gravação é descartada */
     estado.aberta = id; estado.assinatura = ''; $('revisao').hidden = true; $('texto').value = ''; trocarBotao();
     mostrarJa(id); /* fluidez */
     $('v-conversas').classList.add('abrindo'); $('casca').classList.add('em-conversa');
@@ -2545,8 +2533,8 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     if (estado.aberta && Date.now() - digitandoEm > 15000) { digitandoEm = Date.now(); post(`/api/conversas/${estado.aberta}/digitando`).catch(() => {}); }
   });
   texto.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(min-width: 761px)').matches) { e.preventDefault(); enviar(); } });
-  // Com texto, o botão envia. Sem texto, é o microfone (segurar/clicar: veja "nota de voz" abaixo).
-  $('enviar').addEventListener('click', (e) => { if (texto.value.trim()) enviar(); else if (e.detail === 0 && !grav.rec) iniciarGravacao(); });
+  // Com texto, o botão envia. Sem texto, é o microfone (segurar para gravar: telas/gravar-audio.js).
+  $('enviar').addEventListener('click', (e) => { if (texto.value.trim()) enviar(); else if (e.detail === 0) window.SintoniaGravar?.teclado(); }); /* gestos-whats: Enter/Espaço no microfone grava travado */
   $('camera').addEventListener('click', () => $('arq-foto').click());
   /* balao-fantasma: enviar(pronto) manda um texto pronto (a sugestão da IA) pelo mesmo caminho, sem mexer no que está escrito no campo */
   async function enviar(pronto) {
@@ -2812,86 +2800,12 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     finally { window.SintoniaVistos?.enviando.tirar(relogio); } /* vistos */
   }
 
-  // nota de voz, como no WhatsApp: segure o microfone para gravar e solte para enviar; arraste para o lado para cancelar.
-  // Um toque (ou clique no computador) grava sem segurar: depois é só tocar em enviar ou na lixeira.
-  const grav = { rec: null, stream: null, partes: [], inicio: 0, relogio: 0, cancelado: false, conversa: null, parando: false, segurar: null };
-  const MAX_GRAVACAO_S = 15 * 60;
-  function tipoGravacao() {
-    for (const t of ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/webm']) if (window.MediaRecorder?.isTypeSupported?.(t)) return t;
-    return '';
-  }
-  async function iniciarGravacao() {
-    if (!estado.aberta || grav.rec) return;
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      toast(window.isSecureContext ? 'Este navegador não grava áudio.' : 'Para gravar áudio, abra a Sintonia pelo endereço seguro (https).'); return;
-    }
-    try { grav.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch { toast('Sem acesso ao microfone. Libere o microfone para a Sintonia no navegador.'); return; }
-    const tipo = tipoGravacao();
-    try { grav.rec = new MediaRecorder(grav.stream, tipo ? { mimeType: tipo } : undefined); }
-    catch { grav.stream.getTracks().forEach((t) => t.stop()); toast('Este navegador não grava áudio.'); return; }
-    Object.assign(grav, { partes: [], cancelado: false, parando: false, inicio: Date.now(), conversa: estado.aberta });
-    grav.rec.addEventListener('dataavailable', (e) => { if (e.data.size) grav.partes.push(e.data); });
-    grav.rec.addEventListener('stop', terminarGravacao);
-    grav.rec.start(250);
-    document.querySelector('.compor').classList.add('gravando'); $('gravando').hidden = false; $('grav-tempo').textContent = '0:00';
-    modoGravacao(grav.segurar ? 'segurar' : 'travado');
-    if (navigator.vibrate) try { navigator.vibrate(18); } catch {}
-    grav.relogio = setInterval(() => {
-      const s = (Date.now() - grav.inicio) / 1000; $('grav-tempo').textContent = duracao(Math.floor(s));
-      if (s >= MAX_GRAVACAO_S) pararGravacao(false);
-    }, 250);
-  }
-  function modoGravacao(modo) {
-    $('gravando').dataset.modo = modo; $('gravando').style.removeProperty('--arrasto');
-    $('gravando').querySelector('.dica').textContent = modo === 'segurar' ? '‹ Deslize para cancelar' : 'Gravando…';
-  }
-  function pararGravacao(cancelar) {
-    if (!grav.rec || grav.parando) return;
-    grav.parando = true; grav.segurar = null;
-    grav.cancelado = cancelar;
-    if (grav.rec.state !== 'inactive') grav.rec.stop(); else terminarGravacao();
-  }
-  async function terminarGravacao() {
-    const rec = grav.rec; if (!rec) return;
-    clearInterval(grav.relogio); grav.stream?.getTracks().forEach((t) => t.stop());
-    grav.rec = null; grav.stream = null;
-    document.querySelector('.compor').classList.remove('gravando'); $('gravando').hidden = true;
-    const segundos = (Date.now() - grav.inicio) / 1000;
-    if (grav.cancelado) return;
-    if (segundos < 1) { toast('Áudio muito curto. Segure o microfone enquanto fala.'); return; }
-    const mimetype = (rec.mimeType || 'audio/webm').split(';')[0];
-    await enviarArquivo({ blob: new Blob(grav.partes, { type: mimetype }), tipo: 'audio', mimetype, duracaoSeg: Math.round(segundos) }, grav.conversa);
-  }
-  $('grav-enviar').addEventListener('click', () => pararGravacao(false));
-  // Segurar o microfone: começa a gravar no toque; soltar envia; arrastar uns 90 px para o lado cancela.
-  // Toque curto (menos de 0,35 s) ou permissão do microfone ainda aberta: continua gravando "travado".
-  const ARRASTO_CANCELA = 90;
-  $('enviar').addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || texto.value.trim() || grav.rec || !estado.aberta) return;
-    e.preventDefault();
-    grav.segurar = { id: e.pointerId, x: e.clientX, em: Date.now() };
-    iniciarGravacao();
-  });
-  addEventListener('pointermove', (e) => {
-    const s = grav.segurar; if (!s || e.pointerId !== s.id || !grav.rec) return;
-    const dx = Math.max(0, s.x - e.clientX);
-    $('gravando').style.setProperty('--arrasto', Math.min(dx, ARRASTO_CANCELA) + 'px');
-    if (dx >= ARRASTO_CANCELA) { pararGravacao(true); toast('Gravação descartada.'); }
-  });
-  const soltar = (e) => {
-    const s = grav.segurar; if (!s || e.pointerId !== s.id) return;
-    grav.segurar = null;
-    if (!grav.rec) return; // ainda pedindo o microfone: quando começar, fica travado
-    if (e.type === 'pointercancel' || Date.now() - s.em < 350) { modoGravacao('travado'); return; }
-    pararGravacao(false);
-  };
-  addEventListener('pointerup', soltar);
-  addEventListener('pointercancel', soltar);
-  $('grav-cancelar').addEventListener('click', () => { pararGravacao(true); toast('Gravação descartada.'); });
+  /* gestos-whats: a nota de voz (segurar o microfone, deslizar para cancelar ou travar, pausar) fica em
+     public/telas/gravar-audio.js. Aqui só o gancho para ele mandar o áudio pelo mesmo caminho dos outros arquivos. */
+  window.SintoniaEnvio = { arquivo: (dados, conversaId) => enviarArquivo(dados, conversaId) };
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!$('visor').hidden) fecharVisor(); else if (grav.rec) pararGravacao(true);
+    if (!$('visor').hidden) fecharVisor(); else if (window.SintoniaGravar?.ativo()) window.SintoniaGravar.cancelar(); /* gestos-whats */
     /* ESC fecha a conversa e volta para a tela da logo, como no WhatsApp Web (dono 21/11). Antes fecha o que estiver
        por cima: menus, folhas, painéis e diálogos têm o próprio ESC. */
     else if (estado.aberta && estado.vista === 'conversas' && !e.defaultPrevented && !document.querySelector('dialog[open]') && !window.SintoniaPainel?.elemento?.()?.open) {
@@ -4009,6 +3923,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/agendadas.js" defer></script><!-- msg-agendada -->
 <script src="/telas/balao-fantasma.js" defer></script><!-- balao-fantasma: sugestão da IA como balão tracejado na conversa -->
 <script src="/telas/menu-mensagem.js" defer></script><!-- menu-mensagem: segurar a mensagem abre o menu (reagir, responder, encaminhar, editar, apagar, fixar…) -->
+<script src="/telas/gravar-audio.js" defer></script><!-- gestos-whats: nota de voz igual ao WhatsApp (segurar, deslizar para cancelar, travar, pausar) -->
 <script src="/telas/empresa.js" defer></script><!-- layout-telas -->
 <script src="/telas/conta.js" defer></script><!-- empresa-conta: Conta da pessoa -->
 <script src="/telas/capa-perfil.js" defer></script><!-- capa-perfil: capa com foto e atalhos por pessoa -->

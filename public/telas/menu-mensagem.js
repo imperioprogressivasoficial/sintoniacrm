@@ -1,6 +1,10 @@
 /* menu-mensagem: segurar uma mensagem da conversa abre o menu igual ao do WhatsApp do iPhone (pedido do dono, 21/11).
- * - Celular: toque longo (~400 ms, sem o dedo andar mais de 8 px). Computador: clicar e segurar (~400 ms) ou botão direito.
+ * - Celular: toque longo (~350 ms, sem o dedo andar mais de 10 px; rolar a conversa nunca abre). Vibra curto onde o aparelho deixa.
+ *   Computador: botão direito, a setinha que aparece no canto do balão ao passar o mouse, ou clicar e segurar.
  *   Clique rápido e arrastar para selecionar texto continuam normais.
+ * - gestos-whats (27/11): enquanto segura, o balão afunda de leve; ao abrir ele "levanta" (escala 1,03 + sombra), o resto da
+ *   tela escurece e desfoca suave, a pílula de reações entra em cima e o cartão embaixo com mola curta (~220 ms; sai em ~150 ms).
+ *   O balão fica no mesmo lugar da tela; se o menu não couber, a conversa rola o necessário. Só transform/opacity.
  * - Fundo desfocado e escurecido; o balão segurado fica nítido no lugar dele; em cima, a pílula de reações
  *   (👍 ❤️ 😂 😮 😢 🙏 ✅ e "+" com mais emojis); embaixo, o cartão de ações (só o que vale para aquela mensagem).
  * - Fecha tocando fora, com ESC ou arrastando para baixo no celular.
@@ -17,8 +21,8 @@
   const msgs = $('msgs');
   if (!msgs) return;
 
-  const SEGURAR_MS = 400;
-  const ANDOU_PX = 8;
+  const SEGURAR_MS = 350;
+  const ANDOU_PX = 10;
   const RAPIDOS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '✅'];
 
   const tr = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -48,28 +52,56 @@
   /* toque longo: sem o menu do iOS (copiar/consultar) por cima do nosso, sem seleção no celular */
   #msgs .bal { -webkit-touch-callout: none; }
   @media (pointer: coarse) { #msgs .bal { -webkit-user-select: none; user-select: none; } }
-  #msgs .bal.mm-segurando { filter: brightness(.94); transition: filter .25s ease; }
-  html[data-tema="escuro"] #msgs .bal.mm-segurando { filter: brightness(1.12); }
+  /* segurando: o balão afunda de leve (só transform) */
+  #msgs .bal.mm-segurando { transform: scale(.97); transition: transform .2s cubic-bezier(.2,.8,.2,1); }
+  #msgs .bal.rec.mm-segurando { transform-origin: left center; } #msgs .bal.env.mm-segurando { transform-origin: right center; }
+  #msgs .bal.mm-original { opacity: 0 !important; }
+  /* setinha do canto do balão (computador, ao passar o mouse) */
+  .mm-seta { all: unset; box-sizing: border-box; position: absolute; top: 3px; right: 3px; z-index: 2; width: 26px; height: 22px; border-radius: 0 6px 0 12px; display: grid; place-items: center; cursor: pointer;
+    color: var(--sub); background: radial-gradient(circle at 70% 30%, var(--mm-seta-fundo, var(--recebida)) 55%, transparent 80%); opacity: 0; transform: translateY(-2px); transition: opacity .12s ease, transform .12s ease; }
+  .bal.env > .mm-seta { --mm-seta-fundo: var(--enviada); }
+  .bal.midia > .mm-seta { color: #fff; --mm-seta-fundo: rgba(0,0,0,.35); }
+  .mm-seta svg { width: 18px; height: 18px; }
+  .mm-seta.mm-ver, .mm-seta:focus-visible { opacity: 1; transform: none; }
+  .mm-seta:focus-visible { outline: 2px solid var(--marca-azul, #106ebe); outline-offset: 1px; }
 
   /* ---------- menu ---------- */
-  .mm-fundo { position: fixed; inset: 0; z-index: 2147482000; background: rgba(8,26,46,.30); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1);
-    touch-action: none; overscroll-behavior: contain; animation: mm-fundo .16s ease both; -webkit-tap-highlight-color: transparent; }
-  html[data-tema="escuro"] .mm-fundo { background: rgba(0,8,18,.55); }
-  .mm-fundo.mm-saindo { animation: mm-sai .12s ease both; }
-  @keyframes mm-fundo { from { opacity: 0; } }
-  @keyframes mm-sai { to { opacity: 0; } }
+  /* camada separada para o desfoque: só a opacidade dela anima (leve para o celular) */
+  .mm-fundo { position: fixed; inset: 0; z-index: 2147482000; touch-action: none; overscroll-behavior: contain; -webkit-tap-highlight-color: transparent; }
+  .mm-veu { position: absolute; inset: 0; background: rgba(8,26,46,.30); -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
+    opacity: 0; transition: opacity .2s ease; }
+  html[data-tema="escuro"] .mm-veu { background: rgba(0,8,18,.55); }
+  .mm-fundo.mm-aberto .mm-veu { opacity: 1; }
+  .mm-fundo.mm-saindo .mm-veu { opacity: 0; transition-duration: .15s; }
   .mm-peca { position: absolute; }
-  .mm-clone { margin: 0 !important; pointer-events: none; transition: transform .22s cubic-bezier(.2,.8,.2,1); box-shadow: 0 10px 34px rgba(4,18,31,.22) !important; }
+  /* o balão "levanta": cresce 3% e ganha sombra (a sombra fica numa camada que só muda a opacidade) */
+  .mm-clone { margin: 0 !important; pointer-events: none; box-shadow: none !important; transform: translateY(var(--mm-dy, 0px)) scale(var(--mm-s, .97));
+    transition: transform .24s cubic-bezier(.34,1.45,.64,1); }
+  .mm-clone.rec { transform-origin: left center; } .mm-clone.env { transform-origin: right center; }
+  .mm-clone::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 14px 36px rgba(4,18,31,.26), 0 2px 6px rgba(4,18,31,.12); opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+  html[data-tema="escuro"] .mm-clone::after { box-shadow: 0 14px 36px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.3); }
+  .mm-fundo.mm-aberto .mm-clone { --mm-s: 1.03; }
+  .mm-fundo.mm-aberto .mm-clone::after { opacity: 1; }
+  .mm-fundo.mm-saindo .mm-clone { --mm-s: 1; transition: transform .15s cubic-bezier(.4,0,.2,1); }
+  .mm-fundo.mm-saindo .mm-clone::after { opacity: 0; transition-duration: .15s; }
   .mm-clone.mm-corta { overflow: hidden; -webkit-mask-image: linear-gradient(#000 calc(100% - 28px), transparent); mask-image: linear-gradient(#000 calc(100% - 28px), transparent); }
-  .mm-clone .encaminhar, .mm-clone .mm-reacoes { display: none !important; }
-  .mm-entra { animation: mm-entra .2s cubic-bezier(.2,.8,.2,1) both; }
-  @keyframes mm-entra { from { opacity: 0; transform: scale(.86); } }
-  @media (prefers-reduced-motion: reduce) { .mm-fundo, .mm-entra, .mm-fundo.mm-saindo { animation: none; } .mm-clone { transition: none; } }
+  .mm-clone .encaminhar, .mm-clone .mm-reacoes, .mm-clone .mm-seta { display: none !important; }
+  /* pílula e cartão entram com mola curta e saem rápido */
+  .mm-pilula.mm-entra, .mm-cartao.mm-entra { opacity: 0; transform: translateY(var(--mm-de, 8px)) scale(.82); transition: opacity .16s ease, transform .24s cubic-bezier(.34,1.56,.64,1); }
+  .mm-cartao.mm-entra { --mm-de: -6px; transition-delay: .02s; }
+  .mm-fundo.mm-aberto .mm-entra { opacity: 1; transform: none; }
+  .mm-fundo.mm-saindo .mm-entra { opacity: 0; transform: scale(.92); transition: opacity .12s ease, transform .15s ease; transition-delay: 0s; }
+  @media (prefers-reduced-motion: reduce) {
+    .mm-veu, .mm-clone, .mm-clone::after, .mm-pilula.mm-entra, .mm-cartao.mm-entra, .mm-fundo.mm-saindo .mm-clone, .mm-fundo.mm-saindo .mm-entra { transition: none !important; }
+    .mm-fundo.mm-aberto .mm-clone, .mm-fundo.mm-saindo .mm-clone { --mm-s: 1; }
+    #msgs .bal.mm-segurando { transform: none; transition: none; }
+  }
 
   .mm-pilula { display: flex; align-items: center; gap: 2px; padding: 5px 6px; border-radius: 999px; background: var(--fundo); box-shadow: 0 10px 34px rgba(4,18,31,.24); transform-origin: bottom center; }
   .mm-pilula button { all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; line-height: 1;
     font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; transition: transform .1s ease; }
-  .mm-pilula button:hover, .mm-pilula button:focus-visible { background: var(--hover); transform: scale(1.12); }
+  .mm-pilula button:focus-visible { background: var(--hover); transform: scale(1.12); }
+  @media (hover: hover) { .mm-pilula button:hover { background: var(--hover); transform: scale(1.12); } }
   .mm-pilula button[aria-pressed="true"] { background: color-mix(in srgb, var(--marca-azul, #106ebe) 18%, transparent); }
   .mm-pilula .mm-mais { font-size: 0; color: var(--sub); background: var(--painel); }
   .mm-pilula .mm-mais svg { width: 22px; height: 22px; }
@@ -81,7 +113,8 @@
   .mm-op { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 16px;
     font: 400 16px/21px var(--fonte, inherit); color: var(--texto); border-bottom: 1px solid var(--linha); }
   .mm-op:last-child { border-bottom: 0; }
-  .mm-op:hover, .mm-op:focus-visible { background: var(--hover); }
+  .mm-op:focus-visible, .mm-op:active { background: var(--hover); }
+  @media (hover: hover) { .mm-op:hover { background: var(--hover); } } /* no celular o toque não deixa a opção "acesa" */
   .mm-op svg { width: 21px; height: 21px; flex: none; color: var(--icone, var(--texto)); }
   .mm-op.mm-perigo, .mm-op.mm-perigo svg { color: #e5252a; }
   html[data-tema="escuro"] .mm-op.mm-perigo, html[data-tema="escuro"] .mm-op.mm-perigo svg { color: #ff6b6b; }
@@ -215,25 +248,25 @@
   }
 
   // ------------------------------------------------------------ gesto: segurar
-  const G = { timer: 0, bal: null, x: 0, y: 0, pid: null, engolirAte: 0 };
+  const G = { timer: 0, bal: null, x: 0, y: 0, pid: null, engolirAte: 0, dedo: null, dedoAte: 0 };
   const cancelar = () => { clearTimeout(G.timer); G.timer = 0; G.bal?.classList.remove('mm-segurando'); G.bal = null; };
   msgs.addEventListener('pointerdown', (e) => {
     if (menu.aberto) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const bal = e.target.closest('#msgs .bal');
-    if (!bal || !bal.dataset.id || e.target.closest('a[href], input, textarea, select, video[controls], .mm-reacoes, .mm-cit')) return;
+    if (!bal || !bal.dataset.id || e.target.closest('a[href], input, textarea, select, video[controls], .mm-reacoes, .mm-cit, .mm-seta')) return;
     cancelar();
     G.bal = bal; G.x = e.clientX; G.y = e.clientY; G.pid = e.pointerId;
     G.timer = setTimeout(() => {
       const alvo = G.bal; cancelar();
       if (!alvo || !alvo.isConnected) return;
-      G.engolirAte = Date.now() + 800;
+      G.dedo = e.pointerId; G.dedoAte = Date.now() + 8000; // até este dedo sair da tela, nenhum clique conta (nem o que o soltar gera)
       try { if (e.pointerType === 'mouse') getSelection()?.removeAllRanges(); } catch {}
-      try { navigator.vibrate?.(12); } catch {}
+      try { navigator.vibrate?.(10); } catch {}
       abrirMenu(alvo);
     }, SEGURAR_MS);
-    // um pouquinho antes de abrir, o balão escurece (o dedo sente que "pegou")
-    setTimeout(() => { if (G.bal === bal && G.timer) bal.classList.add('mm-segurando'); }, 160);
+    // um pouquinho antes de abrir, o balão afunda de leve (o dedo sente que "pegou")
+    setTimeout(() => { if (G.bal === bal && G.timer) bal.classList.add('mm-segurando'); }, 120);
   });
   msgs.addEventListener('pointermove', (e) => {
     if (!G.timer || e.pointerId !== G.pid) return;
@@ -248,37 +281,50 @@
     e.preventDefault();
     cancelar();
     if (menu.aberto) return;
-    G.engolirAte = Date.now() + 800;
     abrirMenu(bal);
   });
   // O clique que vem logo depois do segurar não faz mais nada (nem o "Ouvir/Copiar", nem tocar o áudio).
   document.addEventListener('click', (e) => {
-    if (Date.now() < G.engolirAte && !e.target.closest('.mm-fundo')) { e.preventDefault(); e.stopPropagation(); G.engolirAte = 0; }
+    if ((G.dedo !== null && Date.now() < G.dedoAte) || Date.now() < G.engolirAte) { e.preventDefault(); e.stopPropagation(); G.engolirAte = 0; }
   }, true);
+  const dedoSaiu = (e) => { if (e.pointerId === G.dedo) { G.dedo = null; G.engolirAte = Date.now() + 350; } };
+  addEventListener('pointerup', dedoSaiu, true);
+  addEventListener('pointercancel', dedoSaiu, true);
 
   // ------------------------------------------------------------ o menu
   const menu = { aberto: false, fundo: null, bal: null, m: null, clone: null, pilula: null, cartao: null, rTopo: 0, tecla: null };
 
+  const calmo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   function fechar() {
     if (!menu.aberto) return;
     menu.aberto = false;
-    const f = menu.fundo;
+    const f = menu.fundo, clone = menu.clone, bal = menu.bal;
     removeEventListener('keydown', menu.tecla, true);
     removeEventListener('resize', fechar);
-    if (f) { f.classList.add('mm-saindo'); setTimeout(() => f.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 120); }
+    const mostrarBalao = () => { bal?.classList.remove('mm-original'); msgs.querySelectorAll('.bal.mm-original').forEach((b) => b.classList.remove('mm-original')); };
+    if (f) {
+      // o balão volta (encolhendo) para o lugar de verdade dele, e o resto some em ~150 ms
+      if (clone && bal?.isConnected) {
+        const rb = bal.getBoundingClientRect();
+        clone.style.transition = ''; clone.style.setProperty('--mm-dy', Math.round(rb.top - (parseFloat(clone.style.top) || 0)) + 'px');
+      }
+      f.classList.remove('mm-aberto'); f.classList.add('mm-saindo');
+      setTimeout(() => { mostrarBalao(); f.remove(); }, calmo() ? 0 : 150);
+    } else mostrarBalao();
     menu.fundo = menu.bal = menu.m = menu.clone = menu.pilula = menu.cartao = null;
   }
 
   function abrirMenu(bal) {
     const m = mensagem(bal.dataset.id);
-    if (!m) return;
+    if (!m || menu.aberto) return;
+    esconderSeta();
     window.SintoniaConversaExtras?.fecharAcoes?.();
     document.querySelectorAll('.bal-acoes').forEach((x) => { x.hidden = true; });
     menu.aberto = true; menu.bal = bal; menu.m = m;
     const r = bal.getBoundingClientRect();
-    const fundo = el('div', { class: 'mm-fundo', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Ações da mensagem' });
+    const fundo = el('div', { class: 'mm-fundo', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Ações da mensagem' }, el('div', { class: 'mm-veu' }));
     const clone = bal.cloneNode(true);
-    clone.classList.remove('mm-segurando', 'lendo', 'mm-pisca'); clone.classList.add('mm-peca', 'mm-clone');
+    clone.classList.remove('mm-segurando', 'lendo', 'mm-pisca', 'mm-original'); clone.classList.add('mm-peca', 'mm-clone');
     clone.removeAttribute('data-id'); clone.setAttribute('aria-hidden', 'true');
     clone.style.width = r.width + 'px'; clone.style.maxWidth = 'none'; clone.style.left = r.left + 'px'; clone.style.top = r.top + 'px';
     const p = possiveis(m, bal);
@@ -288,10 +334,14 @@
     preencher(cartao, opcoesPrincipais(m, p));
     fundo.append(clone, ...(pilula ? [pilula] : []), cartao);
     document.body.append(fundo);
+    bal.classList.add('mm-original'); // o de verdade some: quem aparece é o clone, nítido por cima do desfoque
     posicionar(true);
+    fundo.getBoundingClientRect();
+    requestAnimationFrame(() => { if (menu.fundo === fundo) { clone.style.transition = ''; clone.style.setProperty('--mm-dy', '0px'); fundo.classList.add('mm-aberto'); } });
     // tocar fora (no fundo ou no balão) fecha; arrastar para baixo também
-    fundo.addEventListener('click', (e) => { if (e.target === fundo || e.target.closest('.mm-clone')) fechar(); });
-    fundo.addEventListener('contextmenu', (e) => { e.preventDefault(); if (e.target === fundo) fechar(); });
+    const foraDoMenu = (t) => t === fundo || t.classList?.contains('mm-veu');
+    fundo.addEventListener('click', (e) => { if (foraDoMenu(e.target) || e.target.closest('.mm-clone')) fechar(); });
+    fundo.addEventListener('contextmenu', (e) => { e.preventDefault(); if (foraDoMenu(e.target)) fechar(); });
     arrastarParaFechar(fundo);
     menu.tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(); } };
     addEventListener('keydown', menu.tecla, true);
@@ -319,12 +369,12 @@
     const lado = (w) => Math.min(Math.max(direita ? r.right - w : r.left, 8), vw - w - 8);
     if (pilula) { pilula.style.top = topo + 'px'; pilula.style.left = lado(pw) + 'px'; pilula.style.transformOrigin = direita ? 'bottom right' : 'bottom left'; }
     cartao.style.top = (balTopo + bh + gap) + 'px'; cartao.style.left = lado(cw) + 'px'; cartao.style.transformOrigin = direita ? 'top right' : 'top left';
-    // o balão desliza do lugar de verdade para o lugar novo
+    // O balão fica onde estava. Se o menu não cabe, a conversa rola o necessário (o balão de verdade acompanha)
+    // e o clone desliza junto, do lugar antigo para o novo.
     clone.style.top = balTopo + 'px';
-    if (primeira && Math.abs(balTopo - r.top) > 1) {
-      clone.style.transition = 'none'; clone.style.transform = `translateY(${r.top - balTopo}px)`;
-      clone.getBoundingClientRect();
-      requestAnimationFrame(() => { clone.style.transition = ''; clone.style.transform = ''; });
+    if (primeira) {
+      clone.style.transition = 'none'; clone.style.setProperty('--mm-dy', Math.round(r.top - balTopo) + 'px');
+      if (Math.abs(balTopo - r.top) > 1) { try { msgs.scrollBy({ top: r.top - balTopo, behavior: calmo() ? 'auto' : 'smooth' }); } catch { msgs.scrollTop += r.top - balTopo; } }
     }
   }
 
@@ -362,7 +412,7 @@
   }
 
   function preencher(cartao, filhos, classe = '') {
-    cartao.className = 'mm-peca mm-cartao' + (classe ? ' ' + classe : '');
+    cartao.className = 'mm-peca mm-cartao mm-entra' + (classe ? ' ' + classe : '');
     cartao.replaceChildren(...filhos.filter(Boolean));
     if (menu.aberto && menu.clone) posicionar(false);
   }
@@ -715,7 +765,29 @@
   }
 
   // conversa trocada: fecha o menu e a faixa de resposta
-  new MutationObserver(() => { if (menu.aberto && menu.bal && !menu.bal.isConnected) { const novo = msgs.querySelector(`.bal[data-id="${CSS.escape(menu.m?.id || '')}"]`); if (novo) menu.bal = novo; else fechar(); } }).observe(msgs, { childList: true });
+  new MutationObserver(() => { if (menu.aberto && menu.bal && !menu.bal.isConnected) { const novo = msgs.querySelector(`.bal[data-id="${CSS.escape(menu.m?.id || '')}"]`); if (novo) { menu.bal = novo; novo.classList.add('mm-original'); } else fechar(); } }).observe(msgs, { childList: true });
+
+  // ---- setinha no canto do balão ao passar o mouse (computador), como no WhatsApp Web
+  const seta = el('button', { type: 'button', class: 'mm-seta', title: 'Mais opções', 'aria-label': 'Abrir o menu da mensagem', html: tr('<path d="m7 10 5 5 5-5"/>') });
+  function esconderSeta() { seta.classList.remove('mm-ver'); seta.remove(); }
+  msgs.addEventListener('pointerover', (e) => {
+    if (e.pointerType !== 'mouse' || menu.aberto) return;
+    const bal = e.target.closest?.('#msgs .bal');
+    if (!bal || !bal.dataset.id || bal.querySelector(':scope > .mm-apagada')) { if (!e.target.closest?.('.mm-seta')) esconderSeta(); return; }
+    if (seta.parentElement === bal) return;
+    seta.classList.remove('mm-ver'); bal.append(seta);
+    requestAnimationFrame(() => { if (seta.parentElement === bal) seta.classList.add('mm-ver'); });
+  });
+  msgs.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') esconderSeta(); });
+  seta.addEventListener('pointerdown', (e) => e.stopPropagation());
+  seta.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const bal = seta.parentElement; if (bal) abrirMenu(bal);
+  });
+  // Com o menu aberto, o dedo que ainda está na tela não rola a conversa por baixo (só as listas de dentro do menu rolam).
+  document.addEventListener('touchmove', (e) => {
+    if (menu.aberto && e.cancelable && !e.target.closest?.('.mm-grade, .mm-corpo, .mm-emo-abas')) e.preventDefault();
+  }, { passive: false });
 
   window.SintoniaMenuMensagem = {
     decorar, depois, abrirMenu, fechar, listaFavoritas, limparResposta,

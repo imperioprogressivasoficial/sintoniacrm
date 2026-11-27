@@ -147,12 +147,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .bal-acoes svg { width: 19px; height: 19px; }
   #msgs .bal:not(.midia):not(.aud) { cursor: pointer; }
 
-  /* ---------- microfone: segurar para gravar ---------- */
-  #enviar { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  .gravando[data-modo="segurar"] #grav-cancelar { opacity: .35; pointer-events: none; }
-  .gravando[data-modo="segurar"] .dica { text-indent: calc(-1 * var(--arrasto, 0px)); overflow: hidden; white-space: nowrap; font-weight: 600; }
-  .gravando[data-modo="segurar"] #grav-enviar { animation: micVivo 1.2s ease-in-out infinite; box-shadow: 0 0 0 6px color-mix(in srgb, var(--marca-azul) 22%, transparent); }
-  @keyframes micVivo { 50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--marca-azul) 10%, transparent); } }
+  /* microfone (segurar para gravar): fica em telas/gravar-audio.js */
   `;
   document.head.append(el('style', { id: 'conversa-extras-css', text: CSS }));
 
