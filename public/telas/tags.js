@@ -62,7 +62,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .tgs-bt:focus-visible { outline: 2px solid var(--marca-menta); outline-offset: 2px; }
   .tgs-bt[disabled] { opacity: .5; pointer-events: none; }
   .tgs-bt svg { width: 17px; height: 17px; }
-  @media (min-width: 761px) { .tgs-dlg { margin: auto; } .tgs-folha { width: min(460px, calc(100vw - 32px)); border-radius: 22px; padding: 20px; } }
+  @media (min-width: 761px) { .tgs-dlg { margin: auto; width: fit-content; } /* vistoria: o dialog global (440px) cortava a folha de 460px e o "Pronto" encostava na borda */ .tgs-folha { width: min(460px, calc(100vw - 32px)); border-radius: 22px; padding: 20px; } }
   @media (max-width: 760px) { .tgs-dlg { margin: auto 0 0; width: 100vw; } .tgs-folha { width: 100vw; border-radius: 22px 22px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); } .tgs-lista { max-height: 50vh; } }
   .tgs-form { display: grid; gap: 12px; }
   .tgs-form label { display: grid; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--sub); }

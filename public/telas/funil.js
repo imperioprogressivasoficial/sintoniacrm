@@ -229,6 +229,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fn-origem .ra-ic, .fn-origem svg { width: 15px; height: 15px; flex: none; }
   .fn-pe { justify-content: space-between; }
   .fn-situacao { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-situacao > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; } /* vistoria: "Sem resposta há 2 dias" cortava no meio da letra */
   .fn-situacao i { width: 7px; height: 7px; border-radius: 50%; flex: none; background: currentColor; }
   .fn-situacao.ambar { color: #9a6700; } html[data-tema="escuro"] .fn-situacao.ambar { color: #ffd34d; }
   .fn-situacao.vermelho { color: #c62828; } html[data-tema="escuro"] .fn-situacao.vermelho { color: #ff8a80; }

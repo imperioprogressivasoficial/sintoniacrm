@@ -879,7 +879,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         i.podeAbrir ? el('button', { class: 'ag-bt ag-cheio', type: 'button', html: IC.conversa + '<span>Abrir conversa</span>', onclick: () => { d.close(); s.ui.abrir(i.conversaId); } }) : null,
         i.podeAbrir && s.ui.agendar ? el('button', { class: 'ag-bt ag-borda', type: 'button', html: IC.cal + '<span>Agendar outro horário</span>', onclick: () => { d.close(); s.ui.agendar(i.conversaId); } }) : null),
       el('div', { class: 'ag-aviso', text: i.podeAbrir
-        ? `Para remarcar ou cancelar, combine com a cliente na conversa e ajuste no ${doSistema ? i.por : 'Trinks'}.`
+        ? `Para remarcar ou cancelar, combine com a cliente na conversa e ajuste no ${doSistema ? i.por : 'sistema de agenda da unidade'}.` /* vistoria: não fixar "Trinks" (qualquer empresa) */
         : !i.conversaId ? 'Esta cliente ainda não tem conversa na Sintonia.' : 'Esta conversa é de outra atendente. Você vê o horário, mas não abre a conversa.' }));
     d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
     d.addEventListener('close', () => d.remove());
