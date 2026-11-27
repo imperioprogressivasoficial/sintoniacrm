@@ -174,6 +174,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/balao-fantasma.js': { arquivo: 'telas/balao-fantasma.js', tipo: 'text/javascript; charset=utf-8' }, // balao-fantasma
   '/telas/menu-mensagem.js': { arquivo: 'telas/menu-mensagem.js', tipo: 'text/javascript; charset=utf-8' }, // menu-mensagem
   '/telas/emoji-escrever.js': { arquivo: 'telas/emoji-escrever.js', tipo: 'text/javascript; charset=utf-8' }, // vistoria: emoji na barra de escrever (computador)
+  '/telas/gravar-audio.js': { arquivo: 'telas/gravar-audio.js', tipo: 'text/javascript; charset=utf-8' }, // gestos-whats
   '/telas/emojis-dados.js': { arquivo: 'telas/emojis-dados.js', tipo: 'text/javascript; charset=utf-8' }, // todos os emojis com nomes em português (só quando o seletor abre)
   '/telas/distribuicao.js': { arquivo: 'telas/distribuicao.js', tipo: 'text/javascript; charset=utf-8' }, // automacao-vendas
   // grupos: Conversas de grupo (grupos do WhatsApp) e a troca Conversas · Grupos · Equipe no celular.
