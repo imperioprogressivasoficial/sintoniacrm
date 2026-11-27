@@ -134,8 +134,8 @@ describe('chaves e SSRF (funções puras)', () => {
     expect(g.chave).toMatch(/^sk_[a-z2-9]{10}_[A-Za-z0-9_-]{43}$/);
     expect(prefixoDe(g.chave)).toBe(g.prefixo);
     expect(hashConfere(g.chave, g.hash)).toBe(true);
-    expect(hashConfere(`${g.chave.slice(0, -1)}x`, g.hash)).toBe(false);
-    expect(g.hash).not.toContain(g.chave.split('_')[2]!);
+    expect(hashConfere(`${g.chave.slice(0, -1)}${g.chave.endsWith('x') ? 'y' : 'x'}`, g.hash)).toBe(false); // teste instável corrigido: a chave podia já terminar em x
+    expect(g.hash).not.toContain(g.chave.slice(14));
     expect(mascarar(g.chave)).not.toContain(g.chave.slice(15, 40));
   });
 
