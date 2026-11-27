@@ -120,6 +120,11 @@ export const ItemEquipe = z.object({
     .max(50)
     .default([])
     .transform((l) => [...new Set(l)]),
+  /**
+   * Senha provisória (só o hash scrypt, nunca a senha): vale enquanto a pessoa nunca criou a dela. No primeiro login
+   * o app obriga a trocar pela senha que ela quiser (trocarSenha). Depois de aplicada, não é aplicada de novo.
+   */
+  senhaProvisoriaHash: z.string().regex(/^scrypt\$/).max(300).optional(),
 });
 export type ItemEquipe = z.infer<typeof ItemEquipe>;
 
@@ -165,8 +170,18 @@ export async function semearEquipe(o: {
       continue;
     }
     const p = v.data;
-    if (await o.contas.buscarPorEmail(p.email)) {
+    const existente = await o.contas.buscarPorEmail(p.email);
+    if (existente) {
       r.existentes.push(p.email);
+      // Senha provisória pedida para quem ainda não criou a senha dela: aplica uma vez e obriga a trocar ao entrar.
+      if (p.senhaProvisoriaHash && existente.semSenha) {
+        await o.contas.definirSenha(existente.id, p.senhaProvisoriaHash);
+        await o.acessos?.salvarExtras(existente.id, { trocarSenha: true });
+        await o.acessos
+          ?.auditar({ empresaId: existente.empresaId, autorId: null, autorNome: 'Sistema', alvoId: existente.id, alvoNome: existente.nome, acao: 'recebeu senha provisória (troca obrigatória ao entrar)', em: (o.agora ?? (() => new Date()))() })
+          .catch(() => undefined);
+        log(`Equipe inicial: senha provisória aplicada para ${disfarce(p.email)} (troca obrigatória ao entrar).`);
+      }
       continue;
     }
     const fora = p.unidades.filter((u) => !existeUnidade(u, o.empresaId));
@@ -179,9 +194,10 @@ export async function semearEquipe(o: {
         papel: p.papel,
         unidades: p.unidades,
         // Senha aleatória que ninguém sabe, até a pessoa criar a dela (primeiro acesso ou convite).
-        senhaHash: await gerarHash(randomBytes(24).toString('base64url')),
-        semSenha: true,
+        senhaHash: p.senhaProvisoriaHash ?? (await gerarHash(randomBytes(24).toString('base64url'))),
+        semSenha: !p.senhaProvisoriaHash,
       });
+      if (p.senhaProvisoriaHash) await o.acessos?.salvarExtras(u.id, { trocarSenha: true });
       r.criados.push(u.email);
       await o.acessos
         ?.auditar({ empresaId: o.empresaId, autorId: null, autorNome: 'Sistema', alvoId: u.id, alvoNome: u.nome, acao: 'cadastrou pela equipe inicial', detalhe: p.papel, em: (o.agora ?? (() => new Date()))() })

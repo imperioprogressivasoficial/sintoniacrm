@@ -310,3 +310,23 @@ describe.each(ambientes)('primeiro-acesso de ponta a ponta ($nome)', (amb) => {
     expect(app.body).toMatch(/\/telas\/foto-perfil\.js\?v=/);
   });
 });
+
+describe('senha provisória da equipe inicial', () => {
+  it('aplica uma vez em quem ainda não criou a senha e obriga a trocar ao entrar', async () => {
+    const contas = new ContasMemoria();
+    const acessos = acessosPara(contas);
+    const base = JSON.stringify([{ nome: 'Ana Lima', email: 'ana@exemplo.com', papel: 'atendente', unidades: ['sumare'] }]);
+    await semearEquipe({ contas, acessos, empresaId: 'imperio', bruto: base });
+    const hash = await gerarHash('Provisoria2026xyz');
+    const com = JSON.stringify([{ nome: 'Ana Lima', email: 'ana@exemplo.com', papel: 'atendente', unidades: ['sumare'], senhaProvisoriaHash: hash }]);
+    await semearEquipe({ contas, acessos, empresaId: 'imperio', bruto: com });
+    const u = await contas.buscarPorEmail('ana@exemplo.com');
+    expect(u?.senhaHash).toBe(hash);
+    expect(u?.semSenha).toBe(false);
+    expect((await acessos!.extras(u!.id)).trocarSenha).toBe(true);
+    // Já trocou a senha: a semente não mexe de novo.
+    await contas.definirSenha(u!.id, await gerarHash('MinhaSenha2026abc'));
+    await semearEquipe({ contas, acessos, empresaId: 'imperio', bruto: com });
+    expect((await contas.buscarPorEmail('ana@exemplo.com'))?.senhaHash).not.toBe(hash);
+  });
+});
