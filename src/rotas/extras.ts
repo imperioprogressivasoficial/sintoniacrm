@@ -8,7 +8,7 @@ import type { ArmazemTags, Tags } from '../tags/tags.js';
 import { ArmazemLeadsMemoria, ArmazemLeadsPostgres, type ArmazemLeads } from '../leads/armazem.js';
 import { Leads as LeadsClasse } from '../leads/leads.js';
 import { Relatorios as RelatoriosClasse } from '../relatorios/relatorios.js';
-import { ehGestor, escopoDe, podeVer, type EscopoVisao } from '../auth/acesso.js';
+import { ehGestor, escopoDe, noEscopo, podeVer, type EscopoVisao } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import type { Contas } from '../auth/contas.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -147,7 +147,14 @@ export function registrarExtras(app: FastifyInstance, o: OpcoesExtras): void {
 
   app.get('/api/leads/conferir', async (req) => {
     const q = z.object({ telefone: z.string().max(40).optional(), email: z.string().max(200).optional() }).parse(req.query);
-    return { duplicata: await o.leads.conferirDuplicata(q.telefone, q.email) };
+    const d = await o.leads.conferirDuplicata(q.telefone, q.email);
+    // seguranca-abertura: pelo e-mail, o telefone de um contato que a pessoa não vê (outra unidade) não sai daqui.
+    if (d && d.motivo === 'email' && req.usuario) {
+      const esc = escopo(req);
+      const ve = (await o.repo.listarConversas({ empresaId: o.empresaId, telefone: d.telefone, incluirArquivadas: true })).some((c) => noEscopo(esc, c));
+      if (!ve) return { duplicata: { telefone: null, motivo: d.motivo } };
+    }
+    return { duplicata: d };
   });
 
   app.get('/api/leads/duplicatas', async (req) => {

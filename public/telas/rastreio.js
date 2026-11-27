@@ -188,8 +188,11 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const linhaT = (rot, tec, v) => (v ? [el('dt', {}, rot, el('small', { class: 'ra-tec', text: tec })), el('dd', { text: v })] : []);
     const filhos = [cab];
     if (o.canal === 'anuncio_meta') {
-      const img = o.anuncioMiniatura || o.anuncioMidiaUrl;
-      const criativo = el(o.anuncioUrl ? 'a' : 'div', { class: 'ra-criativo', ...(o.anuncioUrl ? { href: o.anuncioUrl, target: '_blank', rel: 'noopener noreferrer', title: 'Abrir o anúncio' } : {}) },
+      /* seguranca-abertura: só endereço http(s) vira link ou imagem (nunca javascript:) */
+      const web = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u) ? u : '');
+      const img = web(o.anuncioMiniatura) || web(o.anuncioMidiaUrl);
+      const urlAnuncio = web(o.anuncioUrl);
+      const criativo = el(urlAnuncio ? 'a' : 'div', { class: 'ra-criativo', ...(urlAnuncio ? { href: urlAnuncio, target: '_blank', rel: 'noopener noreferrer', title: 'Abrir o anúncio' } : {}) },
         img ? el('img', { src: img, alt: 'Criativo do anúncio', loading: 'lazy', referrerpolicy: 'no-referrer', onerror: (e) => e.target.replaceWith(el('span', { class: 'ra-sem', text: '📣' })) }) : el('span', { class: 'ra-sem', text: '📣' }),
         el('div', {}, el('b', { text: o.anuncioTitulo || o.adNome || 'Anúncio' }), o.anuncioTexto ? el('small', { text: o.anuncioTexto }) : null));
       filhos.push(criativo);
