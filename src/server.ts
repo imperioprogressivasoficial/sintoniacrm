@@ -715,8 +715,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
           adId: z.string().regex(/^\d{5,25}$/).optional(),
           titulo: z.string().trim().max(200).optional(),
           texto: z.string().trim().max(500).optional(),
-          url: z.string().url().max(500).optional(),
-          miniaturaUrl: z.string().url().max(1000).optional(),
+          /* seguranca-abertura: só http(s) — o endereço vira link na Origem do lead (javascript: rodaria no clique) */
+          url: z.string().url().max(500).regex(/^https?:\/\//i, 'Use um endereço http(s).').optional(),
+          miniaturaUrl: z.string().url().max(1000).regex(/^https?:\/\//i, 'Use um endereço http(s).').optional(),
           ctwaClid: z.string().max(300).optional(),
         })
         .optional(),
@@ -724,7 +725,11 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     .refine((b) => Boolean(b.texto) || Boolean(b.midia), 'Escreva a mensagem ou mande um arquivo');
   app.post('/api/teste/cliente', { bodyLimit: 8 * 1024 * 1024 }, async (req, reply) => {
     if (!d.clienteTeste) return reply.code(404).send({ erro: 'Simulador desligado' });
-    await d.clienteTeste(ClienteTeste.parse(req.body));
+    const b = ClienteTeste.parse(req.body);
+    // seguranca-abertura: o simulador cria conversa; só nas unidades que a pessoa atende (como "Nova conversa").
+    const alcance = escopoDe(req.usuario).unidades;
+    if (alcance && !alcance.includes(b.unidade)) throw proibido('Você não atende essa unidade.');
+    await d.clienteTeste(b);
     return { ok: true };
   });
 

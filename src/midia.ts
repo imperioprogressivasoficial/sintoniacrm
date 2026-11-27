@@ -87,6 +87,24 @@ export function nomeParaCabecalho(nome: string): string {
   return `filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nome)}`;
 }
 
+/**
+ * seguranca-abertura: tipos que o navegador mostra dentro da página sem rodar nada (foto, áudio, vídeo, PDF).
+ * HTML, SVG, XHTML, XML e o resto vão sempre como download.
+ */
+export const EXIBIVEL_SEGURO = /^(image\/(jpeg|png|gif|webp|heic|heif|avif)|audio\/[\w.+-]+|video\/[\w.+-]+|application\/pdf)$/;
+
+/** Cabeçalhos para devolver um arquivo que alguém enviou: nada dele roda no endereço do app (sandbox), e tipo perigoso vira download. */
+export function cabecalhosArquivo(mimetype: string, nome = 'arquivo'): Record<string, string> {
+  const base = (mimetype.split(';')[0] ?? '').trim().toLowerCase();
+  const exibe = EXIBIVEL_SEGURO.test(base);
+  return {
+    'content-type': exibe ? mimetype : 'application/octet-stream',
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': "sandbox; default-src 'none'; img-src 'self'; media-src 'self'",
+    'content-disposition': `${exibe ? 'inline' : 'attachment'}; ${nomeParaCabecalho(nome)}`,
+  };
+}
+
 /** O arquivo existe, mas passa do limite de guardar: ficam só os dados dele. */
 export class ErroMidiaGrande extends Error {
   constructor(readonly tamanho: number) {

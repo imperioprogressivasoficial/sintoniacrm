@@ -65,6 +65,8 @@ export function politicaCsp(o: { embutivel?: boolean } = {}): string {
 
 /** Páginas que outro site pode mostrar dentro dele (link de agendamento da empresa). */
 const EMBUTIVEIS = /^\/(r|reservar)\//;
+/** Páginas que usam câmera e microfone (o app). */
+const APP_COM_MIDIA = /^\/app(\/|$)/;
 const MUDA = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const GESTAO = new Set(['admin', 'direcao']);
 
@@ -147,7 +149,9 @@ export function registrarProtecao(app: FastifyInstance, o: OpcoesProtecao): void
     };
     def('x-content-type-options', 'nosniff');
     def('referrer-policy', 'strict-origin-when-cross-origin');
-    def('permissions-policy', 'camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()');
+    // seguranca-abertura: câmera e microfone só no app (/app: áudio e foto na conversa); páginas públicas, login e o resto, nada.
+    const midia = APP_COM_MIDIA.test(caminhoDe(req)) ? '(self)' : '()';
+    def('permissions-policy', `camera=${midia}, microphone=${midia}, geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=()`);
     if (o.https || req.protocol === 'https') def('strict-transport-security', 'max-age=31536000; includeSubDomains');
     if (String(reply.getHeader('content-type') ?? '').startsWith('text/html')) {
       const embutivel = EMBUTIVEIS.test(caminhoDe(req));

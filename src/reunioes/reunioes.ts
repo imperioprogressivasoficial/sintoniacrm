@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { z } from 'zod';
 import type { AvisosReuniao } from './avisos.js';
+import { ehGestor } from '../auth/acesso.js';
 
 /**
  * Link de agendamento (como o Cal.com, dentro da Sintonia): a equipe cria um link ("Reunião de 30 min",
@@ -123,15 +124,32 @@ export function registrarReunioes(
     return req.usuario.empresaId;
   };
   const Id = z.string().uuid();
+  /* seguranca-abertura: links e reuniões não têm unidade. Atendente e recepcionista (sem gestão) só veem e mexem nos
+     links que elas criaram e nas reuniões desses links ou de conversas que elas já veem; a gestão segue vendo tudo. */
+  const soOsDela = (req: FastifyRequest) => Boolean(req.usuario && !ehGestor(req.usuario));
+  const reuniaoVisivel = async (req: FastifyRequest, r: { criado_por?: unknown; conversa_id?: unknown }) =>
+    !soOsDela(req) ||
+    r.criado_por === req.usuario!.id ||
+    Boolean(r.conversa_id && o.podeAbrir && (await o.podeAbrir(req, String(r.conversa_id)).catch(() => false)));
+  const naoAchou = (msg: string) => Object.assign(new Error(msg), { statusCode: 404 });
 
   // ---------- equipe ----------
   app.get('/api/reunioes', async (req) => {
     const e = empresa(req);
-    const links = (await pool.query('select * from sintonia.links_reuniao where empresa_id = $1 order by criado_em', [e])).rows.map(linhaLink);
-    const proximas = (await pool.query(
-      `select r.id, r.nome, r.telefone, r.email, r.observacao, r.inicio, r.fim, r.status, l.titulo
+    const dela = soOsDela(req);
+    const links = (await pool.query('select * from sintonia.links_reuniao where empresa_id = $1 order by criado_em', [e])).rows
+      .filter((l) => !dela || l.criado_por === req.usuario!.id)
+      .map(linhaLink);
+    const todas = (await pool.query(
+      `select r.id, r.nome, r.telefone, r.email, r.observacao, r.inicio, r.fim, r.status, l.titulo, l.criado_por, r.conversa_id
          from sintonia.reunioes r join sintonia.links_reuniao l on l.id = r.link_id
         where r.empresa_id = $1 and r.fim > $2 order by r.inicio limit 100`, [e, agora()])).rows;
+    const proximas = [];
+    for (const r of todas) {
+      if (!(await reuniaoVisivel(req, r))) continue;
+      const { criado_por: _c, conversa_id: _v, ...resto } = r;
+      proximas.push(resto);
+    }
     return { links, proximas };
   });
   app.post('/api/reunioes/links', async (req) => {
@@ -152,21 +170,27 @@ export function registrarReunioes(
     const r = await pool.query(
       `update sintonia.links_reuniao set titulo=$3, descricao=$4, duracao_min=$5, dias=$6, inicio=$7, fim=$8, antecedencia_h=$9, janela_dias=$10, local=$11, ativo=$12,
               whatsapp_cliente=$13, lembrete_min=$14
-        where id=$1 and empresa_id=$2`,
-      [id, e, d.titulo, d.descricao, d.duracao_min, d.dias, d.inicio, d.fim, d.antecedencia_h, d.janela_dias, d.local, d.ativo, d.whatsapp_cliente, d.lembrete_min]);
-    if (!r.rowCount) throw Object.assign(new Error('Link não encontrado.'), { statusCode: 404 });
+        where id=$1 and empresa_id=$2 and ($15::text is null or criado_por = $15)`,
+      [id, e, d.titulo, d.descricao, d.duracao_min, d.dias, d.inicio, d.fim, d.antecedencia_h, d.janela_dias, d.local, d.ativo, d.whatsapp_cliente, d.lembrete_min, soOsDela(req) ? req.usuario!.id : null]);
+    if (!r.rowCount) throw naoAchou('Link não encontrado.');
     return { ok: true };
   });
   app.delete('/api/reunioes/links/:id', async (req) => {
     const e = empresa(req);
-    await pool.query('delete from sintonia.links_reuniao where id=$1 and empresa_id=$2', [Id.parse((req.params as { id: string }).id), e]);
+    const r = await pool.query('delete from sintonia.links_reuniao where id=$1 and empresa_id=$2 and ($3::text is null or criado_por = $3)', [Id.parse((req.params as { id: string }).id), e, soOsDela(req) ? req.usuario!.id : null]);
+    if (soOsDela(req) && !r.rowCount) throw naoAchou('Link não encontrado.');
     return { ok: true };
   });
   app.post('/api/reunioes/:id/cancelar', async (req) => {
     const e = empresa(req);
+    const id = Id.parse((req.params as { id: string }).id);
+    if (soOsDela(req)) {
+      const { rows } = await pool.query('select l.criado_por, r.conversa_id from sintonia.reunioes r join sintonia.links_reuniao l on l.id = r.link_id where r.id=$1 and r.empresa_id=$2', [id, e]);
+      if (!rows[0] || !(await reuniaoVisivel(req, rows[0]))) throw naoAchou('Reunião não encontrada.');
+    }
     const r = await pool.query(
       `update sintonia.reunioes r set status='cancelada', cancelada_por='equipe', cancelada_em=$3 from sintonia.links_reuniao l where r.id=$1 and r.empresa_id=$2 and l.id = r.link_id and r.status <> 'cancelada' returning r.*, l.titulo, l.local`,
-      [Id.parse((req.params as { id: string }).id), e, agora()]);
+      [id, e, agora()]);
     avisar('cancelado', r.rows[0]);
     if (r.rows[0]) o.avisos?.aoCancelar(String(r.rows[0].id), 'equipe');
     return { ok: true };
@@ -186,6 +210,7 @@ export function registrarReunioes(
         order by r.inicio limit 500`, [e, de, ate]);
     const itens = [];
     for (const r of rows) {
+      if (!(await reuniaoVisivel(req, r))) continue; // seguranca-abertura
       const conversaId = r.conversa_id ? String(r.conversa_id) : null;
       const inicio = new Date(r.inicio), fim = new Date(r.fim);
       itens.push({

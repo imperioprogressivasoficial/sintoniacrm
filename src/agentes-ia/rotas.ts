@@ -183,7 +183,7 @@ export function registrarAgentesIa(app: FastifyInstance, o: OpcoesRotasAgentesIa
   app.post('/api/agentes-ia/:id/aprendizados', async (req, reply) => {
     // A equipe corrige uma resposta (no teste ou na conversa): vira aprendizado pendente para a gestão aprovar.
     const b = z
-      .object({ texto: z.string().trim().min(3).max(600), cliente: z.string().max(2000).optional(), sugestao: z.string().max(4000).optional(), conversaId: z.string().optional() })
+      .object({ texto: z.string().trim().min(3).max(600), cliente: z.string().max(2000).optional(), sugestao: z.string().max(4000).optional(), conversaId: z.string().max(64).optional() })
       .parse(req.body);
     return reply.code(201).send(await o.servico.sugerirAprendizado(id(req), b.texto, { cliente: b.cliente, sugestao: b.sugestao, conversaId: b.conversaId, por: quem(req) }));
   });

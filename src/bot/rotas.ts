@@ -4,7 +4,7 @@ import type { Conversa } from '../domain.js';
 import type { Repositorio } from '../store/repositorio.js';
 import { ehGestor, podeVer } from '../auth/acesso.js';
 import { ehCanalTeste } from '../channels/teste.js';
-import { semPrefixoDataUrl } from '../midia.js';
+import { cabecalhosArquivo, semPrefixoDataUrl } from '../midia.js';
 import { ErroBot, type Bots, type ExecucaoBot, type Fluxo } from './bot.js';
 import { Grafo } from './esquema.js';
 
@@ -188,7 +188,8 @@ export function registrarBots(app: FastifyInstance, o: OpcoesRotasBots): void {
   app.get('/api/bots/midias/:id', async (req, reply) => {
     return comProblemas(reply, async () => {
       const m = await bots.midia(param(req, 'id'));
-      return reply.header('content-type', m.mimetype).header('cache-control', 'private, max-age=86400').header('x-content-type-options', 'nosniff').send(m.conteudo);
+      // seguranca-abertura: SVG/XHTML enviado como "imagem" do bot não roda no endereço do app (vai como download, em sandbox).
+      return reply.headers(cabecalhosArquivo(m.mimetype, m.nome ?? 'arquivo')).header('cache-control', 'private, max-age=86400').send(m.conteudo);
     });
   });
 }
