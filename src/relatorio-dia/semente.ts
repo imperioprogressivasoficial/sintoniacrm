@@ -26,6 +26,8 @@ export async function semearRelatorio(o: {
   /** Pessoa da equipe pelo e-mail: nome, id e o WhatsApp do perfil dela. */
   pessoa?: (email: string) => Promise<{ id: string; nome: string; telefone: string } | undefined>;
   log?: (msg: string, extra?: unknown) => void;
+  /** Rodadas de repetição: só registra quando acontece algo. */
+  silencioso?: boolean;
 }): Promise<{ acrescentados: number; enviadosAgora: number }> {
   const log = o.log ?? (() => undefined);
   const texto = (o.bruto ?? '').trim();
@@ -55,7 +57,7 @@ export async function semearRelatorio(o: {
       }
       numero = numeroDestino(bruto);
     } catch (e) {
-      log(`SINTONIA_RELATORIO_INICIAL: ${d.nome || 'destinatário'} ignorado (${(e as Error).message})`);
+      if (!o.silencioso) log(`SINTONIA_RELATORIO_INICIAL: ${d.nome || 'destinatário'} ignorado (${(e as Error).message})`);
       continue;
     }
     const alvo = { tipo: 'numero' as const, destino: numero, nome: d.nome };
@@ -73,12 +75,15 @@ export async function semearRelatorio(o: {
     await o.armazem.salvarConfig(o.empresaId, cfg, 'Sistema (publicação)');
   }
   let enviadosAgora = 0;
-  if (s.agora && destinos.length) {
+  // "agora" com id em forma de data (AAAA-MM-DD) só vale nesse dia (a semente roda de novo de tempos em tempos).
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bahia' }).format(new Date());
+  const valeHoje = !s.agora || !/^\d{4}-\d{2}-\d{2}$/.test(s.agora.id) || s.agora.id === hoje;
+  if (s.agora && destinos.length && valeHoje) {
     enviadosAgora = await o.servico.enviarAgora(s.agora.relatorio, `agora:${s.agora.id}`, destinos).catch((e) => {
       log('SINTONIA_RELATORIO_INICIAL: o envio de agora falhou', String(e));
       return 0;
     });
   }
-  log(`Relatórios automáticos: ${acrescentados} número(s) acrescentado(s), ${enviadosAgora} enviado(s) agora.`);
+  if (acrescentados || enviadosAgora || !o.silencioso) log(`Relatórios automáticos: ${acrescentados} número(s) acrescentado(s), ${enviadosAgora} enviado(s) agora.`);
   return { acrescentados, enviadosAgora };
 }

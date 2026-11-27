@@ -1203,10 +1203,13 @@ const relatorioDia = new RelatorioDia({
   log,
 });
 /* relatorio-equipe: quem recebe os relatórios (vem do ambiente na publicação) e o envio de agora; espera o WhatsApp conectar */
-setTimeout(() => {
-  void semearRelatorio({ armazem: armazemRelatorioDia, servico: relatorioDia, empresaId: cfg.SINTONIA_EMPRESA_ID, bruto: process.env.SINTONIA_RELATORIO_INICIAL, log,
+// Roda ao subir e a cada 10 min: quem põe o WhatsApp em Minha conta › Perfil depois passa a receber sozinho.
+const rodarSementeRelatorio = (silencioso: boolean) => {
+  void semearRelatorio({ armazem: armazemRelatorioDia, servico: relatorioDia, empresaId: cfg.SINTONIA_EMPRESA_ID, bruto: process.env.SINTONIA_RELATORIO_INICIAL, log, silencioso,
     pessoa: async (email) => { const u = await contas.buscarPorEmail(email); return u ? { id: u.id, nome: u.nome, telefone: (await perfisUsuario.ler(u.id)).telefone ?? '' } : undefined; } }).catch((e) => log('Relatórios automáticos: falha ao aplicar a configuração inicial', String(e)));
-}, 20_000).unref();
+};
+setTimeout(() => rodarSementeRelatorio(false), 20_000).unref();
+setInterval(() => rodarSementeRelatorio(true), 10 * 60_000).unref();
 registrarRelatorioDia(app, {
   servico: relatorioDia,
   armazem: armazemRelatorioDia,
