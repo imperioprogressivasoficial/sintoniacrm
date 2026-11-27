@@ -111,7 +111,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /* primeiro-acesso: chave "Primeiro acesso pelo link", o link para a equipe e quem ainda não entrou */
   .ac-pa-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
   .ac-pa-cab h2 { flex: 1; min-width: 0; }
-  .ac-pa-cab .ac-chave { margin-top: 2px; }
+  .ac-pa-cab > label { flex: none; display: inline-flex; }
+  .ac-pa-cab .ac-chave { display: inline-block; margin-top: 2px; }
   .ac-pa-link { display: grid; gap: 10px; min-width: 0; }
   .ac-pa-faltam { display: grid; gap: 0; min-width: 0; }
   .ac-pa-pessoa { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--vidro-borda); min-width: 0; }
@@ -292,7 +293,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       };
       const cab = h('div', { class: 'ac-pa-cab' },
         h('h2', {}, 'Primeiro acesso pelo link', h('small', { text: 'Um link só para a equipe toda: a pessoa digita o e-mail, cria a senha e já entra. Vale para quem foi cadastrado e ainda não criou senha.' })),
-        h('label', { title: r.podeMudar ? '' : 'Só a direção e a administração ligam e desligam' }, h('span', { class: 'escondido', style: 'position:absolute;left:-9999px', text: 'Primeiro acesso pelo link' }), chave(r.ligado, ligar, !r.podeMudar)));
+        h('label', { title: r.podeMudar ? '' : 'Só a direção e a administração ligam e desligam' }, chave(r.ligado, ligar, !r.podeMudar)));
+      cab.querySelector('input')?.setAttribute('aria-label', 'Primeiro acesso pelo link');
       const partes = [cab];
       if (r.ligado) {
         const caixaLink = h('div', { class: 'ac-link', text: r.link });
