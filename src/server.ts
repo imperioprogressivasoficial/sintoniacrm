@@ -508,6 +508,46 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
   });
 
   /* ⋯ do topo da conversa › Exportar conversa: um .txt com todas as mensagens (permissão "exportar", como os relatórios). */
+  /* treinar-ia (dono 27/11): "Baixar todas as conversas" num arquivo só, para estudar o jeito da equipe e treinar a IA.
+     Só a gestão com a permissão "exportar". Por padrão sem dados pessoais das clientes (nome vira "Cliente", telefones,
+     e-mails e CPF saem do texto); ?completo=1 traz como está. Fica na auditoria e no limite de exportações. */
+  app.get('/api/conversas/exportar-todas', async (req, reply) => {
+    const u = req.usuario;
+    if (u && (!['admin', 'direcao', 'gerente'].includes(u.papel) || !pode(req, 'exportar'))) throw Object.assign(new Error('Só a gestão pode baixar todas as conversas.'), { statusCode: 403 });
+    const completo = String((req.query as { completo?: unknown })?.completo ?? '') === '1';
+    const conversas = (await d.repo.listarConversas({ escopo: escopoDe(u), incluirArquivadas: true })).filter(visivelPara(req));
+    const ultimas = await d.repo.ultimasMensagens(conversas.map((c) => c.id)).catch(() => new Map<string, Mensagem>());
+    conversas.sort((a, b) => (ultimas.get(b.id)?.em?.getTime?.() ?? 0) - (ultimas.get(a.id)?.em?.getTime?.() ?? 0));
+    const dois = (n: number) => String(n).padStart(2, '0');
+    const quando = (em: Date) => { const p = partesBahia(new Date(em)); return `${dois(p.dia)}/${dois(p.mes)}/${p.ano} ${dois(p.hora)}:${dois(p.minuto)}`; };
+    const limpar = (t: string) => completo ? t : t
+      .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[e-mail]')
+      .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[cpf]')
+      .replace(/(\+?\d[\d\s().-]{7,}\d)/g, (m) => (m.replace(/\D/g, '').length >= 8 ? '[telefone]' : m));
+    const partes: string[] = [
+      `Conversas da empresa — exportadas pela Sintonia em ${quando(new Date())} (horário da Bahia)`,
+      completo ? 'Com os dados das clientes.' : 'Sem dados pessoais das clientes (nome trocado por "Cliente"; telefones, e-mails e CPF retirados).',
+      `Total: ${conversas.length} conversas. Autores: Cliente, IA, nome da atendente, Sistema.`,
+      '',
+    ];
+    let n = 0;
+    for (const c of conversas) {
+      const msgs = (await d.repo.mensagens(c.id, 3000)).filter((m) => m.texto?.trim());
+      if (!msgs.length) continue;
+      n++;
+      const cliente = completo ? (c.nome || c.telefone || 'Cliente') : 'Cliente';
+      const quem = (m: Mensagem) => (m.autor === 'cliente' ? cliente : m.autor === 'ia' ? 'IA' : m.autor === 'equipe' ? (m.autorNome || 'Equipe') : 'Sistema');
+      partes.push(`==================== Conversa ${n} ====================`);
+      partes.push(`Unidade: ${c.unidade || '—'} · Etapa: ${c.etapa}${completo && c.telefone ? ` · ${c.telefone}` : ''}`);
+      for (const m of msgs) partes.push(`[${quando(m.em)}] ${quem(m)}: ${limpar(m.texto).replace(/\r?\n/g, ' ⏎ ')}`);
+      partes.push('');
+    }
+    reply.header('content-type', 'text/plain; charset=utf-8');
+    reply.header('content-disposition', `attachment; filename="conversas.txt"; filename*=UTF-8''${encodeURIComponent(`Conversas Sintonia ${completo ? 'completas' : 'sem dados pessoais'}`)}.txt`);
+    reply.header('cache-control', 'no-store');
+    return '﻿' + partes.join('\r\n');
+  });
+
   app.get('/api/conversas/:id/exportar', async (req, reply) => {
     const conversa = await conversaVisivel(req);
     if (req.usuario && !pode(req, 'exportar')) throw Object.assign(new Error('Você não tem permissão para exportar. Fale com a gestão.'), { statusCode: 403 });

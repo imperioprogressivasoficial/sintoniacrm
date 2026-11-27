@@ -172,6 +172,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/rotina.js': { arquivo: 'telas/rotina.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/agendadas.js': { arquivo: 'telas/agendadas.js', tipo: 'text/javascript; charset=utf-8' }, // msg-agendada
   '/telas/balao-fantasma.js': { arquivo: 'telas/balao-fantasma.js', tipo: 'text/javascript; charset=utf-8' }, // balao-fantasma
+  '/telas/baixar-conversas.js': { arquivo: 'telas/baixar-conversas.js', tipo: 'text/javascript; charset=utf-8' }, // treinar-ia
   '/telas/menu-mensagem.js': { arquivo: 'telas/menu-mensagem.js', tipo: 'text/javascript; charset=utf-8' }, // menu-mensagem
   '/telas/emoji-escrever.js': { arquivo: 'telas/emoji-escrever.js', tipo: 'text/javascript; charset=utf-8' }, // vistoria: emoji na barra de escrever (computador)
   '/telas/gravar-audio.js': { arquivo: 'telas/gravar-audio.js', tipo: 'text/javascript; charset=utf-8' }, // gestos-whats

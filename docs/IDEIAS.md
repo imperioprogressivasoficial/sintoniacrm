@@ -4,8 +4,8 @@ Ideias que o Bruno quer guardar para fazer mais tarde. Não são tarefas abertas
 confirme com ele o que ela deve fazer.
 
 ## Integração com o Grokbot (pedido em 27/11/2026)
-- **O que é:** ligar a Sintonia a um agente de IA externo que trabalha sozinho, para as partes em que a ferramenta
-  precisa "se autofuncionar", sem alguém da equipe ter que disparar cada passo.
+- **O que é:** ter o Grokbot vivo dentro da própria ferramenta, um agente que trabalha sozinho, para as partes em
+  que a Sintonia precisa "se autofuncionar", sem alguém da equipe ter que disparar cada passo.
 - **Exemplos do que esse agente faria:**
   - estudar as conversas;
   - aprender e atualizar a memória da IA;

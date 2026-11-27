@@ -74,6 +74,24 @@ describe('Exportar conversa (⋯ do topo)', () => {
   });
 });
 
+describe('Baixar todas as conversas (treinar a IA)', () => {
+  it('gestão baixa tudo sem dados pessoais por padrão; completo traz nomes; atendente não baixa', async () => {
+    const { app, admin, carla, norte } = await montar();
+    const app2 = app;
+    void norte;
+    const r = await app2.inject({ method: 'GET', url: '/api/conversas/exportar-todas', headers: { cookie: admin } });
+    expect(r.statusCode).toBe(200);
+    expect(r.body).toContain('Total: 2 conversas');
+    expect(r.body).toContain('Cliente: mensagem 0');
+    expect(r.body).toContain('Carla: mensagem 1');
+    expect(r.body).not.toContain('Juliana');
+    expect(r.body).not.toContain('5571988887777');
+    const c = await app2.inject({ method: 'GET', url: '/api/conversas/exportar-todas?completo=1', headers: { cookie: admin } });
+    expect(c.body).toContain('Juliana: mensagem 0');
+    expect((await app2.inject({ method: 'GET', url: '/api/conversas/exportar-todas', headers: { cookie: carla } })).statusCode).toBe(403);
+  });
+});
+
 describe.skipIf(!temPostgres)('Pesquisar dentro da conversa (postgres)', () => {
   it('ilike com % e _ do texto tratados como letras', async () => {
     const pool = await poolDeTeste();
