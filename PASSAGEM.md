@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 19h20: 74f4686 no ar — botão "Baixar todas as conversas" (⋯ da lista, gestão, sem dados pessoais por padrão) e o script oficial do comercial (SCRIPT + GLOSSÁRIO IPG 2026) em knowledge/imperio.md; a semente agora acrescenta seções novas e atualiza só as que a equipe nunca editou. Agente ia-aprende (estudar conversas / memória automática) ainda trabalhando.
+
 - 27/11 18h35: 4bd4691 no ar — atendente cria tarefa para gestão/recepção; SINTONIA_RELATORIO_INICIAL (destinatários por e-mail → WhatsApp do perfil, reconfere a cada 10 min; agora=fechamento de 27/11). Bruno, Tássia e Vinícius ainda SEM WhatsApp no perfil. SINTONIA_EQUIPE_INICIAL saiu do compose (limite de 8192 letras da Hostinger; todos já criados).
 
 - 27/11 17h44: republicado só para aplicar a senha provisória da Tássia (mesmo pacote).
