@@ -109,6 +109,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/acessos.js': { arquivo: 'telas/acessos.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/painel.js': { arquivo: 'telas/painel.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/ia.js': { arquivo: 'telas/ia.js', tipo: 'text/javascript; charset=utf-8' },
+  '/telas/aprender.js': { arquivo: 'telas/aprender.js', tipo: 'text/javascript; charset=utf-8' }, // ia-aprende
   '/telas/agentes-ia.js': { arquivo: 'telas/agentes-ia.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/economia-ia.js': { arquivo: 'telas/economia-ia.js', tipo: 'text/javascript; charset=utf-8' }, // calculadora
   '/telas/ia-estado.js': { arquivo: 'telas/ia-estado.js', tipo: 'text/javascript; charset=utf-8' } /* ia-completa */,

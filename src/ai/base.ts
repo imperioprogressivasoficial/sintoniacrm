@@ -240,11 +240,56 @@ const CABECALHO = `# Base de conhecimento da IA
 const ordenarSecoes = (l: Secao[]) => l.sort((a, b) => a.ordem - b.ordem || a.titulo.localeCompare(b.titulo, 'pt-BR'));
 const ordenarPerguntas = (l: Pergunta[]) => l.sort((a, b) => a.ordem - b.ordem || a.criadaEm.getTime() - b.criadaEm.getTime());
 
+/* ia-aprende: memória aprendida com as conversas da equipe (src/aprender). Entra no texto da IA junto da seção dela,
+   com limite de tamanho: o que aparece em mais conversas vem primeiro; o que não cabe fica de fora (continua guardado). */
+export interface Aprendido {
+  /** Chave da seção onde entra, CHAVE_FAQ (pergunta frequente) ou o nome de um grupo (roteiro, tom, objecao, evitar, fato). */
+  destino: string;
+  categoria: string;
+  texto: string;
+  pergunta?: string;
+  resposta?: string;
+  /** Em quantas conversas a equipe fez assim (prioridade). */
+  conversas: number;
+  em: Date;
+}
+export const LIMITE_APRENDIDO = 9000;
+const GRUPOS_APRENDIDO: Record<string, string> = {
+  roteiro: 'Como a equipe conduz até o agendamento',
+  tom: 'Jeito de escrever da equipe',
+  pergunta: 'Perguntas que as clientes fazem',
+  objecao: 'Objeções e como a equipe responde',
+  fato: 'Informações do negócio citadas pela equipe',
+  evitar: 'O que evitar',
+};
+
+/** Escolhe o que cabe no limite (mais conversas primeiro, depois o mais novo). */
+export function escolherAprendido(itens: Aprendido[], limite = LIMITE_APRENDIDO): Aprendido[] {
+  const ordem = [...itens].sort((a, b) => b.conversas - a.conversas || b.em.getTime() - a.em.getTime());
+  const saida: Aprendido[] = [];
+  let usado = 0;
+  for (const a of ordem) {
+    const t = a.texto.length + (a.pergunta?.length ?? 0) + (a.resposta?.length ?? 0) + 30;
+    if (usado + t > limite) continue;
+    usado += t;
+    saida.push(a);
+  }
+  return saida;
+}
+
+const linhaAprendida = (a: Aprendido) => `- ${a.texto.trim()}`;
+
 /** Monta o texto que vai no system prompt. As perguntas frequentes entram na seção delas. */
-export function montarTexto(secoes: Secao[], perguntas: Pergunta[]): string {
-  const faq = ordenarPerguntas([...perguntas])
-    .map((p) => `- Pergunta: ${p.pergunta.trim()}\n  Resposta: ${p.resposta.trim()}`)
-    .join('\n');
+export function montarTexto(secoes: Secao[], perguntas: Pergunta[], aprendido: Aprendido[] = []): string {
+  const memoria = escolherAprendido(aprendido);
+  const chaves = new Set(secoes.map((s) => s.chave));
+  const perguntasAprendidas = memoria.filter((a) => a.destino === CHAVE_FAQ && a.pergunta && a.resposta);
+  const faq = [
+    ...ordenarPerguntas([...perguntas]).map((p) => `- Pergunta: ${p.pergunta.trim()}\n  Resposta: ${p.resposta.trim()}`),
+    ...perguntasAprendidas.map((a) => `- Pergunta: ${a.pergunta!.trim()}\n  Resposta: ${a.resposta!.trim()}`),
+  ].join('\n');
+  const naSecao = (chave: string) => memoria.filter((a) => a.destino === chave && chave !== CHAVE_FAQ);
+  const soltos = memoria.filter((a) => !perguntasAprendidas.includes(a) && (!chaves.has(a.destino) || a.destino === CHAVE_FAQ));
   const partes = [CABECALHO];
   let faqUsada = !faq;
   for (const s of ordenarSecoes([...secoes])) {
@@ -253,9 +298,23 @@ export function montarTexto(secoes: Secao[], perguntas: Pergunta[]): string {
       corpo = [corpo, faq].filter(Boolean).join('\n');
       faqUsada = true;
     }
+    const daqui = naSecao(s.chave);
+    if (daqui.length) corpo = [corpo, `Aprendido com a equipe (atendimentos reais):\n${daqui.map(linhaAprendida).join('\n')}`].filter(Boolean).join('\n\n');
     partes.push(`## ${s.titulo}\n${corpo}`);
   }
   if (!faqUsada) partes.push(`## Perguntas frequentes\n${faq}`);
+  if (soltos.length) {
+    const grupos = new Map<string, Aprendido[]>();
+    for (const a of soltos) {
+      const g = GRUPOS_APRENDIDO[a.destino] ?? GRUPOS_APRENDIDO[a.categoria] ?? 'Outros';
+      grupos.set(g, [...(grupos.get(g) ?? []), a]);
+    }
+    partes.push(
+      `## Aprendido com a equipe\nComo a equipe atende de verdade (tirado das conversas). Siga este jeito, sem contrariar o resto da base.\n\n${[...grupos.entries()]
+        .map(([g, l]) => `### ${g}\n${l.map(linhaAprendida).join('\n')}`)
+        .join('\n\n')}`,
+    );
+  }
   return `${partes.join('\n\n')}\n`;
 }
 
@@ -268,8 +327,14 @@ export class BaseConhecimento {
     readonly empresaId: string,
     /** Texto do knowledge/imperio.md (semente da primeira vez). */
     private readonly semente: () => string,
-    private readonly opcoes: { cacheMs?: number; agora?: () => Date } = {},
+    private readonly opcoes: { cacheMs?: number; agora?: () => Date; aprendido?: () => Promise<Aprendido[]> } = {},
   ) {}
+
+  /** ia-aprende: liga a memória aprendida (src/aprender) depois de criada. */
+  usarAprendido(fn: () => Promise<Aprendido[]>) {
+    this.opcoes.aprendido = fn;
+    this.esquecer();
+  }
 
   private agora() {
     return (this.opcoes.agora ?? (() => new Date()))();
@@ -328,12 +393,13 @@ export class BaseConhecimento {
   async texto(): Promise<string> {
     const t = Date.now();
     if (this.cache && this.cache.ate > t) return this.cache.texto;
-    const texto = montarTexto(await this.secoes(), await this.perguntas());
+    const aprendido = this.opcoes.aprendido ? await this.opcoes.aprendido().catch(() => []) : [];
+    const texto = montarTexto(await this.secoes(), await this.perguntas(), aprendido);
     this.cache = { texto, ate: t + (this.opcoes.cacheMs ?? 5000) };
     return texto;
   }
 
-  private esquecer() {
+  esquecer() {
     this.cache = undefined;
   }
 
