@@ -96,9 +96,20 @@
   const novoSeq = () => (seqAtual = Math.max(seqAtual + 1, Date.now()));
   const V = () => window.SintoniaVoltar;
   const marca = (anterior) => ({ ...(history.state && typeof history.state === 'object' ? history.state : {}), sintoniaRota: 1, rotaAnterior: anterior, seq: Number(history.state?.seq) || novoSeq() });
+  /* vistoria: duas mudanças de tela no mesmo toque (ex.: ui.abrir = mostrar('conversas') + abrir(id), vindo do Pipeline,
+     da Agenda ou de uma notificação) viram UMA entrada no histórico. Antes ficava uma entrada a mais (/app/conversas ou a
+     conversa anterior) e o "voltar" caía nela em vez de voltar para a tela de onde a pessoa veio. */
+  let recem = null;
   function trocarEndereco(novo, empurrar) {
     if (novo === location.pathname) return;
     try {
+      if (empurrar && recem && recem === location.pathname && history.state?.sintoniaRota) {
+        history.replaceState({ ...history.state }, '', novo);
+        recem = novo;
+        V()?.guardar?.(history.state);
+        V()?.atualizar?.();
+        return;
+      }
       if (empurrar) {
         // rotas-celular: de onde veio (fica na entrada nova) e o que reabrir ao voltar (fica na entrada de onde saiu)
         let origem = null, reabrir = null;
@@ -107,6 +118,7 @@
         if (reabrir) daqui.reabrir = reabrir; else delete daqui.reabrir;
         history.replaceState(daqui, '', location.pathname + location.search + location.hash);
         history.pushState({ sintoniaRota: 1, rotaAnterior: location.pathname, seq: novoSeq(), ...(origem ? { origem } : {}) }, '', novo); // entrada nova: sem o estado do painel
+        recem = novo; setTimeout(() => { recem = null; }, 0); /* vistoria */
         V()?.guardar?.(history.state);
       } else history.replaceState(marca(history.state?.rotaAnterior), '', novo + location.search + location.hash);
     } catch {}

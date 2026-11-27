@@ -458,14 +458,35 @@ export class RepositorioPostgres implements Repositorio {
            left join sintonia.midias md on md.mensagem_id = m.id`,
         [ids],
       );
-      return new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)]));
+      return this.semApagadas(new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)])));
     }
     const { rows } = await this.pool.query<LinhaMensagem>(
       `select distinct on (m.conversa_id) ${COLUNAS_MENSAGEM}
          from sintonia.mensagens m left join sintonia.midias md on md.mensagem_id = m.id
         order by m.conversa_id, m.em desc, m.id desc`,
     );
-    return new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)]));
+    return this.semApagadas(new Map(rows.map((r) => [r.conversa_id, paraMensagem(r)])));
+  }
+
+  /** vistoria: a prévia da lista (e do funil) não mostra o texto de uma mensagem apagada (menu-mensagem, migração 730). */
+  private async semApagadas(ultimas: Map<string, Mensagem>) {
+    const ids = [...ultimas.values()].map((m) => m.id).filter((x) => UUID.test(x));
+    if (!ids.length) return ultimas;
+    const { rows } = await this.pool
+      .query<{ mensagem_id: string; apagada: string }>(
+        `select mensagem_id, apagada from sintonia.mensagem_extras where mensagem_id = any($1::uuid[]) and apagada is not null`,
+        [ids],
+      )
+      .catch(() => ({ rows: [] as Array<{ mensagem_id: string; apagada: string }> }));
+    if (!rows.length) return ultimas;
+    const apagadas = new Map(rows.map((r) => [r.mensagem_id, r.apagada]));
+    for (const [conversa, m] of ultimas) {
+      const a = apagadas.get(m.id);
+      if (!a) continue;
+      const { anexo: _anexo, ...resto } = m;
+      ultimas.set(conversa, { ...resto, texto: a === 'cliente' ? 'A cliente apagou esta mensagem' : 'Mensagem apagada' });
+    }
+    return ultimas;
   }
 
   /** velocidade: miniaturas do WhatsApp das mensagens pedidas (só as que têm), para o detalhe da conversa. */

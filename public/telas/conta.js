@@ -117,7 +117,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   function telaPerfil(corpo) {
     const { cartao, entrada, campo, chave, opcao, seg, botao } = EC;
     const foto = el('div', { class: 'ct-foto' });
-    const pintarFoto = () => { const url = window.SintoniaFotos?.url(conta.id); foto.replaceChildren(); if (url) foto.append(el('img', { src: url, alt: '' })); else foto.textContent = iniciais(conta.nome); btTirar.hidden = !url; };
+    const pintarFoto = () => { const url = window.SintoniaFotos?.url(conta.id); foto.replaceChildren(); if (url) foto.append(el('img', { src: url, alt: '' })); else foto.textContent = iniciais(conta.nome); btTirar.hidden = !url;
+      /* vistoria: o botão e o rosto da capa acompanham a foto nova (antes ficavam "Pôr foto" e as iniciais até recarregar) */
+      if (btFoto?.lastChild) btFoto.lastChild.textContent = url ? 'Trocar foto' : 'Pôr foto';
+      document.querySelectorAll('#v-conta .cp-rosto').forEach((r) => { r.replaceChildren(); if (url) r.append(el('img', { src: url, alt: '' })); else r.textContent = iniciais(conta.nome); }); };
     const enviarFoto = () => EC.escolherArquivo('image/*', async (arq) => {
       try {
         const bmp = await createImageBitmap(arq); const lado = Math.min(bmp.width, bmp.height), t = 256;
@@ -128,6 +131,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       } catch (x) { ui.toast(x.message || 'Não deu para usar essa imagem.'); }
     });
     const btTirar = botao('Tirar foto', async () => { try { await ui.api(`/api/equipe/${conta.id}/foto`, { method: 'DELETE' }); await window.SintoniaFotos?.carregar(); pintarFoto(); } catch (x) { ui.toast(x.message); } }, 'mini perigo');
+    const btFoto = botao(window.SintoniaFotos?.url(conta.id) ? 'Trocar foto' : 'Pôr foto', enviarFoto, 'mini', 'imagem');
     pintarFoto();
     const nomesUn = (conta.unidades || []).map((u) => ui.UNIDADE?.[u] || u).join(', ') || (souDirecao() ? 'Todas as unidades' : 'Nenhuma ainda');
 
@@ -151,7 +155,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     }, '', '<svg class="ec-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg>');
     const secPerfil = cartao('equipe', 'Perfil',
       el('div', { class: 'ct-perfil' }, foto, el('div', { class: 'ct-quem' }, el('b', { text: conta.nome }), el('span', { class: 'ec-sub', text: `${conta.papelNome} · ${nomesUn}` }),
-        el('div', { class: 'ec-acoes' }, botao(window.SintoniaFotos?.url(conta.id) ? 'Trocar foto' : 'Pôr foto', enviarFoto, 'mini', 'imagem'), btTirar))),
+        el('div', { class: 'ec-acoes' }, btFoto, btTirar))),
       el('div', { class: 'ec-form' }, campo('Nome', nome, { cheio: true, dica: 'Como a equipe e os relatórios te chamam.' }), campo('Telefone', tel, { cheio: true })),
       erro, el('div', { class: 'ec-acoes ec-fim' }, salvar));
     const secAcesso = cartao('acesso', 'Login e segurança',
