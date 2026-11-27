@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11: ffd6c75 no ar — auditoria corrigida: IA sem duplicar no envio incerto (aud-ia), conversa troca para o número por onde a cliente escreveu, número estrangeiro/fixo aceito, cache @lid ao vivo (aud-numeros), Meta por item e sem App Secret recusa, telas (agenda +N, dica x resgate, rodapé ficha, rótulos simples no Rastreamento, Conexões, Equipe/Clientes/Automações). Evolution: dono disse NÃO MEXER (é compartilhada com o Espaço Rainha) — histórico/resgate/@lid pela Evolution continuam sem dados.
+
 - 26/11 18h25: 3d3863a no ar (auditoria parte 2). Pendentes da auditoria (não feitos): conversa única por unidade+telefone sem canal (2 números na mesma unidade misturam), número estrangeiro/fixo descartado (util/telefone.ts), @lid ao vivo sem número descartado, envio incerto da IA pode duplicar e virar copiloto (sintonia.ts), Meta valida o lote inteiro (meta.ts:123), webhook Meta sem App Secret aceita tudo, telas: agenda semana espremida, dica sobre aviso de resgate, rodapé Salvar da ficha no celular, jargão UTM no Rastreamento, respiro em Conexões.
 
 - 26/11 18h05: auditoria. 5dc5ef6 no ar: recusa /%61pi (login contornável pelo roteador que decodifica; o Traefik já normalizava em produção), sincronizar só gestão, exportar conversa auditado. Evolution (projeto Docker "evolution") com DATABASE_SAVE_* = false: puxar histórico/resgate/mapa @lid leem 0 — ligar precisa do OK do Bruno.
