@@ -385,15 +385,17 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     caixa.replaceChildren(tela);
     tela.append(el('div', { class: 'au-cab' }, el('h1', { class: 'titulo-grande' }, el('span', { class: 'au-raio', html: SVG.raio }), el('span', { text: 'Automações' })),
       ehGestao() ? el('button', { class: 'au-botao', type: 'button', onclick: () => abrirEditor({ funilId: s.filtro !== 'todas' && s.filtro !== 'geral' ? s.filtro : null, aoSalvar: () => desenhar(caixa, ui) }) }, el('span', { html: SVG.mais, style: 'display:grid' }), el('span', { text: 'Nova automação' })) : null));
-    // Aba Automações | Bots (o construtor de bots fica em /telas/bot.js).
-    if (window.SintoniaTelas.bot?.abasAutomacoes) tela.append(window.SintoniaTelas.bot.abasAutomacoes('automacoes'));
+    // Abas Automações · Follow-up · Bots numa fileira só (o construtor de bots fica em /telas/bot.js). aud-telas
+    const fu = window.SintoniaTelas.followup;
+    if (fu && ehGestao()) s.aba = s.aba || 'automacoes';
+    const umaFileira = !!window.SintoniaTelas.bot?.abasAutomacoes;
+    if (umaFileira) tela.append(window.SintoniaTelas.bot.abasAutomacoes(fu && ehGestao() ? s.aba : 'automacoes', (v) => { s.aba = v; desenhar(caixa, ui); }));
     tela.append(el('p', { class: 'au-sub', text: 'O que a Sintonia faz sozinha: um gatilho e os passos que vêm depois. Você também pode criar pelo raio ⚡ em cada etapa do CRM.' })); /* sem-exemplos: sem exemplo pronto no texto */
     if (!ehGestao()) { tela.append(el('div', { class: 'au-vazio' }, el('b', { text: 'Só a gestão mexe nas automações.' }), el('span', { text: 'Peça para a gerência criar ou mudar uma automação.' }))); return; }
     // Aba "Follow-up" (cadências e confirmação de agenda: /telas/followup.js).
-    const fu = window.SintoniaTelas.followup;
     if (fu) {
       s.aba = s.aba || 'automacoes';
-      tela.insertBefore(fu.abas(ui, s.aba, (v) => { s.aba = v; desenhar(caixa, ui); }), tela.querySelector('.au-sub'));
+      if (!umaFileira) tela.insertBefore(fu.abas(ui, s.aba, (v) => { s.aba = v; desenhar(caixa, ui); }), tela.querySelector('.au-sub'));
       if (s.aba === 'followup') {
         tela.querySelector('.au-cab .au-botao')?.remove();
         tela.querySelector('.au-sub')?.remove();
