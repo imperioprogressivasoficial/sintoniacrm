@@ -10,6 +10,7 @@ import { lerFiltro } from '../funis/filtro-leads.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
 import { zUnidade } from '../unidades.js';
 import { ErroPerda, type Perdas } from '../perdas/perdas.js';
+import type { PosVenda } from '../pos-venda/pos-venda.js';
 
 /**
  * Rotas dos funis por tags e das automações. Registradas depois de criarServidor (src/index.ts),
@@ -27,6 +28,8 @@ export interface OpcoesRotasFunis {
   origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
   /** perdas-saude: motivo de perda obrigatório ao mover para uma etapa de perda e o motivo no cartão. */
   perdas?: Perdas;
+  /** pos-venda: no quadro do funil pós-venda, visitas no ano de cada cartão e a média do funil (meta). */
+  posVenda?: PosVenda;
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
@@ -149,6 +152,8 @@ export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void 
       const mapa = await o.perdas.dosCartoes(r.funil.id, ids).catch(() => ({}) as Awaited<ReturnType<Perdas['dosCartoes']>>);
       if (ids.length) r = { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => (mapa[x.conversaId] ? { ...x, perda: mapa[x.conversaId] } : x)) })) };
     }
+    /* pos-venda: visitas no ano nos cartões e a média no topo (só no funil pós-venda) */
+    if (o.posVenda) r = await o.posVenda.decorarQuadro(r).catch(() => r);
     if (!o.origens) return r;
     const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
     return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
