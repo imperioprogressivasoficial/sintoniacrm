@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 28/11: no ar 3252d92 — árvore de situações (base + regras + cliente_conhecida com horário futuro/desmarcado), seção Atendimento que encanta e vende, escrita sem dois-pontos; página Conhecimento da IA em Empresa › Documentos. Pendente na base: [PREENCHER] cuidados pós-procedimento e estacionamento. Próximo: configuração da Serena editável (docs/PEDIDOS.md).
+
 - 28/11: no ar aff82b0 — tempo humano da IA (pausaDigitando 1 s + 45 ms/letra, 1,8–7 s, antes de cada mensagem; pausaGravando 1 s + 60 ms/letra, 3–15 s). Agentes situacoes (árvore de situações + escrita sem dois-pontos) e conhecimento-arquivo ainda trabalhando.
 
 - 28/11 00h05: 1ce0ee3 no ar — tabela-fim (tabela pelo sistema depois da confirmação; serviço padrão Essencial; migração 778) e reagendar (menu do botão de agenda: Reagendar / Novo agendamento / Agendar para outra pessoa; rotas /horarios-marcados e /remarcar; IA remarca quando a cliente diz que não vai). Sem emojis além de ✅ e 💜. PRÓXIMO: lembrar o dono do follow-up (docs/PEDIDOS.md).
