@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 21h52: 7a79190 no ar — URGENTE corrigido: a serena-regras deixou 22 campos `[X,'null']` nas ferramentas e a API recusava (400) toda resposta da IA desde ~21h40. Agora def() transforma nulos em opcionais e completarNulos() devolve null. Junto: digitando enquanto pensa, gravando antes de áudio, juntar 3,5 s, pausa 0,8–2,5 s, sem textão, resposta coerente, corrigir_nome, dados do site, memória da Assia (vira documento no Aprender, 90 s depois de subir). LIÇÃO: testar uma chamada real/contagem de uniões antes de publicar mudanças em ferramentas.
+
 - 27/11 22h05: b7807ae no ar — serena-regras inteira (cliente pelo telefone no Trinks, horários padrão por unidade em Empresa › Unidades, PD, enviar_tabela_precos, espelho da agenda 14 dias, migração 777). Tabelas: a gestão cadastra as imagens em Empresa › Documentos, categoria "tabela", nomes "Seu Primeiro Alisamento" e "Liso Infinito". PRÓXIMO: follow-up de clientes (docs/PEDIDOS.md).
 
 - 27/11 21h35: a50b8ca no ar — Serena parte 1 (só o texto do knowledge, copiado da worktree serena-regras com [SEU NOME]=Serena e horários padrão escritos). Ao juntar a serena-regras, ficar com o knowledge dela (ela põe o nome pelo prompt e os horários pela unidade).
