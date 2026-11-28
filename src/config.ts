@@ -6,7 +6,7 @@ const Env = z.object({
   PORT: z.coerce.number().default(3333),
   ANTHROPIC_API_KEY: z.string().optional(),
   SINTONIA_MODELO: z.string().default('claude-opus-5-5'),
-  SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('low'),
+  SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('medium'), // dono 28/11: Opus 5.5 com esforço médio
   EVOLUTION_URL: z.string().url().optional(),
   /** Whisper do próprio servidor (transcrição de áudio grátis). Ex.: http://whisper:9000 */
   WHISPER_URL: z.string().url().optional(),
