@@ -372,6 +372,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   let cadastro = null;
   const filtroProd = { busca: '', tipo: '', categoria: '', inativos: false };
   let filtroDoc = '';
+  let verConhecimento = false; /* conhecimento-arquivo */
 
   function irAba(a) { if (ABAS.some(([id]) => id === a)) aba = a; marcarMenu(); }
   function marcarMenu() {
@@ -398,7 +399,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     caixa.replaceChildren(el('div', { class: 'ec' },
       el('div', { class: 'ec-topo' }, logo, el('div', { class: 'ec-tit' }, el('h1', { text: cadastro?.nome || 'Empresa' }), el('p', { text: 'Dados, unidades, o que a empresa vende, preços e documentos num lugar só.' })),
         window.SintoniaTopoGrupo ? window.SintoniaTopoGrupo() : null),
-      abas(ABAS, aba, (a) => { aba = a; marcarMenu(); desenhar(caixa, ui); }),
+      abas(ABAS, aba, (a) => { aba = a; verConhecimento = false; marcarMenu(); desenhar(caixa, ui); }),
       corpo));
     const telas = { geral: telaGeral, dados: telaDados, unidades: telaUnidades, produtos: telaProdutos, precos: telaPrecos, documentos: telaDocumentos };
     try { await telas[aba](corpo); } catch (x) { encher(corpo, el('p', { class: 'ec-erro', text: x.message || 'Não deu para carregar agora.' })); }
@@ -814,7 +815,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
 
   // ------------------------------------------------------------ documentos
   async function telaDocumentos(corpo) {
-    const r = await ui.api('/api/documentos');
+    /* conhecimento-arquivo: Conhecimento da IA (telas/conhecimento-ia.js), só gestão */
+    const CIA = window.SintoniaConhecimentoIA;
+    if (verConhecimento && CIA && souGestao()) return CIA.desenhar(corpo, ui, { empresa: cadastro?.nome, voltar: () => { verConhecimento = false; redesenhar(); } });
+    const [r, cartaoIa] = await Promise.all([ui.api('/api/documentos'), CIA && souGestao() ? CIA.cartao(ui, () => { verConhecimento = true; redesenhar(); }, cadastro?.nome).catch(() => null) : null]);
     const pode = r.podeEditar;
     const aceita = Object.keys(r.tipos || {}).join(',');
     const enviarArquivo = (arq) => {
@@ -848,6 +852,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     };
     const filtros = cats.length > 1 ? el('div', { class: 'ec-abas', role: 'tablist', style: 'justify-self:start' }, ...[['', 'Todos'], ...cats].map(([k, n]) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(filtroDoc === k), text: n, onclick: () => { filtroDoc = k; redesenhar(); } }))) : null;
     encher(corpo, 
+      cartaoIa,
       pode ? null : el('p', { class: 'ec-info', text: 'Documentos que a gestão deixou para a equipe. Só a gerência, a direção e a administração enviam.' }),
       drop ? el('section', { class: 'ec-c' }, drop) : null,
       filtros,

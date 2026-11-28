@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ehGestor } from '../auth/acesso.js';
 import { pode } from '../auth/permissoes.js';
 import type { Aprender } from './aprender.js';
+import { conhecimentoDaIa } from './conhecimento.js';
 
 /**
  * ia-aprende: rotas do "Aprender com a equipe" (Inteligência › Treinamento). Só a gestão (gerência, direção e
@@ -15,6 +16,7 @@ import type { Aprender } from './aprender.js';
  * POST   /api/ia/aprender/itens/:id/recusar
  * POST   /api/ia/aprender/itens/:id/desfazer
  * POST   /api/ia/aprender/documento { nome, base64? | texto? }   PDF ou texto do dono (202)
+ * GET    /api/ia/conhecimento                   tudo o que a IA sabe, em 4 partes (Empresa › Documentos › Conhecimento da IA)
  */
 export interface OpcoesRotasAprender {
   /** O serviço da empresa de quem pediu (um servidor atende uma empresa; outra empresa não vê nada). */
@@ -37,6 +39,11 @@ export function registrarAprender(app: FastifyInstance, o: OpcoesRotasAprender):
   const idDe = (req: FastifyRequest) => z.string().uuid('Aprendizado não encontrado.').parse((req.params as { id: string }).id);
 
   app.get('/api/ia/aprender', async (req) => servico(req).estado());
+  /* conhecimento-arquivo: só leitura, sempre do banco (sem cópia guardada). */
+  app.get('/api/ia/conhecimento', async (req, reply) => {
+    reply.header('cache-control', 'no-store');
+    return conhecimentoDaIa(servico(req));
+  });
 
   app.post('/api/ia/aprender/estudar', async (req, reply) => reply.code(202).send(await servico(req).estudar(quem(req))));
 

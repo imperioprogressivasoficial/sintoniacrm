@@ -186,6 +186,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/conversas-abas.js': { arquivo: 'telas/conversas-abas.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/scripts.js': { arquivo: 'telas/scripts.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/empresa.js': { arquivo: 'telas/empresa.js', tipo: 'text/javascript; charset=utf-8' }, // layout-telas: Empresa em seções
+  '/telas/conhecimento-ia.js': { arquivo: 'telas/conhecimento-ia.js', tipo: 'text/javascript; charset=utf-8' }, // conhecimento-arquivo: Empresa › Documentos › Conhecimento da IA
   '/telas/conta.js': { arquivo: 'telas/conta.js', tipo: 'text/javascript; charset=utf-8' }, // empresa-conta: Conta da pessoa
   '/telas/capa-perfil.js': { arquivo: 'telas/capa-perfil.js', tipo: 'text/javascript; charset=utf-8' }, // capa-perfil: capa com foto e atalhos
   '/telas/papel-parede.js': { arquivo: 'telas/papel-parede.js', tipo: 'text/javascript; charset=utf-8' }, // conversa-extra
