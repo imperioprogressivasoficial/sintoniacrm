@@ -192,7 +192,7 @@ describe('1/2. A cliente pelo número do WhatsApp (sem pedir nome) e a boas-vind
     expect(txt).toContain('cliente_conhecida: sim');
     expect(txt).toContain('primeira resposta da loja nesta conversa: sim');
     expect(txt).toContain('Seu nome (para se apresentar): Serena.');
-    expect(txt).toContain('Para qual unidade deseja agendar seu atendimento?\\nSalvador Norte Shopping\\nShopping Sumaré');
+    expect(txt).toContain('Para qual unidade deseja agendar seu atendimento?\\n*  Salvador Norte Shopping\\n*  Shopping Sumaré');
     const tools = (recebidos[0]!.tools as Array<{ name: string }>).map((t) => t.name);
     expect(tools).toContain('buscar_cliente');
   });
@@ -213,7 +213,7 @@ describe('1/2. A cliente pelo número do WhatsApp (sem pedir nome) e a boas-vind
 
 describe('3. Pergunta da unidade: uma mensagem, uma unidade por linha', () => {
   it('as linhas vêm das unidades que agendam, com o nome para clientes', () => {
-    expect(blocoUnidades()).toBe('<unidades_para_agendar>\nPara qual unidade deseja agendar seu atendimento?\nSalvador Norte Shopping\nShopping Sumaré\n</unidades_para_agendar>');
+    expect(blocoUnidades()).toBe('<unidades_para_agendar>\nPara qual unidade deseja agendar seu atendimento?\n*  Salvador Norte Shopping\n*  Shopping Sumaré\n</unidades_para_agendar>');
     definirUnidades('imperio', [UNIDADES_IMPERIO[0]!]);
     expect(blocoUnidades()).toContain('Não pergunte a unidade');
   });
@@ -222,7 +222,7 @@ describe('3. Pergunta da unidade: uma mensagem, uma unidade por linha', () => {
     expect(b).toContain('"rainha" de vez em quando, nunca em toda mensagem');
     expect(b).toContain('Eu sou a [SEU NOME] e vou seguir com o seu atendimento.');
     expect(b).toContain('Que bom ter você de volta, [PRIMEIRO NOME]!');
-    expect(b).toContain('Somos especialistas e a maior referência em alisamento capilar da Bahia.');
+    expect(b).toContain('Somos a maior referência em alisamento capilar da Bahia.');
     const roteiro = b.slice(b.indexOf('## Roteiro'), b.indexOf('## Tabela Liso'));
     expect(roteiro).not.toContain('sem formol');
     expect(b).toContain('Pergunta: É com formol?');

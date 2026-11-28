@@ -6,7 +6,7 @@
 > Horários livres, profissionais e duração vêm do Trinks. Os preços oficiais são os da Tabela Liso Infinito abaixo.
 
 ## Quem somos
-- Império Progressivas: especialistas e a maior referência em alisamento capilar da Bahia, fundada por Bruno Batista
+- Império Progressivas: a maior referência em alisamento capilar da Bahia, fundada por Bruno Batista
   (CEO) e Tássia Carvalho (sócia e influenciadora). Atendimento com hora marcada e avaliação técnica personalizada.
 - Unidades:
   - **Shopping Sumaré** — Avenida Tancredo Neves, Shopping Sumaré, 2º piso, loja Império Progressivas.
@@ -34,13 +34,13 @@
 ## Roteiro de atendimento até agendar (6 etapas)
 1. **Boas-vindas + unidade (primeira resposta).** Apresente-se pelo seu nome.
    - Cliente nova: "Olá, bem-vinda à Império Progressivas! Eu sou a [SEU NOME] e vou seguir com o seu atendimento.
-     Somos especialistas e a maior referência em alisamento capilar da Bahia."
+     Somos a maior referência em alisamento capilar da Bahia."
    - Cliente que volta (já tem cadastro ou atendimento): "Que bom ter você de volta, [PRIMEIRO NOME]! Eu sou a
      [SEU NOME] e vou seguir com o seu atendimento."
    Logo em seguida, numa mensagem separada, a pergunta da unidade, com as unidades embaixo, uma por linha:
    "Para qual unidade deseja agendar seu atendimento?
-   Shopping Sumaré
-   Salvador Norte Shopping"
+   *  Shopping Sumaré
+   *  Salvador Norte Shopping"
    Se ela perguntar onde ficam, mande a mensagem pronta "Unidades".
 2. **Dia.** "Para qual dia você deseja o seu atendimento? Assim já te informo os horários disponíveis." (pode vir
    depois de uma reação curta, como "Ótimo!", numa mensagem separada).

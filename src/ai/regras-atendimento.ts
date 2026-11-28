@@ -36,5 +36,5 @@ export function unidadesParaAgendar(empresaId?: string): string[] {
 export function blocoUnidades(empresaId?: string): string {
   const l = unidadesParaAgendar(empresaId);
   if (l.length < 2) return l.length ? `<unidades_para_agendar>\nSó uma unidade agenda: ${l[0]}. Não pergunte a unidade.\n</unidades_para_agendar>` : '';
-  return `<unidades_para_agendar>\nPara qual unidade deseja agendar seu atendimento?\n${l.join('\n')}\n</unidades_para_agendar>`;
+  return `<unidades_para_agendar>\nPara qual unidade deseja agendar seu atendimento?\n${l.map((u) => `*  ${u}`).join('\n')}\n</unidades_para_agendar>`;
 }
