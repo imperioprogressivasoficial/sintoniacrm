@@ -26,6 +26,8 @@ export interface OpcoesAgentesIa {
   cofre: { cifrar(s: string): string; decifrar(s: string): string };
   agenda: Agenda;
   baseGeral: () => Promise<string>;
+  /** serena-config: Jeito de atender da empresa. */
+  jeito?: () => Promise<import('../ai/jeito-atender.js').JeitoVigente>;
   /** O agente de sempre (usado quando a conversa não tem agente do estúdio). */
   padrao: { executar(p: PedidoAgente): Promise<RespostaAgente> };
   /** Chave geral de cada provedor (Conexões), lida na hora. */
@@ -63,7 +65,7 @@ export function montarAgentesIa(o: OpcoesAgentesIa) {
       if (!o.chaveGeral('anthropic')) throw new SemChave('anthropic');
       return o.claudeGeral;
     });
-  const executor = new ExecutorAgentes({ empresaId: o.empresaId, armazem, cofre: o.cofre, agenda: o.agenda, baseGeral: o.baseGeral, cliente, repo: o.repo, agora: o.agora, log: o.log, crm: o.crm });
+  const executor = new ExecutorAgentes({ empresaId: o.empresaId, armazem, cofre: o.cofre, agenda: o.agenda, baseGeral: o.baseGeral, jeito: o.jeito, cliente, repo: o.repo, agora: o.agora, log: o.log, crm: o.crm });
   const temChave = (a: AgenteIa) => Boolean(a.chaveCifrada) || Boolean(o.chaveGeral(a.provedor));
   const controle = new ControleIa({ empresaId: o.empresaId, armazem, executor, padrao: o.padrao, repo: o.repo, temChave, sintonia: o.sintonia, agora: o.agora, log: o.log });
   const servico = new ServicoAgentesIa({ empresaId: o.empresaId, armazem, cofre: o.cofre, executor, repo: o.repo, baseGeral: o.baseGeral, agora: o.agora, fetch: o.fetch });

@@ -119,7 +119,7 @@ export interface DependenciasServidor {
   /** Última vez que cada conversa foi finalizada (selo verde "Finalizado" na lista). */
   finalizadas?: (ids: string[]) => Promise<Map<string, Date>>;
   origens?: (ids: string[]) => Promise<Record<string, { icone: string; canal?: string; rotulo?: string; campanha?: string }>>;
-  gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa'>>;
+  gestao?: Partial<Pick<OpcoesGestao, 'tags' | 'empresa' | 'base' | 'painel' | 'simularIa' | 'iaLigada' | 'tagsDaIa' | 'jeito'>> /* serena-config: jeito */;
   /** robustez: histórico ao conectar em lotes no banco (src/app/historico.ts). Ausente = importa em memória, como antes. */
   /** puxar-historico: busca na Evolution tudo o que ela guardou do número (src/app/puxar-historico.ts). */
   puxarHistorico?: Pick<import('./app/puxar-historico.js').PuxarHistorico, 'agendar' | 'andamento'>;

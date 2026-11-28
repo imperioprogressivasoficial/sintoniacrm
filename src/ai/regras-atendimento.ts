@@ -1,4 +1,5 @@
 import { unidadeDe, unidadesComAgenda, unidadesDa } from '../unidades.js';
+import { pecasDasRegras, type JeitoVigente, type PecasRegras } from './jeito-atender.js';
 
 /**
  * serena-regras (dono 28/11): como a IA conduz o atendimento até agendar, igual para o agente padrão (src/ai/prompt.ts)
@@ -41,8 +42,29 @@ export const REGRAS_ATENDIMENTO: readonly string[] = [
   `Mensagens: escreva como uma pessoa no WhatsApp. A resposta pode ir em 1, 2 ou 3 mensagens: separe uma da outra com uma linha só com ${SEPARADOR_MENSAGENS}. Varie, sem padrão fixo: às vezes uma mensagem só, às vezes uma reação curta primeiro ("Pronto, perfeito!", "Ótimo!") e na outra a próxima pergunta ou informação. Não repita sempre as mesmas frases.`,
 ];
 
+/** serena-config: regras que o "Jeito de atender" troca (pelo começo da regra). */
+const TROCAS: Array<[string, keyof PecasRegras]> = [
+  ['Apresentação:', 'apresentacao'],
+  ['Emojis:', 'emojis'],
+  ['Tamanho:', 'tamanho'],
+  ['Dados da cliente:', 'dadosClienteNova'],
+  ['Preço:', 'preco'],
+  ['Depois de agendar:', 'depoisDeAgendar'],
+  ['Mensagens:', 'mensagens'],
+];
+
+/** serena-config: as regras com o jeito da empresa. Sem jeito (ou jeito padrão): exatamente REGRAS_ATENDIMENTO. */
+export function regrasAtendimento(jeito?: JeitoVigente): string[] {
+  const p = pecasDasRegras(jeito);
+  if (!p) return [...REGRAS_ATENDIMENTO];
+  return REGRAS_ATENDIMENTO.map((r) => {
+    const t = TROCAS.find(([inicio]) => r.startsWith(inicio));
+    return (t && p[t[1]]) || r;
+  });
+}
+
 /** As regras como lista para o system prompt. */
-export const textoRegrasAtendimento = (): string => REGRAS_ATENDIMENTO.map((r) => `- ${r}`).join('\n');
+export const textoRegrasAtendimento = (jeito?: JeitoVigente): string => regrasAtendimento(jeito).map((r) => `- ${r}`).join('\n');
 
 /** Unidades que a IA oferece para agendar: as que agendam; sem nenhuma, as ativas. Nome para clientes. */
 export function unidadesParaAgendar(empresaId?: string): string[] {

@@ -15,6 +15,7 @@ import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, TagsDaIa } from '../src/
 import type { RespostaSimulacao, PedidoSimulacao } from '../src/ai/simulacao.js';
 import { bahia } from '../src/util/tempo.js';
 import { poolDeTeste, temPostgres } from './repos.js';
+import { ArmazemJeitoMemoria, ArmazemJeitoPostgres, JeitoDeAtender, type JeitoAtender } from '../src/ai/jeito-atender.js';
 
 /** Quinta, 5/11/2026 (horário da Bahia). */
 export const quinta = (h: number, m = 0) => bahia(2026, 11, 5, h, m);
@@ -74,6 +75,8 @@ export async function montarGestao(
     relogio?: { t: Date };
     /** Liga a tela Ligações (histórico) e o webhook da Evolution. */
     chamadas?: boolean;
+    /** serena-config: liga o Jeito de atender (com uma semente, se vier). */
+    jeito?: { semente?: JeitoAtender | null };
   } = {},
 ) {
   const { repo, contas, pool } = await amb.criar();
@@ -94,6 +97,10 @@ export async function montarGestao(
   const tagsDaIa = new TagsDaIa(tags, async () => (await empresa.configIa()).marcarTags);
   const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), 'imperio', () => BASE_TESTE, { cacheMs: 0, agora });
   const agente = opcoes.agente ?? new AgenteFalso();
+  if (pool && opcoes.jeito) await pool.query('truncate sintonia.jeito_atender, sintonia.jeito_atender_versoes');
+  const jeito = opcoes.jeito
+    ? new JeitoDeAtender(pool ? new ArmazemJeitoPostgres(pool) : new ArmazemJeitoMemoria(), 'imperio', () => (opcoes.jeito!.semente ? structuredClone(opcoes.jeito!.semente) : null), { cacheMs: 0, agora })
+    : undefined;
   const sintonia = new Sintonia({
     empresaId: 'imperio',
     repo,
@@ -111,7 +118,7 @@ export async function montarGestao(
     repo,
     agora,
     auth: { contas, agora },
-    gestao: { tags, empresa, base, simularIa: opcoes.simularIa, iaLigada: opcoes.iaLigada, tagsDaIa: () => tagsDaIa.nomes() },
+    gestao: { tags, empresa, base, simularIa: opcoes.simularIa, iaLigada: opcoes.iaLigada, tagsDaIa: () => tagsDaIa.nomes(), jeito },
     ...(opcoes.chamadas
       ? { chamadas: { armazem: pool ? new ArmazemChamadasPostgres(pool) : new ArmazemChamadasMemoria(), empresaId: 'imperio' }, evolution: { canal } }
       : {}),
@@ -152,5 +159,5 @@ export async function montarGestao(
   const escreve = async (c: Conversa, texto: string) =>
     sintonia.receber({ canalId: `imperio-${c.unidade}`, telefone: c.telefone, nome: c.nome, texto, deMim: false, idExterno: `in-${Math.random()}`, em: relogio.t });
 
-  return { app, repo, contas, pool, sintonia, relogio, gente, como, conversa, escreve, enviados, empresa, tags, base, agente };
+  return { app, repo, contas, pool, sintonia, relogio, gente, como, conversa, escreve, enviados, empresa, tags, base, agente, jeito };
 }

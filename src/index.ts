@@ -26,7 +26,8 @@ import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBaseDa } from './ai/prompt.js';
-import { pausaDigitando, Sintonia, type NumeroConectado } from './app/sintonia.js';
+import { Sintonia, type NumeroConectado } from './app/sintonia.js';
+import { ArmazemJeitoMemoria, ArmazemJeitoPostgres, carregarJeitoDa, JeitoDeAtender, pausaDigitandoDo, tabelasDaSemente, type JeitoVigente } from './ai/jeito-atender.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { EvolutionAdmin } from './channels/evolution-admin.js';
 import { ArmazemSaudeMemoria, ArmazemSaudePostgres, SaudeWhatsApp } from './channels/whatsapp-saude.js';
@@ -277,6 +278,23 @@ const modoNovo = () => portao.modoNovo(async () => (await empresa.configIa()).mo
 // Na primeira vez (banco vazio) a base nasce do knowledge/imperio.md; depois vale a do banco.
 const base = new BaseConhecimento(pool ? new ArmazemBasePostgres(pool) : new ArmazemBaseMemoria(), cfg.SINTONIA_EMPRESA_ID, () => carregarBaseDa(cfg.SINTONIA_EMPRESA_ID));
 await base.garantirSemente().catch((e) => log('Falha ao preparar a base de conhecimento', String(e)));
+/* serena-config: Jeito de atender da IA (Inteligência › Jeito de atender), no banco. A Império nasce preenchida
+   (knowledge/imperio.jeito.json) uma vez; empresa nova fica no padrão. Nome e tabelas vêm da configuração da IA. */
+const sementeJeito = carregarJeitoDa(cfg.SINTONIA_EMPRESA_ID);
+const jeitoAtender = new JeitoDeAtender(pool ? new ArmazemJeitoPostgres(pool) : new ArmazemJeitoMemoria(), cfg.SINTONIA_EMPRESA_ID, () => (sementeJeito ? structuredClone(sementeJeito) : null));
+await jeitoAtender
+  .garantirSemente()
+  .then(async (criou) => {
+    const t = criou ? tabelasDaSemente(cfg.SINTONIA_EMPRESA_ID) : null;
+    const atual = (await empresa.configIa()).tabelaAgendamento;
+    if (t && !atual.clienteNova && !atual.jaCliente) await empresa.alterarConfigIa({ tabelaAgendamento: t }, 'semente');
+  })
+  .catch((e) => log('Falha ao preparar o jeito de atender', String(e)));
+const jeitoVigente = async (): Promise<JeitoVigente> => {
+  const [jeito, c] = await Promise.all([jeitoAtender.atual(), empresa.configIa()]);
+  return { jeito, nome: c.assinatura.texto || 'Serena', tabelas: c.tabelaAgendamento, nomeUnidade: (id) => unidadeDe(id, cfg.SINTONIA_EMPRESA_ID).nome };
+};
+const pausaDigitandoAtual = (texto: string) => pausaDigitandoDo(jeitoAtender.ultimo())(texto);
 const agente = new Agente(claude, agendas, () => base.texto(), {
   modelo: cfg.SINTONIA_MODELO,
   esforco: cfg.SINTONIA_ESFORCO,
@@ -286,6 +304,7 @@ const agente = new Agente(claude, agendas, () => base.texto(), {
   crm: () => crmIa,
   /* serena-regras: a IA se apresenta com o nome da assinatura (padrão "Serena") */
   nomeIa: async () => (await empresa.configIa()).assinatura.texto || 'Serena',
+  jeito: jeitoVigente /* serena-config */,
 });
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
@@ -575,7 +594,7 @@ const followup = new Followup({
   iaRemarca: (c) => portao.iaAtiva() && !chaveSerena.pausada() && c.modo === 'ia' && !(c.pausaIaAte && c.pausaIaAte.getTime() > Date.now()),
   email,
   tags,
-  pausaDigitando /* followup-minutos: "digitando…" antes da mensagem, no mesmo tempo humano da IA */,
+  pausaDigitando: pausaDigitandoAtual /* followup-minutos: "digitando…" antes da mensagem, no mesmo tempo humano da IA (serena-config: o do Jeito de atender) */,
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
@@ -659,6 +678,7 @@ const agentesIa = montarAgentesIa({
   cofre,
   agenda: agendas,
   baseGeral: () => base.texto(),
+  jeito: jeitoVigente /* serena-config */,
   padrao: agente,
   chaveGeral: (p) => (p === 'openai' ? conexoes.get('openaiApiKey') : conexoes.get('anthropicApiKey')) || undefined,
   claudeGeral: claude,
@@ -712,7 +732,8 @@ const sintonia = new Sintonia({
   configIa: async () => regrasDaConfig(await empresa.configIa()),
   assinaturaIa: async () => (await empresa.configIa()).assinatura, /* assinatura da IA */
   tabelasAgendamento: async () => (await empresa.configIa()).tabelaAgendamento, /* tabela-fim */
-  pausaEntrePartes: pausaDigitando /* serena-regras: "digitando…" entre uma mensagem e outra */,
+  pausaEntrePartes: pausaDigitandoAtual /* serena-regras: "digitando…" entre uma mensagem e outra (serena-config: tempo do Jeito de atender) */,
+  jeitoAtender: () => jeitoAtender.atual() /* serena-config: emojis permitidos e máximo de mensagens */,
   tagsIa: tagsDaIa,
   motor: (c) => followup.motor(c),
   regrasFunil: () => regrasFunil.regrasMotor() /* funil-atendimento */,
@@ -1034,6 +1055,7 @@ const app = criarServidor({
     tags,
     empresa,
     base,
+    jeito: jeitoAtender /* serena-config */,
     iaLigada: () => iaLigada,
     tagsDaIa: () => tagsDaIa.nomes(),
     simularIa: (p) => simularResposta(agente, cfg.SINTONIA_EMPRESA_ID, { ...p, agora: new Date() }),

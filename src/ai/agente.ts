@@ -19,16 +19,17 @@ import type { ServicosCrmIa } from './crm-ia.js';
 import { precosConhecidosDe, precosDoTexto, precosInventados, reais } from './guarda.js';
 import { conferirPassagem } from '../agentes-ia/passagem.js';
 import { conhecerCliente, primeiraResposta, textoClienteConhecida } from './cliente-conhecida.js';
+import type { JeitoVigente } from './jeito-atender.js';
 
 /**
  * serena-regras: bloco <cliente_conhecida> (cadastro na agenda pelo telefone/nome do perfil e se é a primeira resposta).
  * No teste da tela (simulação) a cliente é fictícia: não consulta a agenda.
  */
-export async function blocoClienteConhecida(agenda: Agenda, p: PedidoAgente, prazoMs: number): Promise<string> {
+export async function blocoClienteConhecida(agenda: Agenda, p: PedidoAgente, prazoMs: number, dadosNova: string[] = []): Promise<string> {
   const primeira = primeiraResposta(p.mensagens);
-  if (p.simulacao) return textoClienteConhecida({ conhecida: false, nome: null, por: null, confirmar: false, unidade: null, clienteId: null, ultimoAtendimento: null, proximoHorario: null }, primeira);
+  if (p.simulacao) return textoClienteConhecida({ conhecida: false, nome: null, por: null, confirmar: false, unidade: null, clienteId: null, ultimoAtendimento: null, proximoHorario: null }, primeira, dadosNova);
   const k = await conhecerCliente(agenda, p.conversa, p.agora, { prazoMs }).catch(() => null);
-  return k ? textoClienteConhecida(k, primeira) : '';
+  return k ? textoClienteConhecida(k, primeira, dadosNova) : '';
 }
 
 type Esforco = 'low' | 'medium' | 'high';
@@ -48,6 +49,11 @@ export interface OpcoesAgente {
   prazoAgendaMs?: number;
   /** serena-regras: nome com que a IA se apresenta (Agente de IA › Assinatura; padrão "Serena"). */
   nomeIa?: () => Promise<string>;
+  /**
+   * serena-config: Jeito de atender da empresa (lido a cada resposta). Muda o prompt, e o modelo e o esforço quando a
+   * tela escolhe (vazio = `modelo`/`esforco` acima). Ausente = como sempre.
+   */
+  jeito?: () => Promise<JeitoVigente>;
 }
 
 export interface PedidoAgente {
@@ -145,11 +151,18 @@ export class Agente {
   }
 
   /** System prompt da base atual (refeito só quando a base muda, para aproveitar o cache de prompt). */
-  private async systemAtual(base: string): Promise<string> {
+  private async systemAtual(base: string, jeito?: JeitoVigente): Promise<string> {
     // A empresa entra no system prompt: refeito também quando o nome/segmento muda em Empresa › Dados.
-    const chave = `${base}\u0000${apresentacao()}\u0000${identidade().sobre}`;
-    if (this.system?.base !== chave) this.system = { base: chave, texto: systemPrompt(base) };
+    // serena-config: e quando o Jeito de atender muda (o texto do jeito entra na chave).
+    const doJeito = jeito ? JSON.stringify([jeito.jeito, jeito.tabelas ?? null, jeito.jeito.mensagens.confirmacao.map((c) => jeito.nomeUnidade?.(c.unidade) ?? c.unidade)]) : '';
+    const chave = `${base}\u0000${apresentacao()}\u0000${identidade().sobre}\u0000${doJeito}`;
+    if (this.system?.base !== chave) this.system = { base: chave, texto: systemPrompt(base, identidade(), jeito) };
     return this.system.texto;
+  }
+
+  /** serena-config: o Jeito de atender agora (falhou a leitura: segue sem, como sempre). */
+  private async jeitoAtual(): Promise<JeitoVigente | undefined> {
+    return this.opcoes.jeito ? this.opcoes.jeito().catch(() => undefined) : undefined;
   }
 
   async executar(p: PedidoAgente): Promise<RespostaAgente> {
@@ -171,11 +184,14 @@ export class Agente {
       ...(p.tagsDisponiveis?.length ? [ferramentaMarcarTag(p.tagsDisponiveis)] : []),
     ];
     const base = await this.baseAtual();
-    const system = await this.systemAtual(base);
+    const jeito = await this.jeitoAtual();
+    const system = await this.systemAtual(base, jeito);
+    const modelo = jeito?.jeito.avancado.modelo || this.opcoes.modelo;
+    const esforco = jeito?.jeito.avancado.esforco || this.opcoes.esforco;
     const produtos = this.opcoes.produtosDoLead ? await this.opcoes.produtosDoLead(p.conversa).catch(() => null) : null;
     // serena-regras: quem é a cliente (cadastro na agenda) e o nome da IA, prontos no contexto.
     const [cliente, nomeIa] = await Promise.all([
-      blocoClienteConhecida(this.agenda, p, Math.min(this.opcoes.prazoAgendaMs ?? 6000, 6000)),
+      blocoClienteConhecida(this.agenda, p, Math.min(this.opcoes.prazoAgendaMs ?? 6000, 6000), jeito?.jeito.agendamento.dadosClienteNova),
       this.opcoes.nomeIa ? this.opcoes.nomeIa().catch(() => undefined) : Promise.resolve(undefined),
     ]);
     const messages = this.montarMensagens(p, produtos, cliente, nomeIa);
@@ -186,12 +202,12 @@ export class Agente {
     for (let passo = 0; passo < maxPassos; passo++) {
       if (passo > 0 && p.continuar && !(await p.continuar().catch(() => true))) return { texto: '', acoes, recusou: false, interrompida: true };
       const resp = await this.claude.beta.messages.create({
-        model: this.opcoes.modelo,
+        model: modelo,
         max_tokens: 16000,
         system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
         tools: ferramentas,
         messages,
-        output_config: { effort: this.opcoes.esforco },
+        output_config: { effort: esforco },
         // Se o modelo principal recusar, a API tenta o modelo de reserva recomendado.
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',

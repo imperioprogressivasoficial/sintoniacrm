@@ -19,7 +19,8 @@ import { TravaMemoria, type Trava } from '../fila/trava.js';
 import { textoPassagem } from '../ai/agente.js';
 import type { AplicadorCrmIa, ServicosCrmIa } from '../ai/crm-ia.js';
 import { tabelaDoAgendamento, type TabelasAgendamento } from '../ai/ferramentas-crm.js';
-import { partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
+import { LIMITE_MENSAGEM, partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
+import { JEITO_PADRAO, pausaDigitandoDo, sanitizadorDeEmojis, sanitizadorDoJeito, type JeitoAtender } from '../ai/jeito-atender.js';
 import { PREFIXO_NOTA_IA, type Percepcao } from '../ai/prompt.js';
 import { dataISO, horaHHmm } from '../util/tempo.js';
 import { nomeDoWhatsapp, nomeOuTelefone, nomeParaTrocar } from '../contatos/nome.js';
@@ -122,6 +123,11 @@ export interface DependenciasSintonia {
   guardaCusto?: GuardaCusto;
   /** ia-completa: quem da equipe está disponível agora (vai para a IA em cada resposta). */
   equipeAgora?: (c: Conversa) => Promise<{ texto: string; disponiveis: number; responsavelDisponivel: boolean | null } | undefined>;
+  /**
+   * serena-config: Jeito de atender da empresa (emojis permitidos e quantas mensagens no máximo). Lido a cada resposta.
+   * Ausente = o padrão (✅ e 💜, até 3 mensagens).
+   */
+  jeitoAtender?: () => Promise<JeitoAtender>;
 }
 
 /** ia-completa: espera máxima para juntar mensagens seguidas ou esperar uma mídia baixar. */
@@ -1119,7 +1125,7 @@ export class Sintonia {
         }
 
         if (decisao.acao === 'sugerir') {
-          await this.d.repo.guardarSugestao(depois.id, semEmojiDeRosto(r.texto));
+          await this.d.repo.guardarSugestao(depois.id, sanitizadorDoJeito(await this.jeito())(r.texto));
           await this.aplicarAcoes(depois, r.acoes, 'ia');
           await this.d.repo.salvarConversa(depois);
           await this.evento('sugestao_gerada', depois);
@@ -1136,7 +1142,7 @@ export class Sintonia {
         const enviadoEm = this.agora();
         const espera = this.tempoDeResposta(depois, enviadoEm);
         // ia-completa: sem markdown e em até 3 mensagens curtas.
-        const partes = partirParaWhatsApp(r.texto);
+        const partes = partirParaWhatsApp(r.texto, LIMITE_MENSAGEM, (await this.jeito()).mensagens.maxMensagens); // serena-config
         const enviadas = await this.enviarPartes(depois, partes, enviadoEm);
         const usadas = Sintonia.usadas(enviadas);
         // aud-ia: só a parte sem confirmação ("tempo esgotado") e era a última: conta como respondida, sem reenvio.
@@ -1190,6 +1196,16 @@ export class Sintonia {
     }
   }
 
+  /** serena-config: o Jeito de atender agora (sem ou com falha: o padrão). */
+  private async jeito(): Promise<JeitoAtender> {
+    if (!this.d.jeitoAtender) return JEITO_PADRAO;
+    try {
+      return await this.d.jeitoAtender();
+    } catch {
+      return JEITO_PADRAO;
+    }
+  }
+
   /** Assinatura da IA (dono 21/11): "*Serena:*" antes da 1ª parte ou "_Serena_" depois da última. Desligada: igual. */
   private async assinarPartes(partes: string[]): Promise<string[]> {
     if (!partes.length || !this.d.assinaturaIa) return partes;
@@ -1208,7 +1224,8 @@ export class Sintonia {
    * (as que saíram ficam gravadas na conversa).
    */
   private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown; incerta?: boolean }> {
-    partes = (await this.assinarPartes(partes)).map(semEmojiDeRosto).filter((t) => t.trim()); // dono 28/11: nada de emoji de rosto
+    const semEmoji = sanitizadorDoJeito(await this.jeito()); // serena-config: os emojis permitidos no Jeito de atender
+    partes = (await this.assinarPartes(partes)).map(semEmoji).filter((t) => t.trim()); // dono 28/11: nada de emoji de rosto
     // dono 28/11: a cliente mandou áudio → a IA responde em áudio (voz grátis do servidor), se for uma resposta curta
     // e sem link nem a confirmação do agendamento (essa fica em texto). Qualquer falha: segue em texto.
     if (this.d.voz && partes.length) {
@@ -1377,7 +1394,7 @@ export class Sintonia {
     }
     const enviadoEm = this.agora();
     // ia-completa: sem markdown e em até 3 mensagens; nada saiu = erro (o relógio registra a falha).
-    const e = await this.enviarPartes(c, partirParaWhatsApp(r.texto), enviadoEm);
+    const e = await this.enviarPartes(c, partirParaWhatsApp(r.texto, LIMITE_MENSAGEM, (await this.jeito()).mensagens.maxMensagens), enviadoEm);
     if (!e.n && e.erro) throw e.erro;
     c.ultimaMensagemIa = enviadoEm;
     await this.primeiraResposta(c, 'ia');
@@ -1775,19 +1792,16 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
   return a;
 }
 
-/** dono 28/11: a IA nunca manda emoji de rosto (😊🥰😍🤗…) nem de agenda (📅⏰📍). Os de apoio (✅💜✨) continuam. */
-const PERMITIDOS = new Set(['✅', '💜']);
-/** dono 28/11: nenhum emoji de rosto, de agenda ou "infantil": só ✅ e 💜 passam (o resto sai antes de enviar). */
-export const semEmojiDeRosto = (t: string): string =>
-  t
-    .replace(/\p{Extended_Pictographic}[\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}\p{Extended_Pictographic}]*/gu, (e) => (PERMITIDOS.has(e.replace(/\u{FE0F}/gu, '')) ? e : ''))
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
+/**
+ * dono 28/11: nenhum emoji de rosto, de agenda ou "infantil": só ✅ e 💜 passam (o resto sai antes de enviar).
+ * serena-config: é o padrão; a empresa escolhe os seus em Inteligência › Jeito de atender (sanitizadorDoJeito).
+ */
+export const semEmojiDeRosto = sanitizadorDeEmojis(['✅', '💜']);
 
-/** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
-/** dono 28/11: o tempo de uma pessoa digitar a mensagem no celular (~1 s + 45 ms por letra), entre 1,8 s e 7 s. */
-export const pausaDigitando = (texto: string): number => Math.round(Math.min(7000, Math.max(1800, 1000 + texto.length * 45)));
+/**
+ * dono 28/11: o tempo de uma pessoa digitar a mensagem no celular (~1 s + 45 ms por letra), entre 1,8 s e 7 s.
+ * serena-config: é o padrão; a empresa ajusta em Jeito de atender › Avançado (pausaDigitandoDo).
+ */
+export const pausaDigitando = pausaDigitandoDo(JEITO_PADRAO);
 /** dono 28/11: o tempo de gravar o áudio (~1 s + 60 ms por letra falada), entre 3 s e 15 s. */
 export const pausaGravando = (texto: string): number => Math.round(Math.min(15000, Math.max(3000, 1000 + texto.length * 60)));

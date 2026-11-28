@@ -4,6 +4,7 @@ import { executarFerramenta, filtrarPelaUnidade, novaSessao, type AcaoAgente, ty
 import { conhecerCliente, esquecerCliente, mesmoNome, textoClienteConhecida } from '../src/ai/cliente-conhecida.js';
 import { blocoUnidades, REGRAS_ATENDIMENTO } from '../src/ai/regras-atendimento.js';
 import { carregarBase, systemPrompt } from '../src/ai/prompt.js';
+import { carregarJeitoDa } from '../src/ai/jeito-atender.js';
 import { partirParaWhatsApp } from '../src/ai/guarda.js';
 import { acharTabela, rodarFerramentaCrm } from '../src/ai/ferramentas-crm.js';
 import type { ServicosCrmIa } from '../src/ai/crm-ia.js';
@@ -224,12 +225,14 @@ describe('3. Pergunta da unidade: uma mensagem, uma unidade por linha', () => {
     expect(blocoUnidades()).toContain('Não pergunte a unidade');
   });
   it('a base não chama de "rainha" em toda mensagem e tirou a frase do formol da boas-vindas', () => {
+    // serena-config: jeito de falar, boas-vindas e roteiro da Império passaram para o Jeito de atender (knowledge/imperio.jeito.json).
     const b = carregarBase();
-    expect(b).toContain('"rainha" de vez em quando, nunca em toda mensagem');
-    expect(b).toContain('Eu sou a [SEU NOME] e vou seguir com o seu atendimento.');
-    expect(b).toContain('Que bom ter você de volta, [PRIMEIRO NOME]!');
-    expect(b).toContain('Somos a maior referência em alisamento capilar da Bahia.');
-    const roteiro = b.slice(b.indexOf('## Roteiro'), b.indexOf('## Tabela Liso'));
+    const j = JSON.stringify(carregarJeitoDa('imperio'));
+    expect(j).toContain('\\"rainha\\" de vez em quando, nunca em toda mensagem');
+    expect(j).toContain('Eu sou a [SEU NOME] e vou seguir com o seu atendimento.');
+    expect(j).toContain('Que bom ter você de volta, [PRIMEIRO NOME]!');
+    expect(j).toContain('Somos a maior referência em alisamento capilar da Bahia.');
+    const roteiro = JSON.stringify(carregarJeitoDa('imperio')!.agendamento.roteiro);
     expect(roteiro).not.toContain('sem formol');
     expect(b).toContain('Pergunta: É com formol?');
   });
@@ -442,10 +445,12 @@ describe('1/7. Agendar: quem tem cadastro não informa nada; cliente nova inform
   });
 
   it('a base traz a confirmação organizada com emojis, por unidade, com o endereço', () => {
-    const b = carregarBase();
-    expect(b).toContain('Agendamento confirmado ✅\n  Data: [DATA]\n  Horário: [HORÁRIO]\n  Local: Shopping Sumaré — Avenida Tancredo Neves, 2º piso');
-    expect(b).toContain('Local: Salvador Norte Shopping — São Cristóvão, Piso L2, em frente à Narciso Enxovais');
-    expect(b).toContain('agende direto, sem perguntar');
+    // serena-config: a confirmação por unidade e o roteiro ficam no Jeito de atender da Império.
+    const j = carregarJeitoDa('imperio')!;
+    const conf = Object.fromEntries(j.mensagens.confirmacao.map((c) => [c.unidade, c.texto]));
+    expect(conf.sumare).toContain('Agendamento confirmado ✅\nData: [DATA]\nHorário: [HORÁRIO]\nLocal: Shopping Sumaré — Avenida Tancredo Neves, 2º piso');
+    expect(conf.norte).toContain('Local: Salvador Norte Shopping — São Cristóvão, Piso L2, em frente à Narciso Enxovais');
+    expect(j.agendamento.roteiro.join(' ')).toContain('agende direto, sem perguntar');
   });
 });
 

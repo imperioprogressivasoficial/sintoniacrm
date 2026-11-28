@@ -105,6 +105,8 @@ export interface DependenciasExecutor {
   cofre: { decifrar(s: string): string };
   agenda: Agenda;
   baseGeral: () => Promise<string>;
+  /** serena-config: Jeito de atender da empresa (ausente = como sempre). */
+  jeito?: () => Promise<import('../ai/jeito-atender.js').JeitoVigente>;
   /** Cliente do provedor. `chave` = chave própria do agente (já decifrada); ausente = a chave geral. Lança SemChave. */
   cliente: (provedor: Provedor, chave?: string) => ClienteClaude;
   repo: Pick<Repositorio, 'mensagens' | 'registrarEvento'>;
@@ -136,12 +138,13 @@ export class ExecutorAgentes {
 
   /** System prompt do agente (também mostrado na tela "Ver o que a IA lê"). */
   async systemDe(a: AgenteIa, ferramentas: string[]): Promise<string> {
-    const [conhecimento, aprendizados, baseGeral] = await Promise.all([
+    const [conhecimento, aprendizados, baseGeral, jeito] = await Promise.all([
       this.d.armazem.conhecimentos(a.id),
       this.d.armazem.aprendizados(a.id, 'aprovado'),
       a.config.usarBaseGeral ? this.d.baseGeral().catch(() => '') : Promise.resolve(''),
+      this.d.jeito ? this.d.jeito().catch(() => undefined) : Promise.resolve(undefined),
     ]);
-    return systemDoAgente({ agente: a, baseGeral, conhecimento, aprendizados, ferramentas });
+    return systemDoAgente({ agente: a, baseGeral, conhecimento, aprendizados, ferramentas, jeito });
   }
 
   /**
@@ -183,7 +186,8 @@ export class ExecutorAgentes {
     const cliente = this.clienteDe(a);
     const system = await this.systemDe(a, nomes);
     const memoria = cfg.memoriaCliente && !simulacao ? await this.d.armazem.memoria(this.d.empresaId, p.conversa.telefone).catch(() => []) : [];
-    const quemE = await blocoClienteConhecida(this.d.agenda, p, 6000); // serena-regras
+    const dadosNova = this.d.jeito ? (await this.d.jeito().catch(() => undefined))?.jeito.agendamento.dadosClienteNova : undefined;
+    const quemE = await blocoClienteConhecida(this.d.agenda, p, 6000, dadosNova); // serena-regras (serena-config: dados da cliente nova)
     const messages = this.montarMensagens(a, p, textoMemoria(memoria), simulacao, quemE);
     const anthropic = a.provedor === 'anthropic';
     const comReserva = anthropic && /^claude-(opus|sonnet)-5-5/.test(a.modelo);

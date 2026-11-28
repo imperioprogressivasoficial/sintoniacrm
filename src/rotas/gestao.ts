@@ -11,6 +11,8 @@ import type { PedidoSimulacao, RespostaSimulacao } from '../ai/simulacao.js';
 import { mesDe, montarPainel, montarPessoa, PERIODOS, type FontePainel } from '../painel/painel.js';
 import { iaHoje } from '../painel/ia-hoje.js';
 import { zUnidade } from '../unidades.js';
+import type { JeitoDeAtender } from '../ai/jeito-atender.js';
+import { registrarJeito } from '../ai/jeito-rotas.js';
 
 /**
  * Rotas de gestão: tags, aba IA (o que fez, configuração, treinamento, testar), painel completo e empresa.
@@ -32,6 +34,8 @@ export interface OpcoesGestao {
   iaLigada?: () => boolean;
   /** Nomes de tags que a IA pode marcar agora (para o "Testar a IA" se comportar igual). */
   tagsDaIa?: () => Promise<string[]>;
+  /** serena-config: Jeito de atender (Inteligência › Jeito de atender). Ausente = tela desligada. */
+  jeito?: JeitoDeAtender;
 }
 
 const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
@@ -149,6 +153,8 @@ export function registrarGestao(app: FastifyInstance, o: OpcoesGestao): void {
     const e = exige(o.empresa, 'A configuração da IA');
     return { ...(await e.configIa()), iaLigada: o.iaLigada?.() ?? null };
   });
+
+  if (o.jeito) registrarJeito(app, { jeito: o.jeito, empresa: o.empresa, base: o.base }); // serena-config
 
   app.patch('/api/ia/config', async (req) => {
     exigeGestao(req, 'Só a gerência, a direção e a administração mudam a configuração da IA.');

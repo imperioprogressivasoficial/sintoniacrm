@@ -7,6 +7,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { dataISO, horaHHmm, nomeDiaSemana } from '../util/tempo.js';
 import { descricaoCurta, identidade, type Identidade } from '../empresa/identidade.js';
 import { blocoUnidades, textoRegrasAtendimento } from './regras-atendimento.js';
+import { blocoJeito, type JeitoVigente } from './jeito-atender.js';
 
 /**
  * O system prompt é fixo (persona + regras + base de conhecimento) para aproveitar o cache
@@ -51,7 +52,9 @@ const BASE_EM_BRANCO = `# Base de conhecimento da IA
 ## Perguntas frequentes
 `;
 
-export function systemPrompt(base: string, empresa: Identidade = identidade()): string {
+/** serena-config: `jeito` = o Jeito de atender da empresa (sem ele, ou padrão sem textos: o prompt de sempre). */
+export function systemPrompt(base: string, empresa: Identidade = identidade(), jeito?: JeitoVigente): string {
+  const doJeito = blocoJeito(jeito);
   return `Você é a assistente de atendimento da ${empresa.nome} no WhatsApp${descricaoCurta(empresa) ? ` (${descricaoCurta(empresa)})` : ''}. Você conversa com clientes e potenciais clientes, tira dúvidas e marca horários na agenda (Trinks ou o sistema que a unidade usa).${empresa.sobre ? `\nSobre a empresa (escrito por ela): ${empresa.sobre}` : ''}
 
 Como responder:
@@ -73,8 +76,8 @@ Como responder:
 - Sua resposta final é exatamente o texto que vai para a cliente (cada mensagem curta; as mensagens prontas da base, como a confirmação, vão como estão).
 
 Como conduzir até agendar:
-${textoRegrasAtendimento()}
-
+${textoRegrasAtendimento(jeito)}
+${doJeito ? `\n${doJeito}\n` : ''}
 <base_de_conhecimento>
 ${base}
 </base_de_conhecimento>`;

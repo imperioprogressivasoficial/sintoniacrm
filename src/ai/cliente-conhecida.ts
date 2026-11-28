@@ -221,7 +221,8 @@ const diaBr = (iso: string) => iso.split('-').reverse().join('/');
 const diaComSemana = (iso: string) => `${nomeDiaSemana(new Date(`${iso}T15:00:00Z`))}, ${diaBr(iso)}`;
 
 /** Bloco pronto para o prompt. */
-export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): string {
+/** serena-config: `dadosNova` = os dados que a cliente nova informa (Jeito de atender; vazio = o texto de sempre). */
+export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean, dadosNova: string[] = []): string {
   const linhas = [`cliente_conhecida: ${k.conhecida ? 'sim' : 'não'}`];
   if (k.nome && (k.nomeConfirmado ?? true)) linhas.push(`nome no cadastro: ${k.nome}`);
   if (k.nome && k.nomeConfirmado === false) linhas.push('o número tem cadastro, mas o nome do cadastro não bate com o do perfil: NÃO chame a cliente por nome nenhum. O agendamento vale pelo número: não peça nome nem dados.');
@@ -246,6 +247,8 @@ export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): s
     ? 'Nome não confirmado: boas-vindas sem nome nenhum. Agende pelo número (cadastro já existe), sem pedir dados.'
     : k.conhecida
     ? 'Cliente que volta: não peça nome, nascimento nem e-mail (o cadastro já existe). Se for a primeira resposta, use a boas-vindas de quem volta.'
+    : dadosNova.length
+    ? `Cliente nova: depois que ela escolher o horário, peça ${dadosNova.map((x) => x.replace(/[<>]/g, '')).join(', ')}; o telefone é o do WhatsApp. Grave nas observações do agendamento.`
     : 'Cliente nova: depois que ela escolher o horário, peça nome completo, data de nascimento, e-mail e o que a base pedir (ex.: a maior dificuldade dela); o telefone é o do WhatsApp. Grave nas observações do agendamento.';
   const extra: string[] = [];
   if (k.proximoHorario) {

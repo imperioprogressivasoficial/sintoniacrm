@@ -160,7 +160,8 @@ describe.each(ambientes)('Treinamento da IA: base de conhecimento ($nome)', (amb
 describe('Base de conhecimento: semente e histórico', () => {
   it('as seções do knowledge/imperio.md viram a semente', () => {
     const s = secoesDoMarkdown(carregarBase());
-    expect(s.map((x) => x.chave)).toEqual(['quem-somos', 'jeito-de-falar', 'roteiro-de-atendimento-ate-agendar', 'tabela-liso-infinito', 'tabela-seu-primeiro-alisamento', 'mensagens-prontas', 'regras-comerciais', 'situacoes-e-como-agir', 'atendimento-que-encanta-e-vende', 'outros-assuntos', 'objecoes-mais-comuns', 'quando-passar-para-uma-pessoa-da-equipe', 'etapas-do-funil', 'pos-venda', 'glossario-do-comercial', 'perguntas-frequentes']);
+    // serena-config: "Jeito de falar", "Roteiro" e "Mensagens prontas" passaram para o Jeito de atender (knowledge/imperio.jeito.json).
+    expect(s.map((x) => x.chave)).toEqual(['quem-somos', 'tabela-liso-infinito', 'tabela-seu-primeiro-alisamento', 'regras-comerciais', 'situacoes-e-como-agir', 'atendimento-que-encanta-e-vende', 'outros-assuntos', 'objecoes-mais-comuns', 'quando-passar-para-uma-pessoa-da-equipe', 'etapas-do-funil', 'pos-venda', 'glossario-do-comercial', 'perguntas-frequentes']);
     expect(s[0]!.conteudo).toContain('Salvador Norte Shopping');
   });
 

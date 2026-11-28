@@ -549,6 +549,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
               intTags),
             tagsCaixa),
           cartaoAss,
+          /* serena-config: "Jeito de atender" (public/telas/jeito-atender.js) */
+          window.SintoniaJeitoAtender ? window.SintoniaJeitoAtender.cartao(ui) : null,
           travado ? el('div', { class: 'iax-nota' }, icone('cadeado'), el('span', { text: 'Só a gerência, a direção e a administração mudam essas opções.' })) : null,
           !ligada ? el('div', { class: 'iax-nota' }, el('span', { text: 'Enquanto a IA estiver sem chave, as conversas novas entram em Minha resposta.' })) : null].filter(Boolean));
       }

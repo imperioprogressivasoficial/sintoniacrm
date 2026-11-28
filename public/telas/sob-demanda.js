@@ -37,7 +37,7 @@
     email: { precisa: ['leads'], arquivos: ['email'], telas: { email: { acoes: ['desenhar'], outros: ['ligarFicha'] } } },
     agenda: { arquivos: ['agenda'], telas: { agenda: { acoes: ['desenhar', 'novo'] } } },
     /* a faixa "A IA está no controle" da conversa aberta aparece assim que o grupo chega */
-    ia: { arquivos: ['aprender' /* ia-aprende */, 'ia', 'economia-ia', 'agentes-ia', 'ia-estado'], depois: () => T.agentesIa?.faixaConversa?.(),
+    ia: { arquivos: ['aprender' /* ia-aprende */, 'ia', 'jeito-atender' /* serena-config */, 'economia-ia', 'agentes-ia', 'ia-estado'], depois: () => T.agentesIa?.faixaConversa?.(),
       telas: { ia: { acoes: ['desenhar'] }, economiaIa: { acoes: ['desenhar'] }, agentesIa: { acoes: ['desenhar', 'inicio'], outros: ['faixaConversa'] }, iaEstado: { acoes: ['desenhar'] } } },
     integracoes: { arquivos: ['integracoes'], telas: { integracoes: { acoes: ['desenhar'], outros: ['recarregar'] } } },
     reunioes: { arquivos: ['reunioes'], telas: { reunioes: { acoes: ['desenhar'], outros: ['css'] } } },

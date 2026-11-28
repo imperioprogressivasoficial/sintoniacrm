@@ -2,6 +2,7 @@ import type { AgenteIa, Aprendizado, Conhecimento, MemoriaCliente } from './tipo
 import { NOME_MEMORIA } from './tipos.js';
 import { descricaoCurta, identidade } from '../empresa/identidade.js';
 import { textoRegrasAtendimento } from '../ai/regras-atendimento.js';
+import { blocoJeito, type JeitoVigente } from '../ai/jeito-atender.js';
 
 /**
  * System prompt de um agente do estúdio. Fica fixo enquanto o agente e o conhecimento não mudam
@@ -35,6 +36,8 @@ export interface PartesPrompt {
   aprendizados: Aprendizado[];
   /** Nomes das ferramentas que este agente pode usar (já filtradas). */
   ferramentas: string[];
+  /** serena-config: Jeito de atender da empresa (vale também para os agentes do estúdio que agendam). */
+  jeito?: JeitoVigente;
 }
 
 export function systemDoAgente(p: PartesPrompt): string {
@@ -99,7 +102,11 @@ export function systemDoAgente(p: PartesPrompt): string {
   if (!tem('agendar')) operacao.push('Você não marca horário: quando ela quiser agendar, colete serviço, unidade, dia e hora e diga que a equipe confirma.');
   blocos.push(`<como_operar>\n${operacao.map((x) => `- ${x}`).join('\n')}\n</como_operar>`);
   // serena-regras: o mesmo jeito de conduzir até agendar do agente padrão (src/ai/regras-atendimento.ts).
-  if (tem('consultar_horarios') || tem('agendar')) blocos.push(`<como_conduzir_ate_agendar>\n${textoRegrasAtendimento()}\n</como_conduzir_ate_agendar>`);
+  if (tem('consultar_horarios') || tem('agendar')) {
+    blocos.push(`<como_conduzir_ate_agendar>\n${textoRegrasAtendimento(p.jeito)}\n</como_conduzir_ate_agendar>`);
+    const doJeito = blocoJeito(p.jeito); // serena-config
+    if (doJeito) blocos.push(doJeito);
+  }
 
   const base = [c.usarBaseGeral && p.baseGeral?.trim() ? p.baseGeral.trim() : '', textoConhecimento(p.conhecimento)].filter(Boolean).join('\n\n');
   blocos.push(`<base_de_conhecimento>\n${base || '(vazia: diga que vai confirmar com a equipe quando não souber)'}\n</base_de_conhecimento>`);
