@@ -59,6 +59,12 @@ export interface OpcoesFollowup {
    * (ficam adiadas, não se perdem). A confirmação de agenda continua (é aviso do horário, não atendimento).
    */
   pausada?: () => boolean;
+  /**
+   * reagendar: a IA vai responder esta conversa e pode remarcar (IA conduzindo, chave ligada). Aí, quando a cliente
+   * responde "2"/"não vou conseguir" à confirmação, a resposta fixa ("logo te chamamos") não sai: a própria IA
+   * oferece os horários e remarca (remarcar_agendamento). A equipe continua avisada.
+   */
+  iaRemarca?: (c: Conversa) => boolean;
   email?: EmailParaFollowup;
   tags?: TagsParaFollowup;
   agora?: () => Date;
@@ -307,7 +313,9 @@ export class Followup {
     await this.o.armazem.marcarConfirmacao(this.o.empresaId, conf.agendamento, { status: r, respondidoEm: agora, resposta: texto.slice(0, 200) });
     const v = this.variaveis(c, conf);
     const resposta = r === 'confirmado' ? cfg.confirmacao.textoConfirmado : cfg.confirmacao.textoRemarcar;
-    if (resposta.trim()) {
+    // reagendar: a IA cuida do "quero remarcar" (oferece horários e remarca); sem IA, a resposta fixa de sempre.
+    const iaCuida = r === 'remarcar' && Boolean(this.o.iaRemarca?.(c));
+    if (resposta.trim() && !iaCuida) {
       try {
         // Respondida aqui: a IA não responde de novo ao "1"/"2".
         await this.o.sintonia().enviarAutomatico(c, preencher(resposta, v), AUTOR_CONFIRMACAO);

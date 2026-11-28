@@ -339,7 +339,7 @@ async function servicosDa(ctx: ContextoFerramentas, unidade: string): Promise<Se
 const cancelado = (tipo: string, a: AgendamentoDoSistema) => a.cancelado || (tipo === 'trinks' && a.status?.id === 9);
 
 /** Horários futuros da cliente nesta unidade (vazio se ela não tem cadastro). */
-async function agendamentosDa(ctx: ContextoFerramentas, unidade: string, dias = 120): Promise<{ clienteId: number | null; lista: AgendamentoDoSistema[] }> {
+export async function agendamentosDa(ctx: ContextoFerramentas, unidade: string, dias = 120): Promise<{ clienteId: number | null; lista: AgendamentoDoSistema[] }> {
   const { sistema, tipo, local } = agendaDaUnidade(ctx.agenda, unidade);
   const clienteId = (tipo === 'trinks' ? ctx.conversa.trinksClienteId : undefined) ?? (await sistema.buscarClientePorTelefone(local, ctx.conversa.telefone))?.id ?? null;
   if (!clienteId) return { clienteId: null, lista: [] };
@@ -388,7 +388,7 @@ export function horaPermitida(unidade: string, hora: string): boolean {
 }
 
 /** O serviço em que a IA marca: o que veio, o padrão da unidade, o "Essencial" ou um único "avaliação". Sem nenhum: recusa explicando. */
-async function servicoEscolhido(ctx: ContextoFerramentas, unidade: string, servicoId: number | null | undefined): Promise<ServicoAgenda> {
+export async function servicoEscolhido(ctx: ContextoFerramentas, unidade: string, servicoId: number | null | undefined): Promise<ServicoAgenda> {
   const servicos = await servicosDa(ctx, unidade);
   if (servicoId) {
     const s = servicos.find((x) => x.id === servicoId);
