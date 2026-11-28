@@ -121,7 +121,7 @@ export interface FonteRegrasFunil {
   /** Em atendimento, a loja falou por último e a 1ª mensagem da loja depois da última da cliente é de antes de `antes`. */
   semResposta(empresaId: string, antes: Date, limite: number): Promise<Array<{ conversaId: string; desde: Date }>>;
   /** Agendado cujo horário (o último marcado) terminou antes de `antes`. */
-  horarioPassou(empresaId: string, antes: Date, limite: number): Promise<Array<{ conversaId: string; fim: Date }>>;
+  horarioPassou(empresaId: string, antes: Date, limite: number, desde?: Date): Promise<Array<{ conversaId: string; fim: Date }>>;
   /** Em Novo lead, a cliente escreveu entre `desde` e `antes` e a loja ainda não respondeu; sem alerta para essa mensagem. */
   paradas(empresaId: string, desde: Date, antes: Date, limite: number): Promise<Array<{ conversaId: string; desde: Date }>>;
 }
@@ -150,7 +150,7 @@ export class FonteRegrasFunilMemoria implements FonteRegrasFunil {
     }
     return r;
   }
-  async horarioPassou(empresaId: string, antes: Date, limite: number) {
+  async horarioPassou(empresaId: string, antes: Date, limite: number, desde?: Date) {
     const r: Array<{ conversaId: string; fim: Date }> = [];
     for (const c of await this.repo.listarConversas({ empresaId })) {
       if (r.length >= limite) break;
@@ -161,6 +161,7 @@ export class FonteRegrasFunilMemoria implements FonteRegrasFunil {
       if (!ag) continue;
       const fim = new Date(new Date(String(ag.dados!.inicio)).getTime() + (Number(ag.dados!.duracaoMin) || 60) * MIN);
       if (!(fim.getTime() <= antes.getTime())) continue;
+      if (desde && fim.getTime() < desde.getTime()) continue;
       if (evs.some((e) => MANUAL(e) && e.em.getTime() >= fim.getTime())) continue;
       r.push({ conversaId: c.id, fim });
     }
@@ -199,7 +200,7 @@ export class FonteRegrasFunilPostgres implements FonteRegrasFunil {
     );
     return rows.map((x) => ({ conversaId: x.id, desde: x.ref }));
   }
-  async horarioPassou(empresaId: string, antes: Date, limite: number) {
+  async horarioPassou(empresaId: string, antes: Date, limite: number, desde?: Date) {
     const { rows } = await this.pool.query<{ id: string; fim: Date }>(
       `select c.id, a.fim
          from sintonia.conversas c
@@ -211,10 +212,11 @@ export class FonteRegrasFunilPostgres implements FonteRegrasFunil {
                                 and coalesce(e.dados->>'duracaoMin', '0') ~ '^\\d+(\\.\\d+)?$'
                               order by e.em desc, e.id desc limit 1) a
         where c.empresa_id = $1 and c.etapa = 'agendada' and c.arquivada_em is null and a.fim <= $2
+          and ($4::timestamptz is null or a.fim >= $4)
           and not exists (select 1 from sintonia.eventos e where e.conversa_id = c.id and e.tipo = 'etapa_mudou'
                              and e.dados->>'motivo' = 'manual' and e.em >= a.fim)
         order by a.fim limit $3`,
-      [empresaId, antes, limite],
+      [empresaId, antes, limite, desde ?? null],
     );
     return rows.map((x) => ({ conversaId: x.id, fim: x.fim }));
   }
@@ -380,7 +382,10 @@ export class RegrasFunil {
   private async finalizar(cfg: RegrasFunilCfg, agora: Date): Promise<number> {
     const antes = new Date(agora.getTime() - cfg.finalizado.minutos * MIN);
     let n = 0;
-    for (const x of await this.o.fonte.horarioPassou(this.o.empresaId, antes, POR_VOLTA)) {
+    // Só horários das últimas 48 h: horário antigo (de antes da regra existir) não vira "Finalizado" sozinho,
+    // senão o pós-venda mandaria "obrigada pela visita" semanas depois. Esses a equipe move à mão.
+    const desde = new Date(agora.getTime() - 48 * 60 * MIN);
+    for (const x of await this.o.fonte.horarioPassou(this.o.empresaId, antes, POR_VOLTA, desde)) {
       if (await this.mover(x.conversaId, 'compareceu', (c) => c.etapa === 'agendada', 'horario_passou')) n++;
     }
     return n;

@@ -201,6 +201,15 @@ describe.each(ambientes)('funil de atendimento ($nome)', (amb) => {
     expect((await m.buscar(c.id)).etapa).toBe('agendada');
   });
 
+  it('Finalizado: horário que passou há mais de 48 h não vira Finalizado sozinho (pós-venda não manda fora de hora)', async () => {
+    const m = await montarFunis(amb);
+    const c = await m.conversa('norte', 'Velha');
+    await m.sintonia.equipeAgendou(c.id, { tipo: 'agendou', agendamento: agendamento('norte', quinta(15)), clienteTrinksId: 9 }, 'Carla Lima');
+    m.relogio.t = new Date(quinta(16).getTime() + 3 * 24 * 3600_000);
+    await m.tickRegras();
+    expect((await m.buscar(c.id)).etapa).toBe('agendada');
+  });
+
   it('pediu para remarcar (confirmação de agenda ou tag "Quer remarcar") → Reagendar; desligada, não move', async () => {
     const m = await montarFunis(amb);
     const c = await m.conversa('norte', 'Lu');
