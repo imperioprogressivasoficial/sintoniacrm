@@ -1100,7 +1100,7 @@ export class Sintonia {
         }
 
         if (decisao.acao === 'sugerir') {
-          await this.d.repo.guardarSugestao(depois.id, r.texto);
+          await this.d.repo.guardarSugestao(depois.id, semEmojiDeRosto(r.texto));
           await this.aplicarAcoes(depois, r.acoes, 'ia');
           await this.d.repo.salvarConversa(depois);
           await this.evento('sugestao_gerada', depois);
@@ -1188,7 +1188,7 @@ export class Sintonia {
    * (as que saíram ficam gravadas na conversa).
    */
   private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown; incerta?: boolean }> {
-    partes = await this.assinarPartes(partes);
+    partes = (await this.assinarPartes(partes)).map(semEmojiDeRosto).filter((t) => t.trim()); // dono 28/11: nada de emoji de rosto
     let n = 0;
     for (const texto of partes) {
       // serena-regras: entre uma mensagem e outra, "digitando…" pelo tempo de escrever a próxima (como uma pessoa).
@@ -1687,6 +1687,10 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
   else if (!r.base64 && !canal.baixarMidia) a.situacao = 'falhou';
   return a;
 }
+
+/** dono 28/11: a IA nunca manda emoji de rosto (😊🥰😍🤗…). Os de apoio (✅📅⏰📍💜✨) continuam. */
+const ROSTOS = /[\u{1F600}-\u{1F64F}\u{1F910}-\u{1F92F}\u{1F970}-\u{1F97F}\u{1F9D0}-\u{1F9DF}\u{1FAE0}-\u{1FAEF}\u{263A}\u{2639}][\u{FE0F}\u{1F3FB}-\u{1F3FF}]?/gu;
+export const semEmojiDeRosto = (t: string): string => t.replace(ROSTOS, '').replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
 
 /** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
 export const pausaDigitando = (texto: string): number => Math.round(Math.min(2500, Math.max(800, 500 + texto.length * 15))); // dono 28/11: mais rápido

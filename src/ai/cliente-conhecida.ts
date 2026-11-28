@@ -31,6 +31,11 @@ export interface ClienteConhecida {
   proximoHorario: { data: string; hora: string; unidade: UnidadeId } | null;
   /** A agenda não respondeu a tempo: a IA pode usar buscar_cliente. */
   semResposta?: boolean;
+  /**
+   * dono 28/11 (a Serena chamou a Tássia de "Giovanna"): o nome do cadastro só vale quando bate com o nome do perfil
+   * do WhatsApp (mesmo primeiro nome). Senão o número pode ser de outra pessoa: não chama por nome e confirma antes.
+   */
+  nomeConfirmado?: boolean;
 }
 
 const VAZIA: ClienteConhecida = { conhecida: false, nome: null, por: null, confirmar: false, unidade: null, clienteId: null, ultimoAtendimento: null, proximoHorario: null };
@@ -144,9 +149,13 @@ async function consultar(fonte: FonteAgenda, c: Conversa, agora: Date, nomePerfi
   } catch {
     /* sem histórico: fica só o cadastro */
   }
+  const nomeCad = achada.cliente.nome?.trim() || null;
+  const primeiro = (n: string | null) => (n ? semAcento(n).split(' ').find((x) => x.length >= 2) ?? '' : '');
+  const nomeConfirmado = achada.por === 'nome_do_perfil' || Boolean(nomeCad && nomePerfil && primeiro(nomeCad) && primeiro(nomeCad) === primeiro(nomePerfil));
   return {
     conhecida: true,
-    nome: achada.cliente.nome?.trim() || null,
+    nome: nomeCad,
+    nomeConfirmado,
     por: achada.por,
     confirmar: achada.por === 'nome_do_perfil',
     unidade: achada.unidade,
@@ -196,7 +205,8 @@ const diaBr = (iso: string) => iso.split('-').reverse().join('/');
 /** Bloco pronto para o prompt. */
 export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): string {
   const linhas = [`cliente_conhecida: ${k.conhecida ? 'sim' : 'não'}`];
-  if (k.nome) linhas.push(`nome no cadastro: ${k.nome}`);
+  if (k.nome && (k.nomeConfirmado ?? true)) linhas.push(`nome no cadastro: ${k.nome}`);
+  if (k.nome && k.nomeConfirmado === false) linhas.push(`o cadastro deste número está no nome de "${k.nome}", que NÃO bate com o nome do perfil: o número pode ser de outra pessoa. NÃO chame a cliente por esse nome nem por nenhum outro. Antes de agendar, pergunte o nome completo dela: se for esse mesmo, use o cadastro; se não, trate como cliente nova (agende com nome_cliente e para_outra_pessoa=false, cliente_id=null).`);
   if (k.por === 'telefone') linhas.push('achada pelo número do WhatsApp');
   if (k.por === 'nome_do_perfil') linhas.push('achada pelo nome do perfil do WhatsApp (número diferente): confirme antes de usar o cadastro ("É para você, [primeiro nome]?")');
   if (k.por === 'conversa') linhas.push('já agendou por esta conversa');
@@ -204,7 +214,9 @@ export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): s
   if (k.proximoHorario) linhas.push(`próximo horário marcado: ${diaBr(k.proximoHorario.data)} às ${k.proximoHorario.hora}, ${unidadeDe(k.proximoHorario.unidade).nome}`);
   if (k.semResposta) linhas.push('a agenda não respondeu a tempo: se precisar, use buscar_cliente');
   linhas.push(`primeira resposta da loja nesta conversa: ${primeira ? 'sim' : 'não'}`);
-  const guia = k.conhecida
+  const guia = k.conhecida && k.nomeConfirmado === false
+    ? 'Nome não confirmado: use a boas-vindas de cliente nova, sem nome nenhum, e confirme o nome completo antes de agendar.'
+    : k.conhecida
     ? 'Cliente que volta: não peça nome, nascimento nem e-mail (o cadastro já existe). Se for a primeira resposta, use a boas-vindas de quem volta.'
     : 'Cliente nova: peça nome completo, data de nascimento e e-mail só na hora de agendar (depois que ela escolher o horário).';
   return `<cliente_conhecida>\n${linhas.join('\n')}\n${guia}\n</cliente_conhecida>`;

@@ -563,3 +563,18 @@ describe('9. Espelho da agenda: próximos 14 dias, aos poucos, relido depois de 
     expect(ag.chamadas.periodo).toBe((n ?? 0) + 1);
   });
 });
+
+describe('dono 28/11: nome errado e emoji de rosto', () => {
+  it('cadastro com nome diferente do perfil não vira nome da cliente', async () => {
+    const { textoClienteConhecida } = await import('../src/ai/cliente-conhecida.js');
+    const t = textoClienteConhecida({ conhecida: true, nome: 'Giovanna Souza', nomeConfirmado: false, por: 'telefone', confirmar: false, unidade: 'norte', clienteId: 1, ultimoAtendimento: null, proximoHorario: null }, true);
+    expect(t).not.toContain('nome no cadastro: Giovanna');
+    expect(t).toContain('NÃO chame a cliente por esse nome');
+    expect(t).toContain('boas-vindas de cliente nova, sem nome');
+  });
+  it('tira emoji de rosto e mantém os de apoio', async () => {
+    const { semEmojiDeRosto } = await import('../src/app/sintonia.js');
+    expect(semEmojiDeRosto('Me conta sua dúvida que eu te ajudo. 😊')).toBe('Me conta sua dúvida que eu te ajudo.');
+    expect(semEmojiDeRosto('Agendamento confirmado ✅ Até breve! 💜')).toBe('Agendamento confirmado ✅ Até breve! 💜');
+  });
+});
