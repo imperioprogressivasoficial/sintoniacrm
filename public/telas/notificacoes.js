@@ -249,10 +249,12 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   IC.seta = SVG('<path d="m9 6 6 6-6 6"/>');
   IC.lixo = SVG('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5h6V7"/>');
   IC.agenda_mudou = IC.agendamento; IC.problema = IC.falha; IC.reuniao = IC.agendamento; /* atendimento-extra */
+  IC.lead_parado = IC.espera; /* funil-atendimento */
   const CLASSE_IC = new Proxy({}, { get: (_, t) => `t-${String(t)}` });
   // Só o que pede ação (o servidor não cria mais "nova cliente", "mensagem" nem "a IA agendou").
   const TIPOS = [
     ['espera', 'Clientes esperando resposta', 'Ninguém respondeu além do limite da unidade. No sino, todas viram um item só.'],
+    /* funil-atendimento */ ['lead_parado', 'Lead parado em Novo lead', 'Lead novo sem resposta da loja além do tempo das Regras automáticas do funil.'],
     ['ia_equipe', 'A IA passou para a equipe', 'Quando a IA precisa de uma pessoa (com o motivo).'],
     ['transferida', 'Conversa passada para você', 'Transferida ou atribuída a você.'],
     ['agenda_mudou', 'Agendamento cancelado ou remarcado', 'Quando a cliente pede para remarcar.'],

@@ -125,7 +125,7 @@ describe('análises: funil', () => {
     expect(r.paradas[0]).toMatchObject({ conversaId: 'c', etapa: 'em_conversa', paradoMs: 10 * DIA + 3 * HORA });
     expect(r.paradas.map((p) => p.conversaId)).toEqual(['c', 'a', 'd']);
     expect(r.paradas.at(-1)!.cliente).toBe('Cliente');
-    expect(r.perdas).toEqual({ total: 1, motivos: [{ nome: 'Achou caro', total: 1, pct: 100 }], etapas: [{ nome: 'Em conversa', total: 1, pct: 100 }] });
+    expect(r.perdas).toEqual({ total: 1, motivos: [{ nome: 'Achou caro', total: 1, pct: 100 }], etapas: [{ nome: 'Em atendimento', total: 1, pct: 100 }] });
   });
 });
 

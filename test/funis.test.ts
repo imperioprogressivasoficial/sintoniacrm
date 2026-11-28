@@ -9,30 +9,31 @@ type Coluna = { etapa: Etapa; total: number; mais: boolean; offset: number; cart
 
 describe.each(ambientes)('Funil do sistema "Atendimento" ($nome)', (amb) => {
   it('existe sozinho com as 7 etapas; toda conversa entra nele; a IA/motor movem a tag sem laço', async () => {
-    const agente = new AgenteFalso(() => ({ texto: 'Oi!', acoes: [{ tipo: 'etapa', etapa: 'interessada', motivo: 'perguntou preço' }], recusou: false }));
+    const agente = new AgenteFalso(() => ({ texto: 'Oi!', acoes: [{ tipo: 'etapa', etapa: 'reagendar', motivo: 'não vai conseguir ir' }], recusou: false }));
     const { como, gente, conversa, repo, sistema, etapasSistema, funis } = await montarFunis(amb, { agente });
     const lista = (await como(gente.carla, 'GET', '/api/funis')).json() as FunilJson[];
     expect(lista).toHaveLength(1);
     expect(lista[0]).toMatchObject({ id: sistema.id, nome: 'Atendimento', sistema: true });
-    expect(lista[0]!.etapas.map((e) => e.chaveSistema)).toEqual(['entrada', 'novo_lead', 'em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao', 'perdida']); // etapa-entrada: a Entrada de leads vem antes
-    expect(lista[0]!.etapas.map((e) => e.nome)).toContain('Manutenção');
+    // funil-atendimento (dono 28/11): Novo lead, Em atendimento, Reagendar, Sem resposta, Agendado, Finalizado, Perdido.
+    expect(lista[0]!.etapas.map((e) => e.chaveSistema)).toEqual(['entrada', 'em_conversa', 'reagendar', 'sem_resposta', 'agendada', 'compareceu', 'perdida']);
+    expect(lista[0]!.etapas.map((e) => e.nome)).toEqual(['Novo lead', 'Em atendimento', 'Reagendar', 'Sem resposta', 'Agendado', 'Finalizado', 'Perdido']);
     // garantirSistema é idempotente.
     await funis.garantirSistema();
     expect(((await como(gente.admin, 'GET', '/api/funis')).json() as FunilJson[]).length).toBe(1);
 
-    // Cliente escreve: nasce na "Entrada de leads"; a IA (sugestão, não enviou nada) classifica "Interessada" direto.
+    // Cliente escreve: nasce em "Novo lead"; a IA (sugestão, não enviou nada) classifica "Reagendar" direto.
     const c = await conversa('norte', 'Marina');
-    expect((await repo.buscarConversa(c.id))!.etapa).toBe('interessada');
+    expect((await repo.buscarConversa(c.id))!.etapa).toBe('reagendar');
     const daConversa = (await como(gente.carla, 'GET', `/api/conversas/${c.id}/funis`)).json() as Array<{ funilId: string; etapa: { id: string; chaveSistema: string } }>;
-    expect(daConversa[0]!.etapa).toMatchObject({ id: etapasSistema.get('interessada'), chaveSistema: 'interessada' });
+    expect(daConversa[0]!.etapa).toMatchObject({ id: etapasSistema.get('reagendar'), chaveSistema: 'reagendar' });
     const ev = (await repo.eventosEntre(quinta(0), quinta(23))).filter((e) => e.tipo === 'etapa_movida');
     expect(ev.map((e) => [e.dados!.de, e.dados!.para, e.dados!.por, e.dados!.automatico])).toEqual([
       [null, etapasSistema.get('entrada'), 'Sintonia', true], // etapa-entrada: chegou (dispara as automações da Entrada)
-      [etapasSistema.get('entrada'), etapasSistema.get('interessada'), 'IA', true],
+      [etapasSistema.get('entrada'), etapasSistema.get('reagendar'), 'IA', true],
     ]);
     // Contagem por etapa (visível).
     const contada = ((await como(gente.carla, 'GET', '/api/funis')).json() as FunilJson[])[0]!;
-    expect(contada.etapas.find((e) => e.chaveSistema === 'interessada')!.conversas).toBe(1);
+    expect(contada.etapas.find((e) => e.chaveSistema === 'reagendar')!.conversas).toBe(1);
     expect(((await como(gente.rita, 'GET', '/api/funis')).json() as FunilJson[])[0]!.conversas).toBe(0);
   });
 
@@ -73,10 +74,10 @@ describe.each(ambientes)('Funil do sistema "Atendimento" ($nome)', (amb) => {
 
   it('etapas do sistema: renomeia e recolore, mas não apaga; o funil do sistema não apaga', async () => {
     const { como, gente, sistema, etapasSistema } = await montarFunis(amb);
-    const id = etapasSistema.get('interessada')!;
+    const id = etapasSistema.get('em_conversa')!;
     expect((await como(gente.carla, 'PATCH', `/api/funis/${sistema.id}/etapas/${id}`, { nome: 'Quente' })).statusCode).toBe(403);
     const r = await como(gente.gerenteNorte, 'PATCH', `/api/funis/${sistema.id}/etapas/${id}`, { nome: 'Quente', cor: '#E5484D' });
-    expect(r.json()).toMatchObject({ id, nome: 'Quente', cor: '#E5484D', chaveSistema: 'interessada' });
+    expect(r.json()).toMatchObject({ id, nome: 'Quente', cor: '#E5484D', chaveSistema: 'em_conversa' });
     expect((await como(gente.admin, 'DELETE', `/api/funis/${sistema.id}/etapas/${id}`)).statusCode).toBe(409);
     expect((await como(gente.admin, 'DELETE', `/api/funis/${sistema.id}`)).statusCode).toBe(409);
     expect((await como(gente.admin, 'DELETE', `/api/tags/${id}`)).statusCode).toBe(409);
@@ -138,7 +139,7 @@ describe.each(ambientes)('Funis da empresa ($nome)', (amb) => {
     // Em dois funis ao mesmo tempo (uma etapa em cada) + o do sistema.
     await como(gente.carla, 'POST', `/api/conversas/${c.id}/funis/${campanha.id}`, { etapaId: campanha.etapas[2]!.id });
     const nos = (await como(gente.carla, 'GET', `/api/conversas/${c.id}/funis`)).json() as Array<{ funilNome: string; etapa: { nome: string } | null }>;
-    expect(nos.map((x) => `${x.funilNome}:${x.etapa?.nome ?? '-'}`)).toEqual(['Atendimento:Entrada de leads', 'Pós-atendimento:Voltar', 'Campanha:Fechou']);
+    expect(nos.map((x) => `${x.funilNome}:${x.etapa?.nome ?? '-'}`)).toEqual(['Atendimento:Novo lead', 'Pós-atendimento:Voltar', 'Campanha:Fechou']);
     // As etapas dos funis da empresa aparecem nas tags da conversa (com funilId).
     const tagsConversa = (await como(gente.carla, 'GET', `/api/conversas/${c.id}`)).json().conversa.tags as Array<{ nome: string; funilId?: string }>;
     expect(tagsConversa.map((t) => `${t.nome}:${t.funilId ? 'etapa' : 'solta'}`).sort()).toEqual(['Fechou:etapa', 'Voltar:etapa']);
@@ -263,6 +264,8 @@ describe.runIf(temPostgres)('Migração 010 (funil do sistema)', () => {
       await cliente.query(sql);
       await cliente.query('commit');
     } finally {
+      // funil-atendimento: a 779 troca este índice pelo que deixa um "Agendado" por unidade; a 010 rodada de novo o recria.
+      await cliente.query('drop index if exists sintonia.tags_chave_sistema').catch(() => undefined);
       cliente.release();
     }
     const { rows: funis } = await pool.query<{ empresa_id: string; n: number }>(

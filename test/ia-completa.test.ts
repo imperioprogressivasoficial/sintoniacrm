@@ -757,7 +757,7 @@ describe('Remarcar e cancelar pela agenda da unidade', () => {
     expect((await m.repo.mensagens(c.id)).some((x) => x.autor === 'sistema' && x.texto.includes('IA remarcou'))).toBe(true);
   });
 
-  it('cancelar: só com confirmação; a cliente volta de Agendada para Interessada e a equipe é avisada', async () => {
+  it('cancelar: só com confirmação; a cliente volta de Agendado para Reagendar e a equipe é avisada', async () => {
     let id = 0;
     const m = montar({ passos: [fala('Oi, Marina!'), () => usa('cancelar_agendamento', { unidade: 'norte', agendamento_id: id, motivo: 'Vai viajar', cliente_confirmou: true }), fala('Cancelado. Quando voltar, me chama!')] });
     id = m.agenda.marcarPara(TEL, '2026-11-07', '14:00');
@@ -768,7 +768,7 @@ describe('Remarcar e cancelar pela agenda da unidade', () => {
     m.relogio.t = quinta(10, 2);
     await m.receber('vou viajar, pode cancelar meu horário de sábado');
     expect(m.agenda.cancelamentos).toEqual([id]);
-    expect((await m.conversa()).etapa).toBe('interessada');
+    expect((await m.conversa()).etapa).toBe('reagendar'); // funil-atendimento: cancelou → Reagendar
     expect(m.avisos.join(' ')).toContain('cancelou');
   });
 });

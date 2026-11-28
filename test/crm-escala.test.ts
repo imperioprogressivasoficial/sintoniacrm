@@ -29,7 +29,7 @@ describe.skipIf(!pg)('CRM em escala (postgres)', () => {
       `insert into sintonia.conversas (id, empresa_id, unidade, canal_id, telefone, nome, modo, etapa, criada_em, atualizada_em)
        select gen_random_uuid(), 'imperio', case when i % 2 = 0 then 'norte' else 'sumare' end, 'imperio-norte',
               '557199' || lpad(i::text, 7, '0'), 'Cliente ' || lpad(i::text, 5, '0'), 'humano',
-              (array['novo_lead','em_conversa','interessada','agendada','compareceu','manutencao','perdida'])[1 + i % 7],
+              (array['entrada','em_conversa','reagendar','agendada','compareceu','sem_resposta','perdida'])[1 + i % 7], -- funil-atendimento: etapas novas
               $1::timestamptz - make_interval(mins => i), $1::timestamptz - make_interval(mins => i)
          from generate_series(1, $2::int) as i`,
       [agora, N],
@@ -118,7 +118,7 @@ describe.each(ambientes)('Busca e valor do CRM ($nome)', (amb) => {
     await m.conversa('norte', 'Mariana');
     const r = (await m.como(m.gente.admin, 'GET', `/api/funis/${m.sistema.id}/buscar?q=ana`)).json() as Array<{ conversaId: string; nome: string; etapa: { nome: string } }>;
     expect(r.map((x) => x.nome)).toEqual(['Ana Paula', 'Mariana']); // quem começa com "ana" vem primeiro
-    expect(r[0]!.etapa.nome).toBe('Entrada de leads'); // etapa-entrada: ninguém respondeu ainda
+    expect(r[0]!.etapa.nome).toBe('Novo lead'); // etapa-entrada (no funil Atendimento: "Novo lead"): ninguém respondeu ainda
     expect((await m.como(m.gente.admin, 'GET', `/api/funis/${m.sistema.id}/buscar?q=a`)).json()).toEqual([]); // 1 letra: nada
     await m.como(m.gente.admin, 'PUT', `/api/conversas/${ana.id}/valor`, { valor: 180.5 });
     expect((await m.como(m.gente.admin, 'GET', `/api/conversas/${ana.id}/valor`)).json()).toEqual({ valor: 180.5 });

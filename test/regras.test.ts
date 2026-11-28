@@ -99,12 +99,14 @@ describe('funil automático', () => {
   it('fatos do Trinks movem as etapas importantes', () => {
     expect(proximaEtapa('interessada', { tipo: 'agendamento_criado' })).toBe('agendada');
     expect(proximaEtapa('agendada', { tipo: 'atendimento_finalizado' })).toBe('compareceu');
-    expect(proximaEtapa('agendada', { tipo: 'cliente_faltou' })).toBe('interessada');
-    expect(proximaEtapa('compareceu', { tipo: 'manutencao_vencida' })).toBe('manutencao');
+    // funil-atendimento: faltou → Reagendar; a manutenção agora é do funil Pós-venda (fica em Finalizado).
+    expect(proximaEtapa('agendada', { tipo: 'cliente_faltou' })).toBe('reagendar');
+    expect(proximaEtapa('compareceu', { tipo: 'manutencao_vencida' })).toBe('compareceu');
   });
-  it('cliente perdida que volta a falar reabre a conversa', () => {
-    expect(proximaEtapa('perdida', { tipo: 'mensagem_cliente' })).toBe('em_conversa');
-    expect(proximaEtapa('novo_lead', { tipo: 'mensagem_cliente' })).toBe('em_conversa');
+  it('cliente perdida que volta a falar volta para Novo lead (para ser respondida)', () => {
+    expect(proximaEtapa('perdida', { tipo: 'mensagem_cliente' })).toBe('entrada');
+    // Lead antigo sem conversa (planilha) que escreve: Novo lead.
+    expect(proximaEtapa('novo_lead', { tipo: 'mensagem_cliente' })).toBe('entrada');
   });
 });
 

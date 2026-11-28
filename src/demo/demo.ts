@@ -3,7 +3,7 @@ import type { Contas, Usuario } from '../auth/contas.js';
 import type { Automacoes } from '../automacoes/automacoes.js';
 import type { ArmazemContatos, TipoCampo } from '../contatos/contatos.js';
 import type { ArmazemRespostas } from '../conversa/respostas.js';
-import type { Etapa } from '../domain.js';
+import { ETAPAS, etapaDoFunil, type Etapa } from '../domain.js';
 import type { Empresa } from '../empresa/empresa.js';
 import type { Funis } from '../funis/funis.js';
 import type { ArmazemChamadas } from '../ligacoes/chamadas.js';
@@ -102,7 +102,12 @@ export class Demo {
 
     // Funil do sistema e suas etapas.
     const sistema = await o.funis.garantirSistema();
-    const etapasSistema = Object.fromEntries((await o.funis.etapas(sistema.id)).filter((t) => t.chaveSistema).map((t) => [t.chaveSistema!, t.id])) as Record<Etapa, string>;
+    // funil-atendimento: as etapas antigas (Interessada, Manutenção...) caem na equivalente; "Agendado" por unidade.
+    const doSistema = (await o.funis.etapas(sistema.id)).filter((t) => t.chaveSistema);
+    const etapasSistema = Object.fromEntries(
+      ETAPAS.map((e) => [e, doSistema.find((t) => t.chaveSistema === etapaDoFunil(e))?.id]).filter(([, id]) => id),
+    ) as Record<Etapa, string>;
+    const agendadoPorUnidade = Object.fromEntries(doSistema.filter((t) => t.chaveSistema === 'agendada' && t.unidade).map((t) => [t.unidade!, t.id]));
 
     // Atendentes (papel atendente, senha que não confere: ninguém entra com elas), com rosto.
     const atendentes: ContextoGerador['atendentes'] = [];
@@ -164,7 +169,7 @@ export class Demo {
       agora,
       empresaId: E,
       atendentes,
-      sistema: { funilId: sistema.id, etapas: etapasSistema },
+      sistema: { funilId: sistema.id, etapas: etapasSistema, agendadoPorUnidade },
       posVenda: { funilId: pv.id, retorno: pid('Retorno 30 dias'), manutencao: pid('Manutenção marcada'), fiel: pid('Fiel') },
       tags,
       campos,

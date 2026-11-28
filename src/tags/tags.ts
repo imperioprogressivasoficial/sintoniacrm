@@ -40,6 +40,8 @@ export interface Tag {
   chaveSistema: string | null;
   /** Grupo (categoria) da tag na tela Vendas › Tags, ex.: "Interesse". null = sem grupo. */
   grupo?: string | null;
+  /** funil-atendimento: etapa do sistema de uma unidade só (ex.: "Agendado Sumaré" = chave 'agendada', unidade 'sumare'). */
+  unidade?: string | null;
 }
 
 /** Uso de cada tag: em quantas conversas está e quando foi marcada pela última vez. */
@@ -47,7 +49,7 @@ export interface UsoTag {
   n: number;
   ultimo: Date | null;
 }
-export type CamposTag = Partial<Pick<Tag, 'nome' | 'cor' | 'ordem' | 'grupo'>>;
+export type CamposTag = Partial<Pick<Tag, 'nome' | 'cor' | 'ordem' | 'grupo' | 'unidade'>>;
 
 /** Marcação de uma etapa de funil numa conversa: desde quando ela está ali. */
 export interface MarcacaoEtapa {
@@ -131,7 +133,7 @@ export class ArmazemTagsMemoria implements ArmazemTags {
   }
   async criar(t: Tag) {
     if (this.repetida(t.empresaId, t.funilId, t.nome)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
-    this.tags.set(t.id, { ...t, funilId: t.funilId ?? null, chaveSistema: t.chaveSistema ?? null, grupo: t.grupo ?? null });
+    this.tags.set(t.id, { ...t, funilId: t.funilId ?? null, chaveSistema: t.chaveSistema ?? null, grupo: t.grupo ?? null, unidade: t.unidade ?? null });
   }
   async atualizar(id: string, campos: CamposTag) {
     const t = this.tags.get(id);
@@ -268,8 +270,9 @@ interface LinhaTag {
   funil_id: string | null;
   chave_sistema: string | null;
   grupo: string | null;
+  unidade: string | null;
 }
-const COLUNAS_TAG = 'id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo';
+const COLUNAS_TAG = 'id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo, unidade';
 const paraTag = (l: LinhaTag): Tag => ({
   id: l.id,
   empresaId: l.empresa_id,
@@ -281,6 +284,7 @@ const paraTag = (l: LinhaTag): Tag => ({
   funilId: l.funil_id,
   chaveSistema: l.chave_sistema,
   grupo: l.grupo ?? null,
+  unidade: l.unidade ?? null,
 });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const nomeRepetido = (e: unknown) => (e as { code?: string }).code === '23505';
@@ -306,9 +310,9 @@ export class ArmazemTagsPostgres implements ArmazemTags {
   async criar(t: Tag) {
     try {
       await this.pool.query(
-        `insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm, t.funilId ?? null, t.chaveSistema ?? null, t.grupo ?? null],
+        `insert into sintonia.tags (id, empresa_id, nome, cor, ordem, criada_por, criada_em, funil_id, chave_sistema, grupo, unidade)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [t.id, t.empresaId, t.nome, t.cor, t.ordem, t.criadaPor, t.criadaEm, t.funilId ?? null, t.chaveSistema ?? null, t.grupo ?? null, t.unidade ?? null],
       );
     } catch (e) {
       if (nomeRepetido(e)) throw new ErroTag(`Já existe ${t.funilId ? 'a etapa' : 'a tag'} "${t.nome}".`, 409);
@@ -320,9 +324,10 @@ export class ArmazemTagsPostgres implements ArmazemTags {
       // grupo: undefined = não mexe; null = tira do grupo.
       await this.pool.query(
         `update sintonia.tags set nome = coalesce($2, nome), cor = coalesce($3, cor), ordem = coalesce($4, ordem),
-                grupo = case when $5 then $6 else grupo end
+                grupo = case when $5 then $6 else grupo end,
+                unidade = case when $7 then $8 else unidade end
           where id = $1`,
-        [id, campos.nome ?? null, campos.cor ?? null, campos.ordem ?? null, campos.grupo !== undefined, campos.grupo ?? null],
+        [id, campos.nome ?? null, campos.cor ?? null, campos.ordem ?? null, campos.grupo !== undefined, campos.grupo ?? null, campos.unidade !== undefined, campos.unidade ?? null],
       );
     } catch (e) {
       if (nomeRepetido(e)) throw new ErroTag(`Já existe a tag "${campos.nome}".`, 409);

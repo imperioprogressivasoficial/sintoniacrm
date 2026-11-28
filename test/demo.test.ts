@@ -47,7 +47,7 @@ for (const amb of ambientes) {
       const real = await g.conversa('norte', 'Maria Real', 'Oi, quanto tá a progressiva?');
       const vip = await g.tags.criar({ nome: 'VIP' }, 'Bruno');
       const parada = await g.automacoes.criar(
-        { nome: 'Real: parada em Interessada', funilId: g.sistema.id, ligada: true, gatilho: { tipo: 'parada_na_etapa', etapaId: g.etapasSistema.get('interessada')!, horas: 1 }, passos: [{ tipo: 'enviar_mensagem', texto: 'Oi!', so_no_horario: false }] },
+        { nome: 'Real: parada em Em atendimento', funilId: g.sistema.id, ligada: true, gatilho: { tipo: 'parada_na_etapa', etapaId: g.etapasSistema.get('em_conversa')!, horas: 1 }, passos: [{ tipo: 'enviar_mensagem', texto: 'Oi!', so_no_horario: false }] },
         'Bruno',
       );
       const enviadosAntes = g.enviados.length;

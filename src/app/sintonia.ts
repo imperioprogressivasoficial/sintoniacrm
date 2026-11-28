@@ -9,7 +9,7 @@ import { bloqueioPorDigitacao, viraDonaAoResponder, type Quem } from '../auth/ac
 import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
 import type { AcaoAgente } from '../ai/ferramentas.js';
 import { decidirQuemResponde, equipeAtuou, REGRAS_PADRAO, type RegrasAtendimento } from '../engine/atendimento.js';
-import { proximaEtapa, type EventoFunil } from '../engine/etapas.js';
+import { proximaEtapa, REGRAS_MOTOR_PADRAO, type EventoFunil, type RegrasMotor } from '../engine/etapas.js';
 import { followupsSemAgendamento, lembretesDoAgendamento } from '../engine/followups.js';
 import { unidadeDe } from '../unidades.js';
 import { bahia, DIA, partesBahia } from '../util/tempo.js';
@@ -77,6 +77,8 @@ export interface DependenciasSintonia {
    * os follow-ups fixos (1h/1d/3d) e os lembretes fixos (véspera/2h) do motor saem. Ausente = tudo como sempre.
    */
   motor?: (c: Conversa) => Promise<{ followups: boolean; lembretes: boolean }>;
+  /** funil-atendimento: regras automáticas do funil ligadas (Pipeline › Regras automáticas). Sem isto: todas ligadas. */
+  regrasFunil?: () => Promise<RegrasMotor>;
   /**
    * robustez: há IA para esta conversa agora (chave geral em Conexões ou chave própria do agente dela)?
    * Sem IA: a conversa nova nasce em "Minha resposta" (equipe), a IA não é chamada e nada fica reagendado para sempre.
@@ -144,7 +146,7 @@ export const esperaFalhaIa = (falhas: number) => Math.min(2 * 60_000 * 2 ** Math
  */
 export interface GanchosSintonia {
   /** O motor ou a IA mudou `conversa.etapa` (a tag do funil do sistema acompanha). */
-  etapaMudou?(c: Conversa, de: Etapa, para: Etapa, por: 'IA' | 'Sintonia'): Promise<void>;
+  etapaMudou?(c: Conversa, de: Etapa, para: Etapa, por: 'IA' | 'Sintonia', extra?: { unidade?: string }): Promise<void>;
   /** Mensagem nova da cliente (já gravada). `primeira` = a primeira mensagem dela nesta conversa. */
   mensagemCliente?(c: Conversa, m: { texto: string; idExterno: string; primeira: boolean }): Promise<void>;
   /** Alguém da equipe respondeu (pelo CRM ou pelo celular da loja). */
@@ -1423,7 +1425,7 @@ export class Sintonia {
       if (a.tipo === 'nome' && autor === 'ia') c.nome = a.nome; // dono 28/11: a cliente disse/corrigiu o nome
       if (a.tipo === 'agendou') {
         if (!a.paraOutraPessoa) c.trinksClienteId = a.clienteTrinksId; // serena-regras: horário de outra pessoa não troca o cadastro dela
-        await this.moverFunil(c, { tipo: 'agendamento_criado' });
+        await this.moverFunil(c, { tipo: 'agendamento_criado' }, undefined, a.agendamento.unidade);
         await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
         if ((await this.motorDe(c)).lembretes) {
           for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) {
@@ -1466,6 +1468,8 @@ export class Sintonia {
     const antigo = `${a.antigo.servico ?? 'horário'} de ${a.antigo.inicio.replace('T', ' ').slice(0, 16)}`;
     if (a.tipo === 'remarcou') {
       c.trinksClienteId = a.clienteTrinksId;
+      // funil-atendimento: remarcou → "Agendado <unidade do horário novo>" (saindo de "Reagendar", se estava lá).
+      await this.moverFunil(c, { tipo: 'agendamento_remarcado' }, 'remarcou', a.agendamento.unidade);
       if ((await this.motorDe(c)).lembretes) {
         for (const l of lembretesDoAgendamento(a.agendamento.inicio, this.agora())) await this.d.repo.programar({ conversaId: c.id, tipo: l.tipo, quando: l.quando });
       }
@@ -1557,17 +1561,40 @@ export class Sintonia {
    * Mensagens de automação, bot e pesquisa (enviarAutomatico) não contam. Quem chama grava a conversa.
    */
   private async primeiraResposta(c: Conversa, por: 'equipe' | 'ia'): Promise<void> {
-    if (c.etapa === 'entrada') await this.moverFunil(c, { tipo: 'primeira_resposta', clienteEscreveu: Boolean(c.ultimaMensagemCliente) }, por === 'ia' ? 'primeira_resposta_ia' : 'primeira_resposta_equipe');
+    if (c.etapa === 'entrada' || c.etapa === 'novo_lead') await this.moverFunil(c, { tipo: 'primeira_resposta', clienteEscreveu: Boolean(c.ultimaMensagemCliente) }, por === 'ia' ? 'primeira_resposta_ia' : 'primeira_resposta_equipe');
     await this.gancho('lojaRespondeu', () => this.d.ganchos?.lojaRespondeu?.(c, por));
   }
 
-  private async moverFunil(c: Conversa, ev: EventoFunil, motivo?: string): Promise<void> {
-    const nova = proximaEtapa(c.etapa, ev);
-    if (nova === c.etapa) return;
+  /** funil-atendimento: `unidade` = unidade do agendamento (etapa "Agendado <unidade>"). */
+  private async moverFunil(c: Conversa, ev: EventoFunil, motivo?: string, unidade?: string): Promise<void> {
+    const regras = this.d.regrasFunil ? await this.d.regrasFunil().catch(() => REGRAS_MOTOR_PADRAO) : REGRAS_MOTOR_PADRAO;
+    const nova = proximaEtapa(c.etapa, ev, regras);
+    const por = ev.tipo === 'ia_classificou' ? 'IA' : 'Sintonia';
+    if (nova === c.etapa) {
+      // Continua agendada, mas o horário (novo ou remarcado) é de outra unidade: troca o "Agendado <unidade>".
+      if (nova === 'agendada' && unidade && (ev.tipo === 'agendamento_criado' || ev.tipo === 'agendamento_remarcado')) {
+        await this.gancho('etapaMudou', () => this.d.ganchos?.etapaMudou?.(c, nova, nova, por, { unidade }));
+      }
+      return;
+    }
     const de = c.etapa;
     c.etapa = nova;
-    await this.evento('etapa_mudou', c, { de, para: nova, motivo: motivo ?? ev.tipo });
-    await this.gancho('etapaMudou', () => this.d.ganchos?.etapaMudou?.(c, de, nova, ev.tipo === 'ia_classificou' ? 'IA' : 'Sintonia'));
+    await this.evento('etapa_mudou', c, { de, para: nova, motivo: motivo ?? ev.tipo, ...(unidade ? { unidade } : {}) });
+    await this.gancho('etapaMudou', () => this.d.ganchos?.etapaMudou?.(c, de, nova, por, unidade ? { unidade } : undefined));
+  }
+
+  /** funil-atendimento: a cliente pediu para remarcar (confirmação, tag): vai para "Reagendar" se a regra estiver ligada. */
+  async pediuRemarcar(conversaId: string, motivo: string): Promise<boolean> {
+    return Boolean(
+      await this.mutar(conversaId, async (c) => {
+        const antes = c.etapa;
+        await this.moverFunil(c, { tipo: 'pediu_remarcar' }, motivo);
+        if (c.etapa === antes) return false;
+        c.atualizadaEm = this.agora();
+        await this.d.repo.salvarConversa(c);
+        return true;
+      }),
+    );
   }
 
   private async programarFollowups(c: Conversa, desde: Date): Promise<void> {

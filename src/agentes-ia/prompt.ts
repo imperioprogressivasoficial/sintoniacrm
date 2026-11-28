@@ -93,7 +93,7 @@ export function systemDoAgente(p: PartesPrompt): string {
   } else {
     operacao.push('Você não transfere para a equipe: se não souber, diga que vai confirmar e siga com o que sabe.');
   }
-  if (tem('registrar_etapa')) operacao.push('Use registrar_etapa quando ficar claro o momento da cliente (em_conversa, interessada, perdida).');
+  if (tem('registrar_etapa')) operacao.push('Use registrar_etapa quando ficar claro o momento da cliente: em_conversa (Em atendimento), reagendar (Reagendar: quer remarcar ou não vai conseguir ir) ou perdida (Perdido: desistiu). Agendado e Finalizado mudam sozinhos pela agenda.');
   if (tem('lembrar_cliente')) operacao.push('Use lembrar_cliente para guardar fatos úteis que a cliente contar (tipo de cabelo, comprimento, última química, horário preferido, objeções). Não pergunte de novo o que já está na memória.');
   if (tem('criar_lembrete_ligacao')) operacao.push('Use criar_lembrete_ligacao quando a cliente pedir para ligarem para ela ou quando uma ligação ajudar a fechar.');
   if (!tem('agendar')) operacao.push('Você não marca horário: quando ela quiser agendar, colete serviço, unidade, dia e hora e diga que a equipe confirma.');

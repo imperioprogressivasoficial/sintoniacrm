@@ -572,6 +572,8 @@
       { nome: 'Configuração da lista', info: 'Quais campos aparecem no cartão e na lista', icone: IC.colunas, acao: () => configurarLista(ctx) },
       { nome: 'Imprimir', info: 'Versão limpa para papel ou PDF', icone: IC.imprimir, acao: () => imprimir(ctx) },
       gestao && f && { nome: 'Editar funil de vendas', info: 'Etapas: nome, cor, ordem e botão principal', icone: IC.funil, acao: () => editarFunil(ctx) },
+      /* funil-atendimento: regras que movem o lead sozinho (liga/desliga e tempos) */
+      f && f.sistema && window.SintoniaFunilRegras && { nome: 'Regras automáticas', info: 'O que move o lead sozinho e em quanto tempo', icone: IC.fluxo, acao: () => window.SintoniaFunilRegras.abrir(s.ui) },
       gestao && { nome: 'Nova transmissão', info: 'Mensagem para os leads filtrados', icone: IC.aviao, acao: () => novaTransmissao(ctx) },
     ].filter(Boolean), gestao ? [
       { nome: 'Novo pipeline', icone: IC.novo, acao: () => ctx.novoFunil() },
@@ -702,6 +704,8 @@
       const gerais = autos.filter((a) => a.funilId === f.id && !ids.has(a.gatilho?.etapaId));
       corpo.replaceChildren(el('div', { class: 'ft-pag' },
         el('p', { class: 'ft-nota', style: 'margin:0;font-size:13.5px;color:var(--sub)', text: `O que a Sintonia faz sozinha no pipeline “${f.nome}”, etapa por etapa.` }),
+        /* funil-atendimento: no funil do sistema, as regras que movem o lead sozinho ficam num lugar só */
+        f.sistema && window.SintoniaFunilRegras ? el('button', { class: 'ft-bt ft-principal', type: 'button', onclick: () => window.SintoniaFunilRegras.abrir(s.ui) }, el('span', { html: IC.fluxo, style: 'display:grid' }), el('span', { text: 'Regras automáticas do funil' })) : null,
         el('div', { class: 'ft-autos' }, ...porEtapa),
         gerais.length ? el('h4', { text: 'Outras deste pipeline' }) : null,
         gerais.length ? el('div', { class: 'ft-auto-et' }, ...gerais.map(linhaAuto)) : null,

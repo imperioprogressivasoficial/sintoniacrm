@@ -417,7 +417,7 @@ describe.skipIf(!temPostgres)('Transmissões (Postgres)', () => {
   it('automática: entrou na etapa → entra na fila uma vez só; passo "enviar transmissão" das automações', async () => {
     const sistema = await a.funis.garantirSistema();
     const agendada = (await a.funis.etapas(sistema.id)).find((e) => e.chaveSistema === 'agendada')!;
-    const novo = (await a.funis.etapas(sistema.id)).find((e) => e.chaveSistema === 'novo_lead')!;
+    const novo = (await a.funis.etapas(sistema.id)).find((e) => e.chaveSistema === 'em_conversa')!; // funil-atendimento: "Novo lead" antigo saiu da tela
     const c = await a.t.criar({ nome: 'Confirmação', unidade: 'norte', canal: 'nao_oficial', modo: 'automatico', mensagem: { texto: 'Oi {primeiro_nome}, seu horário está confirmado!' }, envio: { ...RAPIDO, gatilho: { tipo: 'entrou_na_etapa', etapaId: agendada.id } } }, 'Gil');
     expect((await a.t.iniciar(c.id)).status).toBe('enviando');
     const ana = await a.novaConversa('Ana Paula');

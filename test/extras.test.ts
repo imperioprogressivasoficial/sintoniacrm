@@ -176,7 +176,7 @@ for (const amb of ambientes) {
       expect(r.headers['content-type']).toContain('text/csv');
       expect(r.headers['content-disposition']).toContain('attachment; filename="leads-imperio-2026-11-05.csv"');
       expect(r.body.startsWith('\uFEFFNome;Telefone;E-mail;Unidade;Etapa;Tags;Dona;Criado em;Tipo de cabelo\r\n')).toBe(true);
-      expect(r.body).toContain('Marina;5571988130001;marina@x.com;Salvador Norte Shopping;Entrada de leads;VIP;;05/11/2026 10:00;Cacheado');
+      expect(r.body).toContain('Marina;5571988130001;marina@x.com;Salvador Norte Shopping;Novo lead;VIP;;05/11/2026 10:00;Cacheado');
       expect(r.body.split('\r\n').filter(Boolean)).toHaveLength(3);
       const soNorte = (await g.como(g.gente.admin, 'GET', `/api/leads/exportar?unidade=norte&tag=${vip.id}`)).body;
       expect(soNorte.split('\r\n').filter(Boolean)).toHaveLength(2);

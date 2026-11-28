@@ -322,15 +322,15 @@ for (const amb of ambientes) {
       // etapa-entrada: lead criado pela API nasce na "Entrada de leads".
       expect((await t.repo.buscarConversa(conversaId))!.etapa).toBe('entrada');
 
-      const movido = await t.comChave(chave, 'POST', `/api/v1/conversas/${conversaId}/etapa`, { etapa: 'Interessada' });
+      const movido = await t.comChave(chave, 'POST', `/api/v1/conversas/${conversaId}/etapa`, { etapa: 'Reagendar' });
       expect(movido.statusCode).toBe(200);
-      expect(movido.json().conversa.etapa).toBe('interessada');
+      expect(movido.json().conversa.etapa).toBe('reagendar');
       expect((await t.comChave(chave, 'POST', `/api/v1/conversas/${conversaId}/etapa`, { etapa: 'Não existe' })).statusCode).toBe(404);
       expect((await t.comChave(chave, 'PUT', `/api/v1/conversas/${conversaId}/valor`, { valor: 1200.5 })).json().valor).toBe(1200.5);
       const tag = await t.comChave(chave, 'POST', `/api/v1/conversas/${conversaId}/tags`, { nome: 'cliente vip' });
       expect(tag.json().tags.map((x: { nome: string }) => x.nome)).toEqual(['Cliente VIP']);
       const funis = (await t.comChave(chave, 'GET', '/api/v1/funis')).json();
-      expect(funis.dados[0].etapas.find((e: { nome: string }) => e.nome === 'Interessada').leads).toBe(1);
+      expect(funis.dados[0].etapas.find((e: { nome: string }) => e.nome === 'Reagendar').leads).toBe(1);
     });
 
     it('webhook: entrega assinada (HMAC com timestamp) quando a cliente manda mensagem', async () => {
@@ -428,11 +428,11 @@ for (const amb of ambientes) {
       await t.como(t.gente.admin, 'POST', '/api/integracoes/webhooks', { url: 'https://hooks.exemplo.com/x', eventos: ['lead.etapa_mudou', 'tag.aplicada'] });
       const c = await t.conversa('Maria');
       const { chave } = await t.novaChave(['funis:escrever', 'tags:escrever']);
-      await t.comChave(chave, 'POST', `/api/v1/conversas/${c.id}/etapa`, { etapa: 'Agendada' });
+      await t.comChave(chave, 'POST', `/api/v1/conversas/${c.id}/etapa`, { etapa: 'Agendado' });
       await t.comChave(chave, 'POST', `/api/v1/conversas/${c.id}/tags`, { nome: 'Retorno' });
       await t.andarFila();
       const corpos = t.pedidos.map((p) => JSON.parse(p.corpo));
-      const etapa = corpos.find((x) => x.tipo === 'lead.etapa_mudou' && x.dados.para?.nome === 'Agendada');
+      const etapa = corpos.find((x) => x.tipo === 'lead.etapa_mudou' && x.dados.para?.nome === 'Agendado');
       expect(etapa.dados).toMatchObject({ funil: { nome: 'Atendimento' }, por: 'Teste (integração)' });
       expect(corpos.find((x) => x.tipo === 'tag.aplicada').dados).toMatchObject({ tag: { nome: 'Retorno' }, por: 'Teste (integração)' });
     });

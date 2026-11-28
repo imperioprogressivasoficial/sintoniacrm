@@ -426,6 +426,8 @@
       extra.push({ nome: 'Botão do cartão', info: ACOES[acaoDoFunil(ctx)].nome + (ctx.funil?.acaoPrincipal ? '' : ' (padrão)'), acao: () => ctx.escolherAcao() });
       extra.push({ nome: 'Funis, etapas e automações', info: 'Criar, renomear e organizar', acao: ctx.menuTopo });
     }
+    /* funil-atendimento: regras que movem o lead sozinho (só o funil do sistema) */
+    if (ctx.funil?.sistema && window.SintoniaFunilRegras) extra.push({ nome: 'Regras automáticas', info: 'O que move o lead sozinho e em quanto tempo', acao: () => window.SintoniaFunilRegras.abrir(ctx.ui) });
     grupos.push(extra);
     ctx.folha('Pipeline', null, grupos);
   }

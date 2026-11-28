@@ -52,7 +52,8 @@ export interface ContextoGerador {
   empresaId: string;
   atendentes: AtendenteDemo[];
   /** Funil do sistema: id e a tag de cada etapa fixa. */
-  sistema: { funilId: string; etapas: Record<Etapa, string> };
+  /** funil-atendimento: `agendadoPorUnidade` = etapa "Agendado <unidade>" de cada unidade (quando há uma por unidade). */
+  sistema: { funilId: string; etapas: Record<Etapa, string>; agendadoPorUnidade?: Record<string, string> };
   posVenda?: { funilId: string; retorno: string; manutencao: string; fiel: string };
   /** Nome da tag solta → id (Progressiva, Selagem, Botox capilar, VIP, Instagram, Indicação, Tráfego pago, Gestante). */
   tags: Record<string, string>;
@@ -723,7 +724,7 @@ export class Gerador {
       plano.eventos.push(...r.evs);
       plano.marcacoes.push(...r.marcas);
       // Etapa no funil do sistema, "desde" a última mudança de etapa.
-      plano.marcacoes.push({ conversaId: c.id, tagId: this.c.sistema.etapas[c.etapa], funilId: this.c.sistema.funilId, por: 'Sintonia', em: new Date(r.etapaDesde) });
+      plano.marcacoes.push({ conversaId: c.id, tagId: (c.etapa === 'agendada' ? this.c.sistema.agendadoPorUnidade?.[c.unidade] : undefined) ?? this.c.sistema.etapas[c.etapa], funilId: this.c.sistema.funilId, por: 'Sintonia', em: new Date(r.etapaDesde) });
       if (r.posVenda && this.c.posVenda) {
         const em = new Date(Math.min(r.posVenda.em, this.c.agora.getTime() - MIN));
         plano.marcacoes.push({ conversaId: c.id, tagId: r.posVenda.tagId, funilId: this.c.posVenda.funilId, por: 'Demonstração', em });

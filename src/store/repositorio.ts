@@ -59,6 +59,8 @@ export type TipoEvento =
   | 'ia_acao'
   /** serena-faz: a Serena agiu a pedido de alguém da equipe, depois do "Confirmar" (dados.acao: enviou, agendou, remarcou, cancelou, moveu; porId, porNome). */
   | 'serena_acao'
+  /** funil-atendimento: lead parado em "Novo lead" sem resposta da loja há N min (dados: desde, minutos, limite). Vira aviso. */
+  | 'lead_parado'
   | 'falha';
 
 export interface Evento {

@@ -97,8 +97,8 @@ export const FERRAMENTAS_LEITURA: Ferramenta[] = [
   def('corrigir_nome', 'Guarda o nome da cliente quando ELA disser como se chama ou corrigir o nome (ex.: "meu nome não é esse, é Ana Paula"). Não use para o nome do perfil do WhatsApp.', {
     nome: { type: 'string', description: 'Nome como ela disse (nome e sobrenome, se ela disse)' },
   }),
-  def('registrar_etapa', 'Atualiza a etapa da cliente no funil quando o momento dela ficar claro.', {
-    etapa: { type: 'string', enum: ['em_conversa', 'interessada', 'perdida'] },
+  def('registrar_etapa', 'Atualiza a etapa da cliente no funil quando o momento dela ficar claro. em_conversa = "Em atendimento" (tirando dúvidas, quer saber preço ou horário); reagendar = "Reagendar" (quer remarcar ou disse que não vai conseguir ir e ainda não escolheu outro horário); perdida = "Perdido" (disse que não quer ou desistiu). "Agendado" e "Finalizado" mudam sozinhos pela agenda.', {
+    etapa: { type: 'string', enum: ['em_conversa', 'reagendar', 'perdida'] },
     motivo: { type: 'string', description: 'Uma frase curta explicando' },
   }),
 ];
@@ -186,7 +186,8 @@ const ENTRADAS = {
   buscar_cliente: z.object({ unidade: Unidade, telefone: z.string().trim().max(30).nullable().optional(), nome: z.string().trim().max(120).nullable().optional() }),
   ver_agendamentos_da_cliente: z.object({ unidade: Unidade }),
   corrigir_nome: z.object({ nome: z.string().trim().min(2).max(80).regex(/\p{L}/u) }),
-  registrar_etapa: z.object({ etapa: z.enum(['em_conversa', 'interessada', 'perdida']), motivo: z.string() }),
+  /* funil-atendimento: 'interessada' (antiga) ainda é aceita e vale como Em atendimento. */
+  registrar_etapa: z.object({ etapa: z.enum(['em_conversa', 'reagendar', 'perdida', 'interessada']).transform((e) => (e === 'interessada' ? 'em_conversa' : e)), motivo: z.string() }),
   agendar: z.object({
     unidade: Unidade,
     servico_id: z.number().int().nullable().optional(),

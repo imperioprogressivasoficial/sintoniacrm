@@ -1,5 +1,5 @@
 import type pg from 'pg';
-import { ETAPAS, NOME_ETAPA, type Conversa, type Etapa } from '../domain.js';
+import { ETAPAS, ETAPAS_DO_FUNIL, etapaDoFunil, NOME_ETAPA, type Conversa, type Etapa } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import type { Usuario } from '../auth/contas.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
@@ -483,7 +483,8 @@ export async function montarPainel(fonte: FontePainel, o: OpcoesPainel) {
     },
     leadsPorHora: atual.leadsPorHora,
     serie: serieDoPeriodo(o.periodo, j, atual),
-    funil: ETAPAS.map((e) => ({ etapa: e, nome: NOME_ETAPA[e], conversas: agora.funil[e] })),
+    // funil-atendimento: as etapas do funil de atendimento, na ordem da tela (as antigas somam na equivalente).
+    funil: ETAPAS_DO_FUNIL.map((e) => ({ etapa: e, nome: NOME_ETAPA[e], conversas: ETAPAS.filter((x) => etapaDoFunil(x) === e).reduce((n, x) => n + (agora.funil[x] ?? 0), 0) })),
     ranking,
     equipe:
       o.equipe && !pessoal

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ETAPAS, naEtapa, NOME_ETAPA, type Conversa, type Etapa, type UnidadeId } from '../domain.js';
+import { ETAPAS, etapaDoFunil, naEtapa, NOME_ETAPA, type Conversa, type Etapa, type UnidadeId } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { contatoVazio, validarCampos, type ArmazemContatos, type CampoContato, type Contato } from '../contatos/contatos.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -157,9 +157,17 @@ function unidadeDoTexto(v: string | null | undefined): UnidadeId | null | undefi
 }
 
 function etapaDe(v: string | null | undefined): Etapa | null | undefined {
+  const e = etapaDaPlanilha(v);
+  // funil-atendimento: etapa antiga na planilha vira a equivalente do funil novo.
+  return e ? etapaDoFunil(e) : e;
+}
+function etapaDaPlanilha(v: string | null | undefined): Etapa | null | undefined {
   if (!v || !v.trim()) return undefined;
   const s = semAcento(v).replace(/[_-]/g, ' ');
   for (const e of ETAPAS) if (s === e.replace(/_/g, ' ') || s === semAcento(NOME_ETAPA[e])) return e;
+  if (s.startsWith('reagend') || s.startsWith('remarc')) return 'reagendar';
+  if (s.startsWith('sem resp')) return 'sem_resposta';
+  if (s.startsWith('finaliz')) return 'compareceu';
   if (s.startsWith('agend')) return 'agendada';
   if (s.startsWith('compar')) return 'compareceu';
   if (s.startsWith('perd')) return 'perdida';
@@ -192,7 +200,7 @@ function valorDoCampo(def: CampoContato, v: unknown): unknown {
   return s;
 }
 
-const RANK_ETAPA: Record<Etapa, number> = { perdida: 0, entrada: 0.5, novo_lead: 1, em_conversa: 2, interessada: 3, agendada: 4, compareceu: 5, manutencao: 6 };
+const RANK_ETAPA: Record<Etapa, number> = { perdida: 0, entrada: 0.5, novo_lead: 1, em_conversa: 2, sem_resposta: 2.2, reagendar: 2.5, interessada: 3, agendada: 4, compareceu: 5, manutencao: 6 };
 
 // ------------------------------------------------------------------ duplicatas (resposta da API)
 

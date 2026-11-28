@@ -18,23 +18,27 @@ type Etapa = { id: string; nome: string; cor: string; ordem: number; chaveSistem
 type FunilJson = { id: string; nome: string; sistema: boolean; etapas: Etapa[] };
 
 describe('Entrada de leads: regras do motor', () => {
-  it('a cliente escrevendo não tira da Entrada; a 1ª resposta leva para Novo lead (ou Em conversa, se a cliente já escreveu)', () => {
+  it('a cliente escrevendo não tira da Entrada; a 1ª resposta da loja leva para Em atendimento (funil-atendimento)', () => {
     expect(proximaEtapa('entrada', { tipo: 'mensagem_cliente' })).toBe('entrada');
-    expect(proximaEtapa('entrada', { tipo: 'primeira_resposta', clienteEscreveu: false })).toBe('novo_lead');
+    expect(proximaEtapa('entrada', { tipo: 'primeira_resposta', clienteEscreveu: false })).toBe('em_conversa');
     expect(proximaEtapa('entrada', { tipo: 'primeira_resposta', clienteEscreveu: true })).toBe('em_conversa');
-    // Fora da Entrada, a resposta da loja não mexe na etapa (a regra de sempre continua valendo).
-    expect(proximaEtapa('novo_lead', { tipo: 'primeira_resposta', clienteEscreveu: true })).toBe('novo_lead');
-    expect(proximaEtapa('novo_lead', { tipo: 'mensagem_cliente' })).toBe('em_conversa');
-    // A IA classifica e o Trinks agenda direto da Entrada.
-    expect(proximaEtapa('entrada', { tipo: 'ia_classificou', etapa: 'interessada' })).toBe('interessada');
+    // O "Novo lead" antigo vale como a Entrada.
+    expect(proximaEtapa('novo_lead', { tipo: 'primeira_resposta', clienteEscreveu: true })).toBe('em_conversa');
+    expect(proximaEtapa('novo_lead', { tipo: 'mensagem_cliente' })).toBe('entrada');
+    // Fora da Entrada, a resposta da loja não mexe na etapa.
+    expect(proximaEtapa('em_conversa', { tipo: 'primeira_resposta', clienteEscreveu: true })).toBe('em_conversa');
+    // A IA classifica (Interessada antiga vale como Em atendimento) e a agenda agenda direto da Entrada.
+    expect(proximaEtapa('entrada', { tipo: 'ia_classificou', etapa: 'interessada' })).toBe('em_conversa');
     expect(proximaEtapa('entrada', { tipo: 'agendamento_criado' })).toBe('agendada');
   });
 
   it('nas contas, a Entrada também é "Novo lead" (filtros, prazos de espera) e o lead importado nasce nela', () => {
     expect(expandirEtapas(['novo_lead'])).toEqual(['novo_lead', 'entrada']);
+    expect(expandirEtapas(['em_conversa'])).toEqual(['em_conversa', 'interessada']);
     expect(expandirEtapas(['interessada'])).toEqual(['interessada']);
     expect(naEtapa('entrada', 'novo_lead')).toBe(true);
-    expect(naEtapa('novo_lead', 'entrada')).toBe(false);
+    expect(naEtapa('novo_lead', 'entrada')).toBe(true); // funil-atendimento: o "Novo lead" antigo vale como a entrada
+    expect(naEtapa('interessada', 'em_conversa')).toBe(true);
     const regra = { ...REGRA_PADRAO, etapas: { novo_lead: 7 } };
     expect(prazoDa(regra, { etapa: 'entrada' })).toMatchObject({ avisoMin: 7, origem: 'etapa' });
     expect(prazoDa({ ...regra, etapas: { novo_lead: 7, entrada: 3 } }, { etapa: 'entrada' })).toMatchObject({ avisoMin: 3 });
@@ -48,7 +52,8 @@ describe.each(ambientes)('Entrada de leads ($nome)', (amb) => {
     const vendas = (await como(gente.admin, 'POST', '/api/funis', { nome: 'Vendas', etapas: [{ nome: 'Lead' }, { nome: 'Proposta' }, { nome: 'Entrada de leads' }] })).json() as FunilJson;
     const lista = (await como(gente.admin, 'GET', '/api/funis')).json() as FunilJson[];
     for (const f of lista) {
-      expect(f.etapas[0]).toMatchObject({ nome: 'Entrada de leads', cor: '#94a3b8', chaveSistema: 'entrada' });
+      // funil-atendimento: no funil "Atendimento" a etapa fixa de chegada se chama "Novo lead".
+      expect(f.etapas[0]).toMatchObject({ nome: f.sistema ? 'Novo lead' : 'Entrada de leads', cor: '#94a3b8', chaveSistema: 'entrada' });
       expect(f.etapas.filter((e) => e.chaveSistema === 'entrada')).toHaveLength(1);
     }
     // Pedir uma etapa "Entrada de leads" ao criar o funil não repete a fixa.
@@ -60,7 +65,7 @@ describe.each(ambientes)('Entrada de leads ($nome)', (amb) => {
       expect((await como(gente.admin, 'PATCH', url, { nome: 'Chegada' })).statusCode).toBe(409);
       expect((await como(gente.admin, 'PATCH', url, { cor: '#E5484D' })).statusCode).toBe(409);
       // Mandar o mesmo nome e a mesma cor não é mudar.
-      expect((await como(gente.admin, 'PATCH', url, { nome: 'Entrada de leads' })).statusCode).toBe(200);
+      expect((await como(gente.admin, 'PATCH', url, { nome: entrada.nome })).statusCode).toBe(200);
       expect((await como(gente.admin, 'DELETE', url)).statusCode).toBe(409);
       expect((await como(gente.admin, 'DELETE', `/api/tags/${entrada.id}`)).statusCode).toBe(409);
       // Reordenar com a Entrada no fim: ela continua em primeiro.
@@ -106,11 +111,11 @@ describe.each(ambientes)('Entrada de leads ($nome)', (amb) => {
     const b = await conversa('norte', 'Bia');
     expect((await buscar(b.id)).etapa).toBe('entrada');
     expect((await como(gente.admin, 'POST', `/api/conversas/${b.id}/modo`, { modo: 'ia' })).statusCode).toBe(200);
-    agente.resposta = () => ({ texto: 'Temos horário amanhã!', acoes: [{ tipo: 'etapa', etapa: 'interessada', motivo: 'quer horário' }], recusou: false });
+    agente.resposta = () => ({ texto: 'Temos horário amanhã!', acoes: [{ tipo: 'etapa', etapa: 'reagendar', motivo: 'não vai conseguir ir' }], recusou: false });
     await escreve(b, 'Tem horário amanhã?');
     const depois = await buscar(b.id);
     expect(depois.ultimaMensagemIa).toBeTruthy();
-    expect(depois.etapa).toBe('interessada');
+    expect(depois.etapa).toBe('reagendar');
   });
 
   it('lead sem mensagem (API ou planilha) vai para Novo lead na 1ª mensagem da equipe; histórico importado não entra na Entrada', async () => {
@@ -119,7 +124,7 @@ describe.each(ambientes)('Entrada de leads ($nome)', (amb) => {
     const c = (await repo.buscarOuCriarConversa({ empresaId: 'imperio', unidade: 'norte', canalId: base.canalId, telefone: '5571977001122', nome: 'Formulário', agora: quinta(14) })).conversa;
     await repo.salvarConversa({ ...c, etapa: 'entrada' });
     await como(gente.carla, 'POST', `/api/conversas/${c.id}/enviar`, { texto: 'Oi! Recebemos seu cadastro.' });
-    expect((await buscar(c.id)).etapa).toBe('novo_lead');
+    expect((await buscar(c.id)).etapa).toBe('em_conversa');
 
     // Histórico do WhatsApp puxado ao conectar: fica onde sempre ficou (Novo lead), sem lotar a Entrada.
     await sintonia.importarHistorico([

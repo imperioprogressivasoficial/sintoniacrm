@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type pg from 'pg';
-import { COR_ENTRADA, ETAPA_ENTRADA, ETAPAS, NOME_ENTRADA, NOME_ETAPA, type Conversa, type Etapa, type ModoAtendimento, type UnidadeId } from '../domain.js';
+import { COR_ENTRADA, ETAPA_ENTRADA, ETAPAS_ANTIGAS, ETAPAS_DO_FUNIL, NOME_ENTRADA, NOME_ETAPA, etapaDoFunil, type Conversa, type Etapa, type ModoAtendimento, type UnidadeId } from '../domain.js';
 import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
 import { sqlEscopo } from '../painel/escopo-sql.js';
 import type { Repositorio } from '../store/repositorio.js';
@@ -293,12 +293,16 @@ export class ArmazemFunisMemoria implements ArmazemFunis {
     return this.funis.get(funilId)?.empresaId;
   }
   async sincronizarSistema(empresaId: string, funilId: string, em: Date) {
-    const porChave = new Map((await this.tags.listar(empresaId)).filter((t) => t.funilId === funilId && t.chaveSistema).map((t) => [t.chaveSistema!, t.id]));
+    const doSistema = (await this.tags.listar(empresaId)).filter((t) => t.funilId === funilId && t.chaveSistema);
     let n = 0;
     for (const c of await this.repo.listarConversas()) {
       if (c.empresaId !== empresaId) continue;
-      const tagId = porChave.get(c.etapa);
-      if (tagId && (await this.tags.marcarEtapa(c.id, tagId, funilId, 'sincronia', em)).mudou) n++;
+      // funil-atendimento: etapa antiga vale como a equivalente; já estar numa etapa da mesma chave (ex.: outro "Agendado") basta.
+      const chave = etapaDoFunil(c.etapa);
+      const atual = (await this.tags.etapasDaConversa(c.id)).find((m) => m.funilId === funilId);
+      if (atual && doSistema.find((t) => t.id === atual.tagId)?.chaveSistema === chave) continue;
+      const tag = escolherTagDoSistema(doSistema, chave, c.unidade);
+      if (tag && (await this.tags.marcarEtapa(c.id, tag.id, funilId, 'sincronia', em)).mudou) n++;
     }
     return n;
   }
@@ -588,11 +592,21 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
     return rows[0] ? Number(rows[0].valor) : null;
   }
   async sincronizarSistema(empresaId: string, funilId: string, em: Date) {
+    // funil-atendimento: etapa antiga vale como a equivalente; quem já está numa etapa da mesma chave (ex.: outro
+    // "Agendado <unidade>") fica onde está; para escolher entre as de mesma chave, a da unidade da conversa primeiro.
     const r = await this.pool.query(
-      `insert into sintonia.conversa_tags (conversa_id, tag_id, funil_id, marcada_por, marcada_em)
-       select c.id, t.id, t.funil_id, 'sincronia', $3
-         from sintonia.conversas c join sintonia.tags t on t.funil_id = $2 and t.chave_sistema = c.etapa
-        where c.empresa_id = $1
+      `with alvo as (
+         select c.id as conversa_id, c.unidade,
+                case c.etapa when 'novo_lead' then 'entrada' when 'interessada' then 'em_conversa' when 'manutencao' then 'compareceu' else c.etapa end as chave
+           from sintonia.conversas c where c.empresa_id = $1
+       )
+       insert into sintonia.conversa_tags (conversa_id, tag_id, funil_id, marcada_por, marcada_em)
+       select a.conversa_id, t.id, $2, 'sincronia', $3
+         from alvo a
+         join lateral (select x.id from sintonia.tags x where x.funil_id = $2 and x.chave_sistema = a.chave
+                        order by (x.unidade is not distinct from a.unidade) desc, (x.unidade is null) desc, x.ordem, x.id limit 1) t on true
+        where not exists (select 1 from sintonia.conversa_tags ct join sintonia.tags y on y.id = ct.tag_id
+                           where ct.conversa_id = a.conversa_id and ct.funil_id = $2 and y.chave_sistema = a.chave)
        on conflict (conversa_id, funil_id) where funil_id is not null
          do update set tag_id = excluded.tag_id, marcada_por = excluded.marcada_por, marcada_em = excluded.marcada_em
          where sintonia.conversa_tags.tag_id <> excluded.tag_id`,
@@ -607,6 +621,8 @@ export class ArmazemFunisPostgres implements ArmazemFunis {
 /** Cor de cada etapa do sistema (paleta das tags). */
 const COR_SISTEMA: Record<Etapa, string> = {
   entrada: COR_ENTRADA,
+  reagendar: '#E5484D',
+  sem_resposta: '#F76B15',
   novo_lead: '#0090FF',
   em_conversa: '#12A594',
   interessada: '#D4A017',
@@ -615,6 +631,23 @@ const COR_SISTEMA: Record<Etapa, string> = {
   manutencao: '#8E4EC6',
   perdida: '#8B8D98',
 };
+/** funil-atendimento: ordem de cada etapa do sistema ao ser criada (as da empresa podem ficar entre elas). */
+const ORDEM_SISTEMA: Partial<Record<Etapa, number>> = { entrada: -1, em_conversa: 1, reagendar: 2, sem_resposta: 3, agendada: 4, compareceu: 20, perdida: 21 };
+/** funil-atendimento: nomes e ordem das etapas "Agendado" da Império (pedido do dono); as outras empresas usam "Agendado <unidade>". */
+const AGENDADOS_IMPERIO: Readonly<Record<string, string>> = { sumare: 'Agendado Sumaré', norte: 'Agendado Norte' };
+
+/** funil-atendimento: etapas antigas do funil do sistema ficam no banco (histórico), fora da tela. */
+export const etapaEscondida = (t: Pick<Tag, 'chaveSistema'>) => Boolean(t.chaveSistema && (ETAPAS_ANTIGAS as readonly string[]).includes(t.chaveSistema));
+
+/**
+ * funil-atendimento: a etapa (tag) do funil do sistema para uma chave. Para "agendada" há uma por unidade:
+ * a da unidade pedida, senão a sem unidade, senão a primeira.
+ */
+export function escolherTagDoSistema<T extends Pick<Tag, 'id' | 'chaveSistema' | 'ordem'> & { unidade?: string | null }>(tags: T[], chave: string, unidade?: string | null): T | undefined {
+  const l = tags.filter((t) => t.chaveSistema === chave).sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id));
+  return (unidade ? l.find((t) => t.unidade === unidade) : undefined) ?? l.find((t) => !t.unidade) ?? l[0];
+}
+
 const FOLLOWUPS = ['followup_1h', 'followup_1d', 'followup_3d'] as const;
 export const LIMITE_FUNIS = 30;
 export const LIMITE_ETAPAS = 30;
@@ -636,6 +669,11 @@ export interface OpcoesFunis {
   conversasComProdutos?: (f: { produtos: string[]; categorias: string[] }) => Promise<string[]>;
   /** produtos-lead: telefones dos contatos ligados às empresas (chaves de Clientes › Empresas). Sem isto: aviso 'empresas'. */
   telefonesDasEmpresas?: (chaves: string[]) => Promise<string[]>;
+  /**
+   * funil-atendimento: unidades que agendam (na ordem do cadastro), para as etapas "Agendado <unidade>".
+   * Com duas ou mais, o funil do sistema tem uma etapa de agendado por unidade; com uma ou nenhuma, só "Agendado".
+   */
+  unidadesQueAgendam?: () => Array<{ id: string; nome: string }>;
 }
 
 function validarNomeFunil(bruto: string): string {
@@ -656,8 +694,8 @@ export class Funis implements DelegadoEtapas {
   private readonly log: (msg: string, extra?: unknown) => void;
   private readonly observadores: Array<(m: MovimentoEtapa) => Promise<void>> = [];
   private readonly aoApagarFunil: Array<(funilId: string) => Promise<void>> = [];
-  /** Funil do sistema e suas etapas por chave (as chaves nunca mudam; os nomes são lidos de novo). */
-  private sistemaCache?: { funil: Funil; porChave: Map<Etapa, string> };
+  /** Funil do sistema e suas etapas (as chaves nunca mudam; os nomes são lidos de novo). */
+  private sistemaCache?: { funil: Funil; tags: Tag[] };
   /** etapa-entrada: funis que já têm a "Entrada de leads" conferida. */
   private readonly comEntrada = new Set<string>();
 
@@ -683,9 +721,19 @@ export class Funis implements DelegadoEtapas {
 
   // ---------- funil do sistema ----------
 
-  /** Cria (se faltar) o funil "Atendimento" e as 7 etapas ligadas às etapas fixas. Idempotente. */
+  /** Cria (se faltar) o funil "Atendimento" e as etapas ligadas às etapas fixas. Idempotente; uma vez por vez. */
   async garantirSistema(): Promise<Funil> {
     if (this.sistemaCache) return this.sistemaCache.funil;
+    this.garantindo ??= this.garantirSistemaAgora().finally(() => {
+      this.garantindo = undefined;
+    });
+    return this.garantindo;
+  }
+  private garantindo?: Promise<Funil>;
+  /** funil-atendimento: conferências de "Agendado <unidade>" em fila (duas ao mesmo tempo criariam em dobro). */
+  private filaAgendados: Promise<unknown> = Promise.resolve();
+
+  private async garantirSistemaAgora(): Promise<Funil> {
     let funil = (await this.o.armazem.listar(this.empresaId)).find((f) => f.sistema);
     if (!funil) {
       const novo: Funil = { id: randomUUID(), empresaId: this.empresaId, nome: 'Atendimento', ordem: 0, sistema: true, criadaPor: 'sistema', criadaEm: this.agora(), acaoPrincipal: null };
@@ -697,7 +745,7 @@ export class Funis implements DelegadoEtapas {
       funil = (await this.o.armazem.listar(this.empresaId)).find((f) => f.sistema)!;
     }
     const existentes = (await this.o.armazemTags.listar(this.empresaId)).filter((t) => t.funilId === funil.id);
-    for (const [i, chave] of ETAPAS.entries()) {
+    for (const [i, chave] of ETAPAS_DO_FUNIL.entries()) {
       if (existentes.some((t) => t.chaveSistema === chave)) continue;
       try {
         await this.o.armazemTags.criar({
@@ -705,7 +753,7 @@ export class Funis implements DelegadoEtapas {
           empresaId: this.empresaId,
           nome: NOME_ETAPA[chave],
           cor: COR_SISTEMA[chave],
-          ordem: i,
+          ordem: ORDEM_SISTEMA[chave] ?? i,
           criadaPor: 'sistema',
           criadaEm: this.agora(),
           funilId: funil.id,
@@ -715,9 +763,81 @@ export class Funis implements DelegadoEtapas {
         if (!(e instanceof ErroTag && e.statusCode === 409)) throw e;
       }
     }
-    const tags = (await this.o.armazemTags.listar(this.empresaId)).filter((t) => t.funilId === funil.id && t.chaveSistema);
-    this.sistemaCache = { funil, porChave: new Map(tags.map((t) => [t.chaveSistema as Etapa, t.id])) };
+    this.sistemaCache = { funil, tags: await this.tagsDoSistema(funil.id) };
+    await this.conferirAgendados().catch((e) => this.log('Falha ao conferir as etapas de agendado por unidade', String(e)));
     return funil;
+  }
+
+  private async tagsDoSistema(funilId: string): Promise<Tag[]> {
+    return (await this.o.armazemTags.listar(this.empresaId)).filter((t) => t.funilId === funilId && t.chaveSistema && !etapaEscondida(t));
+  }
+
+  /** funil-atendimento: a etapa do funil do sistema para a etapa fixa (e a unidade, no caso de "Agendado"). */
+  async tagDoSistema(etapa: Etapa, unidade?: string | null): Promise<{ funil: Funil; tag: Tag } | undefined> {
+    const funil = await this.garantirSistema();
+    const tag = escolherTagDoSistema(this.sistemaCache!.tags, etapaDoFunil(etapa), unidade);
+    return tag ? { funil, tag } : undefined;
+  }
+
+  /**
+   * funil-atendimento: com duas ou mais unidades que agendam, uma etapa "Agendado <unidade>" para cada uma
+   * (na Império: "Agendado Sumaré" e "Agendado Norte"). A etapa "Agendado" sem unidade vira a da primeira; os leads
+   * que estavam nela vão para a etapa da unidade da conversa. Unidade que deixa de agendar: a etapa fica (os leads
+   * não somem). Idempotente; rode de novo quando as unidades ou a agenda mudarem.
+   */
+  conferirAgendados(): Promise<number> {
+    const p = this.filaAgendados.then(() => this.conferirAgendadosAgora());
+    this.filaAgendados = p.catch(() => undefined);
+    return p;
+  }
+  private async conferirAgendadosAgora(): Promise<number> {
+    const lista = this.o.unidadesQueAgendam?.() ?? [];
+    if (lista.length < 2 || !this.sistemaCache) return 0;
+    const funil = this.sistemaCache.funil;
+    const imperio = this.empresaId === 'imperio';
+    const unidades = imperio
+      ? [...lista].sort((a, b) => (AGENDADOS_IMPERIO[a.id] ? Object.keys(AGENDADOS_IMPERIO).indexOf(a.id) : 99) - (AGENDADOS_IMPERIO[b.id] ? Object.keys(AGENDADOS_IMPERIO).indexOf(b.id) : 99))
+      : lista;
+    const todas = await this.o.armazemTags.listar(this.empresaId);
+    const agendados = todas.filter((t) => t.funilId === funil.id && t.chaveSistema === 'agendada');
+    const nomeDe = (u: { id: string; nome: string }) => (imperio && AGENDADOS_IMPERIO[u.id]) || `Agendado ${u.nome}`.slice(0, 40);
+    const base = agendados.reduce((m, t) => Math.min(m, t.ordem), ORDEM_SISTEMA.agendada!);
+    let mudou = 0;
+    let generica: Tag | undefined;
+    for (const [i, u] of unidades.entries()) {
+      if (agendados.some((t) => t.unidade === u.id)) continue;
+      const livre = agendados.find((t) => !t.unidade);
+      const nome = nomeDe(u);
+      const nomeLivre = !todas.some((t) => t.funilId === funil.id && t.nome.toLowerCase() === nome.toLowerCase() && t.id !== livre?.id);
+      if (livre) {
+        const padrao = /^agendad[oa]$/i.test(livre.nome.trim());
+        await this.o.armazemTags.atualizar(livre.id, { unidade: u.id, ...(padrao && nomeLivre ? { nome } : {}), ordem: base + i });
+        livre.unidade = u.id;
+        generica = livre;
+      } else {
+        const t: Tag = { id: randomUUID(), empresaId: this.empresaId, nome: nomeLivre ? nome : `${nome} (${u.id})`.slice(0, 40), cor: COR_SISTEMA.agendada, ordem: base + i, criadaPor: 'sistema', criadaEm: this.agora(), funilId: funil.id, chaveSistema: 'agendada', unidade: u.id };
+        try {
+          await this.o.armazemTags.criar(t);
+          agendados.push(t);
+          todas.push(t);
+        } catch (e) {
+          if (!(e instanceof ErroTag && e.statusCode === 409)) throw e;
+          continue;
+        }
+      }
+      mudou++;
+    }
+    if (generica) {
+      // Os leads que estavam no "Agendado" sem unidade vão para o da unidade da conversa (sem disparar automações).
+      const porUnidade = new Map(agendados.filter((t) => t.unidade).map((t) => [t.unidade!, t.id]));
+      for (const m of (await this.o.armazemTags.etapasDoFunil(funil.id)).filter((x) => x.tagId === generica!.id)) {
+        const c = await this.o.repo.buscarConversa(m.conversaId);
+        const alvo = c ? porUnidade.get(c.unidade) : undefined;
+        if (alvo && alvo !== generica.id) await this.o.armazemTags.marcarEtapa(m.conversaId, alvo, funil.id, 'sincronia', m.desde);
+      }
+    }
+    if (mudou) this.sistemaCache = { funil, tags: await this.tagsDoSistema(funil.id) };
+    return mudou;
   }
 
   /**
@@ -770,29 +890,34 @@ export class Funis implements DelegadoEtapas {
     return this.o.armazem.sincronizarSistema(this.empresaId, f.id, this.agora());
   }
 
-  /** Gancho: o motor/IA mudou conversa.etapa. A tag do funil do sistema acompanha (sem mexer em conversa.etapa). */
-  async etapaDoSistemaMudou(c: Conversa, de: Etapa, para: Etapa, por: 'IA' | 'Sintonia'): Promise<void> {
+  /**
+   * Gancho: o motor/IA mudou conversa.etapa. A tag do funil do sistema acompanha (sem mexer em conversa.etapa).
+   * funil-atendimento: `extra.unidade` = unidade do agendamento ("Agendado <unidade>"); com de = para, só troca de
+   * "Agendado" (remarcou em outra unidade).
+   */
+  async etapaDoSistemaMudou(c: Conversa, de: Etapa, para: Etapa, por: 'IA' | 'Sintonia', extra?: { unidade?: string }): Promise<void> {
     if (c.empresaId !== this.empresaId) return;
-    await this.garantirSistema();
-    const { funil, porChave } = this.sistemaCache!;
-    const tagId = porChave.get(para);
-    if (!tagId) return;
-    const r = await this.o.armazemTags.marcarEtapa(c.id, tagId, funil.id, por, this.agora());
+    const alvo = await this.tagDoSistema(para, extra?.unidade ?? c.unidade);
+    if (!alvo) return;
+    const { funil, tag } = alvo;
+    const r = await this.o.armazemTags.marcarEtapa(c.id, tag.id, funil.id, por, this.agora());
     if (!r.mudou) return;
-    await this.registrarMovimento({ conversa: c, funil, de: r.de ?? porChave.get(de) ?? null, para: tagId, por: { nome: por, id: null }, automatico: true });
+    await this.registrarMovimento({ conversa: c, funil, de: r.de ?? (await this.tagDoSistema(de, c.unidade))?.tag.id ?? null, para: tag.id, por: { nome: por, id: null }, automatico: true });
   }
 
   /** Garante que a conversa está no funil do sistema (conversa criada por fora do motor). Sem evento. */
   async garantirNoSistema(c: Conversa): Promise<void> {
     if (c.empresaId !== this.empresaId) return;
-    await this.garantirSistema();
-    const { funil, porChave } = this.sistemaCache!;
+    const alvo = await this.tagDoSistema(c.etapa, c.unidade);
+    if (!alvo) return;
+    const { funil } = alvo;
+    const tagId = alvo.tag.id;
     const atual = (await this.o.armazemTags.etapasDaConversa(c.id)).find((m) => m.funilId === funil.id);
-    const tagId = porChave.get(c.etapa);
-    if (!tagId || atual?.tagId === tagId) return;
+    // funil-atendimento: já numa etapa da mesma chave (ex.: o "Agendado" de outra unidade) está certo.
+    if (atual && (atual.tagId === tagId || this.sistemaCache!.tags.find((t) => t.id === atual.tagId)?.chaveSistema === alvo.tag.chaveSistema)) return;
     const r = await this.o.armazemTags.marcarEtapa(c.id, tagId, funil.id, 'sincronia', this.agora());
     // etapa-entrada: lead novo chegando na "Entrada de leads" dispara as automações dela ("entrou na etapa").
-    if (r.mudou && !atual && c.etapa === ETAPA_ENTRADA) {
+    if (r.mudou && !atual && etapaDoFunil(c.etapa) === ETAPA_ENTRADA) {
       await this.registrarMovimento({ conversa: c, funil, de: null, para: tagId, por: { nome: 'Sintonia', id: null }, automatico: true });
     }
   }
@@ -815,7 +940,7 @@ export class Funis implements DelegadoEtapas {
   }
 
   async etapas(funilId: string): Promise<EtapaFunil[]> {
-    return ordenarEtapas((await this.o.armazemTags.listar(this.empresaId)).filter((t): t is EtapaFunil => t.funilId === funilId));
+    return ordenarEtapas((await this.o.armazemTags.listar(this.empresaId)).filter((t): t is EtapaFunil => t.funilId === funilId && !etapaEscondida(t)));
   }
 
   async exigirEtapa(funilId: string, etapaId: string): Promise<EtapaFunil> {
@@ -830,7 +955,7 @@ export class Funis implements DelegadoEtapas {
     return Promise.all(
       funis.map(async (f) => {
         const n = await this.o.armazem.contar(f.id, escopo);
-        const etapas = ordenarEtapas(todas.filter((t) => t.funilId === f.id)).map((t) => ({ ...t, conversas: n.get(t.id) ?? 0 }));
+        const etapas = ordenarEtapas(todas.filter((t) => t.funilId === f.id && !etapaEscondida(t))).map((t) => ({ ...t, conversas: n.get(t.id) ?? 0 }));
         return { ...f, etapas, conversas: etapas.reduce((s, e) => s + e.conversas, 0) };
       }),
     );
@@ -1073,7 +1198,7 @@ export class Funis implements DelegadoEtapas {
    * Move a conversa para a etapa (ou tira do funil, com etapaId null), já sob a trava da conversa.
    * No funil do sistema, conversa.etapa acompanha (quem chama grava a conversa). Devolve se mudou.
    */
-  async moverSobTrava(c: Conversa, funilId: string, etapaId: string | null, por: QuemMove, automatico: boolean): Promise<{ mudou: boolean; de: string | null }> {
+  async moverSobTrava(c: Conversa, funilId: string, etapaId: string | null, por: QuemMove, automatico: boolean, motivo?: string): Promise<{ mudou: boolean; de: string | null }> {
     const funil = await this.exigir(funilId);
     const agora = this.agora();
     if (etapaId === null) {
@@ -1094,13 +1219,25 @@ export class Funis implements DelegadoEtapas {
         conversaId: c.id,
         unidade: c.unidade,
         em: agora,
-        dados: { de, para: c.etapa, motivo: automatico ? 'automacao' : 'manual', por: por.nome, porId: por.id ?? null },
+        dados: { de, para: c.etapa, motivo: motivo ?? (automatico ? 'automacao' : 'manual'), por: por.nome, porId: por.id ?? null },
       });
       if (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida') await this.o.repo.cancelarTarefas(c.id, [...FOLLOWUPS]);
     }
     if (!r.mudou) return { mudou: false, de: r.de };
     await this.registrarMovimento({ conversa: c, funil, de: r.de, para: etapa.id, por, automatico });
     return { mudou: true, de: r.de };
+  }
+
+  /**
+   * funil-atendimento: regra automática (src/funis/regras-funil.ts) põe a conversa numa etapa do funil do sistema,
+   * já sob a trava. conversa.etapa acompanha; quem chama grava a conversa. Devolve se mudou.
+   */
+  async moverNoSistema(c: Conversa, etapa: Etapa, o: { motivo: string; por?: string; unidade?: string }): Promise<boolean> {
+    const alvo = await this.tagDoSistema(etapa, o.unidade ?? c.unidade);
+    if (!alvo) return false;
+    const antes = c.etapa;
+    const r = await this.moverSobTrava(c, alvo.funil.id, alvo.tag.id, { nome: o.por ?? 'Sintonia', id: null }, true, o.motivo);
+    return r.mudou || c.etapa !== antes;
   }
 
   /** Move pela tela (pega a trava da conversa). */

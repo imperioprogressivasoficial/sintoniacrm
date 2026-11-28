@@ -2,21 +2,21 @@ import { z } from 'zod';
 import { minutosDoDia, partesBahia } from '../util/tempo.js';
 
 /** Tipos de notificação (cada um pode ser ligado/desligado nas preferências). */
-export const TIPOS_NOTIFICACAO = ['nova_cliente', 'mensagem', 'ia_equipe', 'espera', 'transferida', 'agendamento', 'agenda_mudou', 'lembrete_ligacao', 'nps_baixa', 'falha', 'radar', 'reuniao'] as const;
+export const TIPOS_NOTIFICACAO = ['nova_cliente', 'mensagem', 'ia_equipe', 'espera', 'transferida', 'agendamento', 'agenda_mudou', 'lembrete_ligacao', 'nps_baixa', 'falha', 'radar', 'reuniao', 'lead_parado'] as const;
 /**
  * O que ainda vira notificação (só o que pede ação). "nova_cliente", "mensagem" e "agendamento" (a IA agendou)
  * não são mais criadas, e as antigas desses tipos não aparecem no sino nem contam (filtro na leitura).
  */
-export const TIPOS_VISIVEIS = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha', 'teste', 'reuniao'] as const;
+export const TIPOS_VISIVEIS = ['espera', 'lead_parado', 'ia_equipe', 'transferida', 'agenda_mudou', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha', 'teste', 'reuniao'] as const;
 /**
  * notificacoes2 (modelo "Precisa de você"): avisos que pedem uma ação de quem recebe e entram no número do sino.
  * A IA pediu ajuda (com conversa), conversa passada para você e problema que impede o trabalho. O resto é "para saber".
  */
 export const pedeAcao = (n: { tipo: string; conversaId?: string | null }): boolean =>
-  n.tipo === 'transferida' || n.tipo === 'falha' || (n.tipo === 'ia_equipe' && Boolean(n.conversaId));
+  n.tipo === 'transferida' || n.tipo === 'falha' || n.tipo === 'lead_parado' || (n.tipo === 'ia_equipe' && Boolean(n.conversaId));
 
 /** Categorias que aparecem nas preferências (engrenagem), na ordem da tela. */
-export const TIPOS_PREFERENCIA = ['espera', 'ia_equipe', 'transferida', 'agenda_mudou', 'reuniao', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha'] as const;
+export const TIPOS_PREFERENCIA = ['espera', 'lead_parado', 'ia_equipe', 'transferida', 'agenda_mudou', 'reuniao', 'lembrete_ligacao', 'radar', 'nps_baixa', 'falha'] as const;
 export type TipoNotificacao = (typeof TIPOS_NOTIFICACAO)[number] | 'teste';
 
 export const NOME_TIPO: Record<(typeof TIPOS_NOTIFICACAO)[number], string> = {
@@ -31,6 +31,7 @@ export const NOME_TIPO: Record<(typeof TIPOS_NOTIFICACAO)[number], string> = {
   nps_baixa: 'Nota baixa na pesquisa de satisfação (gestão)',
   falha: 'Problemas que impedem o trabalho (WhatsApp, chave da IA)',
   radar: 'Radar disparou',
+  /* funil-atendimento */ lead_parado: 'Lead parado em Novo lead sem resposta',
   /* atendimento-extra */ reuniao: 'Reunião online marcada, cancelada ou chegando (link de agendamento)',
 };
 

@@ -155,7 +155,7 @@ for (const amb of ambientes) {
 
       const tudo = (await g.como(g.gente.admin, 'GET', '/api/leads/exportar')).body;
       expect(linhas(tudo)[0]).toBe('﻿Nome;Telefone;E-mail;Unidade;Etapa;Tags;Dona;Criado em;Origem');
-      expect(tudo).toContain('Joana;5571988130002;;Salvador Norte Shopping;Entrada de leads;;;05/11/2026 10:00;Google');
+      expect(tudo).toContain('Joana;5571988130002;;Salvador Norte Shopping;Novo lead;;;05/11/2026 10:00;Google');
 
       const insta = (await g.como(g.gente.admin, 'GET', '/api/leads/exportar?origem=instagram')).body;
       expect(linhas(insta)).toHaveLength(3);

@@ -209,8 +209,9 @@ export async function rodarFerramentaCrm(nome: string, entrada: unknown, ctx: Co
       if (funil.sistema && etapa.chave && !ETAPAS_DA_IA.includes(etapa.chave as Etapa)) {
         throw new RecusaFerramenta(`"${etapa.nome}" muda sozinha pela agenda/atendimento: não mova para lá. Para marcar horário use agendar.`);
       }
-      if (funil.sistema && (ctx.conversa.etapa === 'agendada' || ctx.conversa.etapa === 'compareceu')) {
-        throw new RecusaFerramenta(`A cliente está em "${ctx.conversa.etapa === 'agendada' ? 'Agendada' : 'Compareceu'}" (fato da agenda). Se ela desistiu do horário, use cancelar_agendamento primeiro.`);
+      // funil-atendimento: de "Agendado" a IA só tira para "Reagendar" (ela disse que não vai conseguir ir); de "Finalizado", nunca.
+      if (funil.sistema && (ctx.conversa.etapa === 'compareceu' || (ctx.conversa.etapa === 'agendada' && etapa.chave !== 'reagendar'))) {
+        throw new RecusaFerramenta(`A cliente está em "${ctx.conversa.etapa === 'agendada' ? 'Agendado' : 'Finalizado'}" (fato da agenda). Se ela desistiu do horário, use cancelar_agendamento primeiro; se vai remarcar, use remarcar_agendamento.`);
       }
       let perda: { motivo: string; detalhe: string | null } | null = null;
       if (etapa.perda) {

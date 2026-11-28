@@ -23,7 +23,7 @@ describe.each(ambientes)('Motivo de perda obrigatório ($nome)', (amb) => {
     const sem = await como(gente.carla, 'POST', url, { etapaId: etapasSistema.get('perdida') });
     expect(sem.statusCode).toBe(409);
     const j = sem.json();
-    expect(j).toMatchObject({ codigo: 'motivo_perda', etapa: 'Perdida', cliente: 'Marina' });
+    expect(j).toMatchObject({ codigo: 'motivo_perda', etapa: 'Perdido', cliente: 'Marina' });
     expect(j.motivos.map((m: { id: string }) => m.id)).toEqual(['preco', 'sem_horario', 'sumiu', 'concorrente', 'desistiu', 'outro']);
     expect((await repo.buscarConversa(c.id))!.etapa).not.toBe('perdida');
 
@@ -44,7 +44,7 @@ describe.each(ambientes)('Motivo de perda obrigatório ($nome)', (amb) => {
     // Já está em "Perdida": mandar de novo não pede motivo (nada muda).
     expect((await como(gente.carla, 'POST', url, { etapaId: etapasSistema.get('perdida') })).statusCode).toBe(200);
     // Ir para outra etapa (não é de perda) não pede nada.
-    expect((await como(gente.carla, 'POST', url, { etapaId: etapasSistema.get('interessada') })).statusCode).toBe(200);
+    expect((await como(gente.carla, 'POST', url, { etapaId: etapasSistema.get('em_conversa') })).statusCode).toBe(200);
   });
 
   it('funil próprio: etapa "Perdido" também pede o motivo; relatório por motivo, etapa, atendente e origem (+ CSV)', async () => {
@@ -66,7 +66,7 @@ describe.each(ambientes)('Motivo de perda obrigatório ($nome)', (amb) => {
     const r = (await como(gente.admin, 'GET', '/api/analises/perdas?periodo=hoje')).json();
     expect(r.totais).toMatchObject({ perdas: 3, manuais: 3, automaticas: 0, semMotivo: 0 });
     expect(r.motivos.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Foi para a concorrência', 2], ['Outro', 1]]);
-    expect(r.etapas.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Proposta', 2], ['Entrada de leads', 1]]); // etapa-entrada: a Cris ainda não tinha resposta
+    expect(r.etapas.map((m: { nome: string; total: number }) => [m.nome, m.total])).toEqual([['Proposta', 2], ['Novo lead', 1]]); // etapa-entrada: a Cris ainda não tinha resposta
     const carla = r.atendentes.find((a: { id: string }) => a.id === gente.carla.id);
     expect(carla).toMatchObject({ nome: 'Carla Lima', total: 1, principal: { nome: 'Foi para a concorrência' } });
     expect(r.origens[0]).toMatchObject({ nome: 'WhatsApp', total: 3 });

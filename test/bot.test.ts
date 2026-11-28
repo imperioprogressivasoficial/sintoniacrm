@@ -189,7 +189,7 @@ describe.each(ambientes)('Bots ($nome)', (amb) => {
         { id: 'email', tipo: 'pergunta_aberta', texto: 'Qual seu e-mail?', validacao: 'email', variavel: 'email', campo: 'email' },
         { id: 'cond', tipo: 'condicao', condicao: { se: 'campo', campo: 'email', operador: 'contem', valor: 'vip.com' } },
         { id: 'tag', tipo: 'marcar_tag', tagId: vip.id },
-        { id: 'mov', tipo: 'mover_etapa', funilId: sistema.id, etapaId: etapasSistema.get('interessada') },
+        { id: 'mov', tipo: 'mover_etapa', funilId: sistema.id, etapaId: etapasSistema.get('reagendar') },
         { id: 'dona', tipo: 'atribuir', usuarioId: gente.carla.id },
         { id: 'lem', tipo: 'lembrete', em_minutos: 30, texto: 'Ligar para {primeiro_nome} ({email})' },
         { id: 'web', tipo: 'webhook', url: 'https://exemplo.com/gancho' },
@@ -220,7 +220,7 @@ describe.each(ambientes)('Bots ($nome)', (amb) => {
     expect(e!.estado.caminho).toEqual(['ini', 'email', 'cond', 'tag', 'mov', 'dona', 'lem', 'web', 'fim_ok']);
     expect((await armazens.contatos.obter('imperio', c.telefone))?.email).toBe('marina@vip.com');
     expect(await tags.temTag(c.id, vip.id)).toBe(true);
-    expect(await buscar(c.id)).toMatchObject({ etapa: 'interessada', responsavelId: gente.carla.id });
+    expect(await buscar(c.id)).toMatchObject({ etapa: 'reagendar', responsavelId: gente.carla.id });
     expect(webhooks[0]).toMatchObject({ url: 'https://exemplo.com/gancho', corpo: { conversa: { telefone: c.telefone }, variaveis: { email: 'marina@vip.com' } } });
     const lig = (await como(gente.carla, 'GET', '/api/ligacoes')).json() as { sugestoes: Array<{ conversaId: string; texto: string }> };
     expect(lig.sugestoes.find((s) => s.conversaId === c.id)?.texto).toContain('Ligar para Marina (marina@vip.com)');

@@ -24,6 +24,10 @@ import { FonteAnalisesMemoria, FonteAnalisesPostgres } from '../src/analises/fon
 import { FonteComercialMemoria, FonteComercialPostgres } from '../src/comercial/fonte.js';
 import { ArmazemComercialMemoria } from '../src/comercial/armazem.js';
 import { OrigensConversa } from '../src/analises/origens.js';
+/* funil-atendimento */
+import { ArmazemRegrasFunilMemoria, ArmazemRegrasFunilPostgres, FonteRegrasFunilMemoria, FonteRegrasFunilPostgres, RegrasFunil, type ArmazemRegrasFunil } from '../src/funis/regras-funil.js';
+import { registrarRegrasFunil } from '../src/funis/regras-rotas.js';
+import { observarEventos } from '../src/notificacoes/notificador.js';
 
 export { ambientes, quinta, AgenteFalso };
 
@@ -36,7 +40,9 @@ interface Base {
   relogio: { t: Date };
   enviados: Array<{ canalId: string; telefone: string; texto: string }>;
   /** Memória: o "banco" é o mesmo objeto (sobrevive ao "reinício"). Postgres: cada instância cria os seus. */
-  armazens: { tags: ArmazemTags; funis: ArmazemFunis; automacoes: ArmazemAutomacoes; nps: ArmazemNps; perdas: ArmazemPerdas };
+  armazens: { tags: ArmazemTags; funis: ArmazemFunis; automacoes: ArmazemAutomacoes; nps: ArmazemNps; perdas: ArmazemPerdas; regras: ArmazemRegrasFunil };
+  /** funil-atendimento: unidades que agendam (etapas "Agendado <unidade>"). */
+  unidadesQueAgendam?: () => Array<{ id: string; nome: string }>;
 }
 
 /** Uma "instância do servidor": Sintonia, funis, automações e a API, sobre o mesmo banco. */
@@ -51,11 +57,22 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNp
     },
   });
   const armazens = b.pool
-    ? { tags: new ArmazemTagsPostgres(b.pool), funis: new ArmazemFunisPostgres(b.pool), automacoes: new ArmazemAutomacoesPostgres(b.pool), nps: new ArmazemNpsPostgres(b.pool), perdas: new ArmazemPerdasPostgres(b.pool) }
+    ? { tags: new ArmazemTagsPostgres(b.pool), funis: new ArmazemFunisPostgres(b.pool), automacoes: new ArmazemAutomacoesPostgres(b.pool), nps: new ArmazemNpsPostgres(b.pool), perdas: new ArmazemPerdasPostgres(b.pool), regras: new ArmazemRegrasFunilPostgres(b.pool) }
     : b.armazens;
   const tags = new Tags(armazens.tags, 'imperio', agora);
   let sintonia: Sintonia;
-  const funis = new Funis({ armazem: armazens.funis, armazemTags: armazens.tags, tags, repo: b.repo, empresaId: 'imperio', agora, comConversa: (id, fn) => sintonia.comConversa(id, fn) });
+  const funis = new Funis({ armazem: armazens.funis, armazemTags: armazens.tags, tags, repo: b.repo, empresaId: 'imperio', agora, comConversa: (id, fn) => sintonia.comConversa(id, fn), ...(b.unidadesQueAgendam ? { unidadesQueAgendam: b.unidadesQueAgendam } : {}) });
+  const regras = new RegrasFunil({
+    armazem: armazens.regras,
+    fonte: b.pool ? new FonteRegrasFunilPostgres(b.pool) : new FonteRegrasFunilMemoria(b.repo),
+    repo: b.repo,
+    funis,
+    empresaId: 'imperio',
+    comConversa: (id, fn) => sintonia.comConversa(id, fn),
+    pediuRemarcar: (id, motivo) => sintonia.pediuRemarcar(id, motivo),
+    agora,
+  });
+  tags.aoMarcar((c, tag) => regras.aoMarcarTag(c, tag));
   let nps: Nps | undefined;
   const automacoes = new Automacoes({
     armazem: armazens.automacoes, repo: b.repo, empresaId: 'imperio', sintonia: () => sintonia, funis, tags, contas: b.contas, agora, maxEncadeamento,
@@ -78,10 +95,12 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNp
     agente,
     agora,
     ganchos,
+    regrasFunil: () => regras.regrasMotor(),
   });
   const app = criarServidor({ sintonia, repo: b.repo, agora, auth: { contas: b.contas, agora }, gestao: { tags } });
   const perdas = comPerdas ? new Perdas({ armazem: armazens.perdas, funis, empresaId: 'imperio', agora }) : undefined;
   registrarFunis(app, { repo: b.repo, funis, automacoes, ...(perdas ? { perdas } : {}) });
+  registrarRegrasFunil(app, { regras, funis });
   if (nps) registrarNps(app, { nps, repo: b.repo, automacoes, agora });
   if (perdas) {
     registrarPerdas(app, { perdas });
@@ -96,10 +115,10 @@ function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNp
       agora,
     });
   }
-  return { sintonia, funis, automacoes, tags, app, nps, perdas };
+  return { sintonia, funis, automacoes, tags, app, nps, perdas, regras };
 }
 
-export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean; perdas?: boolean; automacoes?: Partial<OpcoesAutomacoes> } = {}) {
+export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean; perdas?: boolean; automacoes?: Partial<OpcoesAutomacoes>; unidadesQueAgendam?: () => Array<{ id: string; nome: string }> } = {}) {
   const { repo, contas, pool } = await amb.criar();
   const relogio = { t: opcoes.inicio ?? quinta(14) };
   const armazemTags = new ArmazemTagsMemoria(() => repo.listarConversas());
@@ -109,12 +128,16 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     pool,
     relogio,
     enviados: [],
-    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas), nps: new ArmazemNpsMemoria(), perdas: new ArmazemPerdasMemoria(repo) },
+    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas), nps: new ArmazemNpsMemoria(), perdas: new ArmazemPerdasMemoria(repo), regras: new ArmazemRegrasFunilMemoria() },
+    ...(opcoes.unidadesQueAgendam ? { unidadesQueAgendam: opcoes.unidadesQueAgendam } : {}),
   };
+  if (pool) await pool.query('truncate sintonia.funil_regras');
   if (pool && opcoes.perdas) await pool.query('truncate sintonia.perdas, sintonia.perdas_config');
   if (pool && opcoes.nps) await pool.query('truncate sintonia.nps_config, sintonia.atendimentos_finalizados, sintonia.nps_pesquisas');
   const agente = opcoes.agente ?? new AgenteFalso();
   let atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas, opcoes.automacoes);
+  // funil-atendimento: "preciso remarcar" na confirmação de agenda vai para a instância em uso.
+  observarEventos(repo, (e) => atual.regras.aoEvento(e));
   const sistema = await atual.funis.garantirSistema();
   const etapasSistema = new Map((await atual.funis.etapas(sistema.id)).map((e) => [e.chaveSistema!, e.id]));
 
@@ -197,6 +220,16 @@ export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso;
     },
     get perdas() {
       return atual.perdas;
+    },
+    /* funil-atendimento */
+    get regras() {
+      return atual.regras;
+    },
+    /** Uma volta do relógio das regras automáticas do funil (e o que elas puseram na fila). */
+    async tickRegras() {
+      await atual.regras.tick();
+      await atual.regras.ocioso();
+      await atual.automacoes.ocioso();
     },
     /** "Reinício": nova Sintonia, novos funis e automações lendo do mesmo banco. */
     reiniciar() {

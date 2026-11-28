@@ -1721,8 +1721,9 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 (() => {
   const $ = (id) => document.getElementById(id);
   /* etapa-entrada: a "Entrada de leads" vem primeiro (filtros e escolha de etapa) */
-  const ETAPAS = [['entrada','Entrada de leads'],['novo_lead','Novo lead'],['em_conversa','Em conversa'],['interessada','Interessada'],['agendada','Agendada'],['compareceu','Compareceu'],['manutencao','Manutenção'],['perdida','Perdida']];
-  const NOME_ETAPA = Object.fromEntries(ETAPAS);
+  /* funil-atendimento: etapas do funil de atendimento (as antigas só têm nome, para o histórico) */
+  const ETAPAS = [['entrada','Novo lead'],['em_conversa','Em atendimento'],['reagendar','Reagendar'],['sem_resposta','Sem resposta'],['agendada','Agendado'],['compareceu','Finalizado'],['perdida','Perdido']];
+  const NOME_ETAPA = { ...Object.fromEntries(ETAPAS), novo_lead: 'Novo lead', interessada: 'Interessada', manutencao: 'Manutenção' };
   /* unidades: nomes das unidades vêm do cadastro (Empresa › Unidades, /api/unidades). Um único ponto para o app
      inteiro: UNIDADE[id] = nome e UNIDADES = lista na ordem do cadastro ({ id, nome, ativa }). As telas usam
      ui.UNIDADE, ui.unidades(), ui.unidadesAtivas() e ui.nomeUnidade(id); quando o cadastro muda, sai o evento "unidades". */
@@ -2336,7 +2337,7 @@ addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('f-crm-resumo').textContent = [NOME_ETAPA[c.etapa], ...(c.tags || []).map((t) => t.nome)].filter(Boolean).join(' · ') || 'Mover no CRM e marcar etiquetas';
     $('f-avatar').replaceWith(Object.assign(avatar(c), { id: 'f-avatar' }));
     $('f-nome').textContent = nomeDe(c); $('f-tel').textContent = formatarTel(c.telefone);
-    $('f-etapa').replaceChildren(...ETAPAS.map(([id, n]) => el('option', { value: id, text: n }))); $('f-etapa').value = c.etapa;
+    $('f-etapa').replaceChildren(...ETAPAS.map(([id, n]) => el('option', { value: id, text: n }))); $('f-etapa').value = ({ novo_lead: 'entrada', interessada: 'em_conversa', manutencao: 'compareceu' })[c.etapa] || c.etapa;
     $('f-unidade').textContent = UNIDADE[c.unidade] || c.unidade; $('f-modo').textContent = MODO[c.modo];
     $('f-ultima').textContent = quando(c.ultimaMensagemCliente);
     $('f-trinks').textContent = c.trinksClienteId ? '#' + c.trinksClienteId : 'ainda não';
@@ -3957,6 +3958,7 @@ addEventListener('load', () => { const b = document.getElementById('tema-cel'); 
 <script src="/telas/relatorios.js"></script>
 <script src="/telas/desempenho.js"></script>
 <script src="/telas/etapa-acoes.js"></script>
+<script src="/telas/funil-regras.js"></script><!-- funil-atendimento: Regras automáticas do funil -->
 <script src="/telas/analises.js"></script>
 <script src="/telas/saude.js"></script>
 <script src="/telas/automacoes.js"></script>

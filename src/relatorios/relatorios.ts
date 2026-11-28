@@ -187,7 +187,7 @@ export class Relatorios {
     for (const id of coorte) {
       const c = conversas.get(id);
       if (!c) continue;
-      if (['em_conversa', 'interessada', 'agendada', 'compareceu', 'manutencao'].includes(c.etapa)) respondidas.add(id);
+      if (['em_conversa', 'reagendar', 'sem_resposta', 'interessada', 'agendada', 'compareceu', 'manutencao'].includes(c.etapa)) respondidas.add(id);
       if (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'manutencao') agendaram.add(id);
       if (c.etapa === 'compareceu' || c.etapa === 'manutencao') compareceram.add(id);
       if (c.etapa === 'perdida') perdidasCoorte++;

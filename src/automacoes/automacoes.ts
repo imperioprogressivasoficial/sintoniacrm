@@ -1268,7 +1268,7 @@ export function ligarFunis(o: { tags: Tags; funis: Funis; automacoes?: Automacoe
     tags.aoMarcar((c, tag) => automacoes.aoMarcarTag(c, tag));
   }
   return {
-    etapaMudou: (c, de, para, por) => funis.etapaDoSistemaMudou(c, de, para, por),
+    etapaMudou: (c, de, para, por, extra) => funis.etapaDoSistemaMudou(c, de, para, por, extra),
     mensagemCliente: async (c, m) => {
       await funis.garantirNoSistema(c);
       await automacoes?.mensagemCliente(c, m);

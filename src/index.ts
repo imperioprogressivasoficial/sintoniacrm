@@ -65,7 +65,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
-import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe, HORARIOS_PADRAO_IMPERIO } from './unidades.js';
+import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe, unidadesDa, HORARIOS_PADRAO_IMPERIO } from './unidades.js';
 import { definirEmpresaPadraoIdentidade, IDENTIDADE_IMPERIO } from './empresa/identidade.js';
 import { dataISO, partesBahia } from './util/tempo.js';
 import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from './empresa/empresa.js';
@@ -135,6 +135,8 @@ import { semearRelatorio } from './relatorio-dia/semente.js';
 import { Perdas } from './perdas/perdas.js';
 import { ArmazemPerdasMemoria, ArmazemPerdasPostgres } from './perdas/armazem.js';
 import { registrarPerdas } from './perdas/rotas.js';
+import { ArmazemRegrasFunilMemoria, ArmazemRegrasFunilPostgres, FonteRegrasFunilMemoria, FonteRegrasFunilPostgres, RegrasFunil } from './funis/regras-funil.js';
+import { registrarRegrasFunil } from './funis/regras-rotas.js';
 import { FonteSaudeMemoria, FonteSaudePostgres, PainelSaude } from './saude/painel.js';
 import { registrarSaude } from './saude/rotas.js';
 import type { BloqueioConta } from './auth/limite-login.js';
@@ -450,7 +452,22 @@ const funis = new Funis({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
   comConversa: (id, fn) => sintonia.comConversa(id, fn),
   log,
+  /* funil-atendimento: uma etapa "Agendado <unidade>" para cada unidade que agenda (Conexões › Agenda) */
+  unidadesQueAgendam: () => unidadesDa(cfg.SINTONIA_EMPRESA_ID).filter((u) => u.agendaAberta).map((u) => ({ id: u.id, nome: u.nomeApp })),
 });
+/* funil-atendimento: regras automáticas do funil (Pipeline › Regras automáticas): o sistema move o lead sozinho */
+const regrasFunil = new RegrasFunil({
+  armazem: pool ? new ArmazemRegrasFunilPostgres(pool) : new ArmazemRegrasFunilMemoria(),
+  fonte: pool ? new FonteRegrasFunilPostgres(pool) : new FonteRegrasFunilMemoria(repo),
+  repo,
+  funis,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  comConversa: (id, fn) => sintonia.comConversa(id, fn),
+  pediuRemarcar: (id, motivo) => sintonia.pediuRemarcar(id, motivo),
+  log,
+});
+observarEventos(repo, (e) => regrasFunil.aoEvento(e));
+tags.aoMarcar((c, tag) => regrasFunil.aoMarcarTag(c, tag));
 /* perdas-saude: cada ida para uma etapa de perda fica registrada (com o motivo pedido na tela) */
 const perdas = new Perdas({ armazem: pool ? new ArmazemPerdasPostgres(pool) : new ArmazemPerdasMemoria(repo), funis, empresaId: cfg.SINTONIA_EMPRESA_ID, log });
 /* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços.
@@ -665,6 +682,7 @@ const sintonia = new Sintonia({
   pausaEntrePartes: pausaDigitando /* serena-regras: "digitando…" entre uma mensagem e outra */,
   tagsIa: tagsDaIa,
   motor: (c) => followup.motor(c),
+  regrasFunil: () => regrasFunil.regrasMotor() /* funil-atendimento */,
   avisarEquipe: async (texto) => {
     // Aviso vai para os mesmos números do relatório, pelo primeiro número real conectado.
     const n = numeros.find(ehReal);
@@ -1060,6 +1078,7 @@ agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
 registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids), perdas });
 registrarPerdas(app, { perdas }); /* perdas-saude */
+registrarRegrasFunil(app, { regras: regrasFunil, funis }); /* funil-atendimento */
 /* ia-completa: "O que a IA faz" (Automações › Agente de IA): ferramentas por agente e o que falta para funcionar. */
 registrarEstadoIa(app, {
   chaves: () => ({ anthropic: Boolean(conexoes.get('anthropicApiKey')), openai: Boolean(conexoes.get('openaiApiKey')) }),
@@ -1141,6 +1160,7 @@ const cadastroEmpresa = registrarCadastro(app, {
   // Unidade nova (ou desativada): canais de teste, agenda e números refeitos na hora.
   aoMudarUnidades: () => {
     aplicarConexoes();
+    funis.conferirAgendados().catch((e) => log('Falha ao conferir as etapas "Agendado" por unidade', String(e))); /* funil-atendimento */
     conexoes.garantirTokensDasUnidades().catch((e) => log('Falha ao gerar o Verify Token da unidade nova', String(e)));
   },
   // A tabela antiga, sem a mistura com os produtos (é ela que é copiada).
@@ -1152,6 +1172,8 @@ try {
   await cadastroEmpresa.carregar(cfg.SINTONIA_EMPRESA_ID);
   await conexoes.garantirTokensDasUnidades();
   aplicarConexoes();
+  /* funil-atendimento: com as unidades do cadastro, as etapas "Agendado <unidade>" e os leads agendados no lugar certo */
+  if (await funis.conferirAgendados()) await funis.sincronizarSistema();
 } catch (e) {
   log('Falha ao carregar as unidades do cadastro (seguem as conhecidas)', String(e));
 }
@@ -1525,6 +1547,7 @@ const rodadaRelogio = umaPorVez('30 s', async () => {
   await chaveSerena.carregar(); // serena-chave: outro processo pode ter mexido; a pausa vencida volta sozinha
   if (!chaveSerena.pausada()) await agentesIa.controle.tick().catch((e) => log('Falha no relógio dos agentes de IA', String(e))); // volta para a IA (pausada: não muda o modo de ninguém)
   await automacoes.tick().catch((e) => log('Falha no relógio das automações', String(e))); // "esperar", fora do horário, parada na etapa
+  await regrasFunil.tick().catch((e) => log('Falha no relógio das regras do funil', String(e))); // funil-atendimento: Sem resposta, Finalizado, lead parado
   await bots.tick().catch((e) => log('Falha no relógio dos bots', String(e))); // esperas, tempo limite das respostas, agente de IA
   await notificador.tick().catch((e) => log('Falha no relógio das notificações', String(e))); // lembretes que venceram, cliente esperando
   midias.avisar(); // novas tentativas de download que já venceram

@@ -234,6 +234,17 @@ export class Notificador {
         }
         return;
       }
+      case 'lead_parado': {
+        // funil-atendimento: lead em "Novo lead" sem resposta da loja há N min: a dona (ou a unidade) e a gerência.
+        const chave = `parado:${c.id}:${String(d.desde ?? '')}`;
+        const minutos = typeof d.minutos === 'number' ? d.minutos : null;
+        const alvos = new Map([...this.donaOuUnidade(us, c), ...this.gestao(us, c)].map((u) => [u.id, u]));
+        for (const u of alvos.values()) {
+          if (await this.o.armazem.existeChave(u.id, chave)) continue;
+          await this.criar(u, { tipo: 'lead_parado', titulo: `${nome} está esperando em Novo lead`, texto: curto(`Sem resposta${minutos !== null ? ` há ${minutos} min` : ''} · ${unidade}. Responda para o lead não esfriar.`), conversaId: c.id, chave });
+        }
+        return;
+      }
       case 'lembrete_ligacao': {
         if (d.teste) return;
         const quando = typeof d.quando === 'string' ? new Date(d.quando) : this.agora();
