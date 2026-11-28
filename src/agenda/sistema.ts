@@ -75,6 +75,13 @@ export type DadosNovoAgendamento = {
   observacoes?: string;
 };
 
+/** serena-regras: dados que a cliente nova informa para o cadastro (vazio = não informado). */
+export interface DadosExtrasCliente {
+  /** AAAA-MM-DD */
+  dataNascimento?: string;
+  email?: string;
+}
+
 export interface FiltrosHorarios {
   servicoId?: number;
   profissionalId?: number;
@@ -88,7 +95,9 @@ export interface SistemaAgenda {
   listarProfissionais(local: string): Promise<ProfissionalAgenda[]>;
   horariosVagos(local: string, data: string, filtros?: FiltrosHorarios): Promise<ProfissionalComHorarios[]>;
   buscarClientePorTelefone(local: string, telefone: string): Promise<ClienteAgenda | null>;
-  criarCliente(local: string, nome: string, telefone: string): Promise<number>;
+  criarCliente(local: string, nome: string, telefone: string, extras?: DadosExtrasCliente): Promise<number>;
+  /** serena-regras: clientes com esse nome (busca por trecho no sistema). Opcional: nem todo sistema tem. */
+  buscarClientesPorNome?(local: string, nome: string): Promise<ClienteAgenda[]>;
   /** Grava o agendamento. Deve recusar (ErroAgenda 409) horário que não está mais livre. */
   criarAgendamento(local: string, dados: DadosNovoAgendamento): Promise<number>;
   cancelarAgendamento(local: string, agendamentoId: number): Promise<void>;
@@ -116,7 +125,7 @@ export type AgendaBasica = Pick<
   | 'criarAgendamento'
   | 'listarAgendamentosDoCliente'
 > &
-  Partial<Pick<SistemaAgenda, 'sistema' | 'cancelarAgendamento' | 'testar' | 'listarAgendamentosDoPeriodo'>>;
+  Partial<Pick<SistemaAgenda, 'sistema' | 'cancelarAgendamento' | 'testar' | 'listarAgendamentosDoPeriodo' | 'buscarClientesPorNome'>>;
 
 /** O sistema e o local que valem para uma unidade. */
 export interface AgendaDaUnidade {

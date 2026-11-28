@@ -11,6 +11,7 @@ import {
   Endereco,
   ErroDuplicado,
   Horario,
+  HorariosPadrao,
   TIPOS_PRODUTO,
   type ArmazemCadastro,
   type Documento,
@@ -19,7 +20,7 @@ import {
   type Unidade,
 } from './cadastro.js';
 import { definirIdentidade } from './identidade.js';
-import { definirUnidades, faixasDoHorario, IDS_LEGADOS } from '../unidades.js';
+import { definirUnidades, faixasDoHorario, IDS_LEGADOS, textoEndereco } from '../unidades.js';
 
 /**
  * Rotas do menu Empresa:
@@ -53,7 +54,7 @@ export interface OpcoesCadastro {
   aoMudarUnidades?: (empresaId: string, unidades: Unidade[]) => void;
 }
 
-type ListaPadrao = Array<{ id: string; nome: string; nomeCliente?: string; horario?: Horario | null; ativa?: boolean }>;
+type ListaPadrao = Array<{ id: string; nome: string; nomeCliente?: string; horario?: Horario | null; ativa?: boolean; horariosPadrao?: string[]; ultimoHorarioEspecial?: string }>;
 
 /** O que o registro devolve: o index carrega o cache das unidades e da empresa ao subir. */
 export interface CadastroRegistrado {
@@ -138,6 +139,10 @@ const UnidadeCorpo = z.object({
   observacao: T(500).optional(),
   nomeCliente: T(80).optional(),
   modoLigacao: z.enum(['telefone', 'whatsapp']).optional(), // ligacoes-modos
+  /* serena-regras: horários que a IA oferece, último horário especial e serviço padrão para agendar */
+  horariosPadrao: HorariosPadrao.optional(),
+  ultimoHorarioEspecial: z.union([z.literal(''), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora no formato 18:00')]).optional(),
+  servicoPadraoId: z.number().int().positive().nullable().optional(),
 });
 
 const ProdutoBase = z.object({
@@ -290,7 +295,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): Cada
           nome: u.nome,
           ativa: u.ativa ?? true,
           ordem: i,
-          dados: DadosUnidade.parse({ horario: u.horario ?? null, nomeCliente: u.nomeCliente && u.nomeCliente !== u.nome ? u.nomeCliente : '' }),
+          dados: DadosUnidade.parse({ horario: u.horario ?? null, nomeCliente: u.nomeCliente && u.nomeCliente !== u.nome ? u.nomeCliente : '', horariosPadrao: u.horariosPadrao ?? [], ultimoHorarioEspecial: u.ultimoHorarioEspecial ?? '' }),
           atualizadaPor: null,
         });
       }
@@ -309,7 +314,19 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): Cada
     if (l.length) {
       definirUnidades(
         empresaId,
-        l.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.dados.nomeCliente, ativa: u.ativa, ordem: u.ordem, horario: faixasDoHorario(u.dados.horario ?? dados.horario) })),
+        l.map((u) => ({
+          id: u.id,
+          nome: u.nome,
+          nomeCliente: u.dados.nomeCliente,
+          ativa: u.ativa,
+          ordem: u.ordem,
+          horario: faixasDoHorario(u.dados.horario ?? dados.horario),
+          /* serena-regras */
+          horariosPadrao: u.dados.horariosPadrao,
+          ultimoHorarioEspecial: u.dados.ultimoHorarioEspecial || null,
+          servicoPadraoId: u.dados.servicoPadraoId,
+          endereco: textoEndereco(u.dados.endereco),
+        })),
       );
     }
     definirIdentidade(empresaId, {
@@ -331,7 +348,7 @@ export function registrarCadastro(app: FastifyInstance, o: OpcoesCadastro): Cada
   const dadosUnidade = (b: z.infer<typeof UnidadeCorpo>, atual?: Unidade) =>
     DadosUnidade.parse({
       ...(atual?.dados ?? {}),
-      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao, nomeCliente: b.nomeCliente, modoLigacao: b.modoLigacao }).filter(([, v]) => v !== undefined)),
+      ...Object.fromEntries(Object.entries({ endereco: b.endereco, telefone: b.telefone, whatsapp: b.whatsapp, email: b.email, horario: b.horario, observacao: b.observacao, nomeCliente: b.nomeCliente, modoLigacao: b.modoLigacao, horariosPadrao: b.horariosPadrao, ultimoHorarioEspecial: b.ultimoHorarioEspecial, servicoPadraoId: b.servicoPadraoId }).filter(([, v]) => v !== undefined)),
     });
 
   app.post('/api/unidades', async (req, reply) => {

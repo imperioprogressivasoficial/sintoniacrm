@@ -17,6 +17,18 @@ import { FERRAMENTAS_CRM_ESCRITA, FERRAMENTAS_CRM_LEITURA } from './ferramentas-
 import type { ServicosCrmIa } from './crm-ia.js';
 import { precosConhecidosDe, precosDoTexto, precosInventados, reais } from './guarda.js';
 import { conferirPassagem } from '../agentes-ia/passagem.js';
+import { conhecerCliente, primeiraResposta, textoClienteConhecida } from './cliente-conhecida.js';
+
+/**
+ * serena-regras: bloco <cliente_conhecida> (cadastro na agenda pelo telefone/nome do perfil e se é a primeira resposta).
+ * No teste da tela (simulação) a cliente é fictícia: não consulta a agenda.
+ */
+export async function blocoClienteConhecida(agenda: Agenda, p: PedidoAgente, prazoMs: number): Promise<string> {
+  const primeira = primeiraResposta(p.mensagens);
+  if (p.simulacao) return textoClienteConhecida({ conhecida: false, nome: null, por: null, confirmar: false, unidade: null, clienteId: null, ultimoAtendimento: null, proximoHorario: null }, primeira);
+  const k = await conhecerCliente(agenda, p.conversa, p.agora, { prazoMs }).catch(() => null);
+  return k ? textoClienteConhecida(k, primeira) : '';
+}
 
 type Esforco = 'low' | 'medium' | 'high';
 
@@ -33,6 +45,8 @@ export interface OpcoesAgente {
   passagemAutomatica?: boolean;
   /** ia-completa: quanto esperar a agenda antes de desistir (padrão 25 s). */
   prazoAgendaMs?: number;
+  /** serena-regras: nome com que a IA se apresenta (Agente de IA › Assinatura; padrão "Serena"). */
+  nomeIa?: () => Promise<string>;
 }
 
 export interface PedidoAgente {
@@ -158,7 +172,12 @@ export class Agente {
     const base = await this.baseAtual();
     const system = await this.systemAtual(base);
     const produtos = this.opcoes.produtosDoLead ? await this.opcoes.produtosDoLead(p.conversa).catch(() => null) : null;
-    const messages = this.montarMensagens(p, produtos);
+    // serena-regras: quem é a cliente (cadastro na agenda) e o nome da IA, prontos no contexto.
+    const [cliente, nomeIa] = await Promise.all([
+      blocoClienteConhecida(this.agenda, p, Math.min(this.opcoes.prazoAgendaMs ?? 6000, 6000)),
+      this.opcoes.nomeIa ? this.opcoes.nomeIa().catch(() => undefined) : Promise.resolve(undefined),
+    ]);
+    const messages = this.montarMensagens(p, produtos, cliente, nomeIa);
     const maxPassos = this.opcoes.maxPassos ?? 12;
     const sessao = novaSessao();
     let correcoes = 0;
@@ -238,8 +257,9 @@ export class Agente {
     };
   }
 
-  private montarMensagens(p: PedidoAgente, produtos: string | null): Anthropic.Beta.Messages.BetaMessageParam[] {
-    const extra: string[] = [contextoDaConversa(p.conversa, p.agora)];
+  private montarMensagens(p: PedidoAgente, produtos: string | null, cliente?: string, nomeIa?: string): Anthropic.Beta.Messages.BetaMessageParam[] {
+    const extra: string[] = [contextoDaConversa(p.conversa, p.agora, { nomeIa })];
+    if (cliente) extra.push(cliente);
     if (p.equipe) extra.push(`<equipe>\n${p.equipe.texto}\n</equipe>`);
     if (produtos) extra.push(`<produtos_do_lead>${produtos}</produtos_do_lead>`);
     if (p.tipoAtivo) {

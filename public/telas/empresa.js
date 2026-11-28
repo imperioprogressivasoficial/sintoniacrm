@@ -544,6 +544,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           el('span', { class: 'ec-pil ' + (u.ativa ? 'bom' : ''), text: u.ativa ? 'Ativa' : 'Desativada' })),
         el('div', { class: 'ec-linhas' },
           el('div', { class: 'ec-linha', style: 'align-items:flex-start' }, el('span', { text: 'Horário', style: 'flex:none' }), el('small', { class: 'ec-sub', style: 'text-align:right', text: resumoHorario(u.dados?.horario) })),
+          u.dados?.horariosPadrao?.length ? el('div', { class: 'ec-linha' }, el('span', { text: 'Horários da IA' }), el('small', { class: 'ec-sub', style: 'text-align:right', text: u.dados.horariosPadrao.join(' · ') + (u.dados.ultimoHorarioEspecial ? ` (até ${u.dados.ultimoHorarioEspecial} se pedir)` : '') })) : null,
           u.dados?.telefone || u.dados?.whatsapp ? el('div', { class: 'ec-linha' }, el('span', { text: 'Contato' }), el('b', { text: [u.dados.telefone, u.dados.whatsapp].filter(Boolean).join(' · ') })) : null,
           el('div', { class: 'ec-linha' }, el('span', { text: 'Movimento' }), el('small', { class: 'ec-sub', text: `${eq ? `${n} ${n === 1 ? 'pessoa' : 'pessoas'} · ` : ''}${c} ${c === 1 ? 'conversa' : 'conversas'} agora` }))),
         u.fixa ? null : el('p', { class: 'ec-sub', text: 'Ligue um número de WhatsApp a ela em Conexões › WhatsApp e dê acesso às pessoas em Atendentes e acessos.' }),
@@ -568,16 +569,39 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const obs = entrada({ tag: 'textarea', value: d.observacao || '', maxlength: '500', placeholder: 'Ex.: estacionamento no piso G2, entrada pela rua de trás.' });
       /* unidades: nome que vai nas mensagens para os clientes (vazio = o nome) */
       const nomeCli = entrada({ value: d.nomeCliente || '', maxlength: '80', placeholder: 'Ex.: Shopping Barra, piso L2' });
+      /* serena-regras: horários que a IA oferece, último horário especial e serviço em que ela agenda */
+      const horIa = entrada({ value: (d.horariosPadrao || []).join(', '), maxlength: '200', placeholder: 'Ex.: 09:00, 12:30, 15:30', inputmode: 'numeric' });
+      const especial = entrada({ type: 'time', value: d.ultimoHorarioEspecial || '' });
+      const servPadrao = el('select', { class: 'ec-sel', 'aria-label': 'Serviço padrão para agendar' }, el('option', { value: '', text: 'A IA escolhe (sem padrão)' }));
+      if (d.servicoPadraoId) servPadrao.append(el('option', { value: String(d.servicoPadraoId), text: `Serviço nº ${d.servicoPadraoId} (da agenda)` }));
+      servPadrao.value = d.servicoPadraoId ? String(d.servicoPadraoId) : '';
+      if (u) ui.api(`/api/agenda/servicos?unidade=${encodeURIComponent(u.id)}`).then((l) => {
+        const atual = servPadrao.value;
+        servPadrao.replaceChildren(el('option', { value: '', text: 'A IA escolhe (sem padrão)' }), ...(l || []).map((x) => el('option', { value: String(x.id), text: x.nome })));
+        if (atual && ![...servPadrao.options].some((o) => o.value === atual)) servPadrao.append(el('option', { value: atual, text: `Serviço nº ${atual} (não achado na agenda)` }));
+        servPadrao.value = atual;
+      }).catch(() => {});
+      const lerHorariosIa = () => {
+        const l = horIa.value.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean).map((x) => (/^\d{1,2}$/.test(x) ? `${x}:00` : x.replace('h', ':').replace(/:$/, ':00'))).map((x) => (/^\d:/.test(x) ? `0${x}` : x));
+        const ruim = l.find((x) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(x));
+        return ruim ? { erro: `Horário "${ruim}" não está no formato 09:00.` } : { l };
+      };
       let proprio = Boolean(d.horario);
       const hor = editorHorario(d.horario || cadastro?.dados?.horario);
       hor.el.hidden = !proprio;
       const erro = el('p', { class: 'ec-erro', role: 'alert' });
-      form.append(el('div', { class: 'ec-form' }, campo('Nome', nome, { cheio: true, dica: 'Como aparece no app (filtros, conversas, relatórios).' }), campo('Nome para os clientes', nomeCli, { cheio: true, dica: 'Como a IA e as mensagens chamam a unidade. Vazio = o nome acima.' }), ...end.campos, campo('Telefone', tel), campo('WhatsApp', wpp), campo('E-mail', email, { cheio: true }), campo('Observação', obs, { cheio: true })),
+      form.append(el('div', { class: 'ec-form' }, campo('Nome', nome, { cheio: true, dica: 'Como aparece no app (filtros, conversas, relatórios).' }), campo('Nome para os clientes', nomeCli, { cheio: true, dica: 'Como a IA e as mensagens chamam a unidade. Vazio = o nome acima.' }), ...end.campos, campo('Telefone', tel), campo('WhatsApp', wpp), campo('E-mail', email, { cheio: true }), campo('Observação', obs, { cheio: true }),
+          campo('Horários que a IA oferece', horIa, { cheio: true, dica: 'Separados por vírgula. A IA oferece só estes (os que estiverem livres no dia). Vazio = os horários livres da agenda.' }),
+          campo('Último horário especial', especial, { dica: 'Se a cliente pedir outro horário, a IA pode marcar até esta hora. Vazio = só os de cima.' }),
+          campo('Serviço padrão para agendar', servPadrao, { dica: 'A IA agenda neste serviço da agenda, sem perguntar o procedimento.' })),
         opcao('Horário próprio', 'Desligado: segue o horário da empresa.', chave(proprio, (v) => { proprio = v; hor.el.hidden = !v; }, 'Horário próprio')), hor.el,
         opcao('Unidade ativa', 'Desativada some das escolhas, mas nada é apagado.', chave(ativa, (v) => { ligada = v; }, 'Unidade ativa')), erro);
       const salvar = botao(u ? 'Salvar' : 'Cadastrar', async () => {
         erro.textContent = '';
-        const corpo = { nome: nome.value.trim(), ativa: ligada, endereco: end.valor(), telefone: tel.value.trim(), whatsapp: wpp.value.trim(), email: email.value.trim(), observacao: obs.value.trim(), nomeCliente: nomeCli.value.trim(), horario: proprio ? hor.valor() : null };
+        const hIa = lerHorariosIa();
+        if (hIa.erro) { erro.textContent = hIa.erro; horIa.focus(); return; }
+        const corpo = { nome: nome.value.trim(), ativa: ligada, endereco: end.valor(), telefone: tel.value.trim(), whatsapp: wpp.value.trim(), email: email.value.trim(), observacao: obs.value.trim(), nomeCliente: nomeCli.value.trim(), horario: proprio ? hor.valor() : null,
+          horariosPadrao: hIa.l, ultimoHorarioEspecial: especial.value || '', servicoPadraoId: servPadrao.value ? Number(servPadrao.value) : null };
         if (corpo.nome.length < 2) { erro.textContent = 'O nome precisa de pelo menos 2 letras.'; nome.focus(); return; }
         salvar.disabled = true;
         try { await ui.api(u ? `/api/unidades/${encodeURIComponent(u.id)}` : '/api/unidades', { method: u ? 'PATCH' : 'POST', body: JSON.stringify(corpo) }); ui.toast(u ? 'Unidade salva ✓' : 'Unidade cadastrada ✓'); fechar(); redesenhar(); ui.atualizar?.(); }

@@ -1,6 +1,7 @@
 import type { AgenteIa, Aprendizado, Conhecimento, MemoriaCliente } from './tipos.js';
 import { NOME_MEMORIA } from './tipos.js';
 import { descricaoCurta, identidade } from '../empresa/identidade.js';
+import { textoRegrasAtendimento } from '../ai/regras-atendimento.js';
 
 /**
  * System prompt de um agente do estúdio. Fica fixo enquanto o agente e o conhecimento não mudam
@@ -73,7 +74,7 @@ export function systemDoAgente(p: PartesPrompt): string {
   const operacao = [
     'Responda primeiro o que a cliente perguntou e depois conduza para o próximo passo, normalmente propor um horário.',
     'Preço, duração e horários livres vêm das ferramentas do Trinks (quando disponíveis) ou da base abaixo. Nunca invente valor, horário, endereço ou regra.',
-    'Antes de marcar, confirme serviço, unidade, dia, hora e profissional. Só agende depois de ela dizer que sim.',
+
     'Mensagens "[Equipe: nome]" foram escritas por atendentes: continue de onde pararam, sem contradizer.',
     '"[áudio]", "[foto]", "[vídeo]", "[documento]" e "[figurinha]" são mídias que você não vê; peça com gentileza que ela escreva o que precisa.',
     'Sua resposta final é exatamente o texto que vai para a cliente.',
@@ -97,6 +98,8 @@ export function systemDoAgente(p: PartesPrompt): string {
   if (tem('criar_lembrete_ligacao')) operacao.push('Use criar_lembrete_ligacao quando a cliente pedir para ligarem para ela ou quando uma ligação ajudar a fechar.');
   if (!tem('agendar')) operacao.push('Você não marca horário: quando ela quiser agendar, colete serviço, unidade, dia e hora e diga que a equipe confirma.');
   blocos.push(`<como_operar>\n${operacao.map((x) => `- ${x}`).join('\n')}\n</como_operar>`);
+  // serena-regras: o mesmo jeito de conduzir até agendar do agente padrão (src/ai/regras-atendimento.ts).
+  if (tem('consultar_horarios') || tem('agendar')) blocos.push(`<como_conduzir_ate_agendar>\n${textoRegrasAtendimento()}\n</como_conduzir_ate_agendar>`);
 
   const base = [c.usarBaseGeral && p.baseGeral?.trim() ? p.baseGeral.trim() : '', textoConhecimento(p.conhecimento)].filter(Boolean).join('\n\n');
   blocos.push(`<base_de_conhecimento>\n${base || '(vazia: diga que vai confirmar com a equipe quando não souber)'}\n</base_de_conhecimento>`);

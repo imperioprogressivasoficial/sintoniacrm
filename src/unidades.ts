@@ -32,6 +32,14 @@ export interface Unidade {
   agendaAberta: boolean;
   ativa: boolean;
   ordem: number;
+  /** serena-regras: horários que a IA oferece (os livres do dia). Vazio = os livres da agenda. */
+  horariosPadrao: string[];
+  /** serena-regras: até que hora a IA pode marcar quando a cliente pede outro horário (null = só os padrão). */
+  ultimoHorarioEspecial: string | null;
+  /** serena-regras: serviço do sistema de agenda em que a IA marca (null = a IA escolhe). */
+  servicoPadraoId: number | null;
+  /** serena-regras: endereço do cadastro em uma linha ('' = sem endereço no cadastro). */
+  endereco: string;
 }
 
 /** O que o cadastro entrega para o cache. */
@@ -44,6 +52,11 @@ export interface UnidadeDoCadastro {
   ordem: number;
   /** Já resolvido (o da unidade ou o da empresa); null = sem horário (a equipe nunca está "aberta"). */
   horario: Partial<Record<DiaSemana, Faixa>> | null;
+  /* serena-regras (opcionais: quem não manda fica sem padrão) */
+  horariosPadrao?: string[];
+  ultimoHorarioEspecial?: string | null;
+  servicoPadraoId?: number | null;
+  endereco?: string;
 }
 
 /** Agenda de cada unidade: vem das Conexões (o index liga isto ao subir). */
@@ -71,6 +84,14 @@ export const UNIDADES_IMPERIO: ReadonlyArray<UnidadeDoCadastro & { trinks: strin
   { id: 'sumare', nome: 'Sumaré', nomeCliente: 'Shopping Sumaré', ativa: true, ordem: 1, horario: HORARIO_SHOPPING, trinks: '222074' },
   { id: 'feira', nome: 'Feira de Santana', nomeCliente: 'Feira de Santana', ativa: true, ordem: 2, horario: {}, trinks: null },
 ];
+/**
+ * serena-regras (dono 28/11): horários que a IA oferece em cada unidade da Império; o Sumaré marca até 18:00 quando a
+ * cliente pede outro horário. Só semeiam o cadastro dela (e a migração 777); depois vale o que a gestão editar.
+ */
+export const HORARIOS_PADRAO_IMPERIO: Readonly<Record<string, { horariosPadrao: string[]; ultimoHorarioEspecial?: string }>> = {
+  norte: { horariosPadrao: ['09:00', '12:30', '15:30', '18:00'] },
+  sumare: { horariosPadrao: ['09:00', '12:30', '15:30'], ultimoHorarioEspecial: '18:00' },
+};
 /** Empresa dona das unidades acima. */
 export const EMPRESA_IMPERIO = 'imperio';
 /** Ids que já existiam antes do cadastro (os campos de Conexões deles têm nome antigo: "...Norte", "...Sumare"). */
@@ -135,11 +156,15 @@ function montar(u: UnidadeDoCadastro): Unidade {
     agendaAberta: ag.agendaAberta,
     ativa: u.ativa,
     ordem: u.ordem,
+    horariosPadrao: [...(u.horariosPadrao ?? [])],
+    ultimoHorarioEspecial: u.ultimoHorarioEspecial || null,
+    servicoPadraoId: u.servicoPadraoId ?? null,
+    endereco: u.endereco ?? '',
   };
 }
 
 /** Unidade fora do cadastro (dado antigo): o id vira o nome e ela nunca está "aberta". */
-const avulsa = (id: string): Unidade => ({ id, nome: id, nomeApp: id, trinksEstabelecimentoId: null, horario: {}, agendaAberta: false, ativa: false, ordem: 999 });
+const avulsa = (id: string): Unidade => ({ id, nome: id, nomeApp: id, trinksEstabelecimentoId: null, horario: {}, agendaAberta: false, ativa: false, ordem: 999, horariosPadrao: [], ultimoHorarioEspecial: null, servicoPadraoId: null, endereco: '' });
 
 /** A unidade (sempre devolve algo: id desconhecido vira uma unidade sem horário com o próprio id como nome). */
 export function unidadeDe(id: string | null | undefined, empresaId?: string): Unidade {
@@ -223,4 +248,13 @@ export function faixasDoHorario(h: ReadonlyArray<{ dia: number; aberto: boolean;
   const r: Partial<Record<DiaSemana, Faixa>> = {};
   for (const d of h ?? []) if (d.aberto && d.dia >= 0 && d.dia <= 6) r[d.dia as DiaSemana] = { abre: d.abre, fecha: d.fecha };
   return r;
+}
+
+/** serena-regras: endereço do cadastro numa linha ("Av. Tancredo Neves, 148, 2º piso - Caminho das Árvores, Salvador/BA"). */
+export function textoEndereco(e: { logradouro?: string; numero?: string; complemento?: string; bairro?: string; cidade?: string; uf?: string } | null | undefined): string {
+  if (!e) return '';
+  const rua = [e.logradouro, e.numero].filter((x) => x?.trim()).join(', ');
+  const linha = [rua, e.complemento?.trim()].filter(Boolean).join(', ');
+  const cidade = [e.cidade?.trim(), e.uf?.trim()].filter(Boolean).join('/');
+  return [linha, e.bairro?.trim(), cidade].filter(Boolean).join(' - ');
 }

@@ -101,6 +101,19 @@ export function limparMarkdown(texto: string): string {
  * O que passar disso é cortado com "…" (a IA foi instruída a ser curta; isto é a rede de segurança).
  */
 export function partirParaWhatsApp(bruto: string, limite = LIMITE_MENSAGEM, maxPartes = MAX_PARTES): string[] {
+  // serena-regras (item 8): a IA separa as mensagens com uma linha só com "---" (1 a 3 mensagens naturais).
+  const blocos = bruto.replace(/\r/g, '').split(/\n[ \t]*-{3,}[ \t]*(?:\n|$)|^[ \t]*-{3,}[ \t]*\n/);
+  if (blocos.length > 1) {
+    const partes = blocos.flatMap((b) => partirUm(b, limite, maxPartes)).filter(Boolean);
+    if (partes.length <= maxPartes) return partes;
+    // Mais partes que o limite: as que sobram vão juntas na última (nada se perde).
+    const ficam = partes.slice(0, maxPartes - 1);
+    return [...ficam, ...partirUm(partes.slice(maxPartes - 1).join('\n\n'), limite, 1)];
+  }
+  return partirUm(bruto, limite, maxPartes);
+}
+
+function partirUm(bruto: string, limite: number, maxPartes: number): string[] {
   const texto = limparMarkdown(bruto);
   if (!texto) return [];
   if (texto.length <= limite) return [texto];
