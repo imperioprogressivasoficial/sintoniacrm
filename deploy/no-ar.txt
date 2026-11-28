@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-28 03:18 UTC (28/11, na Bahia -3h)
-commit: 86c94b5
-pacote sha256: 9f2ad0266b9f0ae28e543903e15da335dafde5991e9208460d03c88a0f8509b9
+data: 2026-11-28 03:29 UTC (28/11, na Bahia -3h)
+commit: eabff43
+pacote sha256: d98f2b6847486f4b0460d7c69d7e8bfc1279604afe2f0776183d2ccd291438cc
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-86c94b5.b64); pode apagar depois.
-observação: em cima do 3252d92. Entra: follow-up em minutos + cadência Não respondeu ligada para a Império (migração 780).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-eabff43.b64); pode apagar depois.
+observação: em cima do 86c94b5. Entra: funil Pós-venda + 7 automações + visitas no ano (claude/pos-venda, migração 781).
