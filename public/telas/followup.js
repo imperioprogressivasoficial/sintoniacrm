@@ -63,6 +63,10 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   .fu-abas { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--vidro-fundo); box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--vidro-brilho); justify-self: start; }
   .fu-abas button { all: unset; cursor: pointer; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 650; color: var(--sub); display: inline-flex; align-items: center; }
   .fu-abas button[aria-pressed="true"] { color: var(--texto); font-weight: 750; background: var(--vidro-ativo, rgba(255,255,255,.7)); box-shadow: inset 0 0 0 1px var(--vidro-borda); }
+  .fu-quando { font-size: 12.5px; color: var(--sub); flex-basis: 100%; order: 9; }
+  .fu-hoje { justify-self: start; margin-top: 4px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: var(--marca-azul); background: color-mix(in srgb, var(--marca-azul) 10%, transparent); }
+  html[data-tema="escuro"] .fu-hoje { color: var(--marca-menta); background: rgba(15,252,190,.1); }
+  .fu-regra { margin: -4px 2px 0; font-size: 12.5px; line-height: 1.45; color: var(--sub); }
   @media (max-width: 860px) { .fu-cartao { padding: 14px; border-radius: 20px; } .fu-salvar { bottom: 104px; } }
   `;
   if (!document.getElementById('fu-css')) {
@@ -87,6 +91,28 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const d = Math.round(h / 24);
     return `em ${d} ${d === 1 ? 'dia' : 'dias'}`;
   }
+
+  /* followup-minutos: unidade da espera (a escolhida na tela; sem ela, pelo número) e o valor nela. */
+  function unidadeDe(p) {
+    if (p.unidade === 'min' || p.unidade === 'h' || p.unidade === 'd') return p.unidade;
+    const min = Math.round((Number(p.esperaHoras) || 0) * 60);
+    if (min < 60 || min % 60) return 'min';
+    return min % 1440 === 0 ? 'd' : 'h';
+  }
+  function valorEm(horas, u) {
+    const min = Math.round((Number(horas) || 0) * 60);
+    const v = u === 'd' ? min / 1440 : u === 'h' ? min / 60 : min;
+    return Math.round(v * 100) / 100;
+  }
+  /** "sai 5 min depois que a cliente parou" (soma das esperas até este passo). */
+  function quandoTexto(min) {
+    let t;
+    if (min < 60) t = `${min} min`;
+    else if (min < 1440) { const h = Math.floor(min / 60), m = min % 60; t = m ? `${h} h ${m} min` : `${h} h`; }
+    else { const d = Math.round((min / 1440) * 10) / 10; t = `${String(d).replace('.', ',')} ${d === 1 ? 'dia' : 'dias'}`; }
+    return `Sai ${t} depois que a cliente parou de responder.`;
+  }
+  const hojeTexto = (n) => (n === 0 ? 'Nenhuma enviada hoje' : n === 1 ? '1 enviada hoje' : `${n} enviadas hoje`);
 
   // ---------- faixa da conversa ----------
   const cacheConversa = { id: null, em: 0 };
@@ -172,12 +198,25 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       const card = el('section', { class: 'fu-cartao' });
       const passos = el('div', { class: 'fu-passos' });
       /* sem-exemplos: a cadência nasce vazia; a pessoa escreve as mensagens dela. */
-      const desenharPassos = () => passos.replaceChildren(...(cad.passos.length ? [] : [el('div', { class: 'fu-vazio' }, el('b', { text: 'Nenhuma mensagem ainda.' }), el('span', { text: 'Toque em + Mensagem para montar a sua.' }))]), ...cad.passos.map((p, k) => {
-        const dias = p.esperaHoras >= 24 && p.esperaHoras % 24 === 0;
-        const unidade = el('select', { 'aria-label': 'Unidade de tempo' }, el('option', { value: 'h', text: 'horas' }), el('option', { value: 'd', text: 'dias' }));
-        unidade.value = dias ? 'd' : 'h';
-        const qtd = num(dias ? p.esperaHoras / 24 : p.esperaHoras, () => {}, { 'aria-label': 'Esperar' });
-        const atualizar = () => { const n = Number(qtd.value) || 0; p.esperaHoras = Math.max(0.25, unidade.value === 'd' ? n * 24 : n); };
+      /* followup-minutos: só "Não respondeu" tem modelo sugerido; ele entra na tela para editar e só vale depois de salvar. */
+      const sugerir = cad.id === 'sem_resposta' ? el('button', { class: 'fu-botao', type: 'button', text: 'Usar modelo sugerido', style: 'justify-self:center;margin-top:6px', onclick: async () => {
+        try { const r = await ui.api('/api/followup/sugerido/sem_resposta'); cad.passos = r.passos.map((x) => ({ ...x })); desenharPassos(); ui.toast('Modelo colocado. Ajuste os textos e salve para valer.'); } catch (x) { ui.toast(x.message || 'Não deu para buscar o modelo.'); }
+      } }) : null;
+      const desenharPassos = () => passos.replaceChildren(...(cad.passos.length ? [] : [el('div', { class: 'fu-vazio' }, el('b', { text: 'Nenhuma mensagem ainda.' }), el('span', { text: 'Toque em + Mensagem para montar a sua.' }), sugerir)]), ...cad.passos.map((p, k) => {
+        /* followup-minutos: espera em minutos, horas ou dias (mínimo 1 minuto). Guarda em horas (esperaHoras) + a unidade escolhida. */
+        const u0 = unidadeDe(p);
+        const unidade = el('select', { 'aria-label': 'Unidade de tempo' }, el('option', { value: 'min', text: 'minutos' }), el('option', { value: 'h', text: 'horas' }), el('option', { value: 'd', text: 'dias' }));
+        unidade.value = u0;
+        const qtd = num(valorEm(p.esperaHoras, u0), () => {}, { 'aria-label': 'Esperar', min: '1', step: '1' });
+        const quandoSai = el('span', { class: 'fu-quando' });
+        const marcarQuando = () => { quandoSai.textContent = quandoTexto(cad.passos.slice(0, k + 1).reduce((n, x) => n + Math.round((Number(x.esperaHoras) || 0) * 60), 0)); };
+        const atualizar = () => {
+          const n = Math.max(0, Number(qtd.value) || 0);
+          const min = unidade.value === 'd' ? n * 1440 : unidade.value === 'h' ? n * 60 : n;
+          p.esperaHoras = Math.max(1, Math.round(min)) / 60; p.unidade = unidade.value;
+          passos.querySelectorAll('.fu-quando').forEach((q) => q.dispatchEvent(new Event('recalcular')));
+        };
+        quandoSai.addEventListener('recalcular', marcarQuando); marcarQuando();
         qtd.oninput = atualizar; unidade.onchange = atualizar;
         const objetivo = el('input', { type: 'text', class: 'fu-larga', placeholder: 'Objetivo para a IA (ex.: convidar para agendar sem pressionar)', value: p.objetivo || '' });
         objetivo.oninput = () => { p.objetivo = objetivo.value; };
@@ -188,7 +227,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         em.onchange = () => { p.email = em.checked; modelo.hidden = !em.checked; };
         return el('div', { class: 'fu-passo' },
           el('div', { class: 'fu-linha' }, el('span', { class: 'fu-n', text: String(k + 1) }), el('span', { text: k === 0 ? 'Esperar' : 'Depois, esperar' }), qtd, unidade, el('span', { text: '→ mandar:' }),
-            (() => { const t = cad.passos.slice(0, k + 1).reduce((n, x) => n + (Number(x.esperaHoras) || 0), 0); return t >= 24 && t % 24 === 0 ? el('span', { class: 'fu-dia', text: `(dia ${t / 24})`, style: 'opacity:.7' }) : null; })(),
+            quandoSai,
             el('button', { class: 'fu-x', type: 'button', text: 'Remover', onclick: () => { cad.passos.splice(k, 1); if (!cad.passos.length) { cad.ligada = false; chaveCad.setAttribute('aria-checked', 'false'); } desenharPassos(); } })),
           (() => { const t = area(p.texto, (v) => { p.texto = v; }, `Mensagem do passo ${k + 1}`); t.placeholder = 'Escreva a mensagem (use {primeiro_nome} para o nome da cliente)'; return t; })(),
           el('div', { class: 'fu-linha' }, el('label', {}, ia, el('span', { text: 'A IA escreve com este objetivo' })), objetivo),
@@ -200,10 +239,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       }, `Cadência ${s?.nome || cad.id}`);
       desenharPassos();
       card.append(
-        el('div', { class: 'fu-cab' }, el('div', {}, el('h2', { text: s?.nome || cad.id }), el('small', { text: s?.gatilho || '' })), chaveCad),
+        el('div', { class: 'fu-cab' }, el('div', {}, el('h2', { text: s?.nome || cad.id }), el('small', { text: s?.gatilho || '' }),
+          /* followup-minutos: quantas saíram hoje */
+          el('span', { class: 'fu-hoje', text: hojeTexto((dados.enviadasHoje || {})[cad.id] || 0) })), chaveCad),
+        cad.id === 'sem_resposta' ? el('p', { class: 'fu-regra', text: 'Só sai quando a última mensagem é da loja e a cliente não respondeu. Para na hora em que ela responde. Não sai em grupo, em quem já tem horário marcado nem enquanto alguém da equipe está escrevendo. Esperas de menos de 1 hora só valem no mesmo dia da conversa e uma vez por dia.' }) : null,
         passos,
         el('div', { class: 'fu-acoes' },
-          (() => { const b = el('button', { class: 'fu-botao', type: 'button', text: '+ Mensagem', onclick: () => { if (cad.passos.length >= 6) return; cad.passos.push({ esperaHoras: 24, texto: '', ia: false, objetivo: '', email: false, emailModeloId: null }); desenharPassos(); b.hidden = cad.passos.length >= 6; passos.querySelector('.fu-passo:last-child textarea')?.focus(); } }); b.hidden = cad.passos.length >= 6; return b; })(),
+          (() => { const b = el('button', { class: 'fu-botao', type: 'button', text: '+ Mensagem', onclick: () => { if (cad.passos.length >= 6) return; cad.passos.push({ esperaHoras: 24, unidade: 'd', texto: '', ia: false, objetivo: '', email: false, emailModeloId: null }); desenharPassos(); b.hidden = cad.passos.length >= 6; passos.querySelector('.fu-passo:last-child textarea')?.focus(); } }); b.hidden = cad.passos.length >= 6; return b; })(),
           /* sem-exemplos: saiu o botão do modelo pronto */
           el('label', { class: 'fu-linha' }, (() => { const c = el('input', { type: 'checkbox' }); c.checked = cad.pararSeResponder; c.onchange = () => { cad.pararSeResponder = c.checked; }; return c; })(), el('span', { text: 'Parar quando a cliente responder' }))),
         vars());
