@@ -124,6 +124,17 @@ export class Aprender {
     return l.map(({ empresaId: _e, aplicacao: _a, ...x }) => x);
   }
 
+  /* conhecimento-arquivo: Empresa › Documentos › Conhecimento da IA lê a base, os aplicados e os documentos enviados. */
+  get baseConhecimento(): BaseConhecimento {
+    return this.o.base;
+  }
+  /** Documentos (PDF/texto) que o dono mandou para a IA estudar: só nome, data, quem e situação. */
+  async documentosEnviados(limite = 300) {
+    return (await this.o.armazem.rodadas(this.empresaId, limite))
+      .filter((r) => r.origem === 'documento')
+      .map((r) => ({ nome: r.documentoNome ?? 'Documento', enviadoEm: r.criadaEm, enviadoPor: r.pedidaPor, situacao: r.situacao }));
+  }
+
   /** O que a IA que atende usa (aprendizados aplicados que viram memória; "corrigir" já mudou a própria base). */
   async memoria(): Promise<Aprendido[]> {
     const l = await this.o.armazem.itens(this.empresaId, ['aplicado']);
