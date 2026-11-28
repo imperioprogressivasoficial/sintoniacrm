@@ -52,7 +52,7 @@ export function blocosDasRegras(texto = textoRegrasAtendimento()): BlocoConhecim
     .map((l) => l.replace(/^- /, '').trim())
     .filter(Boolean)
     .map((l) => {
-      const m = /^([^:]{2,40}):\s*([\s\S]*)$/.exec(l);
+      const m = /^([^:]{2,60}):\s*([\s\S]*)$/.exec(l);
       return m ? { titulo: m[1]!.trim(), texto: m[2]!.trim() } : { titulo: 'Regra', texto: l };
     });
 }
