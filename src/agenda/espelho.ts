@@ -117,14 +117,30 @@ export class ArmazemEspelhoPostgres implements ArmazemEspelho {
 const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /**
+ * tabela-fim (dono 28/11): palavras do serviço em que a IA marca quando a unidade não tem "serviço padrão para agendar"
+ * (Empresa › Unidades). Ex.: "Progressiva Espelhada Essencial" (o nome no sistema de agenda pode variar).
+ */
+export const NOME_SERVICO_PADRAO = 'essencial';
+
+/** O serviço com "Essencial" no nome; vários: o de "progressiva"/"espelhada", depois o de nome mais curto. */
+export function servicoPeloNome(servicos: ServicoAgenda[], palavra = NOME_SERVICO_PADRAO): ServicoAgenda | null {
+  const alvo = semAcento(palavra);
+  const achados = servicos.filter((s) => semAcento(s.nome).includes(alvo));
+  const pontos = (s: ServicoAgenda) => (semAcento(s.nome).includes('progressiva') ? 2 : 0) + (semAcento(s.nome).includes('espelhada') ? 1 : 0);
+  return achados.sort((a, b) => pontos(b) - pontos(a) || a.nome.length - b.nome.length)[0] ?? null;
+}
+
+/**
  * Serviço em que a IA marca na unidade (sem perguntar procedimento à cliente): o "serviço padrão para agendar" do
- * cadastro (Empresa › Unidades); senão um serviço com "avaliação" no nome; senão, se a agenda só tem um, esse.
- * null = a IA precisa escolher pela lista (ver_servicos).
+ * cadastro (Empresa › Unidades); senão o serviço com "Essencial" no nome (tabela-fim); senão um com "avaliação" no
+ * nome; senão, se a agenda só tem um, esse. null = a IA precisa escolher pela lista (ver_servicos).
  */
 export function servicoParaAgendar(unidade: UnidadeId, servicos: ServicoAgenda[]): ServicoAgenda | null {
   const padrao = unidadeDe(unidade).servicoPadraoId;
   if (padrao) return servicos.find((s) => s.id === padrao) ?? null;
   const visiveis = servicos.filter((s) => s.visivelParaCliente !== false);
+  const essencial = servicoPeloNome(visiveis);
+  if (essencial) return essencial;
   const avaliacao = visiveis.filter((s) => semAcento(s.nome).includes('avaliac'));
   if (avaliacao.length === 1) return avaliacao[0]!;
   return visiveis.length === 1 ? visiveis[0]! : null;

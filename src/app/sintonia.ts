@@ -17,7 +17,8 @@ import { resumir, textoRelatorio } from './relatorio.js';
 import { TravaMemoria, type Trava } from '../fila/trava.js';
 /* ia-completa */
 import { textoPassagem } from '../ai/agente.js';
-import type { AplicadorCrmIa } from '../ai/crm-ia.js';
+import type { AplicadorCrmIa, ServicosCrmIa } from '../ai/crm-ia.js';
+import { tabelaDoAgendamento, type TabelasAgendamento } from '../ai/ferramentas-crm.js';
 import { partirParaWhatsApp, type GuardaCusto } from '../ai/guarda.js';
 import { PREFIXO_NOTA_IA, type Percepcao } from '../ai/prompt.js';
 import { dataISO, horaHHmm } from '../util/tempo.js';
@@ -112,7 +113,9 @@ export interface DependenciasSintonia {
   /** ia-completa: transcreve os áudios e pega as fotos da cliente antes de a IA pensar. */
   percepcao?: { preparar(c: Conversa, mensagens: import('../domain.js').Mensagem[], agora: Date): Promise<{ percepcao: Percepcao; esperar: boolean }> };
   /** ia-completa: o que a IA mexe no CRM (pipeline, produto do lead, tarefa da equipe, arquivo para a cliente). */
-  crmIa?: AplicadorCrmIa;
+  crmIa?: AplicadorCrmIa & Partial<Pick<ServicosCrmIa, 'documentos'>>;
+  /** tabela-fim: nomes das tabelas que vão depois da confirmação do agendamento (config da IA da empresa). */
+  tabelasAgendamento?: () => Promise<TabelasAgendamento>;
   /** ia-completa: limite de uso da IA por conversa por dia. */
   guardaCusto?: GuardaCusto;
   /** ia-completa: quem da equipe está disponível agora (vai para a IA em cada resposta). */
@@ -1155,7 +1158,8 @@ export class Sintonia {
           depois.modo = 'ia';
           await this.evento('ia_assumiu', depois, { motivo: decisao.motivo });
         }
-        await this.aplicarAcoes(depois, r.acoes, 'ia');
+        // tabela-fim: a confirmação saiu; a imagem da tabela vai logo depois (garantido pelo sistema).
+        await this.aplicarAcoes(depois, await this.comTabelaDoAgendamento(depois, r.acoes), 'ia');
         await this.d.repo.salvarConversa(depois);
         await this.evento('ia_respondeu', depois, espera === undefined ? undefined : { tempoRespostaMs: espera });
         await this.d.repo.cancelarTarefas(depois.id, ['reavaliar']);
@@ -1376,6 +1380,32 @@ export class Sintonia {
     if (t.tipo === 'followup_3d') await this.moverFunil(c, { tipo: 'followups_esgotados' });
     await this.d.repo.salvarConversa(c);
     await this.evento('envio_ativo', c, { tipo: t.tipo });
+  }
+
+  /**
+   * tabela-fim (dono 28/11): a IA agendou (para a própria cliente) e a confirmação já saiu: junta o envio da imagem da
+   * tabela (cliente nova ou quem já era cliente, config da IA da empresa). Uma vez por resposta; se a IA já mandou
+   * uma tabela nesta resposta, não repete. Sem imagem cadastrada: só fica no log (a IA já mandou o resumo).
+   */
+  private async comTabelaDoAgendamento(c: Conversa, acoes: AcaoAgente[]): Promise<AcaoAgente[]> {
+    const ag = acoes.find((a): a is Extract<AcaoAgente, { tipo: 'agendou' }> => a.tipo === 'agendou' && !a.paraOutraPessoa);
+    const crm = this.d.crmIa;
+    if (!ag || !crm?.documentos || !this.d.tabelasAgendamento) return acoes;
+    try {
+      const [nomes, docs] = await Promise.all([this.d.tabelasAgendamento(), crm.documentos()]);
+      const tabelas = new Set(docs.filter((d) => d.categoria === 'tabela').map((d) => d.id));
+      const d = tabelaDoAgendamento(docs, nomes, Boolean(ag.clienteNova));
+      if (acoes.some((a) => a.tipo === 'enviar_arquivo' && a.origem === 'documento' && (tabelas.has(a.id) || a.id === d?.id))) return acoes;
+      if (!d) {
+        const nome = (ag.clienteNova ? nomes.clienteNova : nomes.jaCliente) || '(sem nome configurado)';
+        this.log('Agendamento sem imagem da tabela para mandar', { conversa: c.id, tabela: nome, clienteNova: Boolean(ag.clienteNova) });
+        return acoes;
+      }
+      return [...acoes, { tipo: 'enviar_arquivo', origem: 'documento', id: d.id, nome: d.nome, legenda: null }];
+    } catch (e) {
+      this.log('Falha ao achar a tabela do agendamento', String(e));
+      return acoes;
+    }
   }
 
   private async aplicarAcoes(c: Conversa, acoes: AcaoAgente[], autor: 'ia' | 'equipe', atendente?: string, atendenteId?: string): Promise<void> {
