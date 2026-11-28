@@ -529,7 +529,7 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
         horarios: livres,
         instrucao: i.outros_horarios
           ? 'A cliente pediu outro horário: estes são todos os que dá para marcar nesse dia. Diga só os que respondem ao pedido dela, na mesma linha, um ao lado do outro. Não cite profissional.'
-          : 'Responda "Temos os seguintes horários:" com exatamente estes na MESMA linha, um ao lado do outro (ex.: "Temos os seguintes horários: [hora], [hora] e [hora]."), nunca em lista. Não ofereça outros nem cite profissional.',
+          : 'Responda "Temos esses horários" (sem dois-pontos) com exatamente estes na MESMA linha, um ao lado do outro (ex.: "Temos esses horários 9h, 12h30 e 15h30"), nunca em lista. Pode escrever a hora do jeito falado (9h, 12h30). Não ofereça outros nem cite profissional.',
         ...(avisos.length ? { aviso: avisos.join(' ') } : {}),
       };
     }

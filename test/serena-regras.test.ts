@@ -254,7 +254,8 @@ describe('4. Horários: só os padrão da unidade que estão livres; outro horá
     const r = await rodar('consultar_horarios', { unidade: 'sumare', data: '2026-11-07', servico_id: null, profissional_id: null, profissional_nome: null, outros_horarios: null }, ctxDe(ag));
     expect(r.erro).toBe(false);
     expect(r.json.horarios).toEqual(['09:00', '12:30', '15:30']);
-    expect(r.json.instrucao).toContain('Temos os seguintes horários:');
+    expect(r.json.instrucao).toContain('Temos esses horários');
+    expect(r.json.instrucao).not.toContain('seguintes horários:');
     expect(r.conteudo).not.toMatch(/Jéssica|Ana/);
   });
 
@@ -430,7 +431,8 @@ describe('1/7. Agendar: quem tem cadastro não informa nada; cliente nova inform
     const s = systemPrompt('base');
     expect(s).toContain('"Posso confirmar seu agendamento para [DIA], às [HORA], na unidade [UNIDADE]?"');
     expect(s).toContain('nunca diga nome de profissional');
-    expect(s).toContain('Temos os seguintes horários:');
+    expect(s).toContain('Temos esses horários');
+    expect(s).toContain('evite dois-pontos');
     expect(s).not.toContain('confirme com a cliente: serviço, unidade, dia, hora e profissional');
     const a: AgenteIa = { id: 'a1', empresaId: 'imperio', nome: 'Serena', avatar: null, provedor: 'anthropic', modelo: 'claude-opus-5-5', criatividade: 50, unidades: [], ativo: true, config: configPadrao() } as unknown as AgenteIa;
     const st = systemDoAgente({ agente: a, conhecimento: [], aprendizados: [], ferramentas: ['consultar_horarios', 'agendar'] });
