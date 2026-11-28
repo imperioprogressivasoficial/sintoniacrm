@@ -295,7 +295,7 @@ const OPCOES_CAMINHO = { parar_se_equipe_responder: false, parar_se_sair_da_etap
  * As automações sugeridas. `etapa(k)` = id da etapa do funil pós-venda; `finalizado` = etapa Finalizado do funil de
  * atendimento. Todas nascem `ligada` (padrão: sim).
  */
-export function montarAutomacoes(p: { funilId: string; sistemaId: string; finalizado: string; etapa: (k: ChaveEtapa) => string; estilo: Estilo; ligada: boolean }): AutomacaoNova[] {
+export function montarAutomacoes(p: { funilId: string; finalizado: string; etapa: (k: ChaveEtapa) => string; estilo: Estilo; ligada: boolean }): AutomacaoNova[] {
   const t = TEXTOS_POS_VENDA[p.estilo];
   const m = (k: keyof typeof t) => msg(t[k].texto, t[k].objetivo);
   const mover = (k: ChaveEtapa): Passo => ({ tipo: 'mover_etapa', funilId: p.funilId, etapaId: p.etapa(k) });
@@ -304,7 +304,8 @@ export function montarAutomacoes(p: { funilId: string; sistemaId: string; finali
   return [
     {
       nome: 'Pós-venda: começa no Finalizado',
-      funilId: p.sistemaId,
+      // Geral (a etapa do gatilho é do funil de atendimento; a tela mostra em "Gerais"). Apagar o funil pós-venda a desliga.
+      funilId: null,
       ligada: p.ligada,
       gatilho: { tipo: 'entrou_na_etapa', etapaId: p.finalizado },
       passos: [mover('conscientizacao')],
@@ -478,13 +479,15 @@ export class PosVenda {
     const funil = await this.o.funis.criar({ nome: NOME_FUNIL, etapas: Object.values(ETAPAS_POS_VENDA).map((e) => ({ ...e })) }, por);
     const criadas: string[] = [];
     try {
+      // O botão do meio do cartão (celular) vira "Agendar": o objetivo do pós-venda é ela voltar.
+      await this.o.funis.alterar(funil.id, { acaoPrincipal: 'agendar' });
       const etapas = await this.o.funis.etapas(funil.id);
       const etapa = (k: ChaveEtapa) => {
         const e = etapas.find((x) => x.nome === ETAPAS_POS_VENDA[k].nome);
         if (!e) throw new ErroPosVenda(`Etapa "${ETAPAS_POS_VENDA[k].nome}" não foi criada.`, 409);
         return e.id;
       };
-      const lista = montarAutomacoes({ funilId: funil.id, sistemaId: sistema.id, finalizado: finalizado.id, etapa, estilo: o.estilo ?? this.o.estiloPadrao ?? 'geral', ligada: o.ligada ?? true });
+      const lista = montarAutomacoes({ funilId: funil.id, finalizado: finalizado.id, etapa, estilo: o.estilo ?? this.o.estiloPadrao ?? 'geral', ligada: o.ligada ?? true });
       for (const a of lista) criadas.push((await this.o.automacoes.criar(a, por)).id);
       await this.o.armazem.salvar(this.empresaId, { funilId: funil.id, semeadoEm: this.agora() }, por);
       return { funil, automacoes: criadas.length };

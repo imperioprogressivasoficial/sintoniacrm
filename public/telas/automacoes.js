@@ -56,7 +56,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     ['condicao', '🔀', 'Se… senão…', 'Faz uma coisa ou outra'],
   ];
   const NOME_PASSO = Object.fromEntries(PASSOS.map(([t, i, n]) => [t, [i, n]]));
-  const CONDICOES = [['cliente_respondeu', 'a cliente respondeu'], ['tem_tag', 'a conversa tem a tag'], ['modo', 'quem responde é'], ['horario_loja', 'a loja está aberta agora']];
+  const CONDICOES = [['cliente_respondeu', 'a cliente respondeu'], ['tem_tag', 'a conversa tem a tag'], ['modo', 'quem responde é'], ['horario_loja', 'a loja está aberta agora'], ['no_funil', 'a cliente está no funil']]; /* pos-venda: no_funil */
   const VARIAVEIS = [['{primeiro_nome}', 'primeiro nome'], ['{nome}', 'nome completo'], ['{unidade}', 'unidade'], ['{atendente}', 'atendente'], ['{link_avaliacao}', 'link de avaliação']];
   const STATUS = { pendente: 'Na fila', rodando: 'Rodando', concluida: 'Concluída', cancelada: 'Cancelada', erro: 'Erro' };
 
@@ -295,7 +295,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   }
   function frasePasso(p) {
     switch (p.tipo) {
-      case 'enviar_mensagem': return p.texto ? `enviar ${aspas(curto(p.texto, 60))}` : 'enviar mensagem';
+      case 'enviar_mensagem': return p.ia_objetivo ? `a IA escreve: ${aspas(curto(p.ia_objetivo, 50))}` : p.texto ? `enviar ${aspas(curto(p.texto, 60))}` : 'enviar mensagem'; /* pos-venda */
       case 'esperar': return `esperar ${duracao(p.minutos)}`;
       case 'mudar_modo': return `passar para ${MODOS[p.modo] || p.modo}`;
       case 'fluxo_ia': return p.objetivo ? `IA conduz: ${aspas(curto(p.objetivo, 50))}` : 'IA conduz com um objetivo';
@@ -310,7 +310,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'pesquisa_nps': return 'mandar a pesquisa de satisfação';
       case 'condicao': {
         const c = CONDICOES.find(([k]) => k === p.se)?.[1] || '';
-        const v = p.se === 'tem_tag' ? ` ${aspas(tagNome(p.valor))}` : p.se === 'modo' ? ` ${MODOS[p.valor] || ''}` : '';
+        const v = p.se === 'tem_tag' ? ` ${aspas(tagNome(p.valor))}` : p.se === 'modo' ? ` ${MODOS[p.valor] || ''}` : p.se === 'no_funil' ? ` ${aspas(funilNome(p.valor))}` : '';
         const sim = (p.entao || []).map(frasePasso).join(' → ') || 'nada';
         const nao = (p.senao || []).map(frasePasso).join(' → ') || 'nada';
         return `se ${c}${v}: ${sim}; senão: ${nao}`;
@@ -542,7 +542,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   /** Deixa o passo no formato exato da API (sem campos vazios). */
   function limparPasso(p) {
     switch (p.tipo) {
-      case 'enviar_mensagem': return { tipo: p.tipo, texto: String(p.texto || '').trim(), so_no_horario: p.so_no_horario !== false };
+      case 'enviar_mensagem': { const r = { tipo: p.tipo, texto: String(p.texto || '').trim(), so_no_horario: p.so_no_horario !== false }; if (String(p.ia_objetivo || '').trim().length >= 3) r.ia_objetivo = String(p.ia_objetivo).trim(); return r; } /* pos-venda: a IA escreve */
       case 'esperar': return { tipo: p.tipo, minutos: Math.max(1, Math.round(Number(p.minutos) || 1)) };
       case 'mudar_modo': return { tipo: p.tipo, modo: p.modo };
       case 'fluxo_ia': return { tipo: p.tipo, objetivo: String(p.objetivo || '').trim(), dias: Math.min(30, Math.max(1, Math.round(Number(p.dias) || 7))) };
@@ -553,7 +553,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       case 'enviar_email': return { tipo: p.tipo, modeloId: p.modeloId };
       case 'criar_tarefa': return { tipo: p.tipo, titulo: String(p.titulo || '').trim(), em_minutos: Math.min(43200, Math.max(0, Math.round(Number(p.em_minutos) || 0))), prioridade: ['baixa', 'normal', 'alta'].includes(p.prioridade) ? p.prioridade : 'normal' };
       case 'distribuir_rodizio': case 'pesquisa_nps': return { tipo: p.tipo };
-      case 'condicao': { const r = { tipo: p.tipo, se: p.se, entao: (p.entao || []).map(limparPasso), senao: (p.senao || []).map(limparPasso) }; if (p.se === 'tem_tag' || p.se === 'modo') r.valor = p.valor; return r; }
+      case 'condicao': { const r = { tipo: p.tipo, se: p.se, entao: (p.entao || []).map(limparPasso), senao: (p.senao || []).map(limparPasso) }; if (p.se === 'tem_tag' || p.se === 'modo' || p.se === 'no_funil') r.valor = p.valor; return r; }
       default: return p;
     }
   }
@@ -593,7 +593,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       else if (p.tipo === 'criar_tarefa' && String(p.titulo || '').trim().length < 2) erro = `${qual}: escreva o que a equipe precisa fazer.`;
       else if (p.tipo === 'enviar_email' && !p.modeloId) erro = `${qual}: escolha o modelo de e-mail (crie em E-mail marketing › Modelos).`;
       else if ((p.tipo === 'marcar_tag' || p.tipo === 'desmarcar_tag') && !p.tagId) erro = `${qual}: escolha a tag.`;
-      else if (p.tipo === 'condicao') { if ((p.se === 'tem_tag' || p.se === 'modo') && !p.valor) erro = `${qual}: complete a condição.`; ver(p.entao || [], `${pre}${i + 1}.sim.`); ver(p.senao || [], `${pre}${i + 1}.não.`); }
+      else if (p.tipo === 'enviar_mensagem' && p.ia_ligada && String(p.ia_objetivo || '').trim().length < 3) erro = `${qual}: escreva o objetivo da IA (ou desligue “A IA escreve”).`;
+      else if (p.tipo === 'condicao') { if ((p.se === 'tem_tag' || p.se === 'modo' || p.se === 'no_funil') && !p.valor) erro = `${qual}: complete a condição.`; ver(p.entao || [], `${pre}${i + 1}.sim.`); ver(p.senao || [], `${pre}${i + 1}.não.`); }
     });
     ver(d.passos, '');
     return erro;
@@ -608,8 +609,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     const copia = (o) => JSON.parse(JSON.stringify(o));
     const ed = {
       id: a?.id || null,
-      draft: a ? { nome: a.nome, funilId: a.funilId || null, ligada: !!a.ligada, gatilho: copia(a.gatilho), passos: copia(a.passos), opcoes: { parar_se_equipe_responder: a.opcoes?.parar_se_equipe_responder !== false } }
-        : { nome: opcoes.nome || '', funilId: opcoes.funilId || null, ligada: false, gatilho: null, passos: [NOVO_PASSO.enviar_mensagem()], opcoes: { parar_se_equipe_responder: true } },
+      draft: a ? { nome: a.nome, funilId: a.funilId || null, ligada: !!a.ligada, gatilho: copia(a.gatilho), passos: copia(a.passos), opcoes: { parar_se_equipe_responder: a.opcoes?.parar_se_equipe_responder !== false, parar_se_sair_da_etapa: !!a.opcoes?.parar_se_sair_da_etapa, respeitar_limites: !!a.opcoes?.respeitar_limites } }
+        : { nome: opcoes.nome || '', funilId: opcoes.funilId || null, ligada: false, gatilho: null, passos: [NOVO_PASSO.enviar_mensagem()], opcoes: { parar_se_equipe_responder: true, parar_se_sair_da_etapa: false, respeitar_limites: false } },
       sujo: false, catalogo: null,
     };
     /* etapa-entrada: a caixa da etapa abre o editor já com os passos do tipo escolhido (vazios: a pessoa escreve) */
@@ -742,9 +743,20 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           t.value = p.texto || '';
           t.addEventListener('input', () => { p.texto = t.value; marcarSujo(); });
           const inserir = (v) => { const a0 = t.selectionStart ?? t.value.length, b0 = t.selectionEnd ?? a0; t.setRangeText(v, a0, b0, 'end'); t.focus(); p.texto = t.value; marcarSujo(); };
-          campos.append(larga(rotulo('Mensagem', t)),
+          /* pos-venda: a IA escreve a mensagem com um objetivo; o texto acima vira a reserva (IA desligada ou pausada). */
+          if (p.ia_ligada === undefined) p.ia_ligada = !!p.ia_objetivo;
+          const obj = el('textarea', { maxlength: '600', rows: '2', placeholder: 'Ex.: Perguntar como está o cabelo e lembrar da manutenção, sem pressão.' });
+          obj.value = p.ia_objetivo || '';
+          obj.addEventListener('input', () => { p.ia_objetivo = obj.value; marcarSujo(); });
+          const objCaixa = larga(rotulo('Objetivo da IA', obj));
+          const rotuloTexto = rotulo(p.ia_ligada ? 'Texto de reserva (vai se a IA estiver desligada)' : 'Mensagem', t);
+          const mostrarIa = () => { objCaixa.hidden = !p.ia_ligada; const r = rotuloTexto.querySelector('span, b, small'); if (r) r.textContent = p.ia_ligada ? 'Texto de reserva (vai se a IA estiver desligada)' : 'Mensagem'; };
+          campos.append(larga(rotuloTexto),
             larga(el('div', { class: 'au-vars' }, el('span', { text: 'Inserir:' }), ...VARIAVEIS.map(([v, n]) => el('button', { type: 'button', title: v, text: n, onclick: () => inserir(v) })))),
+            larga(linhaChave('A IA escreve com um objetivo', 'A IA escreve uma mensagem curta com o objetivo; sem IA, vai o texto acima', p.ia_ligada, (v) => { p.ia_ligada = v; if (!v) p.ia_objetivo = ''; else obj.value = p.ia_objetivo || ''; mostrarIa(); marcarSujo(); })),
+            objCaixa,
             larga(linhaChave('Só no horário da loja', 'Fora do horário, espera a loja abrir para enviar', p.so_no_horario !== false, (v) => { p.so_no_horario = v; marcarSujo(); })));
+          mostrarIa();
           break;
         }
         case 'esperar':
@@ -818,6 +830,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
           const desenharValor = () => {
             if (p.se === 'tem_tag') { if (!p.valor || !s.base.tagsMap.has(p.valor) && !s.base.etapas.has(p.valor)) p.valor = primeiraOpcao(opcoesTags()); valorCaixa.replaceChildren(rotulo('Tag', selecao(opcoesTags(), p.valor, (v) => { p.valor = v; marcarSujo(); }))); }
             else if (p.se === 'modo') { if (!MODOS[p.valor]) p.valor = 'ia'; valorCaixa.replaceChildren(rotulo('Modo', selecao(Object.entries(MODOS), p.valor, (v) => { p.valor = v; marcarSujo(); }))); }
+            else if (p.se === 'no_funil') { const fs = (s.base?.funis || []).map((f) => [f.id, f.nome]); if (!fs.some(([id]) => id === p.valor)) p.valor = fs[0]?.[0]; valorCaixa.replaceChildren(rotulo('Funil', selecao(fs, p.valor, (v) => { p.valor = v; marcarSujo(); }))); } /* pos-venda */
             else { delete p.valor; valorCaixa.replaceChildren(); }
           };
           campos.append(rotulo('Se', selecao(CONDICOES, p.se, (v) => { p.se = v; desenharValor(); marcarSujo(); })), valorCaixa);
@@ -916,6 +929,9 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       secao('', 'Opções',
         linhaChave('Ligada', 'Desligada, ela não dispara sozinha (mas dá para testar).', ed.draft.ligada, (v) => { ed.draft.ligada = v; marcarSujo(); }),
         linhaChave('Parar quando a equipe responder', 'Se alguém da loja responder a cliente, as mensagens que faltam não saem.', ed.draft.opcoes.parar_se_equipe_responder, (v) => { ed.draft.opcoes.parar_se_equipe_responder = v; marcarSujo(); }),
+        /* pos-venda */
+        linhaChave('Parar se a cliente sair da etapa', 'Vale para “Entrou na etapa” e “Parada na etapa”: se ela for para outra etapa, as esperas e mensagens que faltam param.', ed.draft.opcoes.parar_se_sair_da_etapa, (v) => { ed.draft.opcoes.parar_se_sair_da_etapa = v; marcarSujo(); }),
+        linhaChave('Mensagem de relacionamento', 'Nunca vai para grupos, pula a mensagem se a cliente já recebeu o limite da semana (Follow-up) e para tudo se ela pedir para não receber mais.', ed.draft.opcoes.respeitar_limites, (v) => { ed.draft.opcoes.respeitar_limites = v; marcarSujo(); }),
         el('p', { class: 'au-info', text: 'Horário da loja: cada “Enviar mensagem” tem a opção de só sair com a loja aberta. Limite diário por cliente: veja na página Automações.' })),
       secao('', 'Testar', testeCaixa),
       secao('', 'Execuções recentes', execCaixa),

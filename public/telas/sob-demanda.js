@@ -24,7 +24,7 @@
     ligacoes: { arquivos: ['ligacoes'], telas: { ligacoes: { acoes: ['desenhar', 'ligar', 'favoritos'], outros: ['recarregar', 'cartaoSerena'] } } },
     bot: { arquivos: ['bot'], telas: { bot: { acoes: ['desenhar', 'abrirEditor', 'escolherDaEtapa', 'iniciarNaConversa', 'novoBot'], outros: ['abasAutomacoes'] } } },
     automacoes: { precisa: ['bot', 'ligacoes'], arquivos: ['automacoes'], telas: { automacoes: { acoes: ['desenhar', 'abrirEditor', 'abrirDaEtapa', 'irAba'], outros: ['aba'] } } },
-    funil: { arquivos: ['funil', 'funil-topo', 'funil-celular', 'funil-modos', 'etapa-acoes'],
+    funil: { arquivos: ['pos-venda' /* pos-venda */, 'funil', 'funil-topo', 'funil-celular', 'funil-modos', 'etapa-acoes'],
       telas: { funil: { acoes: ['desenhar', 'abrirFunil', 'novoFunil', 'menu', 'novoLead', 'pular'], outros: ['recarregar', 'redesenhar', 'atual'] }, etapaAcoes: { acoes: ['abrir'] } } },
     transmissoes: { arquivos: ['transmissoes'], telas: { transmissoes: { acoes: ['desenhar', 'novaComPublico'] } } },
     comercial: { arquivos: ['comercial'], telas: { comercial: { acoes: ['desenhar'] } } },

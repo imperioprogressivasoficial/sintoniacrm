@@ -77,6 +77,7 @@ describe.each(ambientes)('pós-venda ($nome)', (amb) => {
     expect(await m.posVenda.semear('salao')).toBe(false);
     const cfg = await m.posVenda.config();
     expect(cfg.funil?.nome).toBe('Pós-venda');
+    expect(cfg.funil?.acaoPrincipal).toBe('agendar'); // botão do cartão no celular: Agendar a volta
     expect((await m.funis.etapas(cfg.funilId!)).map((e) => e.nome)).toEqual(['Entrada de leads', ...Object.values(ETAPAS_POS_VENDA).map((e) => e.nome)]);
     const autos = (await m.automacoes.listar()).filter((a) => a.nome.startsWith('Pós-venda'));
     expect(autos.map((a) => a.nome).sort()).toEqual([
