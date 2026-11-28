@@ -1715,9 +1715,9 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
   return a;
 }
 
-/** dono 28/11: a IA nunca manda emoji de rosto (😊🥰😍🤗…). Os de apoio (✅📅⏰📍💜✨) continuam. */
-const ROSTOS = /[\u{1F600}-\u{1F64F}\u{1F910}-\u{1F92F}\u{1F970}-\u{1F97F}\u{1F9D0}-\u{1F9DF}\u{1FAE0}-\u{1FAEF}\u{263A}\u{2639}][\u{FE0F}\u{1F3FB}-\u{1F3FF}]?/gu;
-export const semEmojiDeRosto = (t: string): string => t.replace(ROSTOS, '').replace(/[ \t]+\n/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+/** dono 28/11: a IA nunca manda emoji de rosto (😊🥰😍🤗…) nem de agenda (📅⏰📍). Os de apoio (✅💜✨) continuam. */
+const ROSTOS = /[\u{1F600}-\u{1F64F}\u{1F910}-\u{1F92F}\u{1F970}-\u{1F97F}\u{1F9D0}-\u{1F9DF}\u{1FAE0}-\u{1FAEF}\u{263A}\u{2639}\u{1F4C5}\u{1F4C6}\u{1F5D3}\u{23F0}\u{1F4CD}][\u{FE0F}\u{1F3FB}-\u{1F3FF}]?/gu;
+export const semEmojiDeRosto = (t: string): string => t.replace(ROSTOS, '').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
 
 /** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
 export const pausaDigitando = (texto: string): number => Math.round(Math.min(2500, Math.max(800, 500 + texto.length * 15))); // dono 28/11: mais rápido

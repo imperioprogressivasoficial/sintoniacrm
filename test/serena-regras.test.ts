@@ -441,8 +441,8 @@ describe('1/7. Agendar: quem tem cadastro não informa nada; cliente nova inform
 
   it('a base traz a confirmação organizada com emojis, por unidade, com o endereço', () => {
     const b = carregarBase();
-    expect(b).toContain('Agendamento confirmado ✅\n  📅 Data: [DATA]\n  ⏰ Horário: [HORÁRIO]\n  📍 Shopping Sumaré — Avenida Tancredo Neves, 2º piso');
-    expect(b).toContain('📍 Salvador Norte Shopping — São Cristóvão, Piso L2, em frente à Narciso Enxovais');
+    expect(b).toContain('Agendamento confirmado ✅\n  Data: [DATA]\n  Horário: [HORÁRIO]\n  Local: Shopping Sumaré — Avenida Tancredo Neves, 2º piso');
+    expect(b).toContain('Local: Salvador Norte Shopping — São Cristóvão, Piso L2, em frente à Narciso Enxovais');
     expect(b).toContain('agende direto, sem perguntar');
   });
 });
