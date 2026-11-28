@@ -814,16 +814,17 @@ export class Sintonia {
   }
 
   /** Foto/arquivo automático (bot), já sob a trava: envia, guarda o arquivo e grava como da IA (com `autorNome`). Quem chama grava a conversa. */
-  async enviarMidiaAutomatico(c: Conversa, midia: MidiaEnvio, autorNome: string): Promise<string> {
+  async enviarMidiaAutomatico(c: Conversa, midia: MidiaEnvio, autorNome: string, op: { gravandoMs?: number } = {}): Promise<string> {
     const n = this.numeroDa(c);
     if (!n.canal.enviarMidia) throw new Error('Este número ainda não envia arquivos pela Sintonia.');
     const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
     const legenda = midia.tipo === 'audio' ? undefined : midia.legenda?.trim() || undefined;
     const texto = textoDoAnexo(midia.tipo, legenda, midia.tipo === 'documento' ? midia.nomeArquivo : undefined);
-    // dono 28/11: áudio da IA mostra "gravando áudio…" antes (como uma pessoa).
+    // dono 28/11: áudio da IA mostra "gravando áudio…" antes, pelo tempo de falar aquilo (como uma pessoa).
     if (midia.tipo === 'audio' && n.canal.enviarPresenca) {
-      void Promise.resolve(n.canal.enviarPresenca(n.canalId, c.telefone, 'gravando', 3000)).catch(() => undefined);
-      await this.esperar(3000);
+      const ms = Math.max(2000, Math.min(20000, op.gravandoMs ?? 4000));
+      void Promise.resolve(n.canal.enviarPresenca(n.canalId, c.telefone, 'gravando', ms)).catch(() => undefined);
+      await this.esperar(ms);
     }
     const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }), { eco: { autor: 'ia', autorNome, em: agora } });
     const mensagemId = randomUUID();
@@ -1213,7 +1214,7 @@ export class Sintonia {
       if (junto.length <= 450 && !/https?:\/\//.test(junto) && !/Agendamento confirmado/i.test(junto) && (await this.clienteMandouAudio(c))) {
         try {
           const a = await this.d.voz.falar(junto);
-          await this.enviarMidiaAutomatico(c, { tipo: 'audio', conteudo: a.conteudo, mimetype: a.mimetype, nomeArquivo: a.mimetype.includes('ogg') ? 'audio.ogg' : a.mimetype.includes('wav') ? 'audio.wav' : 'audio.mp3' }, 'IA da Sintonia');
+          await this.enviarMidiaAutomatico(c, { tipo: 'audio', conteudo: a.conteudo, mimetype: a.mimetype, nomeArquivo: a.mimetype.includes('ogg') ? 'audio.ogg' : a.mimetype.includes('wav') ? 'audio.wav' : 'audio.mp3' }, 'IA da Sintonia', { gravandoMs: pausaGravando(junto) });
           return { n: partes.length };
         } catch (e) {
           this.log('Áudio da IA não saiu; a resposta vai em texto', String(e).slice(0, 200));
@@ -1222,8 +1223,8 @@ export class Sintonia {
     }
     let n = 0;
     for (const texto of partes) {
-      // serena-regras: entre uma mensagem e outra, "digitando…" pelo tempo de escrever a próxima (como uma pessoa).
-      const pausa = n > 0 && this.d.pausaEntrePartes ? Math.max(0, Math.min(8000, this.d.pausaEntrePartes(texto))) : 0;
+      // dono 28/11: antes de cada mensagem (a primeira também), "digitando…" pelo tempo de escrever aquela mensagem (como uma pessoa).
+      const pausa = this.d.pausaEntrePartes ? Math.max(0, Math.min(8000, this.d.pausaEntrePartes(texto))) : 0;
       if (pausa > 0) {
         const num = this.numeroDa(c);
         void Promise.resolve(num.canal.enviarPresenca?.(num.canalId, c.telefone, 'digitando', pausa)).catch(() => undefined); // dono 28/11: não espera em dobro
@@ -1757,4 +1758,7 @@ export const semEmojiDeRosto = (t: string): string =>
     .trim();
 
 /** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
-export const pausaDigitando = (texto: string): number => Math.round(Math.min(2500, Math.max(800, 500 + texto.length * 15))); // dono 28/11: mais rápido
+/** dono 28/11: o tempo de uma pessoa digitar a mensagem no celular (~1 s + 45 ms por letra), entre 1,8 s e 7 s. */
+export const pausaDigitando = (texto: string): number => Math.round(Math.min(7000, Math.max(1800, 1000 + texto.length * 45)));
+/** dono 28/11: o tempo de gravar o áudio (~1 s + 60 ms por letra falada), entre 3 s e 15 s. */
+export const pausaGravando = (texto: string): number => Math.round(Math.min(15000, Math.max(3000, 1000 + texto.length * 60)));
