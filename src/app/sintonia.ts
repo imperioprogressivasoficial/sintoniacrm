@@ -98,6 +98,8 @@ export interface DependenciasSintonia {
    * JUNTAR_MAX_MS de espera). Ausente/0 = responde na hora (comportamento antigo, testes).
    */
   juntarMs?: number;
+  /** dono 28/11: voz grátis (Kokoro): quando a cliente manda áudio, a IA responde em áudio (src/ai/voz.ts). */
+  voz?: import('../ai/voz.js').Voz;
   /** dono 28/11: ids das mensagens apagadas para todos (a IA não lê o que a equipe apagou). */
   apagadasParaTodos?: (conversaId: string) => Promise<Set<string>>;
   /** Como esperar (testes trocam por um relógio falso). */
@@ -832,6 +834,13 @@ export class Sintonia {
     return id;
   }
 
+  /** dono 28/11: a última mensagem da cliente foi um áudio. */
+  private async clienteMandouAudio(c: Conversa): Promise<boolean> {
+    const ms = await this.d.repo.mensagens(c.id, 8).catch(() => []);
+    const ultima = [...ms].reverse().find((m) => m.autor === 'cliente');
+    return ultima?.anexo?.tipo === 'audio';
+  }
+
   /** Troca a dona já sob a trava (automação). Quem chama grava a conversa. */
   async trocarDonaSobTrava(c: Conversa, para: { id: string; nome: string } | null, por: { id?: string; nome: string }, motivo: string): Promise<void> {
     if ((c.responsavelId ?? null) === (para?.id ?? null)) return;
@@ -1193,6 +1202,20 @@ export class Sintonia {
    */
   private async enviarPartes(c: Conversa, partes: string[], em: Date): Promise<{ n: number; erro?: unknown; incerta?: boolean }> {
     partes = (await this.assinarPartes(partes)).map(semEmojiDeRosto).filter((t) => t.trim()); // dono 28/11: nada de emoji de rosto
+    // dono 28/11: a cliente mandou áudio → a IA responde em áudio (voz grátis do servidor), se for uma resposta curta
+    // e sem link nem a confirmação do agendamento (essa fica em texto). Qualquer falha: segue em texto.
+    if (this.d.voz && partes.length) {
+      const junto = partes.join(' ');
+      if (junto.length <= 450 && !/https?:\/\//.test(junto) && !/Agendamento confirmado/i.test(junto) && (await this.clienteMandouAudio(c))) {
+        try {
+          const a = await this.d.voz.falar(junto);
+          await this.enviarMidiaAutomatico(c, { tipo: 'audio', conteudo: a.conteudo, mimetype: a.mimetype, nomeArquivo: a.mimetype.includes('ogg') ? 'audio.ogg' : a.mimetype.includes('wav') ? 'audio.wav' : 'audio.mp3' }, 'IA da Sintonia');
+          return { n: partes.length };
+        } catch (e) {
+          this.log('Áudio da IA não saiu; a resposta vai em texto', String(e).slice(0, 200));
+        }
+      }
+    }
     let n = 0;
     for (const texto of partes) {
       // serena-regras: entre uma mensagem e outra, "digitando…" pelo tempo de escrever a próxima (como uma pessoa).

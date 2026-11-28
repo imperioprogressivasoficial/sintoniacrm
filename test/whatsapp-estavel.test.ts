@@ -293,6 +293,7 @@ describe.runIf(temPostgres)('Saúde do WhatsApp no Postgres', () => {
 function fetchSequencia(respostas: Array<Response | Error>) {
   const pedidos: Array<{ url: string; corpo: unknown }> = [];
   const f = (async (url: string, init?: RequestInit) => {
+    if (String(url).includes('sendPresence')) return new Response('{}'); // "digitando…" não é mensagem
     pedidos.push({ url, corpo: init?.body ? JSON.parse(String(init.body)) : undefined });
     const r = respostas.shift() ?? new Response('{}', { status: 500 });
     if (r instanceof Error) throw r;

@@ -81,6 +81,8 @@ try {
   const REDE_EVOLUTION = process.env.EVOLUTION_REDE ?? 'rainha-saas_default';
   const VOLUME_CHAVE = process.env.EVOLUTION_VOLUME_CHAVE ?? 'rainha-saas_app';
   const comEvolution = Boolean(REDE_EVOLUTION);
+  /* dono 28/11: voz grátis do servidor (Kokoro, projeto rainha-voz) para a Serena responder em áudio. VOZ_REDE= vazio desliga. */
+  const REDE_VOZ = process.env.VOZ_REDE ?? 'n8n-trjk_default';
   // Presença da equipe (disponível / fora do ar) agora é do próprio app (/api/presenca, tabela presencas).
   // O serviço antigo à parte (deploy/presenca) só volta com PRESENCA=1.
   const comPresenca = process.env.PRESENCA === '1';
@@ -171,6 +173,7 @@ ${comEvolution ? `      chave-evolution:
 ${comEvolution ? `      EVOLUTION_URL: http://evolution:8080
       EVOLUTION_API_KEY_ARQUIVO: /chave/evolution.key
 ` : ''}${comWhisper ? `      WHISPER_URL: http://whisper:9000
+` : ''}${REDE_VOZ ? `      SINTONIA_VOZ_URL: http://rainha-voz-voz-1:8880/
 ` : ''}      COOKIE_SEGURO: "1"
       TZ: America/Bahia
       SINTONIA_EMPRESA_ID: imperio
@@ -182,7 +185,7 @@ ${equipeInicial}${relatorioInicial}${process.env.ADMIN_EMAIL ? `      ADMIN_NOME
       - app:/home/node
 ${comEvolution ? '      - chave:/chave:ro\n' : ''}    networks:
       - interna
-${comEvolution ? '      - evolution\n' : ''}    healthcheck:
+${comEvolution ? '      - evolution\n' : ''}${REDE_VOZ ? '      - voz\n' : ''}    healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3333/saude || exit 1"]
       interval: 30s
       timeout: 5s
@@ -353,6 +356,9 @@ networks:
 ${comEvolution ? `  evolution:
     external: true
     name: ${REDE_EVOLUTION}
+` : ''}${REDE_VOZ ? `  voz:
+    external: true
+    name: ${REDE_VOZ}
 ` : ''}`);
   conferirReceita(receita);
   // A Hostinger recusa receitas com mais de 8192 letras: os comentários ficam só aqui no gerador (a 1ª linha, com o

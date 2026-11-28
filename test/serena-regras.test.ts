@@ -443,7 +443,7 @@ describe('1/7. Agendar: quem tem cadastro não informa nada; cliente nova inform
     const b = carregarBase();
     expect(b).toContain('Agendamento confirmado ✅\n  📅 Data: [DATA]\n  ⏰ Horário: [HORÁRIO]\n  📍 Shopping Sumaré — Avenida Tancredo Neves, 2º piso');
     expect(b).toContain('📍 Salvador Norte Shopping — São Cristóvão, Piso L2, em frente à Narciso Enxovais');
-    expect(b).toContain('Posso confirmar seu agendamento para [DIA], às [HORA], na\n   unidade [UNIDADE]?');
+    expect(b).toContain('agende direto, sem perguntar');
   });
 });
 
@@ -584,5 +584,17 @@ describe('dono 28/11: nome errado e emoji de rosto', () => {
     const { semEmojiDeRosto } = await import('../src/app/sintonia.js');
     expect(semEmojiDeRosto('Me conta sua dúvida que eu te ajudo. 😊')).toBe('Me conta sua dúvida que eu te ajudo.');
     expect(semEmojiDeRosto('Agendamento confirmado ✅ Até breve! 💜')).toBe('Agendamento confirmado ✅ Até breve! 💜');
+  });
+});
+
+describe('dono 28/11: voz grátis (Kokoro)', () => {
+  it('fala sem emoji nem link e devolve o áudio com o tipo certo', async () => {
+    const { VozKokoro, textoParaFala } = await import('../src/ai/voz.js');
+    expect(textoParaFala('Temos às 09:00 ✅ veja https://x.com *ok*')).toBe('Temos às 09:00 veja ok');
+    let corpo = '';
+    const v = new VozKokoro('http://voz:8880/', { fetchFn: (async (_u: string, i: RequestInit) => { corpo = String(i.body); return new Response(Buffer.concat([Buffer.from('OggS'), Buffer.alloc(1000)]), { status: 200 }); }) as unknown as typeof fetch });
+    const a = await v.falar('Oi! 💜');
+    expect(JSON.parse(corpo)).toMatchObject({ texto: 'Oi!', voz: 'pf_dora' });
+    expect(a.mimetype).toBe('audio/ogg');
   });
 });

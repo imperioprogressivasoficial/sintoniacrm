@@ -218,6 +218,6 @@ export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): s
     ? 'Nome não confirmado: boas-vindas sem nome nenhum. Agende pelo número (cadastro já existe), sem pedir dados.'
     : k.conhecida
     ? 'Cliente que volta: não peça nome, nascimento nem e-mail (o cadastro já existe). Se for a primeira resposta, use a boas-vindas de quem volta.'
-    : 'Cliente nova: depois que ela escolher o horário, peça nome completo, data de nascimento, e-mail e a maior dificuldade dela com alisamentos (o telefone é o do WhatsApp). Grave a dor nas observações do agendamento.';
+    : 'Cliente nova: depois que ela escolher o horário, peça nome completo, data de nascimento, e-mail e o que a base pedir (ex.: a maior dificuldade dela); o telefone é o do WhatsApp. Grave nas observações do agendamento.';
   return `<cliente_conhecida>\n${linhas.join('\n')}\n${guia}\n</cliente_conhecida>`;
 }

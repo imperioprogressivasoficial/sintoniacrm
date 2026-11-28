@@ -9,6 +9,7 @@ import { RepositorioMemoria } from '../src/store/repositorio.js';
 function montar(fila: FilaEntrada) {
   const enviados: string[] = [];
   const canal = new CanalEvolution('http://evolution.local', 'k', (async (_url: string | URL, init?: RequestInit) => {
+    if (String(_url).includes('sendPresence')) return new Response('{}'); // "digitando…" não é mensagem
     enviados.push(JSON.parse(String(init?.body)).text);
     return new Response(JSON.stringify({ key: { id: `out-${enviados.length}` } }));
   }) as typeof fetch);

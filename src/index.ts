@@ -14,6 +14,7 @@ import { ArmazemTarefasIaMemoria, ArmazemTarefasIaPostgres, montarCrmIa } from '
 import { GuardaCusto } from './ai/guarda.js';
 import { registrarEstadoIa } from './ai/estado-ia.js';
 import { PercepcaoIa } from './app/percepcao.js';
+import { VozKokoro } from './ai/voz.js';
 import { ArmazemCoberturaMemoria, ArmazemCoberturaPostgres, CoberturaIa } from './presenca/cobertura.js';
 import { randomUUID } from 'node:crypto';
 import { Fotos } from './app/fotos.js';
@@ -635,6 +636,7 @@ const sintonia = new Sintonia({
   filaIa,
   /* ia-completa: junta mensagens seguidas (só com a fila da IA, que pensa por trás); ouve áudio e vê foto; CRM; custo. */
   juntarMs: filaIa ? Number(process.env.SINTONIA_JUNTAR_MS ?? 3500) : 0, // dono 28/11: responde mais rápido
+  ...(process.env.SINTONIA_VOZ_URL ? { voz: new VozKokoro(process.env.SINTONIA_VOZ_URL) } : {}),
   ...(pool ? { apagadasParaTodos: async (id: string) => new Set((await pool!.query<{ mensagem_id: string }>("select mensagem_id from sintonia.mensagem_extras where conversa_id = $1 and apagada = 'todos'", [id])).rows.map((r) => r.mensagem_id)) } : {}),
   percepcao: new PercepcaoIa({ repo, transcricoes, transcritor, transcricaoLigada, log }),
   crmIa,
