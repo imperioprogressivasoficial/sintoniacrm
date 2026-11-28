@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-28 01:04 UTC (27/11, 22h04 na Bahia)
-commit: 6ac4c1b
-pacote sha256: a5b2525d2fbccf1c227d1e580303442d2bf67420c5d49f9f5b2d4fdce5eb5f1c
+data: 2026-11-28 01:20 UTC (27/11, 22h20 na Bahia)
+commit: 8a6720f
+pacote sha256: 979379ac1e7956cee4af26ca1fe62540badc50c5f935b608ea79b00054475fe9
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
 pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-f21898f.b64); pode apagar depois.
 observação: em cima do c68e850. Entra: aviso de grupos só quando o WhatsApp trocou de número.
