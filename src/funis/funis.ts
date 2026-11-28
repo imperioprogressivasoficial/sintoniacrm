@@ -824,6 +824,11 @@ export class Funis implements DelegadoEtapas {
     return t as EtapaFunil;
   }
 
+  /** pos-venda: em que etapa (tag) do funil a conversa está, ou null se está fora dele. */
+  async etapaNoFunil(conversaId: string, funilId: string): Promise<string | null> {
+    return (await this.o.armazemTags.etapasDaConversa(conversaId)).find((m) => m.funilId === funilId)?.tagId ?? null;
+  }
+
   /** Funis com as etapas e quantas conversas visíveis há em cada uma. */
   async listarComEtapas(escopo: EscopoVisao) {
     const [funis, todas] = await Promise.all([this.listar(), this.o.armazemTags.listar(this.empresaId)]);

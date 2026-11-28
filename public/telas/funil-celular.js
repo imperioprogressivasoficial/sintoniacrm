@@ -366,6 +366,7 @@
         valorEl(ctx, cartao)),
       passos(ctx, col),
       cartao.perda && window.SintoniaPerda ? window.SintoniaPerda.linha(cartao.perda) : null, /* perdas-saude */
+      window.SintoniaPosVenda?.selo(ctx.ui, cartao), /* pos-venda: visitas no ano */
       balao,
       el('div', { class: 'fc-acoes' },
         el('button', { class: 'fc-ico', type: 'button', 'aria-label': `Abrir conversa com ${nome}`, title: 'Abrir conversa', html: IC.conversa, onclick: () => ctx.ui.abrir(cartao.conversaId) }),
@@ -392,7 +393,8 @@
     }
     b.append(passos(ctx, col),
       el('span', { class: 'fc-p2' }, comChip ? el('span', { text: situacao(ctx, cartao) }) : comQuem(ctx, 'span', cartao, [QUEM]), el('span', { class: 'fc-selo ' + sl.cor, text: sl.texto })),
-      ...(cartao.perda && window.SintoniaPerda ? [el('span', { style: 'display:flex;min-width:0' }, window.SintoniaPerda.selo(cartao.perda))] : [])); /* perdas-saude */
+      ...(cartao.perda && window.SintoniaPerda ? [el('span', { style: 'display:flex;min-width:0' }, window.SintoniaPerda.selo(cartao.perda))] : []), /* perdas-saude */
+      ...(window.SintoniaPosVenda?.selo(ctx.ui, cartao) ? [window.SintoniaPosVenda.selo(ctx.ui, cartao)] : [])); /* pos-venda */
     return b;
   }
   function situacao(ctx, cartao) {

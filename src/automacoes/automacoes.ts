@@ -26,6 +26,7 @@ import {
   type Passo,
   type QuandoAgendou,
 } from './esquema.js';
+import { ehGrupo, pediuParaNaoReceber } from './limites.js';
 
 /**
  * Automações: quando acontece o gatilho numa conversa, roda a lista de passos.
@@ -40,6 +41,11 @@ import {
  * - limite de mensagens automáticas por conversa por dia (configurável, padrão 3);
  * - se a equipe responder, execuções com envio pendente param (opção parar_se_equipe_responder);
  * - encadeamento limitado: uma automação que dispara outra soma 1 na profundidade; passou do limite, não dispara.
+ * pos-venda (opções por automação):
+ * - parar_se_sair_da_etapa: a conversa saiu da etapa do gatilho → as esperas e envios que faltam param;
+ * - respeitar_limites (mensagem de relacionamento): nunca roda para grupos; a mensagem é pulada (o resto segue) se
+ *   passar do limite do dia ou da semana (o da semana é o do Follow-up, somando follow-up e automações); se a cliente
+ *   pedir para não receber mais mensagens, para tudo dela (e entra na lista de quem saiu, a mesma das transmissões).
  */
 
 export interface Automacao {
@@ -299,7 +305,11 @@ const paraAutomacao = (l: LinhaAutomacao): Automacao => ({
   ligada: l.ligada,
   gatilho: l.gatilho,
   passos: l.passos,
-  opcoes: { parar_se_equipe_responder: l.opcoes?.parar_se_equipe_responder ?? true },
+  opcoes: {
+    parar_se_equipe_responder: l.opcoes?.parar_se_equipe_responder ?? true,
+    parar_se_sair_da_etapa: l.opcoes?.parar_se_sair_da_etapa ?? false,
+    respeitar_limites: l.opcoes?.respeitar_limites ?? false,
+  },
   criadaPor: l.criada_por,
   criadaEm: l.criada_em,
   atualizadaEm: l.atualizada_em,
@@ -541,6 +551,19 @@ export interface OpcoesAutomacoes {
   rodizio?: () => { pedir(conversaId: string): void } | undefined;
   /** etapa-entrada: passo "pesquisa_nps" (src/nps). Pode ser preenchida depois. */
   nps?: () => { enviarDeAutomacao(c: Conversa): Promise<{ ok: true; detalhe: string } | { ok: false; motivo: string }> } | undefined;
+  /**
+   * pos-venda: "a IA escreve com este objetivo" no passo enviar_mensagem. Devolve o texto, ou undefined quando a IA
+   * está desligada/pausada (aí vai o texto de reserva do passo).
+   */
+  escreverComIa?: (c: Conversa, objetivo: string) => Promise<string | undefined>;
+  /** pos-venda: limite de mensagens por cliente em 7 dias (o do Follow-up). Sem ele, só vale o limite do dia. */
+  limiteSemana?: () => Promise<number>;
+  /** pos-venda: mensagens de follow-up que a conversa recebeu desde `desde` (somam no limite da semana). */
+  enviadosFollowup?: (conversaId: string, desde: Date) => Promise<number>;
+  /** pos-venda: a cliente pediu para não receber mensagens (lista das transmissões). */
+  descadastrado?: (telefone: string) => Promise<boolean>;
+  /** pos-venda: põe a cliente na lista de quem não quer receber mensagens. */
+  descadastrar?: (telefone: string, motivo: string) => Promise<void>;
 }
 
 /** etapa-entrada: tarefa para a equipe (src/ai/crm-ia.ts: criarTarefa). Sem dona na conversa, vai para a gestão. */
@@ -662,6 +685,12 @@ export class Automacoes {
 
   async funilApagado(funilId: string): Promise<void> {
     await this.o.armazem.apagarDoFunil(funilId);
+    // pos-venda: automações de outros funis que levavam para este (mover de etapa, "está no funil") são desligadas.
+    for (const a of await this.o.armazem.listar(this.empresaId)) {
+      if (!a.ligada) continue;
+      const usa = [...percorrer(a.passos)].some(({ passo: p }) => (p.tipo === 'mover_etapa' && p.funilId === funilId) || (p.tipo === 'condicao' && p.se === 'no_funil' && p.valor === funilId));
+      if (usa) await this.o.armazem.salvar({ ...a, ligada: false, atualizadaEm: this.agora() });
+    }
   }
 
   async execucoes(id: string, limite = 50): Promise<Execucao[]> {
@@ -714,6 +743,7 @@ export class Automacoes {
       if (p.tipo === 'condicao') {
         if (p.se === 'tem_tag' && !tag(p.valor)) throw erro(`${onde}: escolha a tag em "valor".`);
         if (p.se === 'modo' && !MODOS.includes(p.valor as (typeof MODOS)[number])) throw erro(`${onde}: "valor" deve ser ia, copiloto ou humano.`);
+        if (p.se === 'no_funil' && !(p.valor && (await this.o.funis.exigir(p.valor).then(() => true, () => false)))) throw erro(`${onde}: escolha o funil em "valor".`);
       }
       if (p.tipo === 'enviar_email' && this.o.email && !(await this.o.email.modeloExiste(p.modeloId))) throw erro(`${onde}: modelo de e-mail não encontrado.`);
     }
@@ -723,9 +753,47 @@ export class Automacoes {
 
   /** Movimento de cartão: entrou_na_etapa e tag_marcada (etapa é tag). */
   async aoMover(m: MovimentoEtapa): Promise<void> {
-    if (!m.para || m.conversa.empresaId !== this.empresaId) return;
+    if (m.conversa.empresaId !== this.empresaId) return;
+    if (m.de) await this.saiuDaEtapa(m.conversa, m.de);
+    if (!m.para) return;
     const para = m.para;
     await this.disparar(m.conversa, (g) => (g.tipo === 'entrou_na_etapa' && g.etapaId === para) || (g.tipo === 'tag_marcada' && g.tagId === para), `etapa:${para}:${randomUUID()}`);
+  }
+
+  /**
+   * pos-venda: a conversa saiu da etapa: as execuções que esperam (pendentes) das automações com "parar se sair da
+   * etapa" daquela etapa param já. As que estão rodando agora param na próxima volta (rodarSobTrava confere).
+   */
+  private async saiuDaEtapa(c: Conversa, etapaId: string): Promise<void> {
+    const ativas = (await this.o.armazem.ativasDaConversa(c.id)).filter((e) => e.status === 'pendente' && !e.teste);
+    if (!ativas.length) return;
+    const porId = new Map((await this.o.armazem.listar(this.empresaId)).map((a) => [a.id, a]));
+    for (const e of ativas) {
+      const a = porId.get(e.automacaoId);
+      if (a && this.etapaDoGatilho(a) === etapaId && a.opcoes.parar_se_sair_da_etapa) await this.encerrar(e, 'cancelada', 'A cliente saiu da etapa.');
+    }
+  }
+
+  private etapaDoGatilho(a: Automacao): string | undefined {
+    return a.gatilho.tipo === 'entrou_na_etapa' || a.gatilho.tipo === 'parada_na_etapa' ? a.gatilho.etapaId : undefined;
+  }
+
+  /**
+   * pos-venda: a cliente pediu para não receber mais mensagens. Entra na lista (a mesma das transmissões) e todas as
+   * execuções de automações de relacionamento (respeitar_limites) dela param. Devolve quantas pararam.
+   */
+  async pararRelacionamento(c: Conversa, motivo: string): Promise<number> {
+    if (c.empresaId !== this.empresaId) return 0;
+    await this.o.descadastrar?.(c.telefone, motivo).catch((x) => this.log('Falha ao registrar que a cliente não quer mensagens', String(x)));
+    const porId = new Map((await this.o.armazem.listar(this.empresaId)).map((a) => [a.id, a]));
+    let n = 0;
+    for (const e of await this.o.armazem.ativasDaConversa(c.id)) {
+      if (e.teste || !porId.get(e.automacaoId)?.opcoes.respeitar_limites) continue;
+      await this.encerrar(e, 'cancelada', 'A cliente pediu para não receber mais mensagens.');
+      n++;
+    }
+    await this.o.repo.registrarEvento({ tipo: 'automacao', conversaId: c.id, unidade: c.unidade, em: this.agora(), dados: { acao: 'nao_quer_mensagens', motivo, paradas: n } });
+    return n;
   }
 
   /** Tag solta marcada. */
@@ -737,6 +805,8 @@ export class Automacoes {
   /** Mensagem da cliente: nova_conversa (na primeira) e palavra_chave (o bot). */
   async mensagemCliente(c: Conversa, m: { texto: string; idExterno: string; primeira: boolean }): Promise<void> {
     if (c.empresaId !== this.empresaId) return;
+    // pos-venda: "não quero mais receber mensagens" para as automações de relacionamento dela.
+    if (pediuParaNaoReceber(m.texto)) await this.pararRelacionamento(c, `Respondeu "${m.texto.trim().slice(0, 60)}"`);
     if (m.primeira) await this.disparar(c, (g) => g.tipo === 'nova_conversa' && (!g.unidade || g.unidade === c.unidade), 'nova_conversa');
     await this.disparar(c, (g) => g.tipo === 'palavra_chave' && casaPalavra(m.texto, g.palavras, g.modo), `msg:${m.idExterno || randomUUID()}`);
     // automacao-vendas: qualquer mensagem da cliente.
@@ -822,7 +892,9 @@ export class Automacoes {
   private async disparar(c: Conversa, casa: (g: Gatilho) => boolean, chave: string): Promise<void> {
     const ctx = this.contexto.getStore();
     if (ctx?.teste) return; // "Testar" não dispara outras automações
-    const lista = (await this.o.armazem.listar(this.empresaId)).filter((a) => a.ligada && casa(a.gatilho));
+    // pos-venda: as de relacionamento nunca rodam para grupos.
+    const grupo = ehGrupo(c.telefone);
+    const lista = (await this.o.armazem.listar(this.empresaId)).filter((a) => a.ligada && casa(a.gatilho) && !(grupo && a.opcoes.respeitar_limites));
     if (!lista.length) return;
     const profundidade = ctx ? ctx.profundidade + 1 : 0;
     if (profundidade > this.maxEncadeamento) {
@@ -1010,8 +1082,21 @@ export class Automacoes {
       await this.encerrar(e, 'cancelada', 'A automação foi desligada.');
       return false;
     }
+    // pos-venda: grupo nunca recebe as de relacionamento; quem saiu da etapa do gatilho não segue nas esperas.
+    if (!e.teste && a.opcoes.respeitar_limites && ehGrupo(c.telefone)) {
+      await this.encerrar(e, 'cancelada', 'Conversa de grupo: automação de relacionamento não roda em grupo.');
+      return false;
+    }
+    const etapaGatilho = this.etapaDoGatilho(a);
+    if (!e.teste && a.opcoes.parar_se_sair_da_etapa && etapaGatilho && !(await this.o.tags.temTag(c.id, etapaGatilho))) {
+      await this.encerrar(e, 'cancelada', 'A cliente saiu da etapa.');
+      return false;
+    }
     let reavaliar = false;
-    const ctx: Contexto = { profundidade: e.profundidade, teste: e.teste };
+    // pos-venda: depois de uma espera (≥ 1 min) a cadeia recomeça do zero: o limite de encadeamento é contra laços
+    // instantâneos, e um caminho de etapas com esperas (30 dias, 60, 90…) não é laço.
+    const esperou = e.proximaEm.getTime() - e.criadaEm.getTime() >= MIN;
+    const ctx: Contexto = { profundidade: esperou ? 0 : e.profundidade, teste: e.teste };
     await this.contexto.run(ctx, async () => {
       while (e.fila.length) {
         const passo = e.fila.shift()!;
@@ -1069,22 +1154,55 @@ export class Automacoes {
             return { esperarAte: abre, repetir: true };
           }
         }
+        const relacionamento = a.opcoes.respeitar_limites;
+        if (!e.teste && relacionamento && (await this.o.descadastrado?.(c.telefone).catch(() => false))) {
+          return { parar: 'cancelada', motivo: 'A cliente pediu para não receber mais mensagens.' };
+        }
         if (!e.teste) {
           const { limiteDiario } = await this.config();
           const d = partesBahia(agora);
           const enviadas = await this.o.armazem.contarEnvios(c.id, bahia(d.ano, d.mes, d.dia));
-          if (enviadas >= limiteDiario) return { parar: 'cancelada', motivo: `Limite de ${limiteDiario} mensagem(ns) automática(s) por dia nesta conversa.` };
+          if (enviadas >= limiteDiario) {
+            // pos-venda: na de relacionamento a mensagem é pulada e o caminho (esperas, etapas) continua.
+            if (!relacionamento) return { parar: 'cancelada', motivo: `Limite de ${limiteDiario} mensagem(ns) automática(s) por dia nesta conversa.` };
+            this.anotar(e, p.tipo, false, `Mensagem pulada: limite de ${limiteDiario} mensagem(ns) automática(s) por dia nesta conversa.`);
+            return { seguir: true };
+          }
+          if (relacionamento && this.o.limiteSemana) {
+            const limite = await this.o.limiteSemana().catch(() => undefined);
+            const desde = new Date(agora.getTime() - 7 * DIA);
+            if (limite) {
+              const semana = (await this.o.armazem.contarEnvios(c.id, desde)) + ((await this.o.enviadosFollowup?.(c.id, desde).catch(() => 0)) ?? 0);
+              if (semana >= limite) {
+                this.anotar(e, p.tipo, false, `Mensagem pulada: a cliente já recebeu ${semana} mensagem(ns) automática(s) nos últimos 7 dias (limite ${limite}, em Follow-up).`);
+                return { seguir: true };
+              }
+            }
+          }
         }
         if (sintonia.canalDa(c) === 'meta' && agora.getTime() - (c.ultimaMensagemCliente?.getTime() ?? 0) > DIA) {
           return { parar: 'erro', motivo: 'WhatsApp oficial: fora da janela de 24 h só com modelo aprovado pela Meta.' };
         }
         const extras = (await this.o.variaveis?.().catch(() => undefined)) ?? {};
         if (p.texto.includes('{link_avaliacao}') && !extras.link_avaliacao) return { parar: 'erro', motivo: 'Falta o link de avaliação: preencha em Automações › Pesquisa de satisfação.' };
-        const texto = preencher(p.texto, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome }, extras);
+        let texto = preencher(p.texto, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome }, extras);
+        // pos-venda: a IA escreve com o objetivo; sem IA (ou se falhar), vai o texto de reserva.
+        let daIa = false;
+        if (p.ia_objetivo && this.o.escreverComIa) {
+          try {
+            const ia = (await this.o.escreverComIa(c, preencher(p.ia_objetivo, { nome: c.nome, unidade: unidade.nome, atendente: c.responsavelNome }, extras)))?.trim();
+            if (ia) {
+              texto = ia;
+              daIa = true;
+            }
+          } catch (x) {
+            this.log('IA não escreveu a mensagem da automação; vai o texto de reserva', String(x));
+          }
+        }
         await sintonia.enviarAutomatico(c, texto, `Automação: ${a.nome}`);
         await this.o.armazem.registrarEnvio(c.id, agora);
-        await evento('enviou', { texto });
-        this.anotar(e, p.tipo, true, `Enviou: "${texto}"`);
+        await evento('enviou', { texto, ia: daIa });
+        this.anotar(e, p.tipo, true, `${daIa ? 'Enviou (escrita pela IA)' : 'Enviou'}: "${texto}"`);
         return { seguir: true };
       }
       case 'esperar': {
@@ -1245,6 +1363,7 @@ export class Automacoes {
         if (p.se === 'cliente_respondeu') vale = (c.ultimaMensagemCliente?.getTime() ?? 0) > e.criadaEm.getTime();
         else if (p.se === 'tem_tag') vale = Boolean(p.valor) && (await this.o.tags.temTag(c.id, p.valor!));
         else if (p.se === 'modo') vale = c.modo === p.valor;
+        else if (p.se === 'no_funil') vale = Boolean(p.valor) && (await this.o.funis.etapaNoFunil(c.id, p.valor!)) !== null;
         else vale = estaAberta(unidade, agora);
         const ramo = vale ? p.entao : p.senao;
         e.fila.unshift(...copia(ramo));

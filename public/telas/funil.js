@@ -530,6 +530,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.listaEl = el('div', { class: 'ft-lista', hidden: '', 'aria-label': 'Lista de leads' }); // crm-topo: vista Lista
     s.cel = el('div', { class: 'fc', hidden: '' }); // pipeline-celular: o CRM do celular (/telas/funil-celular.js)
     s.focoEl = el('div', { class: 'fm-foco', hidden: '', 'aria-label': 'Foco: um lead por vez' }); // pipeline-modos: modo Foco no computador
+    s.posVendaEl = el('div', { class: 'pv-faixa', hidden: '', 'aria-label': 'Visitas no ano' }); /* pos-venda: média de visitas e meta */
+    window.SintoniaPosVenda?.carregar(s.ui);
     if (M()) s.vista = M().modoInicial(); // pipeline-modos: ?modo= do endereço ou a última escolha
     filtroAtual();
     // crm-topo: no computador o topo (busca + Filtrar, transmissão, Automações, Novo lead, ⋯) mora no cabeçalho da vista.
@@ -542,7 +544,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       el('div', { class: 'fn-topo' },
         topo ? null : el('div', { class: 'fn-buscar' }, el('label', { class: 'fn-busca' }, el('span', { html: SVG.busca, style: 'display:grid' }), busca), s.achados),
         topo ? null : s.botaoFiltros, el('div', { class: 'fn-funis-linha' }, s.barraFunis, topo ? topo.vistas : null)),
-      s.quadro, s.listaEl, s.focoEl, s.cel,
+      s.posVendaEl, s.quadro, s.listaEl, s.focoEl, s.cel,
     );
     s.colEls.clear(); s.cartaoEls.clear();
     // cabeçalho da vista (em app.html): números ao lado do título
@@ -666,6 +668,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
   // ---------- quadro ----------
   function desenharQuadro() {
     const { el } = s.ui;
+    window.SintoniaPosVenda?.faixa(s.posVendaEl, s.q, ctx); /* pos-venda */
     if (!s.q) {
       s.quadro.replaceChildren(el('div', { class: 'fn-erro' }, el('span', { text: s.erro ? `Não deu para carregar o quadro: ${s.erro}` : 'Carregando…' }),
         s.erro ? el('button', { class: 'botao leve', type: 'button', text: 'Tentar de novo', onclick: () => carregarQuadro() }) : null));
@@ -759,6 +762,13 @@ window.SintoniaTelas = window.SintoniaTelas || {};
     s.cel.hidden = !ligado;
     if (!ligado) return;
     const ra = window.SintoniaRastreio;
+    queueMicrotask(() => { /* pos-venda: a faixa de visitas no ano logo abaixo do topo do celular */
+      if (!s.q?.posVenda || !window.SintoniaPosVenda || s.cel.hidden) return;
+      const f = s.ui.el('div', { class: 'pv-faixa' });
+      window.SintoniaPosVenda.faixa(f, s.q, ctx);
+      s.cel.querySelector(':scope > .pv-faixa')?.remove();
+      s.cel.querySelector(':scope > .fc-topo')?.after(f);
+    });
     window.SintoniaFunilCelular.desenhar(s.cel, {
       ui: s.ui, q: s.q, erro: s.erro, funis: s.funis, funil: funil(), gestao: ehGestao(),
       filtros: [s.origem, s.dona, s.unidade, s.etiqueta, s.periodo, T()?.filtroUrl(s) || ''],
@@ -881,6 +891,7 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         l2.length ? el('div', { class: 'fn-l2' }, ...l2) : null,
         extras.length ? el('div', { class: 'fn-linha2' }, ...extras) : null,
         tem('tags') && (cartao.tags || []).length ? el('div', { class: 'fn-tags' }, ...cartao.tags.slice(0, 3).map(tagEl)) : null,
+        window.SintoniaPosVenda?.selo(s.ui, cartao) ? el('div', { class: 'fn-linha2' }, window.SintoniaPosVenda.selo(s.ui, cartao)) : null, /* pos-venda: visitas no ano */
         cartao.perda && window.SintoniaPerda ? el('div', { class: 'fn-tags' }, window.SintoniaPerda.selo(cartao.perda)) : null, /* perdas-saude: motivo da perda */
         pe.length > 1 || tem('situacao') ? el('div', { class: 'fn-pe' }, ...pe) : null),
       mais);
@@ -1195,7 +1206,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
       { nome: 'Novo funil', icone: SVG.mais, acao: novoFunil },
       ...(f ? [{ nome: `Editar funil “${f.nome}”`, info: 'Renomear, etapas e apagar', icone: SVG.lapis, acao: menuFunil }, { nome: 'Nova etapa', icone: SVG.mais, acao: novaEtapa }] : []),
       { nome: 'Automações das etapas', icone: SVG.raio, acao: () => { if (window.SintoniaTelas.automacoes) s.ui.mostrar('automacoes'); } },
-    ] : [];
+      window.SintoniaPosVenda?.itemMenu(ctx, SVG.mais), /* pos-venda */
+    ].filter(Boolean) : [];
     const grupo2 = [{ nome: 'Filtros', info: 'Origem, atendente, unidade, etiqueta e período', icone: SVG.filtro, acao: abrirFiltros }];
     folha('CRM', f ? `Funil: ${f.nome}` : null, [grupo1, grupo2].filter((g) => g.length));
   }
@@ -1369,7 +1381,8 @@ window.SintoniaTelas = window.SintoniaTelas || {};
         el('div', { class: 'fn-campo' }, el('span', { text: 'Responsável' }), donaCaixa),
         el('label', { class: 'fn-campo' }, el('span', { text: 'Observações da ficha' }), obs, obsInfo),
         el('div', { class: 'fn-campo' }, el('span', { text: 'Tags' }), tags),
-        window.SintoniaProdutosLead ? el('div', { class: 'fn-campo' }, el('span', { text: 'Produtos e serviços' }), produtosCaixa) : null),
+        window.SintoniaProdutosLead ? el('div', { class: 'fn-campo' }, el('span', { text: 'Produtos e serviços' }), produtosCaixa) : null,
+        window.SintoniaPosVenda ? el('div', { class: 'fn-campo' }, el('span', { text: 'Visitas no ano' }), window.SintoniaPosVenda.ficha(s.ui, conversaId)) : null), /* pos-venda */
       rodape);
     /* produtos-lead: o valor do cartão acompanha a soma dos produtos */
     window.SintoniaProdutosLead?.montar(produtosCaixa, conversaId, { aoMudar: (r) => { const a = acharCartao(conversaId); if (a && r && 'valor' in r && a.cartao.valor !== r.valor) { a.cartao.valor = r.valor; s.cartaoEls.delete(conversaId); desenharQuadro(); } } });

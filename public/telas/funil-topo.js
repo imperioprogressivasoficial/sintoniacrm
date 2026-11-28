@@ -575,8 +575,9 @@
       gestao && { nome: 'Nova transmissão', info: 'Mensagem para os leads filtrados', icone: IC.aviao, acao: () => novaTransmissao(ctx) },
     ].filter(Boolean), gestao ? [
       { nome: 'Novo pipeline', icone: IC.novo, acao: () => ctx.novoFunil() },
+      window.SintoniaPosVenda?.itemMenu(ctx, IC.novo), /* pos-venda */
       { nome: 'Automações deste pipeline', icone: IC.fluxo, acao: () => abrirAutomacoes(ctx) },
-    ] : []];
+    ].filter(Boolean) : []];
     ctx.folha('Pipeline', f ? f.nome : null, grupos.filter((g) => g.length));
   }
 
