@@ -122,8 +122,8 @@ async function consultar(fonte: FonteAgenda, c: Conversa, agora: Date, nomePerfi
       falhas++;
     }
   }
-  // 2) Pelo nome do perfil (só nome completo e só um cadastro com esse nome).
-  if (!achada && nomePerfil && nomeServeDeChave(nomePerfil)) {
+  // 2) Pelo nome do perfil: dono 28/11, só quando a busca pelo telefone deu erro (o telefone basta para agendar).
+  if (!achada && falhas > 0 && nomePerfil && nomeServeDeChave(nomePerfil)) {
     for (const u of unidades) {
       try {
         const { sistema, local } = agendaDaUnidade(fonte, u);
@@ -206,7 +206,7 @@ const diaBr = (iso: string) => iso.split('-').reverse().join('/');
 export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): string {
   const linhas = [`cliente_conhecida: ${k.conhecida ? 'sim' : 'não'}`];
   if (k.nome && (k.nomeConfirmado ?? true)) linhas.push(`nome no cadastro: ${k.nome}`);
-  if (k.nome && k.nomeConfirmado === false) linhas.push(`o cadastro deste número está no nome de "${k.nome}", que NÃO bate com o nome do perfil: o número pode ser de outra pessoa. NÃO chame a cliente por esse nome nem por nenhum outro. Antes de agendar, pergunte o nome completo dela: se for esse mesmo, use o cadastro; se não, trate como cliente nova (agende com nome_cliente e para_outra_pessoa=false, cliente_id=null).`);
+  if (k.nome && k.nomeConfirmado === false) linhas.push('o número tem cadastro, mas o nome do cadastro não bate com o do perfil: NÃO chame a cliente por nome nenhum. O agendamento vale pelo número: não peça nome nem dados.');
   if (k.por === 'telefone') linhas.push('achada pelo número do WhatsApp');
   if (k.por === 'nome_do_perfil') linhas.push('achada pelo nome do perfil do WhatsApp (número diferente): confirme antes de usar o cadastro ("É para você, [primeiro nome]?")');
   if (k.por === 'conversa') linhas.push('já agendou por esta conversa');
@@ -215,9 +215,9 @@ export function textoClienteConhecida(k: ClienteConhecida, primeira: boolean): s
   if (k.semResposta) linhas.push('a agenda não respondeu a tempo: se precisar, use buscar_cliente');
   linhas.push(`primeira resposta da loja nesta conversa: ${primeira ? 'sim' : 'não'}`);
   const guia = k.conhecida && k.nomeConfirmado === false
-    ? 'Nome não confirmado: use a boas-vindas de cliente nova, sem nome nenhum, e confirme o nome completo antes de agendar.'
+    ? 'Nome não confirmado: boas-vindas sem nome nenhum. Agende pelo número (cadastro já existe), sem pedir dados.'
     : k.conhecida
     ? 'Cliente que volta: não peça nome, nascimento nem e-mail (o cadastro já existe). Se for a primeira resposta, use a boas-vindas de quem volta.'
-    : 'Cliente nova: peça nome completo, data de nascimento e e-mail só na hora de agendar (depois que ela escolher o horário).';
+    : 'Cliente nova: depois que ela escolher o horário, peça nome completo, data de nascimento, e-mail e a maior dificuldade dela com alisamentos (o telefone é o do WhatsApp). Grave a dor nas observações do agendamento.';
   return `<cliente_conhecida>\n${linhas.join('\n')}\n${guia}\n</cliente_conhecida>`;
 }

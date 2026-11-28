@@ -64,8 +64,10 @@ class AgendaFalsa {
       .filter((p) => !f?.profissionalId || p.id === f.profissionalId)
       .map((p) => ({ id: p.id, nome: p.nome, horariosVagos: (this.livres[p.id] ?? []).filter((h) => !this.gravados.some((g) => g.data === data && g.hora === h && g.profissionalId === p.id)) }));
   }
+  falharTelefone = false;
   async buscarClientePorTelefone(_l: string, tel: string) {
     this.conta('porTelefone');
+    if (this.falharTelefone) throw new Error('Trinks fora');
     const c = this.clientes.find((x) => x.tel === tel);
     return c ? { id: c.id, nome: c.nome } : null;
   }
@@ -156,9 +158,13 @@ describe('1/2. A cliente pelo número do WhatsApp (sem pedir nome) e a boas-vind
     expect(texto).toContain('não peça nome, nascimento nem e-mail');
   });
 
-  it('segunda chave: nome do perfil do WhatsApp (outro número) pede confirmação; nome solto não serve', async () => {
+  it('segunda chave: nome do perfil só quando a busca pelo telefone dá erro; pede confirmação; nome solto não serve', async () => {
     const ag = new AgendaFalsa();
     ag.clientes.push({ id: 66, nome: 'Marina Souza Lima', tel: '5571999990000' });
+    // dono 28/11: o telefone basta; sem erro na busca pelo telefone, não procura pelo nome
+    expect((await conhecerCliente(ag, conversa(), quinta(9))).conhecida).toBe(false);
+    esquecerCliente();
+    ag.falharTelefone = true;
     const k = await conhecerCliente(ag, conversa(), quinta(9));
     expect(k).toMatchObject({ conhecida: true, por: 'nome_do_perfil', confirmar: true, clienteId: 66 });
     expect(textoClienteConhecida(k, true)).toContain('É para você');
@@ -386,7 +392,9 @@ describe('1/7. Agendar: quem tem cadastro não informa nada; cliente nova inform
     unidadesComPadrao();
     const ag = new AgendaFalsa();
     ag.clientes.push({ id: 66, nome: 'Marina Souza', tel: '5571999990000' });
+    ag.falharTelefone = true; // dono 28/11: pelo nome só quando o telefone dá erro
     await conhecerCliente(ag, conversa(), quinta(8));
+    ag.falharTelefone = false;
     const r = await rodar('agendar', pedido({ cliente_id: 66 }), ctxDe(ag));
     expect(r.erro).toBe(false);
     expect(ag.criados).toEqual([]);
@@ -569,8 +577,8 @@ describe('dono 28/11: nome errado e emoji de rosto', () => {
     const { textoClienteConhecida } = await import('../src/ai/cliente-conhecida.js');
     const t = textoClienteConhecida({ conhecida: true, nome: 'Giovanna Souza', nomeConfirmado: false, por: 'telefone', confirmar: false, unidade: 'norte', clienteId: 1, ultimoAtendimento: null, proximoHorario: null }, true);
     expect(t).not.toContain('nome no cadastro: Giovanna');
-    expect(t).toContain('NÃO chame a cliente por esse nome');
-    expect(t).toContain('boas-vindas de cliente nova, sem nome');
+    expect(t).toContain('NÃO chame a cliente por nome nenhum');
+    expect(t).toContain('boas-vindas sem nome nenhum');
   });
   it('tira emoji de rosto e mantém os de apoio', async () => {
     const { semEmojiDeRosto } = await import('../src/app/sintonia.js');
