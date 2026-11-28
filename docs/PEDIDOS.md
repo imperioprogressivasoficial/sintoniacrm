@@ -4,7 +4,19 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 
 Ideias guardadas para depois (não são tarefas abertas): [IDEIAS.md](IDEIAS.md).
 
-## Regras de trabalho
+## PRÓXIMO (lembrar o dono assim que as regras da Serena de 27/11 estiverem no ar): follow-up de clientes
+O dono pediu para lembrá-lo de começar o processo de follow-up logo depois dos ajustes da Serena. O que ele quer:
+- **Cutucar quem para de responder, ainda dentro da conversa:** por exemplo, quem passou a unidade e não agendou, ou
+  viu os horários e não escolheu.
+  - Primeiro, depois de 5 minutos.
+  - Depois, depois de mais 15 minutos.
+  - Depois, com intervalos cada vez maiores.
+- **Mensagem curta e humana:** um 👀, um "?" ou "Oi, ainda está aí?". O objetivo é sempre fechar o agendamento.
+- **Se a cliente disser "não fique me chamando, depois eu resolvo":**
+  - perguntar "quando?" e tentar combinar um dia;
+  - se ela não disser, criar sozinha um follow-up automático para mais tarde.
+
+
 - Terminou e testou: **publica sem perguntar** e avisa o que entrou (pedido do dono em 20/11).
 - Por enquanto o WhatsApp é só pela **API não oficial (Evolution)**. A oficial (Meta) fica para depois.
 - Ir organizando o sistema sozinho: achar bugs, corrigir, conectar o que falta, melhorar.

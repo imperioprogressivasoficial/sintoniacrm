@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- LEMBRAR O DONO: quando a serena-regras estiver no ar, começar o follow-up de clientes (detalhes em docs/PEDIDOS.md, seção PRÓXIMO).
+
 - 27/11 21h: 6d66610 no ar — aprender com a equipe (src/aprender, migração 776; 1ª rodada roda sozinha ao subir) + regras do dono no knowledge (sem sinal, Pix/cartão, cancelar sem custo, horários Sumaré 9–19 e Norte 9–22, sem clube, tabela Seu Primeiro Alisamento). Próximo: regras novas da Serena (ver pedido do dono 27/11 noite: não pedir nome, unidades em 2 linhas, horários padrão, sem nome de profissional, PD, cliente de volta, tabela em imagem, mensagens humanizadas) e espelho da agenda do Trinks.
 
 - 27/11 19h20: 74f4686 no ar — botão "Baixar todas as conversas" (⋯ da lista, gestão, sem dados pessoais por padrão) e o script oficial do comercial (SCRIPT + GLOSSÁRIO IPG 2026) em knowledge/imperio.md; a semente agora acrescenta seções novas e atualiza só as que a equipe nunca editou. Agente ia-aprende (estudar conversas / memória automática) ainda trabalhando.
