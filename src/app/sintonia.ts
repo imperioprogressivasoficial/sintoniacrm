@@ -1716,8 +1716,15 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
 }
 
 /** dono 28/11: a IA nunca manda emoji de rosto (😊🥰😍🤗…) nem de agenda (📅⏰📍). Os de apoio (✅💜✨) continuam. */
-const ROSTOS = /[\u{1F600}-\u{1F64F}\u{1F910}-\u{1F92F}\u{1F970}-\u{1F97F}\u{1F9D0}-\u{1F9DF}\u{1FAE0}-\u{1FAEF}\u{263A}\u{2639}\u{1F4C5}\u{1F4C6}\u{1F5D3}\u{23F0}\u{1F4CD}][\u{FE0F}\u{1F3FB}-\u{1F3FF}]?/gu;
-export const semEmojiDeRosto = (t: string): string => t.replace(ROSTOS, '').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+const PERMITIDOS = new Set(['✅', '💜']);
+/** dono 28/11: nenhum emoji de rosto, de agenda ou "infantil": só ✅ e 💜 passam (o resto sai antes de enviar). */
+export const semEmojiDeRosto = (t: string): string =>
+  t
+    .replace(/\p{Extended_Pictographic}[\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}\p{Extended_Pictographic}]*/gu, (e) => (PERMITIDOS.has(e.replace(/\u{FE0F}/gu, '')) ? e : ''))
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 
 /** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
 export const pausaDigitando = (texto: string): number => Math.round(Math.min(2500, Math.max(800, 500 + texto.length * 15))); // dono 28/11: mais rápido
