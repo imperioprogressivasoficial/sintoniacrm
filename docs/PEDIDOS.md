@@ -13,7 +13,7 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 
 Ideias guardadas para depois (não são tarefas abertas): [IDEIAS.md](IDEIAS.md).
 
-## NA FILA (depois do treinamento da IA de 28/11): configuração da Serena editável
+## FEITO (28/11, no ar 9561d50): configuração da Serena editável — tela Jeito de atender
 O dono quer, na área da Serena, um lugar para preencher e editar tudo do jeito de atender, pensando em abrir a
 ferramenta para outras empresas:
 - o que configurar: modelo da IA, tom, estilo, nome, apresentação, o que fazer e o que evitar, emojis, tamanho das

@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 28/11: no ar 9561d50 — Jeito de atender (Inteligência › Comportamento): config por empresa (tabela jeito_atender) controla prompt, emojis, nº de mensagens, digitando, modelo/esforço. Seções Jeito de falar/Roteiro/Mensagens prontas saíram da base (o campo é a fonte). Se a equipe tinha editado alguma dessas seções na base, ela continua lá e a tela avisa para apagar.
+
 - 28/11: no ar e9a79b1 — funil de atendimento novo (claude/funil-atendimento, migração 779), regras em Pipeline ⋯ › Regras automáticas (tabela funil_regras). Finalizado = chave 'compareceu', só horários das últimas 48 h. Próximo: configuração da Serena editável (docs/PEDIDOS.md).
 
 - 28/11: no ar eabff43 — funil Pós-venda criado na Império (log: "funil e automações sugeridos criados"); entra pela etapa chave 'compareceu' (Finalizado). Falta: funil-atendimento (779). Avisar dono: cadência Follow-up Pós-atendimento ligada mandaria em dobro; Voltou não pega agendamento feito direto no Trinks.
