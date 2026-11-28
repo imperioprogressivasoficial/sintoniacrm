@@ -524,6 +524,8 @@ const followup = new Followup({
   agente: { executar: (p) => agentesIa.agente.executar(p) },
   iaDisponivel: () => portao.iaAtiva() /* serena-chave */,
   pausada: () => chaveSerena.pausada() /* serena-chave: cadências esperam a pausa */,
+  /* reagendar: com a IA conduzindo a conversa, ela mesma remarca quando a cliente diz que não vai conseguir ir */
+  iaRemarca: (c) => portao.iaAtiva() && !chaveSerena.pausada() && c.modo === 'ia' && !(c.pausaIaAte && c.pausaIaAte.getTime() > Date.now()),
   email,
   tags,
   log,

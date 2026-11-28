@@ -35,6 +35,9 @@ import { registrarArquivadasNumero } from './conversa/arquivadas-numero.js'; /* 
 import { registrarWebhooksSociais, type OpcoesWebhooksSociais } from './conexoes/sociais.js';
 import { registrarRotasMidia } from './web/midias.js';
 import { agendar, agendaDaUnidade, ErroAgendamento, horariosLivres, textoConfirmacao } from './agenda/agendar.js';
+import { registrarRemarcarEquipe } from './agenda/remarcar-equipe.js'; /* reagendar */
+import { mesmoNome } from './ai/cliente-conhecida.js'; /* reagendar: agendar para outra pessoa */
+import { normalizarCelular } from './util/telefone.js'; /* reagendar */
 import { ErroIntegracaoPendente } from './agenda/sistema.js';
 import { registrarGestao, type OpcoesGestao } from './rotas/gestao.js';
 import { fontePainelPara } from './painel/painel.js';
@@ -903,6 +906,14 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     atendente: z.string().min(1).optional(),
     /** Envia a confirmação padrão para a cliente pelo WhatsApp. */
     enviarConfirmacao: z.boolean().default(true),
+    /* reagendar: o horário é de OUTRA pessoa (nomeCliente = nome completo dela). Marca no cadastro dela; o da dona não muda. */
+    paraOutra: z
+      .object({
+        telefone: z.string().trim().max(30).optional(),
+        dataNascimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        email: z.string().trim().toLowerCase().email().max(200).optional(),
+      })
+      .optional(),
   });
 
   app.post('/api/conversas/:id/agendar', async (req, reply) => {
@@ -914,14 +925,34 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
     // Anti-duplicidade antes de gravar no Trinks: se outra pessoa já está respondendo, nada é marcado.
     if (req.usuario) await d.sintonia.conferirVez(conversa.id, req.usuario);
     try {
+      /* reagendar: para outra pessoa, a mesma regra da IA (para_outra_pessoa): procura pelo telefone dela; sem telefone,
+         pelo nome (só se houver um cadastro só com esse nome); senão cria com os dados dela. */
+      const { paraOutra, ...pedido } = b;
+      let outra: { paraOutraPessoa: { telefone?: string }; clienteId?: number; extrasCliente?: { dataNascimento?: string; email?: string } } | undefined;
+      if (paraOutra) {
+        const nome = b.nomeCliente.trim();
+        if (nome.split(/\s+/).length < 2) return reply.code(400).send({ erro: 'Informe o nome completo da outra pessoa.' });
+        const tel = paraOutra.telefone ? normalizarCelular(paraOutra.telefone) : null;
+        if (paraOutra.telefone && !tel) return reply.code(400).send({ erro: 'Esse telefone não parece um celular válido (com DDD).' });
+        let clienteId: number | undefined;
+        if (!tel) {
+          const { sistema, local } = agendaDaUnidade(exigeAgenda(), b.unidade);
+          const achados = sistema.buscarClientesPorNome ? (await sistema.buscarClientesPorNome(local, nome).catch(() => [])).filter((x) => mesmoNome(x.nome, nome)) : [];
+          if (achados.length === 1) clienteId = achados[0]!.id;
+        }
+        const extras = { ...(paraOutra.dataNascimento ? { dataNascimento: paraOutra.dataNascimento } : {}), ...(paraOutra.email ? { email: paraOutra.email } : {}) };
+        outra = { paraOutraPessoa: tel ? { telefone: tel } : {}, ...(clienteId ? { clienteId } : {}), ...(Object.keys(extras).length ? { extrasCliente: extras } : {}) };
+      }
       const r = await agendar(
         exigeAgenda(),
         conversa,
-        { ...b, origem: `${atendente} pelo CRM` },
+        { ...pedido, ...(outra ?? {}), origem: `${atendente} pelo CRM` },
         agora(),
       );
-      await d.sintonia.equipeAgendou(conversa.id, { tipo: 'agendou', agendamento: r.agendamento, clienteTrinksId: r.clienteTrinksId }, atendente, req.usuario);
-      const confirmacao = textoConfirmacao(conversa.nome ?? b.nomeCliente, r);
+      await d.sintonia.equipeAgendou(conversa.id, { tipo: 'agendou', agendamento: r.agendamento, clienteTrinksId: r.clienteTrinksId, ...(outra ? { paraOutraPessoa: true } : {}) }, atendente, req.usuario);
+      const confirmacao = outra
+        ? textoConfirmacao(conversa.nome ?? undefined, r).replace(/Seu horário está confirmado:/, `O horário de ${b.nomeCliente.trim().split(/\s+/)[0]} está confirmado:`)
+        : textoConfirmacao(conversa.nome ?? b.nomeCliente, r);
       if (b.enviarConfirmacao) await d.sintonia.equipeEnviou(conversa.id, confirmacao, atendente, req.usuario);
       return { ok: true, agendamentoId: r.agendamento.trinksId, valor: r.valor, confirmacao };
     } catch (e) {
@@ -931,6 +962,9 @@ export function criarServidor(d: DependenciasServidor): FastifyInstance {
       throw e;
     }
   });
+
+  /* reagendar: horários marcados da cliente e "Reagendar" pela equipe (topo da conversa) */
+  registrarRemarcarEquipe(app, { agenda: () => d.agenda, sintonia: d.sintonia, conversaVisivel, nomeDe, ...(d.protecao?.auditoria ? { auditoria: d.protecao.auditoria } : {}), empresaId: process.env.SINTONIA_EMPRESA_ID || 'imperio', agora, log });
 
   if (opNotif) registrarNotificacoes(app, opNotif);
 

@@ -65,7 +65,7 @@ const ambientes: Ambiente[] = [
     : []),
 ];
 
-async function montar(a: Ambiente, ajustar?: (cfg: ReturnType<typeof configPadrao>) => void) {
+async function montar(a: Ambiente, ajustar?: (cfg: ReturnType<typeof configPadrao>) => void, extra: { iaRemarca?: () => boolean } = {}) {
   const base = await a.criar();
   const relogio = { t: QUINTA };
   const agora = () => relogio.t;
@@ -80,7 +80,7 @@ async function montar(a: Ambiente, ajustar?: (cfg: ReturnType<typeof configPadra
   }
   let sintonia!: Sintonia;
   const novoFollowup = () =>
-    new Followup({ empresaId: 'imperio', armazem: base.armazem, repo: base.repo, sintonia: () => sintonia, agente, iaDisponivel: () => true, email, tags: base.tags, agora });
+    new Followup({ empresaId: 'imperio', armazem: base.armazem, repo: base.repo, sintonia: () => sintonia, agente, iaDisponivel: () => true, email, tags: base.tags, agora, ...extra });
   let f = novoFollowup();
   observarEventos(base.repo, (e) => f.aoEvento(e));
   sintonia = new Sintonia({
@@ -272,6 +272,22 @@ for (const a of ambientes) {
       await m.tick(); // ação da tag, fora da trava
       expect((await m.tags.daConversa(c.id)).map((t) => t.nome)).toContain('Quer remarcar');
       expect(await m.ir(new Date(inicio.getTime() - 2 * HORA))).toBe(0);
+    });
+
+    it('reagendar: com a IA conduzindo, "não vou conseguir ir" não recebe a resposta fixa: a IA responde (e remarca)', async () => {
+      const m = await montar(a, undefined, { iaRemarca: () => true });
+      await m.cliente('Oi');
+      const inicio = bahia(2026, 11, 7, 15, 0);
+      await m.agendar(inicio, 89);
+      expect(await m.ir(new Date(inicio.getTime() - 24 * HORA))).toBe(1);
+      const pedidos = m.agente.pedidos.length;
+      await m.cliente('Não vou conseguir ir');
+      const c = await m.conversa();
+      expect((await m.f.seloDaConversa(c.id)).confirmacao).toMatchObject({ status: 'remarcar' });
+      expect(m.canal.enviados.some((x) => /logo te chamamos/.test(x.texto))).toBe(false);
+      expect(m.agente.pedidos.length).toBe(pedidos + 1); // a IA respondeu (ela oferece os horários e usa remarcar_agendamento)
+      await m.tick(); // ação da tag "Quer remarcar"
+      expect(await m.ir(new Date(inicio.getTime() - 2 * HORA))).toBe(0); // os lembretes deste horário não saem
     });
 
     it('sem resposta perto do horário vira "Sem resposta"', async () => {

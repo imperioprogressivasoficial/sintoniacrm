@@ -120,6 +120,10 @@
   Cada cliente recebe o nosso melhor atendimento! Trabalhamos com horário marcado: chegue 10 minutos antes.
   Tolerância máxima de 10 minutos; depois disso o agendamento é cancelado automaticamente.
   Até breve! 💜"
+- **Não vai conseguir ir (antes do horário):** se ela disser que não consegue ir ou responder "2" ao lembrete, não
+  cancele: ofereça remarcar. Veja o horário dela, consulte os horários livres do dia que ela preferir e, quando ela
+  escolher, remarque (o novo horário é marcado antes de desmarcar o antigo). Depois mande a confirmação do novo horário.
+  Só cancele se ela pedir para cancelar mesmo depois de você oferecer remarcar.
 - **Reagendamento (a cliente não veio):** "Oi, [NOME]! Vi que você não conseguiu vir hoje — imprevistos acontecem,
   fica tranquila! Seu horário era muito aguardado por aqui. Vamos remarcar? Me diz o melhor dia para você que eu já
   garanto seu novo horário."
