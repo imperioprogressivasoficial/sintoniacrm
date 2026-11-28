@@ -1,7 +1,7 @@
 # O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
-data: 2026-11-28 02:29 UTC (28/11, na Bahia -3h)
-commit: 3252d92
-pacote sha256: 9e46cd0f737d0379a8be0c9a7e184e7365718c4ca08ad51d4411ccb7fdae2b8b
+data: 2026-11-28 03:18 UTC (28/11, na Bahia -3h)
+commit: 86c94b5
+pacote sha256: 9f2ad0266b9f0ae28e543903e15da335dafde5991e9208460d03c88a0f8509b9
 quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
-pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-3252d92.b64); pode apagar depois.
-observação: em cima do aff82b0. Entra: situações de atendimento + Atendimento que encanta e vende + escrita humana (claude/situacoes) e Conhecimento da IA em Documentos (claude/conhecimento-arquivo).
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-86c94b5.b64); pode apagar depois.
+observação: em cima do 3252d92. Entra: follow-up em minutos + cadência Não respondeu ligada para a Império (migração 780).
