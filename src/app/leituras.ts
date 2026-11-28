@@ -1,0 +1,73 @@
+import type pg from 'pg';
+
+/** Até onde cada pessoa leu cada conversa. "Não lida" = a cliente escreveu depois disso. */
+export interface Leituras {
+  /** robustez: com `ids`, só dessas conversas (a página da lista), em vez de todas as que a pessoa já leu. */
+  doUsuario(usuarioId: string, ids?: string[]): Promise<Map<string, Date>>;
+  /** Marca como lidas até `em`. Nunca volta atrás (um "lida" antigo não apaga um mais novo). */
+  marcar(usuarioId: string, conversaIds: string[], em: Date): Promise<void>;
+  /** Volta a conversa para não lida (o "marcar como não lida" do WhatsApp): fica com a bolinha até abrir. */
+  desmarcar(usuarioId: string, conversaIds: string[]): Promise<void>;
+  /** Conversas que esta pessoa marcou como não lidas à mão (somem ao abrir ou marcar como lida). */
+  marcadasNaoLidas(usuarioId: string): Promise<Set<string>>;
+}
+
+export class LeiturasMemoria implements Leituras {
+  private readonly dados = new Map<string, Map<string, Date>>();
+  private readonly marcadas = new Map<string, Set<string>>();
+  async doUsuario(u: string, ids?: string[]) {
+    const m = new Map(this.dados.get(u) ?? []);
+    if (!ids) return m;
+    return new Map(ids.filter((id) => m.has(id)).map((id) => [id, m.get(id)!]));
+  }
+  async marcar(u: string, ids: string[], em: Date) {
+    const m = this.dados.get(u) ?? new Map<string, Date>();
+    for (const id of ids) if (!m.has(id) || m.get(id)! < em) m.set(id, em);
+    this.dados.set(u, m);
+    for (const id of ids) this.marcadas.get(u)?.delete(id);
+  }
+  async desmarcar(u: string, ids: string[]) {
+    const m = this.dados.get(u);
+    for (const id of ids) m?.delete(id);
+    if (!ids.length) return;
+    const s = this.marcadas.get(u) ?? new Set<string>();
+    for (const id of ids) s.add(id);
+    this.marcadas.set(u, s);
+  }
+  async marcadasNaoLidas(u: string) {
+    return new Set(this.marcadas.get(u) ?? []);
+  }
+}
+
+export class LeiturasPostgres implements Leituras {
+  constructor(private readonly pool: pg.Pool) {}
+  async doUsuario(u: string, ids?: string[]) {
+    const { rows } = await this.pool.query<{ conversa_id: string; lida_ate: Date }>(
+      'select conversa_id, lida_ate from sintonia.leituras where usuario_id = $1 and ($2::uuid[] is null or conversa_id = any($2))',
+      [u, ids ?? null],
+    );
+    return new Map(rows.map((r) => [r.conversa_id, r.lida_ate]));
+  }
+  async marcar(u: string, ids: string[], em: Date) {
+    if (!ids.length) return;
+    await this.pool.query(
+      `insert into sintonia.leituras (usuario_id, conversa_id, lida_ate) select $1, unnest($2::uuid[]), $3
+       on conflict (usuario_id, conversa_id) do update set lida_ate = greatest(sintonia.leituras.lida_ate, excluded.lida_ate)`,
+      [u, ids, em],
+    );
+    await this.pool.query('delete from sintonia.marcadas_nao_lidas where usuario_id = $1 and conversa_id = any($2::uuid[])', [u, ids]);
+  }
+  async desmarcar(u: string, ids: string[]) {
+    if (!ids.length) return;
+    await this.pool.query('delete from sintonia.leituras where usuario_id = $1 and conversa_id = any($2::uuid[])', [u, ids]);
+    await this.pool.query(
+      `insert into sintonia.marcadas_nao_lidas (usuario_id, conversa_id) select $1, unnest($2::uuid[])
+       on conflict (usuario_id, conversa_id) do update set em = now()`,
+      [u, ids],
+    );
+  }
+  async marcadasNaoLidas(u: string) {
+    const { rows } = await this.pool.query<{ conversa_id: string }>('select conversa_id from sintonia.marcadas_nao_lidas where usuario_id = $1', [u]);
+    return new Set(rows.map((r) => r.conversa_id));
+  }
+}

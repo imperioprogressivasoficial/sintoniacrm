@@ -1,13 +1,13 @@
 import type { Agendamento, Conversa, UnidadeId } from '../domain.js';
-import type { Agenda } from '../ai/ferramentas.js';
-import { ErroTrinks } from './trinks.js';
-import { UNIDADES } from '../unidades.js';
+import { ehRoteador, ErroAgenda, NOMES_SISTEMA, type AgendaDaUnidade, type DadosExtrasCliente, type FonteAgenda } from './sistema.js';
+import { espelhoAtivo } from './espelho.js';
+import { unidadeDe } from '../unidades.js';
 import { deDataEHora, dataISO, DIA, horaHHmm } from '../util/tempo.js';
 
 /**
- * Um único caminho para marcar horário no Trinks, usado tanto pela IA quanto pelo
- * botão "Agendar" do CRM. Assim as regras (cliente certa, preço do Trinks,
- * conferência de conflito) são sempre as mesmas, não importa quem agendou.
+ * Um único caminho para marcar horário no sistema de agenda da unidade (Trinks, Avec ou AppBarber),
+ * usado tanto pela IA quanto pelo botão "Agendar" do CRM. Assim as regras (cliente certa, preço do
+ * sistema, conferência de conflito) são sempre as mesmas, não importa quem agendou.
  */
 
 export interface PedidoAgendamento {
@@ -16,10 +16,21 @@ export interface PedidoAgendamento {
   profissionalId: number;
   data: string; // AAAA-MM-DD
   hora: string; // HH:mm
-  /** Usado só se a cliente ainda não tiver cadastro no Trinks. */
+  /** Usado só se a cliente ainda não tiver cadastro no sistema de agenda. */
   nomeCliente: string;
-  /** Quem agendou, gravado na observação do Trinks. */
+  /** Quem agendou, gravado na observação do agendamento. */
   origem: string;
+  /**
+   * serena-regras: a cliente no sistema já conhecida (achada pela IA, ex. pelo nome). Sem: a da conversa (id do Trinks
+   * guardado ou pelo telefone) e, sem cadastro, cria uma nova.
+   */
+  clienteId?: number;
+  /** serena-regras: o horário é para outra pessoa (não usa nem grava o cadastro da dona da conversa). */
+  paraOutraPessoa?: { telefone?: string };
+  /** serena-regras: nascimento e e-mail da cliente nova (vão para o cadastro). */
+  extrasCliente?: DadosExtrasCliente;
+  /** serena-regras: marcas que vão no começo da observação (ex.: "PD" = profissional pedida pela cliente). */
+  marcas?: string[];
 }
 
 export interface ResultadoAgendamento {
@@ -38,20 +49,30 @@ export class ErroAgendamento extends Error {
 }
 
 export function estabelecimentoDa(unidade: UnidadeId): string {
-  const u = UNIDADES[unidade];
+  const u = unidadeDe(unidade);
   if (!u.agendaAberta || !u.trinksEstabelecimentoId) {
     throw new ErroAgendamento('sem_agenda', `A unidade ${u.nome} ainda não tem agenda no Trinks.`);
   }
   return u.trinksEstabelecimentoId;
 }
 
-export async function agendarNoTrinks(
-  agenda: Agenda,
+/**
+ * Sistema e local (estabelecimento/loja) da unidade. Com um roteador, vale a escolha de Conexões › Agenda;
+ * com um sistema só (jeito antigo e testes), é o Trinks com o estabelecimento de src/unidades.ts.
+ */
+export function agendaDaUnidade(fonte: FonteAgenda, unidade: UnidadeId): AgendaDaUnidade {
+  if (ehRoteador(fonte)) return fonte.paraUnidade(unidade);
+  return { sistema: fonte, tipo: fonte.sistema ?? 'trinks', local: estabelecimentoDa(unidade) };
+}
+
+export async function agendar(
+  fonte: FonteAgenda,
   conversa: Conversa,
   p: PedidoAgendamento,
   agora: Date,
 ): Promise<ResultadoAgendamento> {
-  const est = estabelecimentoDa(p.unidade);
+  const { sistema: agenda, tipo, local: est } = agendaDaUnidade(fonte, p.unidade);
+  const nomeSistema = NOMES_SISTEMA[tipo];
   const hora = p.hora.padStart(5, '0');
   const inicio = deDataEHora(p.data, hora);
   if (inicio.getTime() <= agora.getTime()) {
@@ -59,12 +80,20 @@ export async function agendarNoTrinks(
   }
 
   const servico = (await agenda.listarServicos(est)).find((s) => s.id === p.servicoId);
-  if (!servico) throw new ErroAgendamento('servico', 'Serviço não encontrado no Trinks.');
+  if (!servico) throw new ErroAgendamento('servico', `Serviço não encontrado no ${nomeSistema}.`);
   const profissional = (await agenda.listarProfissionais(est)).find((x) => x.id === p.profissionalId);
 
+  // O id guardado na conversa é do Trinks: em outro sistema, a cliente é procurada pelo telefone.
+  // serena-regras: para outra pessoa, procura pelo telefone dela (se veio) e cria com o nome dela; nunca usa o da dona.
+  const telefone = p.paraOutraPessoa ? p.paraOutraPessoa.telefone || conversa.telefone : conversa.telefone;
   let clienteId =
-    conversa.trinksClienteId ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id;
-  if (!clienteId) clienteId = await agenda.criarCliente(est, p.nomeCliente, conversa.telefone);
+    p.clienteId ??
+    (p.paraOutraPessoa
+      ? p.paraOutraPessoa.telefone
+        ? (await agenda.buscarClientePorTelefone(est, p.paraOutraPessoa.telefone))?.id
+        : undefined
+      : ((tipo === 'trinks' ? conversa.trinksClienteId : undefined) ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id));
+  if (!clienteId) clienteId = await agenda.criarCliente(est, p.nomeCliente, telefone, p.extrasCliente);
 
   const valor = servico.valorPromocional ?? servico.preco;
   try {
@@ -76,8 +105,9 @@ export async function agendarNoTrinks(
       hora,
       duracaoEmMinutos: servico.duracaoEmMinutos,
       valor,
-      observacoes: `Agendado por ${p.origem} (Sintonia)`,
+      observacoes: `${p.marcas?.length ? `${p.marcas.join(' ')} - ` : ''}Agendado por ${p.origem} (Sintonia)`,
     });
+    espelhoAtivo()?.sujar(p.unidade, p.data); // serena-regras: o espelho relê o dia agora
     return {
       clienteTrinksId: clienteId,
       valor,
@@ -91,26 +121,34 @@ export async function agendarNoTrinks(
       },
     };
   } catch (e) {
-    if (e instanceof ErroTrinks && e.status === 409) {
+    if (e instanceof ErroAgenda && e.status === 409) {
       throw new ErroAgendamento('horario_ocupado', `O horário ${hora} de ${p.data} acabou de ser ocupado. Escolha outro.`);
     }
     throw e;
   }
 }
 
+/** Nome antigo, mantido para quem já importa. */
+export const agendarNoTrinks = agendar;
+
 /** Horários livres de um dia, já sem os que passaram (o Trinks devolve os de hoje que já foram). */
 export async function horariosLivres(
-  agenda: Agenda,
+  fonte: FonteAgenda,
   unidade: UnidadeId,
   data: string,
   servicoId: number,
   profissionalId: number | undefined,
   agora: Date,
+  op: { espelho?: boolean } = {},
 ): Promise<Array<{ profissionalId: number; profissional: string | null; horarios: string[] }>> {
   if (data < dataISO(agora)) return [];
   if (data > dataISO(new Date(agora.getTime() + 120 * DIA))) return [];
-  const est = estabelecimentoDa(unidade);
-  const lista = await agenda.horariosVagos(est, data, { servicoId, profissionalId });
+  const { sistema, local } = agendaDaUnidade(fonte, unidade);
+  // serena-regras: o espelho da agenda responde na hora quando está em dia (quem grava confere no sistema).
+  const doEspelho = op.espelho ? espelhoAtivo()?.vagosDe(unidade, data, servicoId) : null;
+  const lista = doEspelho
+    ? doEspelho.filter((p) => !profissionalId || p.profissionalId === profissionalId).map((p) => ({ id: p.profissionalId, nome: p.profissional, horariosVagos: p.horarios }))
+    : await sistema.horariosVagos(local, data, { servicoId, profissionalId });
   const limite = agora.getTime() + 30 * 60_000;
   return lista
     .map((p) => ({
@@ -128,5 +166,5 @@ export function textoConfirmacao(nome: string | undefined, r: ResultadoAgendamen
   const hora = horaHHmm(a.inicio);
   const com = a.profissional ? ` com ${a.profissional}` : '';
   const primeiro = nome?.split(' ')[0];
-  return `${primeiro ? `Prontinho, ${primeiro}! ` : 'Prontinho! '}Seu horário está confirmado: ${a.servico}, dia ${dia} às ${hora}${com}, no ${UNIDADES[a.unidade].nome}. Te mando um lembrete na véspera.`;
+  return `${primeiro ? `Prontinho, ${primeiro}! ` : 'Prontinho! '}Seu horário está confirmado: ${a.servico}, dia ${dia} às ${hora}${com}, no ${unidadeDe(a.unidade).nome}. Te mando um lembrete na véspera.`;
 }

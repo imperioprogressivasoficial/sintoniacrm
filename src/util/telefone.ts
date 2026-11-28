@@ -19,11 +19,31 @@ export function normalizarCelular(bruto: string | null | undefined): string | nu
   return d;
 }
 
+/**
+ * aud-numeros: número que chegou pelo WhatsApp (já com o código do país, só dígitos), de qualquer país.
+ * - Brasil (começa com 55, 12 ou 13 dígitos): celular segue a regra de sempre (normalizarCelular: com/sem o 9),
+ *   para não duplicar conversas que já existem; fixo (DDD + 8 dígitos começando com 2-5) passa como veio, sem o 9.
+ * - Outros países: aceita como veio, de 8 a 15 dígitos (padrão internacional E.164, sem o +).
+ * Antes, número de fora do Brasil ou fixo era descartado e a mensagem sumia sem registro.
+ */
+export function normalizarTelefoneWhats(bruto: string | null | undefined): string | null {
+  const d = String(bruto ?? '').replace(/\D/g, '');
+  if (!d || d.startsWith('0')) return null;
+  if (d.startsWith('55') && (d.length === 12 || d.length === 13)) {
+    const celular = normalizarCelular(d);
+    if (celular) return celular;
+    if (d.length === 12 && /^[1-9][0-9][2-5]/.test(d.slice(2))) return d; // fixo brasileiro
+    return null;
+  }
+  if (d.startsWith('55')) return null; // Brasil com quantidade de dígitos errada
+  return d.length >= 8 && d.length <= 15 ? d : null;
+}
+
 /** Extrai o número de um JID do WhatsApp ("5571988124471@s.whatsapp.net"). Ignora grupos. */
 export function telefoneDoJid(jid: string): string | null {
-  if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast')) return null;
+  if (!jid || jid.endsWith('@g.us') || jid.endsWith('@broadcast') || jid.endsWith('@lid') || jid.endsWith('@newsletter')) return null;
   const numero = jid.split('@')[0]?.split(':')[0] ?? '';
-  return normalizarCelular(numero);
+  return normalizarTelefoneWhats(numero);
 }
 
 /** Separa DDD e número para o cadastro de cliente no Trinks. */

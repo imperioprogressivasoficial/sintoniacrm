@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Página não encontrada · Sintonia</title>
+<link rel="icon" href="/favicon-64.png" type="image/png">
+<!-- Endereço que não existe (setNotFoundHandler em src/web/paginas.ts). Tudo aqui dentro: sem depender de outros arquivos. -->
+<style>
+:root{--fonte:'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;--fonte-mono:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;--fundo:linear-gradient(160deg,#f6faff,#e6f0fb);--texto:#0d2240;--sub:rgba(13,34,64,.66);--cartao:rgba(255,255,255,.86);--borda:rgba(13,34,64,.10);
+  --term:#0d2240;--cod:rgba(13,34,64,.10);--botao2:rgba(16,110,190,.08)}
+:root[data-tema="escuro"]{--fundo:linear-gradient(160deg,#041427,#0a2d52);--texto:#e9f3ff;--sub:rgba(233,243,255,.66);--cartao:rgba(6,25,47,.74);--borda:rgba(233,243,255,.10);
+  --term:rgba(2,12,24,.62);--cod:rgba(233,243,255,.07);--botao2:rgba(233,243,255,.08)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px;color:var(--texto);
+  font-family:var(--fonte);-webkit-font-smoothing:antialiased;
+  background:radial-gradient(60% 50% at 50% 38%,rgba(15,252,190,.13),transparent 70%),radial-gradient(80% 70% at 50% 110%,rgba(58,160,255,.2),transparent 70%),var(--fundo);
+  background-color:#f6faff}
+:root[data-tema="escuro"] body{background-color:#041427}
+.fundo{position:fixed;inset:0;overflow:hidden;pointer-events:none;column-width:320px;column-gap:40px;column-fill:auto;font:500 13px/2.1 var(--fonte-mono);color:var(--cod);white-space:pre;padding:12px 20px;
+  -webkit-mask-image:radial-gradient(70% 60% at 50% 50%,transparent 30%,#000 75%);mask-image:radial-gradient(70% 60% at 50% 50%,transparent 30%,#000 75%)}
+.cartao{position:relative;width:min(460px,100%);padding:34px 26px 26px;border-radius:22px;text-align:center;background:var(--cartao);border:1px solid var(--borda);
+  box-shadow:0 30px 80px rgba(2,12,24,.18);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:entra .5s cubic-bezier(.2,.7,.2,1) both}
+.cartao::before{content:'';position:absolute;left:22px;right:22px;top:-1px;height:1.5px;border-radius:2px;background:linear-gradient(90deg,transparent,#0ffcbe,#3aa0ff,transparent)}
+.num{margin:0;font-size:84px;line-height:1;font-weight:700;letter-spacing:-.04em;background:linear-gradient(90deg,#106ebe,#3aa0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+:root[data-tema="escuro"] .num{background:linear-gradient(90deg,#3aa0ff,#0ffcbe);-webkit-background-clip:text;background-clip:text}
+h1{margin:10px 0 0;font-size:22px;line-height:1.25;font-weight:700}
+p.sub{margin:8px auto 0;max-width:36ch;font-size:14px;line-height:1.5;color:var(--sub)}
+.term{margin:20px 0 0;padding:12px 14px;border-radius:12px;background:var(--term);text-align:left;font:500 12.5px/1.75 var(--fonte-mono);color:rgba(233,243,255,.8);overflow:hidden}
+.term div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.term .k{color:#3aa0ff}.term .n{color:#ff8a8a}.term .ok{color:#0ffcbe}
+.acoes{margin-top:22px;display:flex;flex-direction:column;gap:10px}
+.botao{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:12px;font:600 15px/1 inherit;font-family:inherit;text-decoration:none;cursor:pointer}
+.botao.principal{color:#fff;background:linear-gradient(90deg,#106ebe,#3aa0ff);box-shadow:0 10px 26px rgba(16,110,190,.32)}
+.botao.principal:hover{filter:brightness(1.06)}
+.botao.segundo{color:var(--texto);background:var(--botao2);border:1px solid var(--borda)}
+.botao:focus-visible{outline:2px solid #3aa0ff;outline-offset:3px}
+.botao svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@keyframes entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (min-width:520px){.acoes{flex-direction:row;justify-content:center}.botao{flex:0 0 auto}}
+@media (prefers-reduced-motion:reduce){.cartao{animation:none}}
+</style>
+<script>
+(() => {
+  let t = 'auto';
+  try { t = localStorage.getItem('sintonia.tema') || 'auto'; } catch {}
+  const escuro = t === 'escuro' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro';
+})();
+</script>
+</head>
+<body>
+<div class="fundo" aria-hidden="true" id="fundo"></div>
+<main class="cartao">
+  <p class="num" aria-hidden="true">404</p>
+  <h1>Esta página não existe</h1>
+  <p class="sub">O endereço pode ter mudado ou foi digitado com algum erro. Suas conversas e dados continuam no lugar de sempre.</p>
+  <div class="term" aria-hidden="true">
+    <div><span class="k">GET</span> <span id="caminho">/</span></div>
+    <div><span class="n">✗</span> página não encontrada</div>
+    <div><span class="ok">›</span> voltar para a Sintonia</div>
+  </div>
+  <div class="acoes">
+    <a class="botao principal" href="/app"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg>Voltar para a Sintonia</a>
+    <button class="botao segundo" type="button" id="voltar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Página anterior</button>
+  </div>
+</main>
+<script>
+(() => {
+  const c = document.getElementById('caminho');
+  c.textContent = decodeURIComponent(location.pathname).slice(0, 80) || '/';
+  const v = document.getElementById('voltar');
+  if (history.length < 2) v.hidden = true;
+  v.addEventListener('click', () => history.back());
+  const linhas = ['const pagina = rotas.buscar(endereco)', "if (!pagina) return mostrar('404')", '// tudo certo com seus dados', 'sintonia.abrir("/app")', 'await conversas.carregar()', 'funil.etapas.map(conferir)'];
+  let txt = '';
+  for (let i = 0; i < 400; i++) txt += '  '.repeat(i % 3) + linhas[i % linhas.length] + '\n';
+  document.getElementById('fundo').textContent = txt;
+})();
+</script>
+</body>
+</html>

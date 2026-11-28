@@ -1,0 +1,245 @@
+import type pg from 'pg';
+import { Sintonia } from '../src/app/sintonia.js';
+import { ArmazemAutomacoesMemoria, ArmazemAutomacoesPostgres, Automacoes, type ArmazemAutomacoes, type OpcoesAutomacoes } from '../src/automacoes/automacoes.js';
+import type { Contas, Papel, Usuario } from '../src/auth/contas.js';
+import { gerarHash } from '../src/auth/senha.js';
+import type { CanalWhatsApp } from '../src/channels/tipos.js';
+import type { Conversa } from '../src/domain.js';
+import { ArmazemFunisMemoria, ArmazemFunisPostgres, Funis, type ArmazemFunis } from '../src/funis/funis.js';
+import { registrarFunis } from '../src/rotas/funis.js';
+import { criarServidor } from '../src/server.js';
+import type { Repositorio } from '../src/store/repositorio.js';
+import { ArmazemTagsMemoria, ArmazemTagsPostgres, Tags, type ArmazemTags } from '../src/tags/tags.js';
+import { ligarFunis } from '../src/automacoes/automacoes.js';
+import { AgenteFalso, ambientes, quinta, type Ambiente } from './gestao-ambiente.js';
+import { ArmazemNpsMemoria, ArmazemNpsPostgres, type ArmazemNps } from '../src/nps/armazem.js';
+import { Nps } from '../src/nps/nps.js';
+import { registrarNps } from '../src/nps/rotas.js';
+/* perdas-saude */
+import { ArmazemPerdasMemoria, ArmazemPerdasPostgres, type ArmazemPerdas } from '../src/perdas/armazem.js';
+import { Perdas } from '../src/perdas/perdas.js';
+import { registrarPerdas } from '../src/perdas/rotas.js';
+import { registrarAnalises } from '../src/analises/rotas.js';
+import { FonteAnalisesMemoria, FonteAnalisesPostgres } from '../src/analises/fonte.js';
+import { FonteComercialMemoria, FonteComercialPostgres } from '../src/comercial/fonte.js';
+import { ArmazemComercialMemoria } from '../src/comercial/armazem.js';
+import { OrigensConversa } from '../src/analises/origens.js';
+/* funil-atendimento */
+import { ArmazemRegrasFunilMemoria, ArmazemRegrasFunilPostgres, FonteRegrasFunilMemoria, FonteRegrasFunilPostgres, RegrasFunil, type ArmazemRegrasFunil } from '../src/funis/regras-funil.js';
+import { registrarRegrasFunil } from '../src/funis/regras-rotas.js';
+import { observarEventos } from '../src/notificacoes/notificador.js';
+
+export { ambientes, quinta, AgenteFalso };
+
+const hashPadrao = gerarHash('Imperio2026xyz');
+
+interface Base {
+  repo: Repositorio;
+  contas: Contas;
+  pool?: pg.Pool;
+  relogio: { t: Date };
+  enviados: Array<{ canalId: string; telefone: string; texto: string }>;
+  /** Memória: o "banco" é o mesmo objeto (sobrevive ao "reinício"). Postgres: cada instância cria os seus. */
+  armazens: { tags: ArmazemTags; funis: ArmazemFunis; automacoes: ArmazemAutomacoes; nps: ArmazemNps; perdas: ArmazemPerdas; regras: ArmazemRegrasFunil };
+  /** funil-atendimento: unidades que agendam (etapas "Agendado <unidade>"). */
+  unidadesQueAgendam?: () => Array<{ id: string; nome: string }>;
+}
+
+/** Uma "instância do servidor": Sintonia, funis, automações e a API, sobre o mesmo banco. */
+function instancia(b: Base, agente: AgenteFalso, maxEncadeamento?: number, comNps = false, comPerdas = false, extrasAuto: Partial<OpcoesAutomacoes> = {}) {
+  const agora = () => b.relogio.t;
+  const canal = (tipo: CanalWhatsApp['tipo']): CanalWhatsApp => ({
+    tipo,
+    lerWebhook: () => [],
+    enviarTexto: async (canalId, telefone, texto) => {
+      b.enviados.push({ canalId, telefone, texto });
+      return { idExterno: `out-${Math.random()}` };
+    },
+  });
+  const armazens = b.pool
+    ? { tags: new ArmazemTagsPostgres(b.pool), funis: new ArmazemFunisPostgres(b.pool), automacoes: new ArmazemAutomacoesPostgres(b.pool), nps: new ArmazemNpsPostgres(b.pool), perdas: new ArmazemPerdasPostgres(b.pool), regras: new ArmazemRegrasFunilPostgres(b.pool) }
+    : b.armazens;
+  const tags = new Tags(armazens.tags, 'imperio', agora);
+  let sintonia: Sintonia;
+  const funis = new Funis({ armazem: armazens.funis, armazemTags: armazens.tags, tags, repo: b.repo, empresaId: 'imperio', agora, comConversa: (id, fn) => sintonia.comConversa(id, fn), ...(b.unidadesQueAgendam ? { unidadesQueAgendam: b.unidadesQueAgendam } : {}) });
+  const regras = new RegrasFunil({
+    armazem: armazens.regras,
+    fonte: b.pool ? new FonteRegrasFunilPostgres(b.pool) : new FonteRegrasFunilMemoria(b.repo),
+    repo: b.repo,
+    funis,
+    empresaId: 'imperio',
+    comConversa: (id, fn) => sintonia.comConversa(id, fn),
+    pediuRemarcar: (id, motivo) => sintonia.pediuRemarcar(id, motivo),
+    agora,
+  });
+  tags.aoMarcar((c, tag) => regras.aoMarcarTag(c, tag));
+  let nps: Nps | undefined;
+  const automacoes = new Automacoes({
+    armazem: armazens.automacoes, repo: b.repo, empresaId: 'imperio', sintonia: () => sintonia, funis, tags, contas: b.contas, agora, maxEncadeamento,
+    ...(comNps ? { variaveis: () => nps!.variaveis(), nps: () => nps } : {}),
+    ...extrasAuto, // etapa-entrada: tarefas e rodízio de mentira nos testes
+  });
+  const ganchosBase = ligarFunis({ tags, funis, automacoes });
+  if (comNps) nps = new Nps({ empresaId: 'imperio', armazem: armazens.nps, repo: b.repo, sintonia: () => sintonia, automacoes: () => automacoes, agora });
+  const ganchos: typeof ganchosBase = nps
+    ? { ...ganchosBase, mensagemCliente: async (c, m) => { await ganchosBase.mensagemCliente?.(c, m); await nps!.mensagemCliente(c, m); } }
+    : ganchosBase;
+  sintonia = new Sintonia({
+    empresaId: 'imperio',
+    repo: b.repo,
+    numeros: [
+      { canalId: 'imperio-norte', unidade: 'norte', canal: canal('evolution') },
+      { canalId: 'imperio-sumare', unidade: 'sumare', canal: canal('evolution') },
+      { canalId: 'teste-norte', unidade: 'norte', canal: canal('teste') },
+    ],
+    agente,
+    agora,
+    ganchos,
+    regrasFunil: () => regras.regrasMotor(),
+  });
+  const app = criarServidor({ sintonia, repo: b.repo, agora, auth: { contas: b.contas, agora }, gestao: { tags } });
+  const perdas = comPerdas ? new Perdas({ armazem: armazens.perdas, funis, empresaId: 'imperio', agora }) : undefined;
+  registrarFunis(app, { repo: b.repo, funis, automacoes, ...(perdas ? { perdas } : {}) });
+  registrarRegrasFunil(app, { regras, funis });
+  if (nps) registrarNps(app, { nps, repo: b.repo, automacoes, agora });
+  if (perdas) {
+    registrarPerdas(app, { perdas });
+    registrarAnalises(app, {
+      fonte: b.pool ? new FonteAnalisesPostgres(b.pool) : new FonteAnalisesMemoria(b.repo),
+      comercial: b.pool ? new FonteComercialPostgres(b.pool) : new FonteComercialMemoria(b.repo),
+      armazemComercial: new ArmazemComercialMemoria(),
+      origens: new OrigensConversa({ repo: b.repo }),
+      contas: b.contas,
+      perdas,
+      empresaId: 'imperio',
+      agora,
+    });
+  }
+  return { sintonia, funis, automacoes, tags, app, nps, perdas, regras };
+}
+
+export async function montarFunis(amb: Ambiente, opcoes: { agente?: AgenteFalso; inicio?: Date; maxEncadeamento?: number; ignorarParadas?: (conversaId: string) => boolean; nps?: boolean; perdas?: boolean; automacoes?: Partial<OpcoesAutomacoes>; unidadesQueAgendam?: () => Array<{ id: string; nome: string }> } = {}) {
+  const { repo, contas, pool } = await amb.criar();
+  const relogio = { t: opcoes.inicio ?? quinta(14) };
+  const armazemTags = new ArmazemTagsMemoria(() => repo.listarConversas());
+  const b: Base = {
+    repo,
+    contas,
+    pool,
+    relogio,
+    enviados: [],
+    armazens: { tags: armazemTags, funis: new ArmazemFunisMemoria(repo, armazemTags), automacoes: new ArmazemAutomacoesMemoria(armazemTags, opcoes.ignorarParadas), nps: new ArmazemNpsMemoria(), perdas: new ArmazemPerdasMemoria(repo), regras: new ArmazemRegrasFunilMemoria() },
+    ...(opcoes.unidadesQueAgendam ? { unidadesQueAgendam: opcoes.unidadesQueAgendam } : {}),
+  };
+  if (pool) await pool.query('truncate sintonia.funil_regras');
+  if (pool && opcoes.perdas) await pool.query('truncate sintonia.perdas, sintonia.perdas_config');
+  if (pool && opcoes.nps) await pool.query('truncate sintonia.nps_config, sintonia.atendimentos_finalizados, sintonia.nps_pesquisas');
+  const agente = opcoes.agente ?? new AgenteFalso();
+  let atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas, opcoes.automacoes);
+  // funil-atendimento: "preciso remarcar" na confirmação de agenda vai para a instância em uso.
+  observarEventos(repo, (e) => atual.regras.aoEvento(e));
+  const sistema = await atual.funis.garantirSistema();
+  const etapasSistema = new Map((await atual.funis.etapas(sistema.id)).map((e) => [e.chaveSistema!, e.id]));
+
+  const h = await hashPadrao;
+  const pessoa = (nome: string, papel: Papel, unidades: string[]) =>
+    contas.criarUsuario({ empresaId: 'imperio', nome, email: `${nome.split(' ')[0]!.toLowerCase()}@imperio.com`, papel, unidades, senhaHash: h });
+  const gente = {
+    admin: await pessoa('Bruno Batista', 'admin', []),
+    gerenteNorte: await pessoa('Gil Norte', 'gerente', ['norte']),
+    carla: await pessoa('Carla Lima', 'atendente', ['norte']),
+    bia: await pessoa('Bia Souza', 'atendente', ['norte']),
+    rita: await pessoa('Rita Recepção', 'recepcionista', ['sumare']),
+  };
+  const cookies = new Map<string, string>();
+  const cookieDe = async (u: Usuario) => {
+    let c = cookies.get(u.id);
+    if (!c) {
+      c = `sintonia_sessao=${await contas.criarSessao(u.id, new Date(relogio.t.getTime() + 400 * 24 * 3600_000))}`;
+      cookies.set(u.id, c);
+    }
+    return c;
+  };
+  const como = async (u: Usuario, method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', url: string, payload?: unknown) => {
+    const r = await atual.app.inject({ method, url, headers: { cookie: await cookieDe(u) }, ...(payload !== undefined ? { payload: payload as object } : {}) });
+    await atual.automacoes.ocioso();
+    return r;
+  };
+
+  let tel = 0;
+  /** Uma cliente nova escreve agora (pelo número real da unidade, ou pelo de teste). */
+  const conversa = async (unidade: 'norte' | 'sumare', nome: string, texto = 'Oi, quanto custa?', canalId = `imperio-${unidade}`): Promise<Conversa> => {
+    const telefone = `55719881300${String(++tel).padStart(2, '0')}`;
+    await atual.sintonia.receber({ canalId, telefone, nome, texto, deMim: false, idExterno: `in-${unidade}-${tel}-${Math.random()}`, em: relogio.t });
+    await atual.automacoes.ocioso();
+    return (await repo.listarConversas()).find((c) => c.telefone === telefone)!;
+  };
+  /** A mesma cliente escreve de novo. */
+  const escreve = async (c: Conversa, texto: string, deMim = false) => {
+    await atual.sintonia.receber({ canalId: c.canalId, telefone: c.telefone, nome: c.nome, texto, deMim, idExterno: `in-${Math.random()}`, em: relogio.t });
+    await atual.automacoes.ocioso();
+  };
+  const tick = async () => {
+    await atual.automacoes.tick();
+    await atual.automacoes.ocioso();
+  };
+  const avancar = (min: number) => {
+    relogio.t = new Date(relogio.t.getTime() + min * 60_000);
+  };
+  const buscar = async (id: string) => (await repo.buscarConversa(id))!;
+
+  return {
+    repo,
+    contas,
+    pool,
+    relogio,
+    gente,
+    agente,
+    enviados: b.enviados,
+    sistema,
+    etapasSistema,
+    /** Armazém de tags em uso (o mesmo do banco de cada modo). */
+    armazemTags: (pool ? new ArmazemTagsPostgres(pool) : b.armazens.tags) as ArmazemTags,
+    get app() {
+      return atual.app;
+    },
+    get funis() {
+      return atual.funis;
+    },
+    get automacoes() {
+      return atual.automacoes;
+    },
+    get tags() {
+      return atual.tags;
+    },
+    get sintonia() {
+      return atual.sintonia;
+    },
+    get nps() {
+      return atual.nps;
+    },
+    get perdas() {
+      return atual.perdas;
+    },
+    /* funil-atendimento */
+    get regras() {
+      return atual.regras;
+    },
+    /** Uma volta do relógio das regras automáticas do funil (e o que elas puseram na fila). */
+    async tickRegras() {
+      await atual.regras.tick();
+      await atual.regras.ocioso();
+      await atual.automacoes.ocioso();
+    },
+    /** "Reinício": nova Sintonia, novos funis e automações lendo do mesmo banco. */
+    reiniciar() {
+      atual = instancia(b, agente, opcoes.maxEncadeamento, opcoes.nps, opcoes.perdas, opcoes.automacoes);
+    },
+    como,
+    conversa,
+    escreve,
+    tick,
+    avancar,
+    buscar,
+  };
+}

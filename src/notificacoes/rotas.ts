@@ -1,0 +1,270 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { z } from 'zod';
+import type { Usuario } from '../auth/contas.js';
+import type { ArmazemNotificacoes } from './armazem.js';
+import type { Notificador } from './notificador.js';
+import type { ChavesPush } from './push.js';
+import { ehGestor, veTudo } from '../auth/acesso.js';
+import type { UnidadeId } from '../domain.js';
+import { existeUnidade, idsUnidades, unidadeDe, zUnidade } from '../unidades.js';
+import { completarPreferencias, emNaoPerturbe, EsquemaPreferencias, type Notificacao } from './tipos.js';
+
+export interface OpcoesNotificacoes {
+  notificador: Notificador;
+  armazem: ArmazemNotificacoes;
+  /** Sem chaves, o push fica desligado (a rota da chave responde 501). */
+  chaves?: ChavesPush;
+  agora?: () => Date;
+  /** O que impede o trabalho agora (WhatsApp, chave da IA, agenda): um item fixo cada, até alguém resolver. */
+  problemas?: () => Problema[];
+}
+
+export interface Problema {
+  chave: string;
+  titulo: string;
+  texto: string;
+  vista: string;
+}
+
+/** Problemas a partir da situação do servidor (o mesmo /api/situacao do app). */
+export function problemasDaSituacao(s: { iaLigada: boolean; numerosReais: number; agenda?: { unidades: Array<{ nome: string; sistema?: string; falta?: string[]; pronta?: boolean }> } }): Problema[] {
+  const lista: Problema[] = [];
+  if (!s.numerosReais) lista.push({ chave: 'whatsapp', titulo: 'WhatsApp desconectado', texto: 'Nenhum número da loja está conectado: as clientes não recebem respostas.', vista: 'conexoes' });
+  if (!s.iaLigada) lista.push({ chave: 'ia', titulo: 'Falta a chave da IA', texto: 'A IA está desligada até a chave (Anthropic) ser cadastrada em Conexões.', vista: 'conexoes' });
+  for (const u of s.agenda?.unidades ?? []) {
+    if (u.sistema && u.sistema !== 'nenhum' && u.pronta === false && u.falta?.length) {
+      lista.push({ chave: `agenda:${u.nome}`, titulo: `Agenda de ${u.nome} com problema`, texto: u.falta.join(' · '), vista: 'conexoes' });
+    }
+  }
+  return lista;
+}
+
+/** notificacoes2: "Lembrar em 1 h" de problema fixo, por pessoa (chave do problema → até quando), guardado na config. */
+const adiadosCache = new Map<string, Promise<Record<string, string>>>();
+const chaveAdiados = (u: Usuario) => `nt-adiar:${u.id}`;
+function adiados(o: OpcoesNotificacoes, u: Usuario): Promise<Record<string, string>> {
+  let p = adiadosCache.get(u.id);
+  if (!p) {
+    p = o.armazem.config(chaveAdiados(u)).then((v) => (v ? (JSON.parse(v) as Record<string, string>) : {})).catch(() => ({}));
+    adiadosCache.set(u.id, p);
+  }
+  return p;
+}
+/** Problemas fixos que esta pessoa vê (só quem resolve: gestão), menos os que ela pediu para lembrar depois. */
+async function problemasPara(o: OpcoesNotificacoes, u: Usuario): Promise<Problema[]> {
+  if (!o.problemas || !(ehGestor(u) || veTudo(u))) return [];
+  const lista = o.problemas();
+  if (!lista.length) return lista;
+  const ate = await adiados(o, u);
+  const agora = (o.agora?.() ?? new Date()).getTime();
+  return lista.filter((p) => !(ate[p.chave] && new Date(ate[p.chave]!).getTime() > agora));
+}
+/** notificacoes2: o aviso de falha que repete um problema fixo ("falha:ia" = problema "ia") não aparece nem conta de novo. */
+const chavesRepetidas = (ps: Problema[]) => ps.map((p) => `falha:${p.chave}`);
+
+const exigeLogin = (req: FastifyRequest): Usuario => {
+  if (!req.usuario) throw Object.assign(new Error('Faça login para continuar.'), { statusCode: 401 });
+  return req.usuario;
+};
+
+const paraTela = (n: Notificacao) => ({
+  id: n.id,
+  tipo: n.tipo,
+  titulo: n.titulo,
+  texto: n.texto,
+  contador: n.contador,
+  conversaId: n.conversaId ?? null,
+  vista: n.vista ?? null,
+  em: n.atualizadaEm,
+  criadaEm: n.criadaEm,
+  lida: Boolean(n.lidaEm),
+});
+
+/** Cursor opaco: "<ms>_<id>" da última notificação mostrada. */
+const lerCursor = (s?: string) => {
+  const m = s?.match(/^(\d+)_([0-9a-f-]{36})$/i);
+  return m ? { em: new Date(Number(m[1])), id: m[2]! } : undefined;
+};
+const cursorDe = (n: Notificacao) => `${n.atualizadaEm.getTime()}_${n.id}`;
+
+/**
+ * Cabeçalho com o resumo das notificações (não lidas, versão e se está no "não perturbe"),
+ * posto nas respostas que o app já busca periodicamente: o sino se atualiza sem chamada nova.
+ */
+export async function cabecalhoNotificacoes(o: OpcoesNotificacoes | undefined, req: FastifyRequest, reply: FastifyReply): Promise<{ naoLidas: number; novas: number; versao: number; silencio: boolean } | undefined> {
+  if (!o || !req.usuario) return undefined;
+  try {
+    const ps = await problemasPara(o, req.usuario);
+    const r = await o.notificador.resumo(req.usuario, { problemas: ps.length, excluirChaves: chavesRepetidas(ps) });
+    const prefs = await o.notificador.preferencias(req.usuario.id);
+    const resumo = { ...r, silencio: emNaoPerturbe(prefs, o.agora?.() ?? new Date()) };
+    reply.header('x-notificacoes', JSON.stringify({ n: resumo.naoLidas, v: resumo.versao, s: resumo.silencio ? 1 : 0 }));
+    return resumo;
+  } catch {
+    return undefined; // o sino nunca derruba a lista de conversas
+  }
+}
+
+export function registrarNotificacoes(app: FastifyInstance, o: OpcoesNotificacoes): void {
+  const agora = () => o.agora?.() ?? new Date();
+
+  app.get('/api/notificacoes', async (req, reply) => {
+    const u = exigeLogin(req);
+    const q = z.object({ antes: z.string().max(80).optional(), limite: z.coerce.number().int().min(1).max(100).default(30) }).parse(req.query);
+    const problemas = await problemasPara(o, u);
+    const itens = await o.notificador.listar(u.id, q.limite + 1, lerCursor(q.antes), chavesRepetidas(problemas));
+    const pagina = itens.slice(0, q.limite);
+    const resumo = await cabecalhoNotificacoes(o, req, reply);
+    // notificacoes2: "clientes esperando" vem da lista de verdade (sempre aparece, mesmo com o sino cheio).
+    const esperando = q.antes ? [] : await o.notificador.esperasDoSino(u).catch(() => []);
+    return {
+      itens: pagina.map(paraTela),
+      proximo: itens.length > q.limite && pagina.length ? cursorDe(pagina[pagina.length - 1]!) : null,
+      naoLidas: resumo?.naoLidas ?? 0,
+      novas: resumo?.novas ?? 0,
+      versao: resumo?.versao ?? 0,
+      // Só para quem resolve (gestão): ficam no topo até serem resolvidos; cada um conta uma vez no número do sino.
+      problemas,
+      esperando: esperando.map((x) => ({ conversaId: x.conversaId, nome: x.nome, unidade: x.unidade, nivel: x.nivel, minutos: x.minutos, desde: x.desde, dona: x.dona })),
+      silencio: resumo?.silencio ?? false,
+    };
+  });
+
+  app.post('/api/notificacoes/lidas', async (req) => {
+    const u = exigeLogin(req);
+    return { ok: true, marcadas: await o.armazem.marcarTodas(u.id, agora()) };
+  });
+
+  /* notificacoes2: "Lembrar em 1 h" (some até lá e volta com push), limpar do histórico, adiar um problema fixo. */
+  app.post('/api/notificacoes/:id/adiar', async (req, reply) => {
+    const u = exigeLogin(req);
+    const { id } = z.object({ id: z.string().min(1).max(64) }).parse(req.params);
+    const { minutos } = z.object({ minutos: z.number().int().min(5).max(24 * 60).default(60) }).parse(req.body ?? {});
+    const ate = new Date(agora().getTime() + minutos * 60_000);
+    if (!(await o.armazem.adiar(u.id, id, ate))) return reply.code(404).send({ erro: 'Notificação não encontrada' });
+    return { ok: true, ate };
+  });
+
+  app.post('/api/notificacoes/limpar', async (req) => {
+    const u = exigeLogin(req);
+    const { ids } = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(req.body);
+    return { ok: true, limpas: await o.armazem.limpar(u.id, ids) };
+  });
+
+  app.post('/api/notificacoes/problemas/adiar', async (req, reply) => {
+    const u = exigeLogin(req);
+    const b = z.object({ chave: z.string().min(1).max(120), minutos: z.number().int().min(5).max(24 * 60).default(60) }).parse(req.body);
+    if (!(ehGestor(u) || veTudo(u))) return reply.code(403).send({ erro: 'Só a gestão vê esses avisos.' });
+    const atual = { ...(await adiados(o, u)) };
+    const t = agora().getTime();
+    for (const [k, v] of Object.entries(atual)) if (new Date(v).getTime() <= t) delete atual[k]; // os vencidos saem
+    const ate = new Date(t + b.minutos * 60_000);
+    atual[b.chave] = ate.toISOString();
+    await o.armazem.gravarConfig(chaveAdiados(u), JSON.stringify(atual));
+    adiadosCache.set(u.id, Promise.resolve(atual));
+    return { ok: true, ate };
+  });
+
+  app.post('/api/notificacoes/:id/lida', async (req, reply) => {
+    const u = exigeLogin(req);
+    const { id } = z.object({ id: z.string().min(1).max(64) }).parse(req.params);
+    if (!(await o.armazem.marcarLida(u.id, id, agora()))) return reply.code(404).send({ erro: 'Notificação não encontrada' });
+    return { ok: true };
+  });
+
+  app.get('/api/notificacoes/preferencias', async (req) => {
+    const u = exigeLogin(req);
+    const p = await o.notificador.preferencias(u.id);
+    return { ...p, pushDisponivel: Boolean(o.chaves), aparelhos: (await o.armazem.inscricoes(u.id)).length };
+  });
+
+  app.put('/api/notificacoes/preferencias', async (req) => {
+    const u = exigeLogin(req);
+    const b = EsquemaPreferencias.partial().parse(req.body);
+    const atual = await o.notificador.preferencias(u.id);
+    const nova = completarPreferencias({
+      ...atual,
+      ...b,
+      tipos: { ...atual.tipos, ...(b.tipos ?? {}) },
+      mensagens: { ...atual.mensagens, ...(b.mensagens ?? {}) },
+      espera: { ...atual.espera, ...(b.espera ?? {}) },
+    });
+    await o.armazem.salvarPreferencias(u.id, nova);
+    return nova;
+  });
+
+  /** Manda uma notificação de teste para a própria pessoa (e para os aparelhos dela). */
+  app.post('/api/notificacoes/teste', async (req) => {
+    const u = exigeLogin(req);
+    const n = await o.notificador.testar(u);
+    return { ok: true, id: n?.id ?? null, aparelhos: (await o.armazem.inscricoes(u.id)).length };
+  });
+
+  // ---------- Web Push ----------
+  app.get('/api/push/chave', async (req, reply) => {
+    exigeLogin(req);
+    if (!o.chaves) return reply.code(501).send({ erro: 'Push desligado neste servidor' });
+    return { chave: (await o.chaves.obter()).publica };
+  });
+
+  const Inscricao = z.object({
+    endpoint: z.string().url().max(1000).refine((s) => s.startsWith('https://'), 'Endereço de push inválido'),
+    keys: z.object({ p256dh: z.string().min(20).max(200), auth: z.string().min(8).max(100) }),
+  });
+  app.post('/api/push/inscrever', async (req) => {
+    const u = exigeLogin(req);
+    const b = Inscricao.parse(req.body);
+    const agente = typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].slice(0, 300) : undefined;
+    await o.armazem.inscrever({ endpoint: b.endpoint, usuarioId: u.id, p256dh: b.keys.p256dh, auth: b.keys.auth, ...(agente ? { agente } : {}) });
+    return { ok: true, aparelhos: (await o.armazem.inscricoes(u.id)).length };
+  });
+
+  app.post('/api/push/sair', async (req) => {
+    const u = exigeLogin(req);
+    const b = z.object({ endpoint: z.string().max(1000) }).parse(req.body);
+    return { ok: await o.armazem.removerInscricao(b.endpoint, u.id) };
+  });
+
+  // ---------- Cliente esperando (faixa, alarme, regras por unidade) ----------
+  app.get('/api/espera', async (req) => {
+    const u = exigeLogin(req);
+    const prefs = await o.notificador.preferencias(u.id);
+    const itens = await o.notificador.esperasPara(u);
+    return {
+      itens,
+      silencioAte: prefs.espera.silencioAte && new Date(prefs.espera.silencioAte).getTime() > agora().getTime() ? prefs.espera.silencioAte : null,
+      agora: agora(),
+    };
+  });
+
+  /** Silencia o alarme e os pushes de espera por X minutos (0 = volta a tocar). */
+  app.post('/api/espera/silenciar', async (req) => {
+    const u = exigeLogin(req);
+    const { minutos } = z.object({ minutos: z.number().int().min(0).max(240) }).parse(req.body);
+    const atual = await o.notificador.preferencias(u.id);
+    const silencioAte = minutos ? new Date(agora().getTime() + minutos * 60_000).toISOString() : null;
+    await o.armazem.salvarPreferencias(u.id, completarPreferencias({ ...atual, espera: { ...atual.espera, silencioAte } }));
+    return { ok: true, silencioAte };
+  });
+
+  const unidadesDe = (u: Usuario): UnidadeId[] => (veTudo(u) ? idsUnidades(u.empresaId) : (u.unidades as UnidadeId[]).filter((x) => existeUnidade(x, u.empresaId)));
+  app.get('/api/espera/regras', async (req) => {
+    const u = exigeLogin(req);
+    const regras = await o.notificador.regrasEspera();
+    return {
+      podeEditar: ehGestor(u),
+      unidades: unidadesDe(u).map((id) => ({ id, nome: unidadeDe(id).nome, regra: o.notificador.regraDaUnidade(regras, id) })),
+    };
+  });
+  app.put('/api/espera/regras/:unidade', async (req, reply) => {
+    const u = exigeLogin(req);
+    const { unidade } = z.object({ unidade: zUnidade() }).parse(req.params);
+    if (!ehGestor(u) || !unidadesDe(u).includes(unidade)) return reply.code(403).send({ erro: 'Só a gestão da unidade muda os alertas de espera.' });
+    try {
+      return { ok: true, regra: await o.notificador.salvarRegrasEspera(unidade, req.body ?? {}) };
+    } catch (x) {
+      if (x instanceof z.ZodError) return reply.code(400).send({ erro: x.issues[0]?.message ?? 'Regra inválida' });
+      throw x;
+    }
+  });
+}

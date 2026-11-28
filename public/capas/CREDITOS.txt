@@ -1,0 +1,23 @@
+Capas de paisagem do perfil (Configurações no celular e topo da Conta) — capa-perfil, 21/11/2026
+
+Todas vieram do Unsplash (images.unsplash.com), sob a Licença Unsplash: uso livre e gratuito, inclusive comercial,
+sem precisar pedir permissão nem dar crédito (https://unsplash.com/license). Mesmo assim, anotamos de onde veio cada uma.
+Foram cortadas em 1200x700 (ou 1080x630) e comprimidas em WebP (< 150 KB); a "-mini" é a miniatura de 400x240 do seletor.
+
+Para achar a página original de uma foto, abra o endereço "Origem" abaixo (o código "photo-..." é o da foto no Unsplash).
+
+praia.webp       — Praia ao pôr do sol (mar azul e areia)
+                   Origem: https://images.unsplash.com/photo-1507525428034-b723cf961d3e
+                   Autor: Sean Oulashin (Unsplash)
+montanha.webp    — Montanhas com neve e pinheiros (padrão)
+                   Origem: https://images.unsplash.com/photo-1464822759023-fed622ff2c3b
+                   Autor: Kalen Emsley (Unsplash)
+por-do-sol.webp  — Pôr do sol num lago, com píer e barquinho
+                   Origem: https://images.unsplash.com/photo-1495616811223-4d98c6e9c869
+                   Autor: ver na página da foto no Unsplash (não confirmado aqui)
+floresta.webp    — Floresta com luz entre as árvores
+                   Origem: https://images.unsplash.com/photo-1441974231531-c6227db76b6e
+                   Autor: Lukasz Szmigiel (Unsplash)
+cidade.webp      — Luzes de uma cidade grande à noite, vista do alto
+                   Origem: https://images.unsplash.com/photo-1444723121867-7a241cacace9
+                   Autor: ver na página da foto no Unsplash (não confirmado aqui)

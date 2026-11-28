@@ -28,21 +28,41 @@ export class TravaMemoria implements Trava {
 export class TravaPostgres implements Trava {
   private readonly local = new TravaMemoria();
 
-  constructor(private readonly pool: pg.Pool) {}
+  /**
+   * Use um pool SÓ para as travas (veja src/index.ts): quem segura a trava precisa de outras conexões para
+   * trabalhar; se travas e trabalho dividirem o mesmo pool, um pico esgota as conexões e tudo para.
+   * Quem não consegue a trava não fica parado segurando conexão: tenta, devolve a conexão e tenta de novo.
+   */
+  constructor(
+    private readonly pool: pg.Pool,
+    private readonly dormir: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  ) {}
 
   comTrava<T>(chave: string, fn: () => Promise<T>): Promise<T> {
+    const k = `sintonia:${chave}`;
     // Dentro do mesmo processo, fila local primeiro: não ocupa conexões esperando a si mesmo.
     return this.local.comTrava(chave, async () => {
-      const cliente = await this.pool.connect();
-      try {
-        await cliente.query('select pg_advisory_lock(hashtextextended($1, 0))', [`sintonia:${chave}`]);
+      for (let tentativa = 0; ; tentativa++) {
+        const cliente = await this.pool.connect();
+        let quebrou: Error | undefined;
         try {
-          return await fn();
+          const { rows } = await cliente.query<{ ok: boolean }>('select pg_try_advisory_lock(hashtextextended($1, 0)) as ok', [k]);
+          if (rows[0]?.ok) {
+            try {
+              return await fn();
+            } finally {
+              // Se não der para soltar, a conexão é descartada (o Postgres solta a trava ao fechar a sessão).
+              await cliente.query('select pg_advisory_unlock(hashtextextended($1, 0))', [k]).catch((e: Error) => (quebrou = e));
+            }
+          }
+        } catch (e) {
+          quebrou ??= e as Error;
+          throw e;
         } finally {
-          await cliente.query('select pg_advisory_unlock(hashtextextended($1, 0))', [`sintonia:${chave}`]);
+          cliente.release(quebrou);
         }
-      } finally {
-        cliente.release();
+        // Outro processo está com esta conversa: espera um pouco (crescendo até 400 ms, com variação).
+        await this.dormir(Math.min(20 * 2 ** tentativa, 400) * (0.75 + Math.random() / 2));
       }
     });
   }

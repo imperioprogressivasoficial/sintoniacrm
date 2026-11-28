@@ -1,0 +1,302 @@
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { z } from 'zod';
+import type { Conversa } from '../domain.js';
+import type { Repositorio } from '../store/repositorio.js';
+import { ehGestor, escopoDe, podeVer } from '../auth/acesso.js';
+import { pode } from '../auth/permissoes.js';
+import { ehCanalTeste } from '../channels/teste.js';
+import { ACOES_PRINCIPAIS, ehEtapaDePerda, type Funis } from '../funis/funis.js';
+import { lerFiltro } from '../funis/filtro-leads.js';
+import type { Automacoes } from '../automacoes/automacoes.js';
+import { zUnidade } from '../unidades.js';
+import { ErroPerda, type Perdas } from '../perdas/perdas.js';
+import type { PosVenda } from '../pos-venda/pos-venda.js';
+
+/**
+ * Rotas dos funis por tags e das automações. Registradas depois de criarServidor (src/index.ts),
+ * então valem o login, o bloqueio da API e o tratamento de erros de lá.
+ * Sem login configurado (teste local) tudo fica liberado, como no resto da API.
+ *
+ * Quem pode: gestão (gerente, direção, admin) cria/edita funis, etapas e automações;
+ * quem vê a conversa pode movê-la; listas e quadro só mostram o que a pessoa vê.
+ */
+export interface OpcoesRotasFunis {
+  repo: Repositorio;
+  funis: Funis;
+  automacoes?: Automacoes;
+  /** Origem do lead (ícone e selo) de cada cartão. */
+  origens?: (ids: string[]) => Promise<Record<string, { icone: string }>>;
+  /** perdas-saude: motivo de perda obrigatório ao mover para uma etapa de perda e o motivo no cartão. */
+  perdas?: Perdas;
+  /** pos-venda: no quadro do funil pós-venda, visitas no ano de cada cartão e a média do funil (meta). */
+  posVenda?: PosVenda;
+}
+
+const proibido = (msg: string) => Object.assign(new Error(msg), { statusCode: 403 });
+const UNIDADE = zUnidade();
+
+export function registrarFunis(app: FastifyInstance, o: OpcoesRotasFunis): void {
+  const { funis } = o;
+  const quem = (req: FastifyRequest) => req.usuario?.nome ?? 'teste';
+  const exigeGestao = (req: FastifyRequest, msg = 'Só a gerência, a direção e a administração mexem nos funis e nas automações.') => {
+    if (!pode(req, req.url.startsWith('/api/automacoes') ? 'automacoes' : 'funis_editar')) throw proibido(msg);
+  };
+  const visivel = (req: FastifyRequest, c: Conversa) => !req.usuario || podeVer(req.usuario, c);
+  async function conversaVisivel(req: FastifyRequest, id: string): Promise<Conversa> {
+    const c = await o.repo.buscarConversa(id).catch(() => undefined);
+    if (!c || c.empresaId !== funis.empresaId || !visivel(req, c)) throw Object.assign(new Error('Conversa não encontrada'), { statusCode: 404 });
+    return c;
+  }
+  const automacoes = () => {
+    if (!o.automacoes) throw Object.assign(new Error('As automações não estão configuradas neste servidor.'), { statusCode: 501 });
+    return o.automacoes;
+  };
+  const param = (req: FastifyRequest, nome: string) => (req.params as Record<string, string>)[nome]!;
+  const comEtapas = async (id: string) => ({ ...(await funis.exigir(id)), etapas: await funis.etapas(id) });
+
+  // ------------------------------------------------------------ funis e etapas
+  const EtapaNova = z.object({ nome: z.string().max(60), cor: z.string().max(10).optional() });
+  const FunilNovo = z.object({ nome: z.string().max(80), etapas: z.array(EtapaNova).max(30).optional() });
+  const FunilAlteracao = z
+    .object({
+      nome: z.string().max(80).optional(),
+      ordem: z.number().int().min(0).max(1000).optional(),
+      /** Botão do meio do cartão no celular; null volta ao padrão. */
+      acaoPrincipal: z.enum(ACOES_PRINCIPAIS).nullable().optional(),
+    })
+    .refine((v) => v.nome !== undefined || v.ordem !== undefined || v.acaoPrincipal !== undefined, 'Informe o nome, a ordem ou o botão.');
+  const EtapaAlteracao = z
+    .object({ nome: z.string().max(60).optional(), cor: z.string().max(10).optional() })
+    .refine((v) => v.nome !== undefined || v.cor !== undefined, 'Informe o nome ou a cor.');
+  const Ordem = z.object({ ids: z.array(z.string().min(1)).max(100) });
+
+  app.get('/api/funis', async (req) => funis.listarComEtapas(escopoDe(req.usuario)));
+
+  app.post('/api/funis', async (req, reply) => {
+    exigeGestao(req);
+    const f = await funis.criar(FunilNovo.parse(req.body), quem(req));
+    return reply.code(201).send(await comEtapas(f.id));
+  });
+
+  app.patch('/api/funis/:id', async (req) => {
+    exigeGestao(req);
+    await funis.alterar(param(req, 'id'), FunilAlteracao.parse(req.body));
+    return comEtapas(param(req, 'id'));
+  });
+
+  app.delete('/api/funis/:id', async (req) => {
+    exigeGestao(req);
+    await funis.apagar(param(req, 'id'));
+    return { ok: true };
+  });
+
+  app.post('/api/funis/:id/etapas', async (req, reply) => {
+    exigeGestao(req);
+    return reply.code(201).send(await funis.criarEtapa(param(req, 'id'), EtapaNova.parse(req.body), quem(req)));
+  });
+
+  app.patch('/api/funis/:id/etapas/:etapaId', async (req) => {
+    exigeGestao(req);
+    return funis.alterarEtapa(param(req, 'id'), param(req, 'etapaId'), EtapaAlteracao.parse(req.body));
+  });
+
+  app.delete('/api/funis/:id/etapas/:etapaId', async (req, reply) => {
+    exigeGestao(req);
+    const { moverPara } = z.object({ moverPara: z.string().min(1).optional() }).parse(req.query);
+    try {
+      return { ok: true, movidas: await funis.apagarEtapa(param(req, 'id'), param(req, 'etapaId'), moverPara, quem(req)) };
+    } catch (e) {
+      const x = e as { codigo?: string; conversas?: number; message: string };
+      if (x.codigo === 'etapa_com_conversas') return reply.code(409).send({ erro: x.message, codigo: x.codigo, conversas: x.conversas });
+      throw e;
+    }
+  });
+
+  app.post('/api/funis/:id/etapas/ordem', async (req) => {
+    exigeGestao(req);
+    return funis.reordenarEtapas(param(req, 'id'), Ordem.parse(req.body).ids);
+  });
+
+  const QuadroQ = z.object({
+    unidade: UNIDADE.optional(),
+    busca: z.string().trim().max(80).optional(),
+    etapaId: z.string().min(1).optional(),
+    dona: z.string().min(1).max(60).optional(),
+    /** Cursor "atualizadaEm|conversaId" do último cartão carregado (carregar mais sem OFFSET). */
+    apos: z
+      .string()
+      .max(120)
+      .regex(/^[^|]+\|[0-9a-f-]{36}$/i)
+      .optional(),
+    offset: z.coerce.number().int().min(0).max(100_000).default(0),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+    /** Filtro completo do painel "Filtrar" (JSON; ver src/funis/filtro-leads.ts). */
+    filtro: z.string().max(6000).optional(),
+  });
+  /** Filtro completo resolvido para este funil e esta pessoa (ou nada, sem filtro). */
+  async function avancado(req: FastifyRequest, funilId: string, texto: string | undefined) {
+    const f = lerFiltro(texto);
+    if (!f) return { avancado: undefined, avisos: [] as string[] };
+    const r = await funis.resolverFiltro(funilId, f, req.usuario?.id);
+    return { avancado: r.filtro, avisos: r.avisos };
+  }
+  app.get('/api/funis/:id/quadro', async (req) => {
+    const { filtro, ...q } = QuadroQ.parse(req.query);
+    const [em, id] = q.apos ? q.apos.split('|') : [];
+    const apos = em && id && !Number.isNaN(Date.parse(em)) ? { em: new Date(em), id } : undefined;
+    const av = await avancado(req, param(req, 'id'), filtro);
+    let r = { ...(await funis.quadro(param(req, 'id'), { ...q, apos, busca: q.busca || undefined, escopo: escopoDe(req.usuario), avancado: av.avancado })), avisos: av.avisos };
+    /* perdas-saude: motivo da perda nos cartões das etapas de perda */
+    if (o.perdas) {
+      const ids = r.colunas.filter((c) => ehEtapaDePerda(r.funil, c.etapa)).flatMap((c) => c.cartoes.map((x) => x.conversaId));
+      const mapa = await o.perdas.dosCartoes(r.funil.id, ids).catch(() => ({}) as Awaited<ReturnType<Perdas['dosCartoes']>>);
+      if (ids.length) r = { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => (mapa[x.conversaId] ? { ...x, perda: mapa[x.conversaId] } : x)) })) };
+    }
+    /* pos-venda: visitas no ano nos cartões e a média no topo (só no funil pós-venda) */
+    if (o.posVenda) r = await o.posVenda.decorarQuadro(r).catch(() => r);
+    if (!o.origens) return r;
+    const mapa = await o.origens(r.colunas.flatMap((c) => c.cartoes.map((x) => x.conversaId))).catch(() => ({}) as Record<string, { icone: string }>);
+    return { ...r, colunas: r.colunas.map((c) => ({ ...c, cartoes: c.cartoes.map((x) => ({ ...x, origem: mapa[x.conversaId] ?? { icone: 'desconhecido' } })) })) };
+  });
+
+  // Busca do quadro: lista debaixo do campo (nome ou dígitos do telefone), sem esconder os outros cartões.
+  const BuscaQ = z.object({ q: z.string().trim().max(80).default(''), limite: z.coerce.number().int().min(1).max(50).default(20) });
+  app.get('/api/funis/:id/buscar', async (req) => {
+    const { q, limite } = BuscaQ.parse(req.query);
+    const achados = await funis.buscar(param(req, 'id'), q, escopoDe(req.usuario), limite);
+    if (!o.origens || !achados.length) return achados;
+    const mapa = await o.origens(achados.map((a) => a.conversaId)).catch(() => ({}) as Record<string, { icone: string }>);
+    return achados.map((a) => ({ ...a, origem: mapa[a.conversaId] ?? { icone: 'desconhecido' } }));
+  });
+
+  // Ids de todos os leads que passam no filtro (todas as colunas, ou só uma): "Nova transmissão" do pipeline.
+  const IdsQ = z.object({ unidade: UNIDADE.optional(), etapaId: z.string().uuid().optional(), dona: z.string().min(1).max(60).optional(), filtro: z.string().max(6000).optional(), max: z.coerce.number().int().min(1).max(5000).default(5000) });
+  app.get('/api/funis/:id/ids', async (req) => {
+    const { filtro, max, ...q } = IdsQ.parse(req.query);
+    const av = await avancado(req, param(req, 'id'), filtro);
+    const ids = await funis.idsDoQuadro(param(req, 'id'), { ...q, escopo: escopoDe(req.usuario), avancado: av.avancado }, max);
+    return { ids, limite: ids.length >= max, avisos: av.avisos };
+  });
+
+  // Lixeira do pipeline: "Excluir lead" esconde o cartão (nada é apagado); "Recuperar" devolve.
+  const Ids = z.object({ ids: z.array(z.string().uuid()).min(1).max(200) });
+  const naLixeira = async (req: FastifyRequest) => {
+    if (!pode(req, 'crm_mover')) throw proibido('Você não pode mudar o CRM. Fale com a gestão.');
+    const { ids } = Ids.parse(req.body);
+    for (const id of ids) await conversaVisivel(req, id);
+    return ids;
+  };
+  app.post('/api/funis/:id/excluidos', async (req) => {
+    const ids = await naLixeira(req);
+    return { ok: true, excluidos: await funis.excluir(param(req, 'id'), ids, quem(req)) };
+  });
+  app.post('/api/funis/:id/excluidos/recuperar', async (req) => {
+    const ids = await naLixeira(req);
+    return { ok: true, recuperados: await funis.recuperar(param(req, 'id'), ids) };
+  });
+
+  // ------------------------------------------------------------ cartões
+  app.get('/api/conversas/:id/funis', async (req) => funis.daConversa(await conversaVisivel(req, param(req, 'id'))));
+
+  // Valor do negócio (R$) que aparece no cartão do CRM. Quem vê a conversa e pode mover no CRM, edita.
+  const Valor = z.object({ valor: z.number().min(0).max(10_000_000).nullable() });
+  app.get('/api/conversas/:id/valor', async (req) => ({ valor: await funis.valor(await conversaVisivel(req, param(req, 'id'))) }));
+  app.put('/api/conversas/:id/valor', async (req) => {
+    if (!pode(req, 'crm_mover')) throw proibido('Você não pode mudar o CRM. Fale com a gestão.');
+    const { valor } = Valor.parse(req.body);
+    const c = await conversaVisivel(req, param(req, 'id'));
+    return { valor: await funis.definirValor(c, valor, quem(req)) };
+  });
+
+  /* perdas-saude: `perda` = { motivo, detalhe } quando a etapa nova é de perda (sem ele: 409 com a lista de motivos) */
+  const Mover = z.object({ etapaId: z.string().min(1).nullable(), perda: z.unknown().optional() });
+  app.post('/api/conversas/:id/funis/:funilId', async (req, reply) => {
+    const { etapaId, perda } = Mover.parse(req.body);
+    const c = await conversaVisivel(req, param(req, 'id'));
+    let limpar = () => {};
+    if (o.perdas) {
+      try {
+        limpar = await o.perdas.antesDeMover(c, param(req, 'funilId'), etapaId, perda);
+      } catch (e) {
+        if (e instanceof ErroPerda) return reply.code(e.statusCode).send({ erro: e.message, ...e.extra });
+        throw e;
+      }
+    }
+    let r: { mudou: boolean };
+    try {
+      r = await funis.mover(c.id, param(req, 'funilId'), etapaId, { nome: quem(req), id: req.usuario?.id ?? null });
+    } finally {
+      limpar();
+    }
+    const depois = (await o.repo.buscarConversa(c.id)) ?? c;
+    return { ok: true, mudou: r.mudou, etapa: depois.etapa, funis: await funis.daConversa(depois) };
+  });
+
+  // ------------------------------------------------------------ automações
+  const ConfigQ = z.object({ limiteDiario: z.number().int().min(0).max(20) });
+  app.get('/api/automacoes/config', async (req) => {
+    exigeGestao(req);
+    return automacoes().config();
+  });
+  app.patch('/api/automacoes/config', async (req) => {
+    exigeGestao(req);
+    return automacoes().alterarConfig(ConfigQ.parse(req.body), quem(req));
+  });
+
+  app.get('/api/automacoes', async (req) => {
+    exigeGestao(req);
+    const { funilId } = z.object({ funilId: z.string().min(1).optional() }).parse(req.query);
+    const lista = await automacoes().listar();
+    return funilId ? lista.filter((a) => (funilId === 'geral' ? !a.funilId : a.funilId === funilId)) : lista;
+  });
+
+  app.post('/api/automacoes', async (req, reply) => {
+    exigeGestao(req);
+    return reply.code(201).send(await automacoes().criar(req.body, quem(req)));
+  });
+
+  app.get('/api/automacoes/:id', async (req) => {
+    exigeGestao(req);
+    return automacoes().exigir(param(req, 'id'));
+  });
+
+  app.patch('/api/automacoes/:id', async (req) => {
+    exigeGestao(req);
+    return automacoes().alterar(param(req, 'id'), req.body);
+  });
+
+  app.delete('/api/automacoes/:id', async (req) => {
+    exigeGestao(req);
+    await automacoes().apagar(param(req, 'id'));
+    return { ok: true };
+  });
+
+  app.post('/api/automacoes/:id/ligar', async (req) => {
+    exigeGestao(req);
+    return automacoes().ligar(param(req, 'id'), true);
+  });
+  app.post('/api/automacoes/:id/desligar', async (req) => {
+    exigeGestao(req);
+    return automacoes().ligar(param(req, 'id'), false);
+  });
+
+  app.get('/api/automacoes/:id/execucoes', async (req) => {
+    exigeGestao(req);
+    const { limite } = z.object({ limite: z.coerce.number().int().min(1).max(200).default(50) }).parse(req.query);
+    return automacoes().execucoes(param(req, 'id'), limite);
+  });
+
+  const Testar = z.object({ conversaId: z.string().min(1), permitirReal: z.boolean().default(false) });
+  app.post('/api/automacoes/:id/testar', async (req, reply) => {
+    exigeGestao(req);
+    const b = Testar.parse(req.body);
+    const c = await conversaVisivel(req, b.conversaId);
+    if (!ehCanalTeste(c.canalId) && !b.permitirReal) {
+      return reply.code(400).send({
+        erro: 'Teste numa conversa do WhatsApp de teste. Numa cliente de verdade as mensagens saem de verdade: mande permitirReal: true para confirmar.',
+        codigo: 'conversa_real',
+      });
+    }
+    return automacoes().testar(param(req, 'id'), c.id);
+  });
+}

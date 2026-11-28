@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import type { UnidadeId } from './domain.js';
 
@@ -5,9 +6,13 @@ const Env = z.object({
   PORT: z.coerce.number().default(3333),
   ANTHROPIC_API_KEY: z.string().optional(),
   SINTONIA_MODELO: z.string().default('claude-opus-5-5'),
-  SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('low'),
+  SINTONIA_ESFORCO: z.enum(['low', 'medium', 'high']).default('medium'), // dono 28/11: Opus 5.5 com esforço médio
   EVOLUTION_URL: z.string().url().optional(),
+  /** Whisper do próprio servidor (transcrição de áudio grátis). Ex.: http://whisper:9000 */
+  WHISPER_URL: z.string().url().optional(),
   EVOLUTION_API_KEY: z.string().optional(),
+  /** Arquivo com a chave da Evolution (lida de um volume no servidor); só vale se EVOLUTION_API_KEY não vier. */
+  EVOLUTION_API_KEY_ARQUIVO: z.string().optional(),
   EVOLUTION_WEBHOOK_TOKEN: z.string().optional(),
   META_TOKEN: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
@@ -15,19 +20,28 @@ const Env = z.object({
   TRINKS_API_KEY: z.string().optional(),
   TRINKS_INTERVALO_MS: z.coerce.number().default(1200),
   RELATORIO_DESTINOS: z.string().default(''),
-  /** JSON: [{"canalId":"imperio-norte","unidade":"norte","canal":"evolution"}] */
+  /** JSON: [{"canalId":"imperio-norte","unidade":"norte","canal":"evolution"}] (unidade = id em Empresa › Unidades) */
   SINTONIA_NUMEROS: z.string().default('[]'),
   SINTONIA_EMPRESA_ID: z.string().default('imperio'),
   /** Postgres da Sintonia. Sem ele, tudo fica em memória (só para teste local). */
   DATABASE_URL: z.string().optional(),
   /** Quantas clientes diferentes cada processo atende ao mesmo tempo. */
+  /** Cookie de login só por HTTPS. Desligue (0) apenas em teste local sem HTTPS. */
+  COOKIE_SEGURO: z.enum(['0', '1']).default('1'),
+  /** Primeiro administrador, criado ao subir se ainda não existir. */
+  ADMIN_NOME: z.string().optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_SENHA: z.string().optional(),
+  ADMIN_SENHA_HASH: z.string().transform((h) => h.replaceAll('$$', '$')).pipe(z.string().startsWith('scrypt$')).optional(),
   SINTONIA_PARALELO: z.coerce.number().int().min(1).max(64).default(8),
+  /** robustez: quantas conversas a IA pensa ao mesmo tempo (fila própria da IA; a mensagem aparece na tela antes). */
+  SINTONIA_PARALELO_IA: z.coerce.number().int().min(1).max(128).default(24),
 });
 
 export const NumerosConfig = z.array(
   z.object({
     canalId: z.string(),
-    unidade: z.enum(['norte', 'sumare', 'feira']),
+    unidade: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/),
     canal: z.enum(['evolution', 'meta']),
   }),
 );
@@ -41,7 +55,18 @@ export function lerConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const e = Env.parse(env);
   return {
     ...e,
+    EVOLUTION_API_KEY: e.EVOLUTION_API_KEY || lerChaveDeArquivo(e.EVOLUTION_API_KEY_ARQUIVO),
     numeros: NumerosConfig.parse(JSON.parse(e.SINTONIA_NUMEROS)),
     destinosRelatorio: e.RELATORIO_DESTINOS.split(',').map((s) => s.trim()).filter(Boolean),
   };
+}
+
+/** Lê uma chave guardada num arquivo (primeira linha, sem espaços). Sem arquivo ou vazio: undefined. */
+export function lerChaveDeArquivo(caminho?: string): string | undefined {
+  if (!caminho) return undefined;
+  try {
+    return readFileSync(caminho, 'utf8').trim() || undefined;
+  } catch {
+    return undefined;
+  }
 }

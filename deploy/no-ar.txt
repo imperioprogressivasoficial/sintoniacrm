@@ -1,0 +1,7 @@
+# O que está no ar na Sintonia (projeto Docker "sintonia", VPS 1969277). Atualize a cada publicação.
+data: 2026-11-28 04:19 UTC (28/11, na Bahia -3h)
+commit: 9561d50
+pacote sha256: 11f4cc859d13488943c12b4e07ffc24ae9d4080b6736e5e091f3ea22491d26c4
+quem: Claude (conta do Bruno, Max), com o ok do dono (publicar sempre)
+pacote servido de: branch claude/pacote-deploy (raw.githubusercontent.com, arquivo pacote-9561d50.b64); pode apagar depois.
+observação: em cima do e9a79b1. Entra: Jeito de atender da Serena editável (claude/serena-config, migração 782, knowledge/imperio.jeito.json).

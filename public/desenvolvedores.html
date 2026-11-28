@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Desenvolvedores · Sintonia CRM</title>
+<meta name="description" content="API, webhooks e MCP da Sintonia CRM: tudo para conectar o seu sistema.">
+<meta name="theme-color" content="#0d2240">
+<link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<script>
+  // Mesmo tema do app (claro, escuro ou automático), guardado neste aparelho.
+  (() => { let t = 'auto'; try { t = localStorage.getItem('sintonia.tema') || 'auto'; } catch {} const escuro = t === 'escuro' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.tema = escuro ? 'escuro' : 'claro'; })();
+</script>
+<style>
+  :root {
+    --fundo: #f4f7fb; --painel: #ffffff; --texto: #0d2240; --sub: #5a6b85; --borda: #e2e8f2; --sel: #eef4fb;
+    --azul: #106ebe; --menta: #0ffcbe; --codigo: #0d2240; --codigo-texto: #e6f0ff; --codigo-sub: #8fb2d9;
+    --get: #0a8f7a; --post: #106ebe; --patch: #b26b00; --put: #7c3aed; --delete: #c43a3a;
+  }
+  html[data-tema="escuro"] {
+    --fundo: #07111f; --painel: #0d1a2d; --texto: #e8f0fb; --sub: #93a6c2; --borda: #1d2d45; --sel: #13233b;
+    --azul: #3aa0ff; --codigo: #050c16; --codigo-texto: #e6f0ff; --codigo-sub: #7f9cc4;
+    --get: #2dd4bf; --post: #60a5fa; --patch: #fbbf24; --put: #a78bfa; --delete: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body { margin: 0; font: 15px/1.6 Poppins, system-ui, sans-serif; color: var(--texto); background: var(--fundo); }
+  a { color: var(--azul); }
+  code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; }
+  :not(pre) > code { background: var(--sel); padding: 1px 6px; border-radius: 6px; word-break: break-word; }
+  .topo { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 12px 20px; background: color-mix(in srgb, var(--fundo) 86%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--borda); }
+  .topo::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, #0ffcbe, #3aa0ff); opacity: .7; }
+  .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--texto); font-weight: 700; font-size: 18px; }
+  .marca img { width: 30px; height: 30px; }
+  .marca b { color: var(--menta); }
+  .marca small { font-weight: 500; font-size: 14px; color: var(--sub); padding-left: 10px; border-left: 1px solid var(--borda); }
+  .topo .esp { flex: 1; }
+  .bt { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--texto); background: var(--painel); box-shadow: inset 0 0 0 1px var(--borda); }
+  .bt.forte { color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); box-shadow: none; }
+  .bt:focus-visible { outline: 2px solid var(--menta); outline-offset: 2px; }
+  .bt svg { width: 16px; height: 16px; }
+  .grade { display: grid; grid-template-columns: minmax(0, 1fr); max-width: 1240px; margin: 0 auto; padding: 0 16px; gap: 28px; }
+  nav.indice { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 12px 0 0; position: sticky; top: 57px; z-index: 4; background: var(--fundo); }
+  nav.indice::-webkit-scrollbar { display: none; }
+  nav.indice a { flex: none; text-decoration: none; color: var(--texto); font-size: 13.5px; font-weight: 600; padding: 7px 12px; border-radius: 999px; background: var(--painel); box-shadow: inset 0 0 0 1px var(--borda); }
+  nav.indice a.ativo { color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); box-shadow: none; }
+  @media (min-width: 980px) {
+    .grade { grid-template-columns: 220px minmax(0, 1fr); padding: 0 28px; }
+    nav.indice { flex-direction: column; position: sticky; top: 80px; align-self: start; padding: 24px 0; background: none; }
+    nav.indice a { background: none; box-shadow: none; border-radius: 10px; padding: 7px 12px; }
+    nav.indice a:hover { background: var(--sel); }
+    nav.indice a.sub { font-weight: 500; padding-left: 24px; color: var(--sub); }
+  }
+  @media (max-width: 979px) { nav.indice a.sub { display: none; } }
+  main { min-width: 0; padding: 24px 0 80px; }
+  section { margin-bottom: 44px; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 8px 0 10px; letter-spacing: -.02em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #106ebe, #3aa0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  html[data-tema="escuro"] h1 em { background: linear-gradient(90deg, #0ffcbe, #3aa0ff); -webkit-background-clip: text; background-clip: text; }
+  h2 { font-size: 23px; margin: 0 0 10px; letter-spacing: -.01em; }
+  h3 { font-size: 17px; margin: 22px 0 8px; }
+  p, li { color: var(--sub); }
+  p b, li b { color: var(--texto); }
+  .lead { font-size: 16.5px; max-width: 760px; }
+  .cartoes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); margin: 18px 0; }
+  .cartao { background: var(--painel); border-radius: 18px; padding: 16px; box-shadow: inset 0 0 0 1px var(--borda); }
+  .cartao b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .cartao span { font-size: 13.5px; color: var(--sub); }
+  .cartao .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 10px; color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); }
+  .cartao .ic svg { width: 18px; height: 18px; }
+  .bloco { position: relative; margin: 12px 0; border-radius: 14px; background: var(--codigo); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+  .bloco .cab { display: flex; align-items: center; gap: 8px; padding: 8px 12px 0; color: var(--codigo-sub); font-size: 12px; font-weight: 600; }
+  .bloco .cab span { flex: 1; }
+  .bloco pre { margin: 0; padding: 10px 14px 14px; overflow-x: auto; color: var(--codigo-texto); white-space: pre; }
+  .copiar { all: unset; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--codigo-sub); padding: 3px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+  .copiar:hover { color: #fff; }
+  .copiar:focus-visible { outline: 2px solid var(--menta); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--painel); border-radius: 14px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--borda); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--sub); }
+  tr:last-child td { border-bottom: 0; }
+  .tabela { overflow-x: auto; border-radius: 14px; }
+  .rota { background: var(--painel); border-radius: 18px; box-shadow: inset 0 0 0 1px var(--borda); margin: 12px 0; overflow: hidden; }
+  .rota > button { all: unset; cursor: pointer; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; flex-wrap: wrap; }
+  .rota > button:focus-visible { outline: 2px solid var(--menta); outline-offset: -2px; }
+  .metodo { flex: none; min-width: 62px; text-align: center; font: 700 12px 'JetBrains Mono', monospace; padding: 4px 8px; border-radius: 8px; color: #fff; }
+  .m-get { background: var(--get); } .m-post { background: var(--post); } .m-patch { background: var(--patch); } .m-put { background: var(--put); } .m-delete { background: var(--delete); }
+  html[data-tema="escuro"] .metodo { color: #07111f; }
+  .caminho { font: 600 13.5px 'JetBrains Mono', monospace; word-break: break-all; }
+  .rota .resumo { color: var(--sub); font-size: 14px; flex: 1; min-width: 160px; }
+  .escopo { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--sel); color: var(--texto); }
+  .rota .corpo { display: none; padding: 0 16px 16px; border-top: 1px solid var(--borda); }
+  .rota.aberta .corpo { display: block; }
+  .grupo-rotas { margin-top: 26px; }
+  .aviso { border-radius: 14px; padding: 12px 14px; background: color-mix(in srgb, #0ffcbe 14%, var(--painel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, #0ffcbe 40%, transparent); color: var(--texto); font-size: 14px; }
+  .abas { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .abas button { all: unset; cursor: pointer; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: var(--painel); box-shadow: inset 0 0 0 1px var(--borda); }
+  .abas button[aria-pressed="true"] { color: #fff; background: linear-gradient(135deg, #106ebe, #3aa0ff); box-shadow: none; }
+  .evento { background: var(--painel); border-radius: 16px; box-shadow: inset 0 0 0 1px var(--borda); padding: 12px 14px; margin: 10px 0; }
+  .evento summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; list-style: none; }
+  .evento summary::-webkit-details-marker { display: none; }
+  .evento summary code { font-weight: 600; }
+  .evento summary span { color: var(--sub); font-size: 14px; }
+  .bt { white-space: nowrap; }
+  @media (max-width: 560px) { .marca small { display: none; } .topo { padding: 10px 16px; gap: 10px; } nav.indice { top: 53px; } }
+  footer { color: var(--sub); font-size: 13px; padding: 24px 0; border-top: 1px solid var(--borda); }
+</style>
+</head>
+<body>
+<header class="topo">
+  <a class="marca" href="/" aria-label="Sintonia CRM"><img src="/simbolo.png" alt="" id="logo"><span>sintonia<b>.</b></span><small>Desenvolvedores</small></a>
+  <span class="esp"></span>
+  <button class="bt" id="tema" type="button" aria-label="Trocar claro e escuro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.6A7.8 7.8 0 0 1 9.4 4.5a.6.6 0 0 0-.8-.7A8.6 8.6 0 1 0 20.2 15.4a.6.6 0 0 0-.7-.8Z"/></svg></button>
+  <a class="bt forte" href="/app">Abrir o app</a>
+</header>
+
+<div class="grade">
+  <nav class="indice" aria-label="Nesta página">
+    <a href="#comecar">Começar</a>
+    <a href="#autenticacao">Autenticação</a>
+    <a class="sub" href="#escopos">Escopos</a>
+    <a class="sub" href="#paginacao">Paginação</a>
+    <a class="sub" href="#limites">Limites</a>
+    <a class="sub" href="#erros">Erros</a>
+    <a href="#referencia">Referência da API</a>
+    <a href="#webhooks">Webhooks</a>
+    <a class="sub" href="#eventos">Eventos</a>
+    <a class="sub" href="#assinatura">Validar a assinatura</a>
+    <a class="sub" href="#tentativas">Tentativas</a>
+    <a href="#mcp">MCP (IA)</a>
+    <a href="#openapi">OpenAPI</a>
+  </nav>
+
+  <main>
+    <section id="comecar">
+      <h1>Conecte o seu sistema à <em>Sintonia</em></h1>
+      <p class="lead">Leia e crie contatos, mande mensagens de WhatsApp, mova leads no funil, aplique tags, marque horários e receba avisos em tempo real. Tudo pela <b>API v1</b>, pelos <b>webhooks</b> ou pelo <b>MCP</b>, para conectar a IA (Claude, Cursor) direto no seu CRM.</p>
+      <div class="cartoes">
+        <div class="cartao"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></svg></i><b>1. Crie uma chave</b><span>No app: Empresa e conta › Integrações e API › Chaves de API. Escolha só as permissões que precisa.</span></div>
+        <div class="cartao"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg></i><b>2. Chame a API</b><span>Mande a chave no cabeçalho <code>Authorization</code>. Respostas em JSON.</span></div>
+        <div class="cartao"><i class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 2.5 4.8 13.4a.6.6 0 0 0 .5 1h5.4l-1.1 7.1 8.4-10.9a.6.6 0 0 0-.5-1h-5.4l1.1-7.1Z"/></svg></i><b>3. Receba eventos</b><span>Cadastre um webhook e a Sintonia avisa o seu sistema quando algo acontece.</span></div>
+        <div class="cartao"><i class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9L12 2.5Z"/></svg></i><b>4. Ligue a IA</b><span>O servidor MCP deixa o Claude ou o Cursor usarem o CRM com as mesmas permissões da chave.</span></div>
+      </div>
+      <p>Endereço da API: <code data-base>…/api/v1</code>. Teste a sua chave:</p>
+      <div class="bloco" data-codigo="curl"><div class="cab"><span>Terminal</span></div><pre data-modelo="curl {BASE}/api/v1/eu \
+  -H &quot;Authorization: Bearer $SINTONIA_CHAVE&quot;"></pre></div>
+    </section>
+
+    <section id="autenticacao">
+      <h2>Autenticação</h2>
+      <p>Toda chamada leva a chave no cabeçalho <code>Authorization: Bearer sk_...</code> (ou <code>x-api-key</code>). A chave é da <b>empresa</b>: tudo o que ela lê ou muda é sempre dessa empresa. A chave inteira aparece <b>uma vez só</b>, quando é criada; guarde num cofre de segredos (variável de ambiente), nunca no código do site ou do app.</p>
+      <div class="aviso">Chave vazou? Revogue na hora em Integrações › Chaves de API e crie outra. A revogação vale em segundos.</div>
+      <h3 id="escopos">Escopos (permissões)</h3>
+      <p>Cada chave tem escopos por recurso: <code>recurso:ler</code> e <code>recurso:escrever</code>. <b>Escrever inclui ler.</b> Sem o escopo, a resposta é <code>403 sem_permissao</code>, com o escopo que faltou.</p>
+      <div class="tabela"><table><thead><tr><th>Recurso</th><th>O que dá acesso</th></tr></thead><tbody id="recursos"></tbody></table></div>
+      <h3 id="paginacao">Paginação por cursor</h3>
+      <p>As listas devolvem <code>{ "dados": [...], "proximoCursor": "..." }</code>. Para a próxima página, repita a chamada com <code>?cursor=</code> igual ao <code>proximoCursor</code>. Quando ele vier <code>null</code>, acabou. <code>limite</code> vai de 1 a 100 (padrão 25).</p>
+      <h3 id="limites">Limite de chamadas</h3>
+      <p>Cada chave tem um limite por minuto (padrão <b>60</b>, ajustável ao criar). Toda resposta traz <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code> e <code>X-RateLimit-Reset</code> (segundos até abrir vaga). Passou do limite: <code>429 limite_excedido</code> com <code>Retry-After</code>.</p>
+      <h3 id="erros">Erros</h3>
+      <p>Sempre no mesmo formato:</p>
+      <div class="bloco"><div class="cab"><span>JSON</span></div><pre>{ "erro": { "codigo": "nao_encontrado", "mensagem": "Conversa não encontrada." } }</pre></div>
+      <div class="tabela"><table><thead><tr><th>Status</th><th>Códigos comuns</th></tr></thead><tbody>
+        <tr><td>400</td><td><code>dados_invalidos</code> (com <code>detalhes</code>), <code>telefone_invalido</code>, <code>cursor_invalido</code></td></tr>
+        <tr><td>401</td><td><code>nao_autenticado</code>, <code>chave_invalida</code>, <code>chave_revogada</code>, <code>chave_expirada</code></td></tr>
+        <tr><td>403</td><td><code>sem_permissao</code> (traz <code>escopoNecessario</code>)</td></tr>
+        <tr><td>404</td><td><code>nao_encontrado</code>, <code>rota_inexistente</code></td></tr>
+        <tr><td>409</td><td><code>horario_ocupado</code>, <code>sem_whatsapp</code>, <code>conflito</code></td></tr>
+        <tr><td>422</td><td><code>fora_da_janela</code>: na API oficial do WhatsApp, só modelo aprovado depois de 24 h sem resposta do contato</td></tr>
+        <tr><td>429</td><td><code>limite_excedido</code>, <code>muitas_tentativas</code></td></tr>
+        <tr><td>502</td><td><code>erro_canal</code>, <code>envio_falhou</code>: o WhatsApp recusou o envio</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section id="referencia">
+      <h2>Referência da API v1</h2>
+      <p>Gerada do próprio servidor (<a href="/openapi.json">openapi.json</a>). Toque numa rota para ver os detalhes e o exemplo.</p>
+      <div id="rotas"><p>Carregando…</p></div>
+    </section>
+
+    <section id="webhooks">
+      <h2>Webhooks</h2>
+      <p>Cadastre o endereço do seu sistema (precisa ser <b>https</b> e público) e escolha os eventos. A cada evento a Sintonia faz um <code>POST</code> com JSON. Responda <b>2xx em até 10 segundos</b>; o processamento pesado, faça depois (numa fila sua).</p>
+      <div class="bloco"><div class="cab"><span>Corpo de todo evento</span></div><pre>{
+  "id": "evt_3f2a9c1e8b7d4a5f9e0c1b2a3d4e5f60",   // o mesmo em todas as tentativas: use para não processar duas vezes
+  "tipo": "mensagem.recebida",
+  "criadoEm": "2026-11-20T14:03:11.000Z",
+  "empresaId": "sua-empresa",
+  "dados": { ... }
+}</pre></div>
+      <p>Cabeçalhos: <code>Sintonia-Evento</code>, <code>Sintonia-Evento-Id</code>, <code>Sintonia-Entrega</code>, <code>Sintonia-Tentativa</code> e <code>Sintonia-Assinatura</code>.</p>
+      <h3 id="eventos">Eventos</h3>
+      <div id="lista-eventos"></div>
+
+      <h3 id="assinatura">Validar a assinatura</h3>
+      <p><code>Sintonia-Assinatura: t=&lt;segundos&gt;,v1=&lt;assinatura&gt;</code>. A assinatura é o <b>HMAC-SHA256</b> (hexadecimal) do texto <code>t + "." + corpo cru</code>, com o segredo do webhook (<code>whsec_...</code>). Compare em tempo constante e recuse se <code>t</code> tiver mais de 5 minutos. Use o corpo <b>cru</b>, antes de converter o JSON.</p>
+      <div class="abas" role="group" aria-label="Linguagem"><button type="button" data-ling="node" aria-pressed="true">Node.js</button><button type="button" data-ling="python" aria-pressed="false">Python</button></div>
+      <div class="bloco" data-ling-bloco="node"><div class="cab"><span>Node.js (Express)</span></div><pre>import crypto from 'node:crypto';
+import express from 'express';
+
+const app = express();
+const SEGREDO = process.env.SINTONIA_WEBHOOK_SEGREDO; // whsec_...
+
+app.post('/webhooks/sintonia', express.raw({ type: 'application/json' }), (req, res) =&gt; {
+  const cab = req.get('Sintonia-Assinatura') || '';
+  const partes = Object.fromEntries(cab.split(',').map((p) =&gt; p.trim().split('=')));
+  const t = Number(partes.t);
+  const esperado = crypto.createHmac('sha256', SEGREDO).update(`${t}.${req.body}`).digest('hex');
+  const recebido = Buffer.from(partes.v1 || '', 'hex');
+  const ok = recebido.length === 32
+    &amp;&amp; crypto.timingSafeEqual(recebido, Buffer.from(esperado, 'hex'))
+    &amp;&amp; Math.abs(Date.now() / 1000 - t) &lt;= 300;
+  if (!ok) return res.status(400).send('assinatura inválida');
+
+  const evento = JSON.parse(req.body.toString('utf8'));
+  // Já processou este evento.id? Ignore (pode chegar de novo numa nova tentativa).
+  console.log(evento.tipo, evento.dados);
+  res.sendStatus(200);
+});
+
+app.listen(3000);</pre></div>
+      <div class="bloco" data-ling-bloco="python" hidden><div class="cab"><span>Python (Flask)</span></div><pre>import hashlib, hmac, json, os, time
+from flask import Flask, abort, request
+
+app = Flask(__name__)
+SEGREDO = os.environ["SINTONIA_WEBHOOK_SEGREDO"].encode()  # whsec_...
+
+@app.post("/webhooks/sintonia")
+def sintonia():
+    corpo = request.get_data()  # corpo cru, em bytes
+    partes = dict(p.strip().split("=", 1) for p in request.headers.get("Sintonia-Assinatura", "").split(",") if "=" in p)
+    t = int(partes.get("t", "0"))
+    esperado = hmac.new(SEGREDO, f"{t}.".encode() + corpo, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(esperado, partes.get("v1", "")) or abs(time.time() - t) &gt; 300:
+        abort(400)
+
+    evento = json.loads(corpo)
+    # Já processou evento["id"]? Ignore.
+    print(evento["tipo"], evento["dados"])
+    return "", 200</pre></div>
+
+      <h3 id="tentativas">Tentativas e desligamento</h3>
+      <p>Se o seu sistema não responder 2xx (ou demorar mais de 10 s), a Sintonia tenta de novo com espera crescente: <b>1 min, 5 min, 30 min, 2 h, 5 h, 10 h e 24 h</b> (8 tentativas no total). Redirecionamentos não são seguidos. Depois de <b>20 falhas seguidas</b>, o webhook é desligado sozinho e a gestão recebe um aviso no sino; ligue de novo na tela quando o seu sistema voltar. Na tela dá para ver cada entrega (status, resposta, tempo), <b>Reenviar</b> qualquer uma e <b>Enviar teste</b>.</p>
+      <p>Por segurança, a Sintonia não chama endereços internos: localhost, redes privadas (10.x, 172.16–31.x, 192.168.x), link-local e os endereços de metadados de nuvem são bloqueados, inclusive quando o nome do site aponta para eles.</p>
+    </section>
+
+    <section id="mcp">
+      <h2>MCP: a IA usando o seu CRM</h2>
+      <p>O servidor MCP da Sintonia fica em <code data-mcp>…/mcp</code> (transporte HTTP "streamable"). Ele usa a <b>mesma chave de API</b> e as mesmas permissões: a IA só vê as ferramentas que a chave pode usar. Para a IA só consultar, crie uma chave só com escopos de leitura.</p>
+      <div class="tabela"><table><thead><tr><th>Ferramenta</th><th>O que faz</th><th>Escopos</th></tr></thead><tbody id="ferramentas"></tbody></table></div>
+      <h3>Claude Code</h3>
+      <div class="bloco" data-codigo><div class="cab"><span>Terminal</span></div><pre data-modelo="claude mcp add --transport http sintonia {BASE}/mcp \
+  --header &quot;Authorization: Bearer sk_sua_chave&quot;"></pre></div>
+      <h3>Claude Desktop</h3>
+      <p>Em Configurações › Desenvolvedor › Editar configuração (<code>claude_desktop_config.json</code>):</p>
+      <div class="bloco" data-codigo><div class="cab"><span>JSON</span></div><pre data-modelo='{
+  "mcpServers": {
+    "sintonia": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "{BASE}/mcp", "--header", "Authorization: Bearer ${SINTONIA_CHAVE}"],
+      "env": { "SINTONIA_CHAVE": "sk_sua_chave" }
+    }
+  }
+}'></pre></div>
+      <h3>Cursor</h3>
+      <p>Em <code>~/.cursor/mcp.json</code> (ou <code>.cursor/mcp.json</code> no projeto):</p>
+      <div class="bloco" data-codigo><div class="cab"><span>JSON</span></div><pre data-modelo='{
+  "mcpServers": {
+    "sintonia": {
+      "url": "{BASE}/mcp",
+      "headers": { "Authorization": "Bearer sk_sua_chave" }
+    }
+  }
+}'></pre></div>
+      <h3>Testar na mão</h3>
+      <div class="bloco" data-codigo><div class="cab"><span>Terminal</span></div><pre data-modelo="curl {BASE}/mcp \
+  -H &quot;Authorization: Bearer $SINTONIA_CHAVE&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -H &quot;Accept: application/json, text/event-stream&quot; \
+  -d '{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;method&quot;:&quot;tools/list&quot;}'"></pre></div>
+    </section>
+
+    <section id="openapi">
+      <h2>OpenAPI</h2>
+      <p>A descrição completa está em <a href="/openapi.json">/openapi.json</a> (OpenAPI 3.1, com os webhooks). Importe no Postman, Insomnia, n8n ou gere um cliente na sua linguagem.</p>
+    </section>
+    <footer>Sintonia CRM · Esta página é pública e não mostra dado de nenhuma empresa.</footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  const BASE = location.origin;
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, props = {}, ...filhos) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v != null) e.setAttribute(k, v); } for (const f of filhos) if (f != null) e.append(f); return e; };
+
+  // Tema
+  const logo = () => { $('#logo').src = document.documentElement.dataset.tema === 'escuro' ? '/simbolo-escuro.png' : '/simbolo.png'; };
+  logo();
+  $('#tema').addEventListener('click', () => {
+    const novo = document.documentElement.dataset.tema === 'escuro' ? 'claro' : 'escuro';
+    document.documentElement.dataset.tema = novo;
+    try { localStorage.setItem('sintonia.tema', novo); } catch {}
+    logo();
+  });
+
+  // Blocos de código com o endereço desta instalação e botão Copiar.
+  document.querySelectorAll('[data-base]').forEach((e) => { e.textContent = `${BASE}/api/v1`; });
+  document.querySelectorAll('[data-mcp]').forEach((e) => { e.textContent = `${BASE}/mcp`; });
+  document.querySelectorAll('pre[data-modelo]').forEach((p) => { p.textContent = p.dataset.modelo.replaceAll('{BASE}', BASE); });
+  const comCopiar = (bloco) => {
+    const cab = bloco.querySelector('.cab');
+    if (!cab || cab.querySelector('.copiar')) return;
+    const b = el('button', { class: 'copiar', type: 'button', text: 'Copiar' });
+    b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(bloco.querySelector('pre').textContent); b.textContent = 'Copiado ✓'; } catch { b.textContent = 'Selecione e copie'; }
+      setTimeout(() => { b.textContent = 'Copiar'; }, 1600);
+    });
+    cab.append(b);
+  };
+  document.querySelectorAll('.bloco').forEach(comCopiar);
+  const bloco = (titulo, texto) => { const b = el('div', { class: 'bloco' }, el('div', { class: 'cab' }, el('span', { text: titulo })), el('pre', { text: texto })); comCopiar(b); return b; };
+
+  // Abas Node/Python
+  document.querySelectorAll('[data-ling]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-ling]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('[data-ling-bloco]').forEach((x) => { x.hidden = x.dataset.lingBloco !== b.dataset.ling; });
+  }));
+
+  // Exemplos de corpo de cada evento.
+  const conversa = { id: '9b1d6c2e-8f1a-4c3b-9d2e-1f0a2b3c4d5e', telefone: '5571988124471', nome: 'Maria Souza', unidade: 'norte', etapa: 'em_conversa', modo: 'copiloto', responsavel: { id: 'u_7c1', nome: 'Carla Lima' } };
+  const EXEMPLOS = {
+    'mensagem.recebida': { conversa, mensagem: { id: '1f2e…', autor: 'cliente', autorNome: null, texto: 'Oi! Tem horário amanhã?', em: '2026-11-20T14:03:10.000Z' } },
+    'mensagem.enviada': { conversa, mensagem: { id: '2a3b…', autor: 'equipe', autorNome: 'Carla Lima', texto: 'Tenho às 10h, posso marcar?', em: '2026-11-20T14:04:02.000Z', entrega: 'enviada' } },
+    'contato.criado': { conversa: { ...conversa, etapa: 'novo_lead', responsavel: null }, origem: 'conversa' },
+    'lead.etapa_mudou': { conversa: { ...conversa, etapa: 'interessada' }, funil: { id: 'f_1', nome: 'Atendimento' }, de: { id: 'e_1', nome: 'Em conversa' }, para: { id: 'e_2', nome: 'Interessada' }, por: 'Carla Lima', automatico: false },
+    'tag.aplicada': { conversa, tag: { id: 't_9', nome: 'Cliente VIP' }, por: 'Carla Lima' },
+    'tag.removida': { conversa, tag: { id: 't_9', nome: 'Cliente VIP' }, por: 'Carla Lima' },
+    'agendamento.criado': { conversa, agendamento: { id: 't48213', origem: 'agenda', inicio: '2026-11-21T13:00:00.000Z', duracaoMin: 60, servico: 'Avaliação', profissional: 'Ana', por: 'IA' } },
+    'agendamento.cancelado': { conversa: null, agendamento: { id: '5c0e…', origem: 'link', status: 'cancelado', inicio: '2026-11-22T12:00:00.000Z', fim: '2026-11-22T12:30:00.000Z', titulo: 'Reunião de 30 min', cliente: { nome: 'Maria Souza', telefone: '5571988124471', email: null } } },
+    'atendimento.finalizado': { conversa, motivo: 'resolvido', motivoNome: 'Resolvido', atendente: { id: 'u_7c1', nome: 'Carla Lima' }, por: 'Carla Lima', pesquisa: 'enviada' },
+    'nps.respondido': { conversa, nota: 9, categoria: 'promotor', comentario: 'Atendimento ótimo!', atendente: { id: 'u_7c1', nome: 'Carla Lima' } },
+  };
+
+  const metodoCurl = (m, caminho, exemplo) => {
+    const url = `${BASE}${caminho.replace(/\{(\w+)\}/g, (_x, n) => `<${n}>`)}`;
+    const linhas = [`curl${m === 'get' ? '' : ` -X ${m.toUpperCase()}`} "${url}"`, '  -H "Authorization: Bearer $SINTONIA_CHAVE"'];
+    if (exemplo !== undefined) linhas.push('  -H "Content-Type: application/json"', `  -d '${JSON.stringify(exemplo)}'`);
+    return linhas.join(' \\\n');
+  };
+
+  fetch('/openapi.json').then((r) => r.json()).then((api) => {
+    // Recursos (escopos)
+    const tb = $('#recursos');
+    for (const r of api['x-recursos'] || []) tb.append(el('tr', {}, el('td', {}, el('b', { text: r.nome }), el('br'), el('code', { text: `${r.id}:ler` }), ' ', el('code', { text: `${r.id}:escrever` })), el('td', { text: r.descricao })));
+    // Ferramentas MCP
+    const tf = $('#ferramentas');
+    for (const f of api['x-ferramentas-mcp'] || []) tf.append(el('tr', {}, el('td', {}, el('code', { text: f.nome })), el('td', { text: f.descricao }), el('td', { text: f.escopos.join(', ') })));
+    // Eventos
+    const le = $('#lista-eventos');
+    for (const e of api['x-eventos'] || []) {
+      const corpo = { id: 'evt_3f2a9c1e8b7d4a5f9e0c1b2a3d4e5f60', tipo: e.id, criadoEm: '2026-11-20T14:03:11.000Z', empresaId: 'sua-empresa', dados: EXEMPLOS[e.id] || {} };
+      le.append(el('details', { class: 'evento' }, el('summary', {}, el('code', { text: e.id }), el('span', { text: `${e.nome}: ${e.descricao}` })), bloco('Exemplo de corpo', JSON.stringify(corpo, null, 2))));
+    }
+    // Rotas por grupo
+    const caixa = $('#rotas');
+    caixa.replaceChildren();
+    const porGrupo = new Map();
+    for (const [caminho, metodos] of Object.entries(api.paths)) for (const [m, op] of Object.entries(metodos)) {
+      const g = op.tags?.[0] || 'Outros';
+      if (!porGrupo.has(g)) porGrupo.set(g, []);
+      porGrupo.get(g).push({ caminho, m, op });
+    }
+    for (const [g, lista] of porGrupo) {
+      const sec = el('div', { class: 'grupo-rotas' }, el('h3', { text: g }));
+      for (const { caminho, m, op } of lista) {
+        const corpoReq = op.requestBody?.content?.['application/json'];
+        const corpo = el('div', { class: 'corpo' });
+        if (op.description) corpo.append(el('p', { text: op.description }));
+        const params = op.parameters || [];
+        if (params.length) {
+          const t = el('tbody');
+          for (const p of params) t.append(el('tr', {}, el('td', {}, el('code', { text: p.name })), el('td', { text: p.in === 'path' ? 'no caminho' : 'na URL (?)' }), el('td', { text: [p.description, p.schema?.type, p.schema?.enum ? `um de: ${p.schema.enum.join(', ')}` : '', p.schema?.default !== undefined ? `padrão ${p.schema.default}` : '', p.schema?.maximum && p.schema.maximum < 1e6 ? `até ${p.schema.maximum}` : ''].filter(Boolean).join(' · ') })));
+          corpo.append(el('div', { class: 'tabela' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', { text: 'Parâmetro' }), el('th', { text: 'Onde' }), el('th', { text: 'Detalhes' }))), t)));
+        }
+        if (corpoReq?.schema?.properties) {
+          const t = el('tbody');
+          const obrig = new Set(corpoReq.schema.required || []);
+          for (const [nome, s] of Object.entries(corpoReq.schema.properties)) t.append(el('tr', {}, el('td', {}, el('code', { text: nome })), el('td', { text: obrig.has(nome) ? 'obrigatório' : 'opcional' }), el('td', { text: [s.type, s.enum ? `um de: ${s.enum.join(', ')}` : '', s.maxLength ? `até ${s.maxLength} letras` : '', s.format].filter(Boolean).join(' · ') })));
+          corpo.append(el('h3', { text: 'Corpo (JSON)' }), el('div', { class: 'tabela' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', { text: 'Campo' }), el('th', { text: '' }), el('th', { text: 'Tipo' }))), t)));
+        }
+        corpo.append(bloco('Exemplo', metodoCurl(m, caminho, corpoReq?.example)));
+        const art = el('article', { class: 'rota', id: op.operationId },
+          el('button', { type: 'button', 'aria-expanded': 'false' },
+            el('span', { class: `metodo m-${m}`, text: m.toUpperCase() }),
+            el('span', { class: 'caminho', text: caminho }),
+            el('span', { class: 'resumo', text: op.summary }),
+            op['x-escopo'] ? el('span', { class: 'escopo', text: op['x-escopo'] }) : null),
+          corpo);
+        art.firstChild.addEventListener('click', () => { const a = art.classList.toggle('aberta'); art.firstChild.setAttribute('aria-expanded', String(a)); });
+        sec.append(art);
+      }
+      caixa.append(sec);
+    }
+  }).catch(() => { $('#rotas').replaceChildren(el('p', { text: 'Não deu para carregar a referência agora. Veja /openapi.json.' })); });
+
+  // Índice: marca a seção em que a pessoa está.
+  const links = [...document.querySelectorAll('nav.indice a')];
+  const obs = new IntersectionObserver((itens) => {
+    for (const i of itens) if (i.isIntersecting) links.forEach((a) => a.classList.toggle('ativo', a.getAttribute('href') === `#${i.target.id}`));
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  document.querySelectorAll('main section[id]').forEach((s) => obs.observe(s));
+})();
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import type { Evento } from '../store/repositorio.js';
 import type { UnidadeId } from '../domain.js';
-import { UNIDADES } from '../unidades.js';
+import { unidadeDe } from '../unidades.js';
 import { dataISO, nomeDiaSemana } from '../util/tempo.js';
 
 export interface Resumo {
@@ -98,7 +98,7 @@ export function textoRelatorio(r: Resumo, dia: Date, semAgendar: number): string
   const unidades = Object.entries(r.porUnidade) as Array<[UnidadeId, { conversas: number; agendamentos: number }]>;
   if (unidades.length) {
     linhas.push('');
-    for (const [u, v] of unidades) linhas.push(`${UNIDADES[u].nome}: ${v.conversas} conversas, ${v.agendamentos} agendamentos`);
+    for (const [u, v] of unidades) linhas.push(`${unidadeDe(u).nome}: ${v.conversas} conversas, ${v.agendamentos} agendamentos`);
   }
   const equipe = Object.entries(r.porAtendente).sort((a, b) => b[1].agendamentos - a[1].agendamentos);
   if (equipe.length) {

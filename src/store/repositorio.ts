@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import type { Conversa, Mensagem, UnidadeId } from '../domain.js';
+import type { Anexo, Conversa, Mensagem, UnidadeId } from '../domain.js';
 import type { TipoEnvio } from '../engine/followups.js';
+import { noEscopo, type EscopoVisao } from '../auth/acesso.js';
+import { nomeEhReal, nomeParaTrocar } from '../contatos/nome.js';
 
 /** Envio ativo programado, ou uma reavaliação de "quem responde". */
 export interface Tarefa {
@@ -24,6 +26,41 @@ export type TipoEvento =
   | 'passou_para_humano'
   | 'etapa_mudou'
   | 'envio_ativo'
+  /** Atendente ligou para a cliente (aba Ligações). */
+  | 'ligacao'
+  /** A conversa mudou de dona (assumiu, transferiu, liberou ou primeira resposta). */
+  | 'transferencia'
+  /** Tag marcada/desmarcada numa conversa (dados: tagId, nome, por). */
+  | 'tag_marcada'
+  | 'tag_desmarcada'
+  /** Cartão mudou de etapa num funil (dados: funilId, de, para, por, porId, automatico). */
+  | 'etapa_movida'
+  /** Uma automação agiu numa conversa (dados: automacaoId, execucaoId, acao, ...). */
+  | 'automacao'
+  /** Lembrete de ligação criado por automação (dados: quando, texto, automacaoId): aparece em "Ligar hoje". */
+  | 'lembrete_ligacao'
+  /** Lead que entrou por importação de planilha (dados: por). Não conta como conversa nova no painel. */
+  | 'lead_importado'
+  /** Contatos duplicados juntados num só (dados: principal, mesclados, por, porId...). */
+  | 'leads_mesclados'
+  /** Transmissão (disparo em massa) enviada, respondida ou descadastro (dados: transmissaoId, nome, acao). */
+  | 'transmissao'
+  /** Follow-up ou confirmação de agenda enviados (src/followup; dados: situacao, passo, total, agendamento). */
+  | 'followup'
+  /** A cliente respondeu à confirmação de agenda (dados: status confirmado|remarcar, agendamento, inicio, servico). */
+  | 'confirmacao'
+  /** Atendimento finalizado (src/nps; dados: finalizacaoId, motivo, motivoNome, porId, porNome, atendenteId, atendenteNome, pesquisa). */
+  | 'atendimento_finalizado'
+  /** Nota da pesquisa de satisfação (src/nps; dados: pesquisaId, nota, categoria, atendenteId, atendenteNome, motivo, comentario). */
+  | 'nps'
+  /** Radar (src/radar): dados.acao = 'disparou' (motivo, origem, vigiar, donoId, iaResponde). */
+  | 'radar'
+  /** ia-completa: a IA agiu no CRM/agenda (dados.acao: remarcou, cancelou, mover_funil, vincular_produto, tarefa_equipe, retorno, enviar_arquivo). */
+  | 'ia_acao'
+  /** serena-faz: a Serena agiu a pedido de alguém da equipe, depois do "Confirmar" (dados.acao: enviou, agendou, remarcou, cancelou, moveu; porId, porNome). */
+  | 'serena_acao'
+  /** funil-atendimento: lead parado em "Novo lead" sem resposta da loja há N min (dados: desde, minutos, limite). Vira aviso. */
+  | 'lead_parado'
   | 'falha';
 
 export interface Evento {
@@ -32,6 +69,41 @@ export interface Evento {
   unidade?: UnidadeId;
   em: Date;
   dados?: Record<string, unknown>;
+}
+
+/** Alguém da equipe digitando numa conversa (anti-duplicidade). */
+export interface Digitando {
+  usuarioId: string;
+  nome: string;
+  /** Início da sequência de digitação: quem começou primeiro tem a vez. */
+  desde: Date;
+  /** Último sinal de digitação. */
+  em: Date;
+}
+
+/** Depois de quanto tempo sem sinal a pessoa deixa de contar como "respondendo". */
+export const VALIDADE_DIGITANDO_MS = 60_000;
+
+/** Mídia esperando download (fila própria, na tabela de mídias). */
+/** Ordem da entrega: só avança (um aviso atrasado de "entregue" não apaga o "lida"). "ouvida" só existe em áudio. */
+export const ORDEM_ENTREGA: Record<NonNullable<Mensagem['entrega']>, number> = { enviada: 1, entregue: 2, lida: 3, ouvida: 4, falhou: 5 };
+
+export interface MidiaPendente {
+  mensagemId: string;
+  conversaId: string;
+  canalId: string;
+  idExterno: string;
+  /** Id da mídia no canal, quando é outro (API oficial). */
+  ref?: string;
+  /** Contando com esta. */
+  tentativas: number;
+}
+
+/** Arquivo guardado de uma mensagem. */
+export interface MidiaGuardada {
+  conversaId: string;
+  anexo: Anexo;
+  conteudo: Buffer | null;
 }
 
 export interface Repositorio {
@@ -45,11 +117,84 @@ export interface Repositorio {
     agora: Date;
   }): Promise<{ conversa: Conversa; nova: boolean }>;
   salvarConversa(c: Conversa): Promise<void>;
-  listarConversas(): Promise<Conversa[]>;
+  /**
+   * trocar-numero: arquiva (em = data) ou desarquiva (em = null) conversas da empresa, para todo mundo.
+   * Devolve quantas mudaram.
+   */
+  arquivarConversas(empresaId: string, ids: string[], em: Date | null, motivo?: string): Promise<number>;
+  /** contato-nome: conversas sem nome de verdade (vazio, o número, símbolos), da mais recente para a mais antiga. */
+  conversasSemNome(empresaId: string, limite: number): Promise<Array<{ id: string; telefone: string; nome?: string }>>;
+  /**
+   * Conversas, da mais recente para a mais antiga. robustez: SEM o antigo corte de 500 (com mais clientes que isso,
+   * a busca não achava cliente antiga e os números ficavam menores que a realidade). Use o filtro para não trazer
+   * tudo quando só precisa de algumas: `ids` (as dos eventos do período), `telefone` (achar a cliente), `escopo`.
+   */
+  listarConversas(filtro?: FiltroConversas): Promise<Conversa[]>;
+  /**
+   * robustez: uma página da lista de Conversas, direto no banco: escopo de quem vê, busca por nome, telefone ou
+   * texto das mensagens, e cursor (`antes`) para a rolagem infinita. Vem com a última mensagem de cada uma.
+   */
+  paginaConversas(p: PedidoPagina): Promise<{ conversas: Conversa[]; ultimas: Map<string, Mensagem>; proximo: { em: Date; id: string } | null }>;
+  /**
+   * serena-super: busca no texto das mensagens (o mesmo índice de trigramas da busca de Conversas, migração 550),
+   * da mais nova para a mais antiga, com o escopo de quem vê e filtros (período, unidade, quem mandou, conversas).
+   * Quem chama ainda confere podeVer em cada conversa.
+   */
+  buscarMensagens(p: PedidoBuscaMensagens): Promise<Mensagem[]>;
 
-  /** Retorna false se a mensagem (pelo idExterno) já foi registrada. */
-  adicionarMensagem(m: Omit<Mensagem, 'id'>): Promise<boolean>;
+  /**
+   * Retorna false se a mensagem (pelo idExterno) já foi registrada.
+   * Com `anexo`, grava junto os dados da mídia (o arquivo vem depois, em `guardarMidia`).
+   * `id` opcional: quem grava pode escolher o id para guardar a mídia logo em seguida.
+   * `refMidia`: id da mídia no canal, quando não é o da mensagem (API oficial), para o download.
+   * `proximaMidia`: quando o download pode começar (histórico/resgate: depois das mídias que acabaram de chegar).
+   */
+  adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }): Promise<boolean>;
+  /**
+   * atendimento-extra: mensagem que já estava gravada só como texto ("[foto]") e sem os dados da mídia
+   * (histórico antigo): grava agora os dados da mídia, para baixar o arquivo. Retorna o id da mensagem
+   * se completou; undefined se ela não existe nessa conversa ou já tinha mídia.
+   */
+  completarMidia(conversaId: string, idExterno: string, anexo: Anexo, o?: { ref?: string; proxima?: Date }): Promise<string | undefined>;
+  /** Aviso de entrega/leitura de uma mensagem que a loja enviou. Nunca volta atrás (lida não vira entregue). */
+  registrarEntrega(idExterno: string, status: NonNullable<Mensagem['entrega']>, em: Date): Promise<boolean>;
+
+  // ---------- mídias (fotos, áudios, vídeos, documentos) ----------
+  midia(mensagemId: string): Promise<MidiaGuardada | undefined>;
+  /** velocidade: miniaturas do WhatsApp (base64) das mensagens pedidas; as sem miniatura ficam de fora. */
+  miniaturas(mensagemIds: string[]): Promise<Map<string, string>>;
+  /** Arquivo baixado: situação "pronta". */
+  guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }): Promise<void>;
+  /** Passou do limite: ficam só os dados. */
+  midiaGrande(mensagemId: string, tamanho?: number): Promise<void>;
+  /** Falha ao baixar: com `proxima`, tenta de novo nessa hora; sem, desiste (situação "falhou"). */
+  falhaMidia(mensagemId: string, erro: string, proxima?: Date): Promise<void>;
+  /**
+   * Pega as mídias pendentes vencidas e as reserva por `reservaMs` (se o processo cair, outro retoma).
+   * Com vários processos, cada mídia sai para um só.
+   */
+  reivindicarMidias(agora: Date, limite?: number, reservaMs?: number): Promise<MidiaPendente[]>;
+  /** Volta uma mídia que falhou para a fila (botão "tentar de novo"). Retorna false se não estava em falha. */
+  rebaixarMidia(mensagemId: string, agora: Date): Promise<boolean>;
   mensagens(conversaId: string, limite?: number): Promise<Mensagem[]>;
+  /** origem-auto: as primeiras mensagens da cliente na conversa (texto e hora), da mais antiga para a mais nova. */
+  primeirasDaCliente?(conversaId: string, limite: number): Promise<Array<{ texto: string; autor: string; em: Date }>>;
+  /** menu-mensagem: uma mensagem pelo id (com os dados da mídia). */
+  mensagemPorId?(id: string): Promise<Mensagem | undefined>;
+  /** menu-mensagem: uma mensagem pelo id no canal (reação/apagou/editou que veio pelo webhook). */
+  mensagemPorIdExterno?(idExterno: string): Promise<Mensagem | undefined>;
+  /** menu-mensagem: troca o texto (mensagem editada). A IA passa a ler o texto novo. */
+  trocarTexto?(id: string, texto: string): Promise<boolean>;
+  /** Pesquisar dentro de uma conversa (lupa do topo): as mais recentes primeiro, sem diferenciar maiúsculas. */
+  buscarNaConversa?(conversaId: string, termo: string, limite?: number): Promise<Mensagem[]>;
+  /** Foto de perfil guardada (conteudo null = a cliente não tem foto). */
+  foto(telefone: string): Promise<{ conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date } | undefined>;
+  salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date): Promise<void>;
+  /**
+   * Última mensagem de cada conversa (prévia da lista), numa consulta só. robustez: com `ids`, só dessas conversas
+   * (índice por conversa: rápido mesmo com milhões de mensagens); sem, de todas (lê o histórico inteiro, evite).
+   */
+  ultimasMensagens(ids?: string[]): Promise<Map<string, Mensagem>>;
 
   /** Marca ids de mensagens que a própria Sintonia enviou, para não confundi-las com a atendente. */
   registrarEnviadoPorNos(idExterno: string): Promise<void>;
@@ -70,9 +215,80 @@ export interface Repositorio {
 
   guardarSugestao(conversaId: string, texto: string): Promise<void>;
   sugestao(conversaId: string): Promise<string | undefined>;
+
+  /** Registra o sinal de "digitando" de alguém da equipe. */
+  registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date): Promise<void>;
+  /** Quem deu sinal de digitação a partir de `desde`, de quem começou primeiro para quem começou depois. */
+  digitando(conversaId: string, desde: Date): Promise<Digitando[]>;
+  pararDigitando(conversaId: string, usuarioId: string): Promise<void>;
 }
 
 /** Implementação em memória: usada nos testes e para rodar local sem banco. */
+/** robustez: filtro de listarConversas (tudo opcional; vários juntos = todos valem). */
+export interface FiltroConversas {
+  ids?: string[];
+  telefone?: string;
+  empresaId?: string;
+  escopo?: EscopoVisao;
+  /**
+   * trocar-numero: arquivadas pela empresa ficam de fora das listas (Pipeline, relatórios, alarmes...).
+   * Quem procura por ids ou telefone recebe todas; `incluirArquivadas` força trazer também numa lista.
+   */
+  incluirArquivadas?: boolean;
+}
+
+/** trocar-numero: a lista leva as arquivadas pela empresa? (por ids/telefone sim: é uma procura pontual). */
+export const comArquivadas = (f: FiltroConversas | undefined) => Boolean(f?.incluirArquivadas || f?.ids || f?.telefone);
+
+/** robustez: pedido de uma página da lista de Conversas. */
+export interface PedidoPagina {
+  escopo?: EscopoVisao;
+  limite: number;
+  /** Cursor: só as conversas depois desta (mais antigas), na ordem da lista. */
+  antes?: { em: Date; id: string };
+  /** Nome, telefone (dígitos) ou texto de alguma mensagem. */
+  busca?: string;
+  /** Só as conversas com esta tag. */
+  tagId?: string;
+  /** trocar-numero: true = só as arquivadas pela empresa (filtro "Arquivadas do número antigo"); sem = só as outras. */
+  arquivadas?: boolean;
+}
+
+/** serena-super: pedido da busca no texto das mensagens. */
+export interface PedidoBuscaMensagens {
+  /** Texto procurado (2 letras ou mais). */
+  texto: string;
+  escopo?: EscopoVisao;
+  desde?: Date;
+  ate?: Date;
+  unidade?: string;
+  /** Quem mandou: cliente, equipe, ia (sem: todos menos as notas do sistema). */
+  autores?: Array<Mensagem['autor']>;
+  /** Só nestas conversas (ex.: a cliente que a pessoa citou). */
+  conversaIds?: string[];
+  limite: number;
+}
+
+/** Dígitos de uma busca que parece telefone (3 ou mais dígitos). */
+export const digitosBusca = (b: string) => {
+  const d = b.replace(/\D/g, '');
+  return d.length >= 3 ? d : '';
+};
+
+const passaFiltro = (f: FiltroConversas | undefined, c: Conversa) =>
+  (comArquivadas(f) || !c.arquivadaEm) &&
+  (!f ||
+    ((!f.ids || f.ids.includes(c.id)) &&
+      (!f.telefone || c.telefone === f.telefone) &&
+      (!f.empresaId || c.empresaId === f.empresaId) &&
+      (!f.escopo || noEscopo(f.escopo, c))));
+
+/** velocidade: cópia do anexo sem a miniatura (ela só vai no detalhe da conversa). */
+function semMiniatura(a: Anexo): Anexo {
+  const { miniatura: _m, ...resto } = a;
+  return resto;
+}
+
 export class RepositorioMemoria implements Repositorio {
   private conversas = new Map<string, Conversa>();
   private msgs: Mensagem[] = [];
@@ -96,7 +312,15 @@ export class RepositorioMemoria implements Repositorio {
   }) {
     for (const c of this.conversas.values()) {
       if (c.empresaId === d.empresaId && c.unidade === d.unidade && c.telefone === d.telefone) {
+        // trocar-numero: mensagem nova tira a conversa do arquivo da empresa.
+        delete c.arquivadaEm;
+        delete c.arquivadaMotivo;
         if (d.nome && !c.nome) c.nome = d.nome;
+        else {
+          // contato-nome: só o número (ou símbolos) no nome e chegou um nome de verdade: usa o nome. Nome de verdade não muda.
+          const novo = nomeParaTrocar(c.nome, d.nome);
+          if (novo) c.nome = novo;
+        }
         return { conversa: { ...c }, nova: false };
       }
     }
@@ -118,21 +342,272 @@ export class RepositorioMemoria implements Repositorio {
   }
 
   async salvarConversa(c: Conversa) {
-    this.conversas.set(c.id, { ...c });
+    // trocar-numero: o arquivo da empresa só muda por arquivarConversas (e por mensagem nova), como no Postgres.
+    const atual = this.conversas.get(c.id);
+    const { arquivadaEm: _a, arquivadaMotivo: _m, ...resto } = c;
+    this.conversas.set(c.id, { ...resto, ...(atual?.arquivadaEm ? { arquivadaEm: atual.arquivadaEm, arquivadaMotivo: atual.arquivadaMotivo } : {}) });
   }
 
-  async listarConversas() {
-    return [...this.conversas.values()].map((c) => ({ ...c }));
+  async arquivarConversas(empresaId: string, ids: string[], em: Date | null, motivo?: string) {
+    let n = 0;
+    for (const id of ids) {
+      const c = this.conversas.get(id);
+      if (!c || c.empresaId !== empresaId || Boolean(c.arquivadaEm) === Boolean(em)) continue;
+      if (em) Object.assign(c, { arquivadaEm: em, arquivadaMotivo: motivo ?? 'numero_antigo' });
+      else {
+        delete c.arquivadaEm;
+        delete c.arquivadaMotivo;
+      }
+      n++;
+    }
+    return n;
   }
 
-  async adicionarMensagem(m: Omit<Mensagem, 'id'>) {
+  /** trocar-numero (só memória): apaga conversas e o que é só delas (mensagens, mídias, tarefas, eventos, sugestões). */
+  apagarConversasMemoria(ids: string[]): { conversas: number; mensagens: number; midias: number } {
+    const alvo = new Set(ids.filter((id) => this.conversas.has(id)));
+    const msgs = this.msgs.filter((m) => alvo.has(m.conversaId));
+    let midias = 0;
+    for (const m of msgs) if (this.midias.delete(m.id)) midias++;
+    this.msgs = this.msgs.filter((m) => !alvo.has(m.conversaId));
+    this.tarefas = this.tarefas.filter((t) => !alvo.has(t.conversaId));
+    // Agendamentos (vendas) ficam nos relatórios, sem a ligação com a conversa; o resto da conversa vai junto.
+    this.eventos = this.eventos.flatMap((e) => {
+      if (!e.conversaId || !alvo.has(e.conversaId)) return [e];
+      if (e.tipo !== 'agendamento_ia' && e.tipo !== 'agendamento_equipe') return [];
+      const { conversaId: _c, ...resto } = e;
+      return [{ ...resto, dados: { ...(e.dados ?? {}), empresaId: this.conversas.get(e.conversaId)!.empresaId, conversaApagada: true } }];
+    });
+    for (const id of alvo) {
+      this.sugestoes.delete(id);
+      this.conversas.delete(id);
+    }
+    return { conversas: alvo.size, mensagens: msgs.length, midias };
+  }
+
+  /** trocar-numero (só memória): mensagens e mídias de cada conversa, sem cópia. */
+  contarMensagensMemoria(ids: string[]): { mensagens: number; midias: number; ultima: Map<string, Date> } {
+    const alvo = new Set(ids);
+    let mensagens = 0, midias = 0;
+    const ultima = new Map<string, Date>();
+    for (const m of this.msgs) {
+      if (!alvo.has(m.conversaId)) continue;
+      mensagens++;
+      if (this.midias.has(m.id)) midias++;
+      const u = ultima.get(m.conversaId);
+      if (!u || m.em > u) ultima.set(m.conversaId, m.em);
+    }
+    return { mensagens, midias, ultima };
+  }
+
+  async conversasSemNome(empresaId: string, limite: number) {
+    return [...this.conversas.values()]
+      .filter((c) => c.empresaId === empresaId && /^\d+$/.test(c.telefone) && !nomeEhReal(c.nome))
+      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime())
+      .slice(0, limite)
+      .map((c) => ({ id: c.id, telefone: c.telefone, nome: c.nome }));
+  }
+
+  async listarConversas(filtro?: FiltroConversas) {
+    return [...this.conversas.values()]
+      .filter((c) => passaFiltro(filtro, c))
+      .sort((a, b) => b.atualizadaEm.getTime() - a.atualizadaEm.getTime() || (a.id < b.id ? 1 : -1))
+      .map((c) => ({ ...c }));
+  }
+
+  async paginaConversas(p: PedidoPagina) {
+    const busca = p.busca?.trim().toLowerCase();
+    const digitos = busca ? digitosBusca(busca) : '';
+    const lista = (await this.listarConversas({ escopo: p.escopo, incluirArquivadas: true })).filter((c) => {
+      if (Boolean(c.arquivadaEm) !== (p.arquivadas === true)) return false;
+      if (p.antes && !(c.atualizadaEm.getTime() < p.antes.em.getTime() || (c.atualizadaEm.getTime() === p.antes.em.getTime() && c.id < p.antes.id))) return false;
+      if (!busca) return true;
+      if ((c.nome ?? '').toLowerCase().includes(busca) || (digitos && c.telefone.includes(digitos))) return true;
+      return this.msgs.some((m) => m.conversaId === c.id && m.texto.toLowerCase().includes(busca));
+    });
+    // `tagId`: em memória as tags ficam em outro armazém; a rota filtra depois (no Postgres o filtro é no banco).
+    const pagina = lista.slice(0, p.limite);
+    const ultima = pagina.at(-1);
+    return {
+      conversas: pagina,
+      ultimas: await this.ultimasMensagens(pagina.map((c) => c.id)),
+      proximo: lista.length > p.limite && ultima ? { em: ultima.atualizadaEm, id: ultima.id } : null,
+    };
+  }
+
+  async buscarMensagens(p: PedidoBuscaMensagens) {
+    const termo = p.texto.trim().toLowerCase();
+    if (termo.length < 2) return [];
+    const autores: Array<Mensagem['autor']> = p.autores?.length ? p.autores : ['cliente', 'equipe', 'ia'];
+    const conversas = new Map((await this.listarConversas({ escopo: p.escopo })).map((c) => [c.id, c]));
+    return this.msgs
+      .filter((m) => {
+        const c = conversas.get(m.conversaId);
+        if (!c || !autores.includes(m.autor)) return false;
+        if (p.unidade && c.unidade !== p.unidade) return false;
+        if (p.conversaIds && !p.conversaIds.includes(m.conversaId)) return false;
+        if (p.desde && m.em < p.desde) return false;
+        if (p.ate && m.em >= p.ate) return false;
+        return m.texto.toLowerCase().includes(termo);
+      })
+      .sort((a, b) => b.em.getTime() - a.em.getTime())
+      .slice(0, p.limite)
+      .map((m) => ({ ...m }));
+  }
+
+  async adicionarMensagem(m: Omit<Mensagem, 'id'> & { id?: string; refMidia?: string; proximaMidia?: Date }) {
     if (m.idExterno && this.msgs.some((x) => x.idExterno === m.idExterno)) return false;
-    this.msgs.push({ ...m, id: randomUUID() });
+    const { anexo, refMidia, proximaMidia, ...resto } = m;
+    const id = m.id ?? randomUUID();
+    this.msgs.push({ ...resto, id });
+    if (anexo) this.midias.set(id, { conversaId: m.conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: proximaMidia?.getTime() ?? 0, ref: refMidia });
     return true;
   }
 
+  async completarMidia(conversaId: string, idExterno: string, anexo: Anexo, o: { ref?: string; proxima?: Date } = {}) {
+    const m = this.msgs.find((x) => x.idExterno === idExterno && x.conversaId === conversaId);
+    if (!m) return undefined;
+    const ja = this.midias.get(m.id);
+    if (ja) {
+      // Falhou antes e agora veio a mensagem completa: tenta de novo do zero (igual ao Postgres).
+      if (!o.ref || ja.ref === o.ref || (ja.anexo.situacao !== 'falhou' && ja.anexo.situacao !== 'pendente')) return undefined;
+      Object.assign(ja, { ref: o.ref, tentativas: 0, proxima: o.proxima?.getTime() ?? 0 });
+      ja.anexo = { ...ja.anexo, situacao: 'pendente' };
+      return m.id;
+    }
+    this.midias.set(m.id, { conversaId, anexo: { ...anexo }, conteudo: null, tentativas: 0, proxima: o.proxima?.getTime() ?? 0, ref: o.ref });
+    return m.id;
+  }
+
+  async registrarEntrega(idExterno: string, pedido: NonNullable<Mensagem['entrega']>) {
+    const m = this.msgs.find((x) => x.idExterno === idExterno);
+    if (!m) return false;
+    // "Ouvida" só vale para áudio; em texto, foto etc. conta como lida.
+    const status = pedido === 'ouvida' && this.midias.get(m.id)?.anexo.tipo !== 'audio' ? 'lida' : pedido;
+    if (ORDEM_ENTREGA[status] <= (m.entrega ? ORDEM_ENTREGA[m.entrega] : 0)) return false;
+    m.entrega = status;
+    return true;
+  }
+
+  /** A mensagem com os dados atuais da mídia (a situação muda depois do download). */
+  private comAnexo(m: Mensagem): Mensagem {
+    const md = this.midias.get(m.id);
+    return md ? { ...m, anexo: semMiniatura(md.anexo) } : { ...m }; /* velocidade: a miniatura só sai por miniaturas() (igual ao Postgres) */
+  }
+
   async mensagens(conversaId: string, limite = 40) {
-    return this.msgs.filter((m) => m.conversaId === conversaId).slice(-limite);
+    return this.msgs
+      .filter((m) => m.conversaId === conversaId)
+      .slice(-limite)
+      .map((m) => this.comAnexo(m));
+  }
+
+  /* menu-mensagem */
+  async mensagemPorId(id: string) {
+    const m = this.msgs.find((x) => x.id === id);
+    return m ? this.comAnexo(m) : undefined;
+  }
+  async mensagemPorIdExterno(idExterno: string) {
+    const m = idExterno ? this.msgs.find((x) => x.idExterno === idExterno) : undefined;
+    return m ? this.comAnexo(m) : undefined;
+  }
+  async trocarTexto(id: string, texto: string) {
+    const m = this.msgs.find((x) => x.id === id);
+    if (!m) return false;
+    m.texto = texto;
+    return true;
+  }
+
+  async buscarNaConversa(conversaId: string, termo: string, limite = 50) {
+    const t = termo.toLocaleLowerCase('pt-BR');
+    return this.msgs
+      .filter((m) => m.conversaId === conversaId && m.texto.toLocaleLowerCase('pt-BR').includes(t))
+      .slice(-limite).reverse()
+      .map((m) => this.comAnexo(m));
+  }
+
+  private midias = new Map<string, { conversaId: string; anexo: Anexo; conteudo: Buffer | null; tentativas: number; proxima: number; erro?: string; ref?: string }>();
+
+  async miniaturas(mensagemIds: string[]) {
+    const r = new Map<string, string>();
+    for (const id of mensagemIds) { const mi = this.midias.get(id)?.anexo.miniatura; if (mi) r.set(id, mi); }
+    return r;
+  }
+
+  async midia(mensagemId: string) {
+    const md = this.midias.get(mensagemId);
+    return md ? { conversaId: md.conversaId, anexo: semMiniatura(md.anexo), conteudo: md.conteudo } : undefined;
+  }
+
+  async guardarMidia(mensagemId: string, r: { conteudo: Buffer; mimetype?: string; nomeArquivo?: string }) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.conteudo = r.conteudo;
+    md.erro = undefined;
+    md.anexo = {
+      ...md.anexo,
+      situacao: 'pronta',
+      tamanho: r.conteudo.length,
+      mimetype: md.anexo.mimetype ?? r.mimetype,
+      nomeArquivo: md.anexo.nomeArquivo ?? r.nomeArquivo,
+    };
+  }
+
+  async midiaGrande(mensagemId: string, tamanho?: number) {
+    const md = this.midias.get(mensagemId);
+    if (md) md.anexo = { ...md.anexo, situacao: 'grande', tamanho: tamanho ?? md.anexo.tamanho };
+  }
+
+  async falhaMidia(mensagemId: string, erro: string, proxima?: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md) return;
+    md.erro = erro;
+    if (proxima) md.proxima = proxima.getTime();
+    else md.anexo = { ...md.anexo, situacao: 'falhou' };
+  }
+
+  async reivindicarMidias(agora: Date, limite = 10, reservaMs = 5 * 60_000) {
+    const t = agora.getTime();
+    const saida: MidiaPendente[] = [];
+    for (const [mensagemId, md] of this.midias) {
+      if (saida.length >= limite) break;
+      if (md.anexo.situacao !== 'pendente' || md.proxima > t) continue;
+      const m = this.msgs.find((x) => x.id === mensagemId);
+      const c = this.conversas.get(md.conversaId);
+      if (!m?.idExterno || !c) continue;
+      md.tentativas++;
+      md.proxima = t + reservaMs;
+      saida.push({ mensagemId, conversaId: md.conversaId, canalId: c.canalId, idExterno: m.idExterno, tentativas: md.tentativas, ...(md.ref ? { ref: md.ref } : {}) });
+    }
+    return saida;
+  }
+
+  async rebaixarMidia(mensagemId: string, agora: Date) {
+    const md = this.midias.get(mensagemId);
+    if (!md || md.anexo.situacao !== 'falhou') return false;
+    Object.assign(md, { tentativas: 0, proxima: agora.getTime(), erro: undefined });
+    md.anexo = { ...md.anexo, situacao: 'pendente' };
+    return true;
+  }
+
+  private fotos = new Map<string, { conteudo: Buffer | null; tipo: string | null; atualizadaEm: Date }>();
+  async foto(telefone: string) {
+    return this.fotos.get(telefone);
+  }
+  async salvarFoto(telefone: string, foto: { conteudo: Buffer; tipo: string } | null, em: Date) {
+    this.fotos.set(telefone, { conteudo: foto?.conteudo ?? null, tipo: foto?.tipo ?? null, atualizadaEm: em });
+  }
+
+  async ultimasMensagens(ids?: string[]) {
+    const r = new Map<string, Mensagem>();
+    const quer = ids ? new Set(ids) : undefined;
+    for (const m of this.msgs) {
+      if (quer && !quer.has(m.conversaId)) continue;
+      const atual = r.get(m.conversaId);
+      if (!atual || atual.em.getTime() <= m.em.getTime()) r.set(m.conversaId, m);
+    }
+    for (const [k, m] of r) r.set(k, this.comAnexo(m));
+    return r;
   }
 
   async registrarEnviadoPorNos(id: string) {
@@ -184,5 +659,64 @@ export class RepositorioMemoria implements Repositorio {
 
   async sugestao(conversaId: string) {
     return this.sugestoes.get(conversaId);
+  }
+
+  private digitandoAgora = new Map<string, Map<string, Digitando>>();
+  async registrarDigitando(conversaId: string, quem: { usuarioId: string; nome: string }, em: Date) {
+    const m = this.digitandoAgora.get(conversaId) ?? new Map<string, Digitando>();
+    const antes = m.get(quem.usuarioId);
+    const continua = antes && em.getTime() - antes.em.getTime() <= VALIDADE_DIGITANDO_MS;
+    m.set(quem.usuarioId, { usuarioId: quem.usuarioId, nome: quem.nome, desde: continua ? antes.desde : em, em });
+    this.digitandoAgora.set(conversaId, m);
+  }
+  async digitando(conversaId: string, desde: Date) {
+    return [...(this.digitandoAgora.get(conversaId)?.values() ?? [])]
+      .filter((d) => d.em.getTime() >= desde.getTime())
+      .sort((a, b) => a.desde.getTime() - b.desde.getTime())
+      .map((d) => ({ ...d }));
+  }
+  async pararDigitando(conversaId: string, usuarioId: string) {
+    this.digitandoAgora.get(conversaId)?.delete(usuarioId);
+  }
+
+  /** Só na memória (dados de demonstração, src/demo): apaga as conversas e tudo o que é delas. Devolve quantas mensagens e eventos saíram. */
+  async apagarConversas(ids: string[]) {
+    const fora = new Set(ids);
+    const antes = { mensagens: this.msgs.length, eventos: this.eventos.length };
+    this.msgs = this.msgs.filter((m) => !fora.has(m.conversaId));
+    for (const [k, md] of this.midias) if (fora.has(md.conversaId)) this.midias.delete(k);
+    this.eventos = this.eventos.filter((e) => !e.conversaId || !fora.has(e.conversaId));
+    this.tarefas = this.tarefas.filter((t) => !fora.has(t.conversaId));
+    for (const id of fora) {
+      this.sugestoes.delete(id);
+      this.digitandoAgora.delete(id);
+      this.conversas.delete(id);
+    }
+    return { mensagens: antes.mensagens - this.msgs.length, eventos: antes.eventos - this.eventos.length };
+  }
+
+  /** Só na memória (demonstração): todas as tarefas, para conferir que nada ficou programado. */
+  todasAsTarefas(): Tarefa[] {
+    return this.tarefas.map((t) => ({ ...t }));
+  }
+
+  /**
+   * Só na memória (mesclar duplicatas, src/leads): passa mensagens, mídias, eventos e tarefas pendentes
+   * (dos tipos que a outra ainda não tem) de `deId` para `paraId` e apaga `deId`. No Postgres é SQL (leads/armazem.ts).
+   */
+  async unirConversas(deId: string, paraId: string) {
+    for (const m of this.msgs) if (m.conversaId === deId) m.conversaId = paraId;
+    for (const md of this.midias.values()) if (md.conversaId === deId) md.conversaId = paraId;
+    for (const e of this.eventos) if (e.conversaId === deId) e.conversaId = paraId;
+    const jaTem = new Set(this.tarefas.filter((t) => t.conversaId === paraId && !t.feita).map((t) => t.tipo));
+    for (const t of this.tarefas) {
+      if (t.conversaId !== deId) continue;
+      if (!t.feita && !jaTem.has(t.tipo)) t.conversaId = paraId;
+      else t.feita = true;
+    }
+    if (!this.sugestoes.has(paraId) && this.sugestoes.has(deId)) this.sugestoes.set(paraId, this.sugestoes.get(deId)!);
+    this.sugestoes.delete(deId);
+    this.digitandoAgora.delete(deId);
+    this.conversas.delete(deId);
   }
 }

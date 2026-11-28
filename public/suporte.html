@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- sem-pagamento: página pública exigida pela App Store (Privacidade, Termos e Suporte). -->
+<title>Suporte · Sintonia CRM</title>
+<meta name="description" content="Fale com a equipe da Sintonia CRM: WhatsApp, e-mail e recado.">
+<meta name="theme-color" content="#f4f8fc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#061527" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/favicon-escuro-64.png" type="image/png" sizes="64x64" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/icone-180.png">
+<link rel="stylesheet" href="/legal.css">
+<script>try { const t = localStorage.getItem('sintonia.tema'); if (t === 'claro' || t === 'escuro') document.documentElement.dataset.tema = t; } catch {}</script>
+<style>html[data-tema="escuro"] { --lg-fundo: #061527; --lg-cartao: #0b2138; --lg-texto: #eaf3fc; --lg-sub: #9db7d1; --lg-linha: rgba(255,255,255,.1); --lg-azul: #3aa0ff; --lg-link: #7cc4ff; --lg-realce: rgba(58,160,255,.12); --lg-sombra: none; color-scheme: dark; }</style>
+</head>
+<body class="legal">
+<header class="lg-topo">
+  <div class="lg-barra">
+    <a class="lg-logo" href="/" aria-label="Sintonia CRM, início"><img src="/simbolo-escuro.png" alt="" width="30" height="30"><span>sintonia<b>.</b></span></a>
+    <nav aria-label="Páginas de ajuda"><a href="/privacidade">Privacidade</a><a href="/termos">Termos</a><a href="/suporte" aria-current="page">Suporte</a></nav>
+  </div>
+</header>
+<main class="lg" id="conteudo">
+<div class="lg-cab">
+  <h1>Suporte</h1>
+  <p>Dúvida, problema ou quer usar a Sintonia na sua empresa? Fale com a gente.</p>
+</div>
+<section class="lg-sec"><h2>WhatsApp</h2>
+  <p data-so-whats hidden>Nosso número: <b data-contato="whatsapp"></b>. Respondemos em dias úteis, das 9h às 18h.</p>
+  <p data-sem-contato>Mande um recado pelo formulário abaixo e a gente responde no seu WhatsApp.</p>
+  <div class="lg-acoes"><a class="lg-bt" data-whats href="/suporte" data-sem="#recado" data-whats-texto="Olá! Preciso de ajuda com a Sintonia."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.6a8.3 8.3 0 0 1-12.3 7.3L3.5 20l1.2-4A8.3 8.3 0 1 1 20 11.6Z"/><path d="M9 8.6c.2 2.9 2.4 5.3 5.4 5.6l1.1-1.2-1.6-.8-.8.8c-.9-.4-1.9-1.4-2.3-2.3l.8-.8-.8-1.6Z"/></svg><span data-whats-rotulo>Falar no WhatsApp</span></a></div>
+  <p data-so-email hidden>E-mail: <a data-contato="email" href="#"></a></p>
+</section>
+<section class="lg-sec" id="recado"><h2>Deixe um recado</h2>
+  <p>A gente responde pelo WhatsApp que você informar.</p>
+  <form class="lg-form" id="form-recado" novalidate>
+    <label>Seu nome<input name="nome" autocomplete="name" required maxlength="120"></label>
+    <label>Seu WhatsApp<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(71) 9 0000-0000" required></label>
+    <label>Empresa <small style="font-weight:400">(se tiver)</small><input name="empresa" autocomplete="organization" maxlength="160"></label>
+    <label>Como podemos ajudar?<textarea name="mensagem" maxlength="1000"></textarea></label>
+    <div class="escondido" aria-hidden="true"><label>Site<input name="site" tabindex="-1" autocomplete="off"></label></div>
+    <p class="lg-aviso" role="status" aria-live="polite"></p>
+    <div><button class="lg-bt" type="submit">Enviar recado</button></div>
+  </form>
+</section>
+<section class="lg-sec"><h2>Perguntas rápidas</h2>
+  <h3>Como consigo acesso à Sintonia?</h3>
+  <p>O acesso é liberado pela nossa equipe. Fale com a gente pelo WhatsApp ou deixe um recado.</p>
+  <h3>Esqueci a minha senha</h3>
+  <p>Na tela de entrar, toque em <a href="/esqueci-senha">Esqueci minha senha</a>. Se não chegar o link, peça para a administração da sua empresa.</p>
+  <h3>Como excluo a minha conta?</h3>
+  <p>No app, vá em <b>Configurações › Minha conta › Privacidade › Excluir minha conta</b>. Seus dados pessoais são apagados na hora.</p>
+  <h3>Como vocês cuidam dos dados?</h3>
+  <p>Veja a <a href="/privacidade">Política de privacidade</a> e os <a href="/termos">Termos de uso</a>.</p>
+</section>
+<script>
+(() => {
+  const f = document.getElementById('form-recado');
+  const aviso = f.querySelector('.lg-aviso');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(f));
+    if (!String(d.nome || '').trim() || String(d.whatsapp || '').replace(/\D/g, '').length < 10) { aviso.className = 'lg-aviso erro'; aviso.textContent = 'Preencha o seu nome e o WhatsApp com DDD.'; return; }
+    const bt = f.querySelector('button'); bt.disabled = true;
+    try {
+      const r = await fetch('/api/contato', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...d, origem: 'suporte' }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.erro || 'Não deu para enviar agora. Tente de novo.');
+      f.reset(); aviso.className = 'lg-aviso ok'; aviso.textContent = 'Recebemos o seu recado. A gente responde no seu WhatsApp.';
+    } catch (x) { aviso.className = 'lg-aviso erro'; aviso.textContent = navigator.onLine === false ? 'Sem internet agora. Confira a conexão e tente de novo.' : x.message; }
+    finally { bt.disabled = false; }
+  });
+})();
+</script>
+</main>
+<footer class="lg-rodape">
+  <span>© 2026 Sintonia CRM · by Império Progressivas</span>
+  <a href="/privacidade">Política de privacidade</a>
+  <a href="/termos">Termos de uso</a>
+  <a href="/suporte">Suporte</a>
+  <a href="/entrar">Entrar</a>
+</footer>
+<script src="/contato-publico.js" defer></script>
+</body>
+</html>
