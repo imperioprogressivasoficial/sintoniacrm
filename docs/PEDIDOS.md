@@ -4,6 +4,13 @@ Anotado em 20/11/2026. Quem pegar um item, marca aqui e no PASSAGEM.md.
 
 Ideias guardadas para depois (não são tarefas abertas): [IDEIAS.md](IDEIAS.md).
 
+## NA FILA (depois do treinamento da IA de 28/11): configuração da Serena editável
+O dono quer, na área da Serena, um lugar para preencher e editar tudo do jeito de atender, pensando em abrir a
+ferramenta para outras empresas:
+- o que configurar: modelo da IA, tom, estilo, nome, apresentação, o que fazer e o que evitar, emojis, tamanho das
+  mensagens, roteiro de agendamento, mensagens modelo, horários padrão, tabelas;
+- o que a Império já usa deve vir preenchido e organizado nesses campos.
+
 ## PRÓXIMO (lembrar o dono assim que as regras da Serena de 27/11 estiverem no ar): follow-up de clientes
 O dono pediu para lembrá-lo de começar o processo de follow-up logo depois dos ajustes da Serena. O que ele quer:
 - **Cutucar quem para de responder, ainda dentro da conversa:** por exemplo, quem passou a unidade e não agendou, ou
