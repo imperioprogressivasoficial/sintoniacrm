@@ -14,6 +14,7 @@ import {
   novaSessao,
 } from '../ai/ferramentas.js';
 import { CRM_ESCRITA_NOMES, FERRAMENTAS_CRM } from '../ai/ferramentas-crm.js';
+import { completarNulos } from '../ai/ferramenta-base.js';
 import type { ServicosCrmIa } from '../ai/crm-ia.js';
 import { contextoDaConversa, INSTRUCAO_ATIVA, instrucaoObjetivo, montarTurnos } from '../ai/prompt.js';
 import { descreverAcao } from '../ai/simulacao.js';
@@ -212,7 +213,7 @@ export class ExecutorAgentes {
         const resultados: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
         for (const bloco of resp.content) {
           if (bloco.type !== 'tool_use') continue;
-          const r = await this.rodarFerramenta(a, bloco.name, bloco.input, p, res, permitidas, nomes, simulacao, sessao, crm);
+          const r = await this.rodarFerramenta(a, bloco.name, completarNulos(bloco.name, bloco.input), p, res, permitidas, nomes, simulacao, sessao, crm);
           res.ferramentas.push({ nome: bloco.name, entrada: bloco.input, ok: !r.erro, resultado: r.conteudo.slice(0, 500) });
           resultados.push({ type: 'tool_result', tool_use_id: bloco.id, content: r.conteudo, is_error: r.erro });
         }

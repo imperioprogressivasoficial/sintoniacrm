@@ -813,6 +813,11 @@ export class Sintonia {
     const agora = new Date(Math.max(this.agora().getTime(), c.ultimaMensagemCliente?.getTime() ?? 0));
     const legenda = midia.tipo === 'audio' ? undefined : midia.legenda?.trim() || undefined;
     const texto = textoDoAnexo(midia.tipo, legenda, midia.tipo === 'documento' ? midia.nomeArquivo : undefined);
+    // dono 28/11: áudio da IA mostra "gravando áudio…" antes (como uma pessoa).
+    if (midia.tipo === 'audio' && n.canal.enviarPresenca) {
+      void Promise.resolve(n.canal.enviarPresenca(n.canalId, c.telefone, 'gravando', 3000)).catch(() => undefined);
+      await this.esperar(3000);
+    }
     const id = await this.enviarCom(c, texto, () => n.canal.enviarMidia!(n.canalId, c.telefone, { ...midia, legenda }), { eco: { autor: 'ia', autorNome, em: agora } });
     const mensagemId = randomUUID();
     const anexo: Anexo = { tipo: midia.tipo, mimetype: midia.mimetype, tamanho: midia.conteudo.length, situacao: 'pendente' };
@@ -1058,6 +1063,11 @@ export class Sintonia {
         if (d.ultimaMensagemCliente?.getTime() !== marco) return false;
         return modo !== 'responder' || decidirQuemResponde(d, unidadeDe(d.unidade), this.agora(), regras).acao === 'ia_responde';
       };
+      // dono 28/11: a cliente vê "digitando…" enquanto a IA pensa (não espera o aviso).
+      if (modo === 'responder') {
+        const num = this.numeroDa(c);
+        void Promise.resolve(num.canal.enviarPresenca?.(num.canalId, c.telefone, 'digitando', 12_000)).catch(() => undefined);
+      }
       const r = await this.d.agente.executar({
         conversa: c,
         mensagens,
@@ -1185,7 +1195,7 @@ export class Sintonia {
       const pausa = n > 0 && this.d.pausaEntrePartes ? Math.max(0, Math.min(8000, this.d.pausaEntrePartes(texto))) : 0;
       if (pausa > 0) {
         const num = this.numeroDa(c);
-        await Promise.resolve(num.canal.enviarPresenca?.(num.canalId, c.telefone, 'digitando', pausa)).catch(() => undefined);
+        void Promise.resolve(num.canal.enviarPresenca?.(num.canalId, c.telefone, 'digitando', pausa)).catch(() => undefined); // dono 28/11: não espera em dobro
         await this.esperar(pausa);
       }
       // Cada parte 1 ms depois da anterior: a ordem na tela é a ordem em que saíram.
@@ -1352,6 +1362,7 @@ export class Sintonia {
         if (tag) await this.evento('tag_marcada', c, { tagId: tag.id, nome: tag.nome, por: 'IA' });
       }
       if (a.tipo === 'etapa') await this.moverFunil(c, { tipo: 'ia_classificou', etapa: a.etapa }, a.motivo);
+      if (a.tipo === 'nome' && autor === 'ia') c.nome = a.nome; // dono 28/11: a cliente disse/corrigiu o nome
       if (a.tipo === 'agendou') {
         if (!a.paraOutraPessoa) c.trinksClienteId = a.clienteTrinksId; // serena-regras: horário de outra pessoa não troca o cadastro dela
         await this.moverFunil(c, { tipo: 'agendamento_criado' });
@@ -1678,4 +1689,4 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
 }
 
 /** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
-export const pausaDigitando = (texto: string): number => Math.round(Math.min(4500, Math.max(1200, 700 + texto.length * 30)));
+export const pausaDigitando = (texto: string): number => Math.round(Math.min(2500, Math.max(800, 500 + texto.length * 15))); // dono 28/11: mais rápido

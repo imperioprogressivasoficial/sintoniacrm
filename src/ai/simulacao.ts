@@ -29,6 +29,8 @@ export function descreverAcao(a: AcaoAgente): { tipo: string; descricao: string 
   switch (a.tipo) {
     case 'etapa':
       return { tipo: a.tipo, descricao: `Mudaria a etapa para "${a.etapa}" (${a.motivo})` };
+    case 'nome':
+      return { tipo: a.tipo, descricao: `Guardaria o nome "${a.nome}"` };
     case 'passar_para_humano':
       return { tipo: a.tipo, descricao: `Chamaria alguém da equipe: ${a.motivo}` };
     case 'marcar_tag':

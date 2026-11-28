@@ -634,7 +634,7 @@ const transcricaoLigada = () => Boolean(cfg.WHISPER_URL || conexoes.get('openaiA
 const sintonia = new Sintonia({
   filaIa,
   /* ia-completa: junta mensagens seguidas (só com a fila da IA, que pensa por trás); ouve áudio e vê foto; CRM; custo. */
-  juntarMs: filaIa ? Number(process.env.SINTONIA_JUNTAR_MS ?? 6000) : 0,
+  juntarMs: filaIa ? Number(process.env.SINTONIA_JUNTAR_MS ?? 3500) : 0, // dono 28/11: responde mais rápido
   percepcao: new PercepcaoIa({ repo, transcricoes, transcritor, transcricaoLigada, log }),
   crmIa,
   guardaCusto,
@@ -1190,6 +1190,33 @@ const aprender = new Aprender({
   log,
 });
 base.usarAprendido(() => aprender.memoria());
+/* dono 28/11: a memória da Assia (agente do Estúdio de IA) vira proposta de treinamento para a Serena, uma vez só.
+   Vai pelo mesmo caminho dos documentos do dono: a gestão aprova em Treinamento da IA › Aprender com a equipe. */
+setTimeout(() => {
+  void (async () => {
+    if (!iaLigada) return;
+    const NOME = 'Memória da Assia.txt';
+    if ((await aprender.estado()).documentos.some((d) => d.documentoNome === NOME)) return;
+    const assia = (await agentesIa.armazem.listar(cfg.SINTONIA_EMPRESA_ID)).find((a) => /assia/i.test(a.nome));
+    if (!assia) return;
+    const [conh, aprov] = await Promise.all([agentesIa.armazem.conhecimentos(assia.id), agentesIa.armazem.aprendizados(assia.id, 'aprovado')]);
+    const c = assia.config;
+    const partes = [
+      `Memória do agente de IA "${assia.nome}" (Estúdio de agentes), para aproveitar no atendimento.`,
+      c.persona.quemE && `Quem é: ${c.persona.quemE}`,
+      c.persona.comoFala && `Como fala: ${c.persona.comoFala}`,
+      c.regras.sempre.length && `Sempre:\n${c.regras.sempre.map((x) => `- ${x}`).join('\n')}`,
+      c.regras.nunca.length && `Nunca:\n${c.regras.nunca.map((x) => `- ${x}`).join('\n')}`,
+      c.padroes.length && `Respostas padrão:\n${c.padroes.map((x) => `- ${x.situacao}: ${x.resposta}`).join('\n')}`,
+      c.exemplos.length && `Exemplos:\n${c.exemplos.map((x) => `- Cliente: ${x.cliente}\n  Resposta: ${x.resposta}`).join('\n')}`,
+      conh.length && `Conhecimento:\n${conh.map((x) => `### ${x.titulo}\n${x.conteudo}`).join('\n\n')}`,
+      aprov.length && `Aprendizados aprovados:\n${aprov.map((x) => `- ${x.texto}`).join('\n')}`,
+    ].filter(Boolean);
+    if (partes.length < 2) return;
+    await aprender.enviarDocumento({ nome: NOME, texto: partes.join('\n\n') }, 'Sistema (memória da Assia)');
+    log('Memória da Assia enviada para o Treinamento da IA (propostas para aprovar).');
+  })().catch((e) => log('Falha ao trazer a memória da Assia', String(e)));
+}, 90_000).unref();
 registrarAprender(app, { aprender: (e) => (e === aprender.empresaId ? aprender : undefined), empresaId: cfg.SINTONIA_EMPRESA_ID });
 const rodadaAprender = umaPorVez('aprender com a equipe', () => aprender.tick(), log);
 // Primeira volta logo depois de subir (retoma o que parou; na primeira vez estuda sozinha se houver conversas da equipe).

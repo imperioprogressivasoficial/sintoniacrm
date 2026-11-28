@@ -467,8 +467,8 @@ describe('8. Mais humana: 1 a 3 mensagens com "digitando…" entre elas', () => 
     // A confirmação com quebras de linha vai inteira, numa mensagem só.
     const conf = 'Agendamento confirmado ✅\n📅 Data: 07/11\n⏰ Horário: 09:00\n📍 Shopping Sumaré — Av. Tancredo Neves\nAté breve! 💜';
     expect(partirParaWhatsApp(conf)).toEqual([conf]);
-    expect(pausaDigitando('Ótimo!')).toBe(1200);
-    expect(pausaDigitando('x'.repeat(400))).toBe(4500);
+    expect(pausaDigitando('Ótimo!')).toBe(800);
+    expect(pausaDigitando('x'.repeat(400))).toBe(2500);
   });
 
   it('entre uma mensagem e outra mostra "digitando…" pelo tempo proporcional e espera', async () => {
@@ -493,7 +493,7 @@ describe('8. Mais humana: 1 a 3 mensagens com "digitando…" entre elas', () => 
     });
     await s.receber({ canalId: 'imperio-norte', telefone: TEL, nome: 'Marina', texto: 'Sumaré', deMim: false, idExterno: 'in-1', em: relogio.t });
     const p2 = 'Para qual dia você deseja o seu atendimento?';
-    expect(canal.eventos).toEqual(['texto:Pronto, perfeito!', `digitando:${1000 + p2.length}`, `texto:${p2}`]);
+    expect(canal.eventos).toEqual(['digitando:12000', 'texto:Pronto, perfeito!', `digitando:${1000 + p2.length}`, `texto:${p2}`]);
     expect(esperas).toContain(1000 + p2.length);
   });
 });

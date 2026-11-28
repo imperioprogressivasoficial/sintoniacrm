@@ -33,6 +33,8 @@ export type AcaoAgente =
   | { tipo: 'agendou'; agendamento: Agendamento; clienteTrinksId: number; paraOutraPessoa?: boolean }
   | { tipo: 'passar_para_humano'; motivo: string }
   | { tipo: 'etapa'; etapa: Etapa; motivo: string }
+  /** dono 28/11: a cliente disse ou corrigiu o próprio nome: vira o nome do contato. */
+  | { tipo: 'nome'; nome: string }
   /** Marcar uma tag que JÁ EXISTE na empresa (a IA nunca cria tag). */
   | { tipo: 'marcar_tag'; nome: string }
   /** ia-completa: remarcou (o novo já está gravado na agenda; o antigo foi cancelado ou ficou para a equipe cancelar). */
@@ -91,6 +93,9 @@ export const FERRAMENTAS_LEITURA: Ferramenta[] = [
   ),
   def('ver_agendamentos_da_cliente', 'Próximos horários marcados desta cliente (próximos 60 dias), com o id de cada um (para remarcar ou cancelar).', {
     unidade: unidadeProp,
+  }),
+  def('corrigir_nome', 'Guarda o nome da cliente quando ELA disser como se chama ou corrigir o nome (ex.: "meu nome não é esse, é Ana Paula"). Não use para o nome do perfil do WhatsApp.', {
+    nome: { type: 'string', description: 'Nome como ela disse (nome e sobrenome, se ela disse)' },
   }),
   def('registrar_etapa', 'Atualiza a etapa da cliente no funil quando o momento dela ficar claro.', {
     etapa: { type: 'string', enum: ['em_conversa', 'interessada', 'perdida'] },
@@ -180,6 +185,7 @@ const ENTRADAS = {
   }),
   buscar_cliente: z.object({ unidade: Unidade, telefone: z.string().trim().max(30).nullable().optional(), nome: z.string().trim().max(120).nullable().optional() }),
   ver_agendamentos_da_cliente: z.object({ unidade: Unidade }),
+  corrigir_nome: z.object({ nome: z.string().trim().min(2).max(80).regex(/\p{L}/u) }),
   registrar_etapa: z.object({ etapa: z.enum(['em_conversa', 'interessada', 'perdida']), motivo: z.string() }),
   agendar: z.object({
     unidade: Unidade,
@@ -562,6 +568,11 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
             status: a.status?.nome,
           }))
         : 'Nenhum horário marcado.';
+    }
+    case 'corrigir_nome': {
+      const i = ENTRADAS.corrigir_nome.parse(entrada);
+      ctx.acoes.push({ tipo: 'nome', nome: i.nome });
+      return 'ok: nome guardado. Chame a cliente por ele daqui para frente.';
     }
     case 'registrar_etapa': {
       const i = ENTRADAS.registrar_etapa.parse(entrada);

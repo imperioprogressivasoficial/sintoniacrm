@@ -13,6 +13,7 @@ import {
   novaSessao,
   type SessaoFerramentas,
 } from './ferramentas.js';
+import { completarNulos } from './ferramenta-base.js';
 import { FERRAMENTAS_CRM_ESCRITA, FERRAMENTAS_CRM_LEITURA } from './ferramentas-crm.js';
 import type { ServicosCrmIa } from './crm-ia.js';
 import { precosConhecidosDe, precosDoTexto, precosInventados, reais } from './guarda.js';
@@ -205,7 +206,7 @@ export class Agente {
         const resultados: Anthropic.Beta.Messages.BetaToolResultBlockParam[] = [];
         for (const bloco of resp.content) {
           if (bloco.type !== 'tool_use') continue;
-          const r = await executarFerramenta(bloco.name, bloco.input, {
+          const r = await executarFerramenta(bloco.name, completarNulos(bloco.name, bloco.input), {
             agenda: this.agenda,
             conversa: p.conversa,
             agora: p.agora,
