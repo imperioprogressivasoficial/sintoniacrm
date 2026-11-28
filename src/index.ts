@@ -528,6 +528,7 @@ const followup = new Followup({
   iaRemarca: (c) => portao.iaAtiva() && !chaveSerena.pausada() && c.modo === 'ia' && !(c.pausaIaAte && c.pausaIaAte.getTime() > Date.now()),
   email,
   tags,
+  pausaDigitando /* followup-minutos: "digitando…" antes da mensagem, no mesmo tempo humano da IA */,
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
