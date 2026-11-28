@@ -52,6 +52,10 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 28/11: no ar eabff43 — funil Pós-venda criado na Império (log: "funil e automações sugeridos criados"); entra pela etapa chave 'compareceu' (Finalizado). Falta: funil-atendimento (779). Avisar dono: cadência Follow-up Pós-atendimento ligada mandaria em dobro; Voltou não pega agendamento feito direto no Trinks.
+
+- 28/11: no ar 86c94b5 — follow-up em minutos (claude/followup-minutos, migração 780): Não respondeu ligado na Império (5 min, +15 min, +1 dia IA, +2 dias). Ainda trabalhando: funil-atendimento (779) e pos-venda (781). Conferir se a Império tem automação antiga com gatilho sem_resposta ligada (mandaria em dobro).
+
 - 28/11: no ar 3252d92 — árvore de situações (base + regras + cliente_conhecida com horário futuro/desmarcado), seção Atendimento que encanta e vende, escrita sem dois-pontos; página Conhecimento da IA em Empresa › Documentos. Pendente na base: [PREENCHER] cuidados pós-procedimento e estacionamento. Próximo: configuração da Serena editável (docs/PEDIDOS.md).
 
 - 28/11: no ar aff82b0 — tempo humano da IA (pausaDigitando 1 s + 45 ms/letra, 1,8–7 s, antes de cada mensagem; pausaGravando 1 s + 60 ms/letra, 3–15 s). Agentes situacoes (árvore de situações + escrita sem dois-pontos) e conhecimento-arquivo ainda trabalhando.

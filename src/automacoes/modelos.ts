@@ -56,7 +56,7 @@ export function montarPosVenda(p: ParamsPosVenda): AutomacaoNova[] {
     // Finalizou: espera até o dia seguinte. Compareceu: o gatilho já é 1 dia depois.
     passos: [...(p.comeca === 'finalizado' ? esperarDias(1) : []), msg(p.textoCuidados), ...esperarDias(p.diasRetorno - 1), msg(p.textoRetorno)],
     // Pós-venda não para se alguém da equipe conversar com a cliente no meio do caminho.
-    opcoes: { parar_se_equipe_responder: false },
+    opcoes: { parar_se_equipe_responder: false, parar_se_sair_da_etapa: false, respeitar_limites: false },
   };
   const lista = [cuidados];
   if (p.pedirAvaliacao) {
@@ -67,7 +67,7 @@ export function montarPosVenda(p: ParamsPosVenda): AutomacaoNova[] {
       gatilho: { tipo: 'nota_nps', min: 9, max: 10 },
       // Um respiro depois do "obrigado" da pesquisa.
       passos: [{ tipo: 'esperar', minutos: 30 }, msg(p.textoAvaliacao)],
-      opcoes: { parar_se_equipe_responder: false },
+      opcoes: { parar_se_equipe_responder: false, parar_se_sair_da_etapa: false, respeitar_limites: false },
     });
   }
   return lista;

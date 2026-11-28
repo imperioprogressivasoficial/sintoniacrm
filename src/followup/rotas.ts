@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ehGestor, podeVer } from '../auth/acesso.js';
 import type { Repositorio } from '../store/repositorio.js';
 import type { Followup } from './followup.js';
-import { GATILHO_SITUACAO, NOME_SITUACAO, SITUACOES, TEXTOS_CONFIRMACAO } from './tipos.js';
+import { GATILHO_SITUACAO, NOME_SITUACAO, SITUACOES, SUGESTAO_SEM_RESPOSTA, TEXTOS_CONFIRMACAO } from './tipos.js';
 
 /**
  * Rotas /api/followup/... (registradas depois de criarServidor: valem o login e o tratamento de erros de lá).
@@ -33,7 +33,19 @@ export function registrarFollowup(app: FastifyInstance, o: OpcoesRotasFollowup):
     // sem-exemplos: sem o modelo pronto de cada cadência (o dono monta as suas).
     situacoes: SITUACOES.map((id) => ({ id, nome: NOME_SITUACAO[id], gatilho: GATILHO_SITUACAO[id] })),
     textosConfirmacao: TEXTOS_CONFIRMACAO,
+    /* followup-minutos: quantas mensagens de cada cadência saíram hoje (a tela mostra no cartão). */
+    enviadasHoje: await f.enviadasHoje().catch(() => ({})),
   }));
+
+  /*
+   * followup-minutos: modelo sugerido de "Não respondeu" (5 min, 15 min, 1 dia, 3 dias). Só devolve os passos: a tela
+   * coloca na cadência para a pessoa ver e editar, e só vale depois que ela salvar (nada nasce sozinho: sem-exemplos).
+   */
+  app.get('/api/followup/sugerido/:situacao', async (req) => {
+    const { situacao } = req.params as { situacao: string };
+    if (situacao !== 'sem_resposta') throw erro('Não há modelo sugerido para esta cadência.', 404);
+    return { situacao, passos: SUGESTAO_SEM_RESPOSTA };
+  });
 
   app.put('/api/followup/config', async (req) => {
     exigeGestao(req);

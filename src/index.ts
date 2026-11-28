@@ -179,6 +179,8 @@ import { ArmazemIntegracoesMemoria, ArmazemIntegracoesPostgres } from './integra
 import { montarIntegracoes } from './integracoes/rotas.js';
 /* atendimento-extra: avisos do agendamento online (sino, WhatsApp para o contato e lembrete antes) */
 import { AvisosReuniao } from './reunioes/avisos.js';
+import { ArmazemPosVendaMemoria, ArmazemPosVendaPostgres, PosVenda } from './pos-venda/pos-venda.js'; /* pos-venda */
+import { registrarPosVenda } from './pos-venda/rotas.js'; /* pos-venda */
 
 const cfg = lerConfig();
 const log = (msg: string, extra?: unknown) => console.log(new Date().toISOString(), msg, extra ?? '');
@@ -512,6 +514,33 @@ const automacoes = new Automacoes({
   tarefas: () => crmIa,
   rodizio: () => rodizio,
   nps: () => nps,
+  /* pos-venda: mensagens de relacionamento (IA com objetivo e texto de reserva; limite da semana do Follow-up; quem saiu) */
+  escreverComIa: async (c, objetivo) => {
+    if (!portao.iaAtiva() || chaveSerena.pausada()) return undefined;
+    const r = await agentesIa.agente.executar({
+      conversa: c,
+      mensagens: await repo.mensagens(c.id),
+      agora: new Date(),
+      modo: 'responder',
+      objetivo: `Mensagem automática de relacionamento (pós-venda). Objetivo: ${objetivo} Escreva só a mensagem para enviar agora à cliente.`,
+    });
+    return r.texto?.trim() || undefined;
+  },
+  limiteSemana: async () => (await followup.config()).limiteSemana,
+  enviadosFollowup: (conversaId, desde) => armazemFollowup.contarEnviados(conversaId, 'cadencia', desde),
+  descadastrado: async (tel) => (transmissoes ? transmissoes.descadastrado(tel) : false),
+  descadastrar: async (tel, motivo) => {
+    await transmissoes?.descadastrar(tel, motivo);
+  },
+});
+/* pos-venda: funil pós-venda (Conscientização → Retorno 30 → Manutenção 60 → Retorno 90 → Inativa; Voltou) e visitas no ano */
+const posVenda = new PosVenda({
+  armazem: pool ? new ArmazemPosVendaPostgres(pool) : new ArmazemPosVendaMemoria(repo, armazemTags),
+  funis,
+  automacoes,
+  empresaId: cfg.SINTONIA_EMPRESA_ID,
+  estiloPadrao: cfg.SINTONIA_EMPRESA_ID === EMPRESA_IMPERIO ? 'salao' : 'geral',
+  log,
 });
 /* automacao-vendas: gatilho "agendou" (agendamento da IA ou da equipe, e a cliente confirmando o horário). */
 observarEventos(repo, (e) => void automacoes.aoEvento(e));
@@ -533,9 +562,10 @@ const ganchosBase = ligarBots(ligarFunis({ tags, funis, automacoes }), { bots, f
 // Transmissões (disparo em massa): só com Postgres. Criadas depois da Sintonia; os ganchos as chamam quando existirem.
 let transmissoes: Transmissoes | undefined;
 // Follow-up configurável e confirmação automática de agenda (src/followup): ouve os eventos, envia pelo relógio.
+const armazemFollowup = pool ? new ArmazemFollowupPostgres(pool) : new ArmazemFollowupMemoria(); /* pos-venda: o limite da semana soma o follow-up */
 const followup = new Followup({
   empresaId: cfg.SINTONIA_EMPRESA_ID,
-  armazem: pool ? new ArmazemFollowupPostgres(pool) : new ArmazemFollowupMemoria(),
+  armazem: armazemFollowup,
   repo,
   sintonia: () => sintonia,
   agente: { executar: (p) => agentesIa.agente.executar(p) },
@@ -545,6 +575,7 @@ const followup = new Followup({
   iaRemarca: (c) => portao.iaAtiva() && !chaveSerena.pausada() && c.modo === 'ia' && !(c.pausaIaAte && c.pausaIaAte.getTime() > Date.now()),
   email,
   tags,
+  pausaDigitando /* followup-minutos: "digitando…" antes da mensagem, no mesmo tempo humano da IA */,
   log,
 });
 observarEventos(repo, (e) => followup.aoEvento(e));
@@ -586,6 +617,8 @@ tags.aoMarcar(async (c, tag) => {
 });
 // Funil do sistema "Atendimento" e toda conversa nele, na etapa em que está.
 await funis.sincronizarSistema().then((n) => n && log(`Funil do sistema: ${n} conversa(s) sincronizada(s)`)).catch((e) => log('Falha ao sincronizar o funil do sistema', String(e)));
+/* pos-venda: na Império, o funil pós-venda sugerido nasce uma vez (ligado). Nunca é recriado por cima do que a equipe editou. */
+if (cfg.SINTONIA_EMPRESA_ID === EMPRESA_IMPERIO) await posVenda.semear('salao').catch((e) => log('Falha ao criar o funil pós-venda sugerido', String(e)));
 
 // Rastreamento de leads (origem: anúncio, link rastreado) e API de Conversões da Meta.
 const armazemRastreio = pool ? new ArmazemRastreioPostgres(pool) : new ArmazemRastreioMemoria();
@@ -1076,7 +1109,8 @@ chaveSerena.aoMudar(async (m) => {
 agentesIa.registrar(app, { tagsDaIa: () => tagsDaIa.nomes() });
 
 // Rotas dos funis e das automações (depois de criarServidor: valem o login e o tratamento de erros de lá).
-registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids), perdas });
+registrarFunis(app, { repo, funis, automacoes, origens: (ids) => rastreio.selos(ids), perdas, posVenda });
+registrarPosVenda(app, { posVenda, repo }); /* pos-venda */
 registrarPerdas(app, { perdas }); /* perdas-saude */
 registrarRegrasFunil(app, { regras: regrasFunil, funis }); /* funil-atendimento */
 /* ia-completa: "O que a IA faz" (Automações › Agente de IA): ferramentas por agente e o que falta para funcionar. */

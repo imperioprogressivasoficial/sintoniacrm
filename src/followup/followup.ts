@@ -3,11 +3,13 @@ import type { PedidoAgente, RespostaAgente } from '../ai/agente.js';
 import { ajustarParaJanelaAtiva, estaAberta, proximaAbertura } from '../engine/horario.js';
 import type { Evento, Repositorio } from '../store/repositorio.js';
 import { unidadeDe } from '../unidades.js';
-import { DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
+import { bahia, DIA, HORA, MIN, partesBahia } from '../util/tempo.js';
 import type { ArmazemFollowup } from './armazem.js';
 import { identidade } from '../empresa/identidade.js';
 import {
   ConfigFollowup,
+  ehToqueCurto,
+  esperaMs,
   MODELOS_CADENCIA,
   NOME_SITUACAO,
   normalizarConfig,
@@ -16,6 +18,7 @@ import {
   SITUACOES,
   type Confirmacao,
   type EnvioFollowup,
+  type Passo,
   type Situacao,
   type StatusConfirmacao,
 } from './tipos.js';
@@ -32,6 +35,10 @@ import {
 export interface SintoniaParaFollowup {
   comConversa<T>(conversaId: string, fn: (c: Conversa) => Promise<T>): Promise<T | undefined>;
   enviarAutomatico(c: Conversa, texto: string, autorNome: string): Promise<string>;
+  /** followup-minutos: "digitando…" para a cliente antes da mensagem (Sintonia.mostrarPresenca). Sem isso, não mostra. */
+  mostrarPresenca?(conversaId: string, tipo: 'digitando' | 'gravando', segundos: number): Promise<void>;
+  /** followup-minutos: quem da equipe está respondendo agora (sinal de digitação recente). Alguém digitando: espera. */
+  quemEstaRespondendo?(conversaId: string): Promise<unknown[]>;
 }
 
 export interface EmailParaFollowup {
@@ -69,6 +76,12 @@ export interface OpcoesFollowup {
   tags?: TagsParaFollowup;
   agora?: () => Date;
   log?: (msg: string, extra?: unknown) => void;
+  /**
+   * followup-minutos: o tempo de "digitando…" antes de cada mensagem do follow-up (o mesmo jeito humano da IA:
+   * pausaDigitando de src/app/sintonia.ts). Sem isso, sai sem pausa (testes).
+   */
+  pausaDigitando?: (texto: string) => number;
+  esperar?: (ms: number) => Promise<void>;
 }
 
 const AUTOR_FOLLOWUP = 'Follow-up';
@@ -78,6 +91,20 @@ const RESERVA_MS = 5 * MIN;
 const DE_VENDA: Situacao[] = ['sem_resposta', 'preco_sem_agendar', 'orcamento', 'faltou'];
 const PEDIU_PRECO = /\b(pre[cç]os?|valor(es)?|quanto (custa|fica|é|e|sai|cobra|cobram|seria)|tabela de pre[cç]o)\b/i;
 const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+/** followup-minutos: tempo máximo de "digitando…" por rodada do relógio (o resto fica para a rodada seguinte, 30 s depois). */
+const ORCAMENTO_DIGITANDO_MS = 15_000;
+/** followup-minutos: alguém da equipe digitando: confere de novo daqui a 2 minutos. */
+const ESPERA_EQUIPE_DIGITANDO = 2 * MIN;
+
+/** followup-minutos: conversa de grupo (nunca recebe follow-up). Os grupos ficam em src/grupos; aqui é só por garantia. */
+export const ehGrupo = (c: Pick<Conversa, 'telefone'>): boolean => /@g\.us$|-/.test(c.telefone) || c.telefone.replace(/\D/g, '').length > 15;
+
+/** Começo do dia (Bahia) de `d`. */
+const inicioDoDia = (d: Date): Date => {
+  const p = partesBahia(d);
+  return bahia(p.ano, p.mes, p.dia, 0, 0);
+};
+const mesmoDia = (a: Date, b: Date): boolean => inicioDoDia(a).getTime() === inicioDoDia(b).getTime();
 
 const dois = (n: number) => String(n).padStart(2, '0');
 export function dataHora(d: Date): { data: string; hora: string } {
@@ -91,6 +118,8 @@ export class Followup {
   private cache?: { cfg: ConfigFollowup; ate: number };
   private fila: Promise<void> = Promise.resolve();
   private rodando = false;
+  /** followup-minutos: quanto de "digitando…" ainda cabe nesta rodada do relógio. */
+  private orcamentoDigitando = ORCAMENTO_DIGITANDO_MS;
 
   constructor(private readonly o: OpcoesFollowup) {
     this.agora = o.agora ?? (() => new Date());
@@ -223,6 +252,9 @@ export class Followup {
     if (!c || c.empresaId !== this.o.empresaId) return false;
     if (DE_VENDA.includes(situacao) && situacao !== 'faltou' && (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida')) return false;
     if (situacao !== 'pos_atendimento' && c.modo === 'humano' && cfg.pararQuandoEquipeAssume) return false;
+    // followup-minutos: nada em grupo; "não respondeu" e "pediu preço" não começam com um horário marcado pela frente.
+    if (ehGrupo(c)) return false;
+    if ((situacao === 'sem_resposta' || situacao === 'preco_sem_agendar') && (await this.temHorarioMarcado(conversaId))) return false;
     // sem-exemplos: cadência sem mensagens (nasce vazia) não começa.
     const primeiro = cad.passos[0];
     if (!primeiro) return false;
@@ -236,7 +268,7 @@ export class Followup {
         passo: 0,
         total: cad.passos.length,
         chave: `cad:${conversaId}:${situacao}:${base.getTime()}:0`,
-        quando: new Date(base.getTime() + primeiro.esperaHoras * HORA),
+        quando: new Date(base.getTime() + esperaMs(primeiro)),
         dados: { base: base.toISOString(), ...extra },
       },
       this.agora(),
@@ -349,6 +381,7 @@ export class Followup {
   async tick(): Promise<{ enviados: number }> {
     if (this.rodando) return { enviados: 0 };
     this.rodando = true;
+    this.orcamentoDigitando = ORCAMENTO_DIGITANDO_MS;
     let enviados = 0;
     try {
       const agora = this.agora();
@@ -422,17 +455,59 @@ export class Followup {
     if (!cad?.ligada || !passo) return fim('cancelado', 'cadência desligada');
     if (await this.o.armazem.pausado(e.conversaId)) return fim('cancelado', 'pausado pela equipe');
     const base = new Date(String(e.dados.base ?? e.criadoEm.toISOString()));
-    const desde = new Date(this.agora().getTime() - 7 * DIA);
+    const agora = this.agora();
+    const desde = new Date(agora.getTime() - 7 * DIA);
     if ((await this.o.armazem.contarEnviados(e.conversaId, 'cadencia', desde)) >= cfg.limiteSemana) return fim('pulado', 'limite de mensagens por cliente');
+    const situacao = e.situacao as Situacao;
+    const venda = situacao !== 'pos_atendimento';
+    const curto = venda && ehToqueCurto(passo);
 
-    const r = await this.o.sintonia().comConversa(e.conversaId, async (c) => {
-      if (c.modo === 'humano' && cfg.pararQuandoEquipeAssume && e.situacao !== 'pos_atendimento') return { estado: 'cancelado' as const, detalhe: 'a equipe assumiu' };
-      if (cad.pararSeResponder && (c.ultimaMensagemCliente?.getTime() ?? 0) > base.getTime()) {
-        // A última palavra é da cliente e já passou do começo: ela respondeu.
-        const ultLoja = Math.max(c.ultimaMensagemIa?.getTime() ?? 0, c.ultimaMensagemEquipe?.getTime() ?? 0);
-        if (e.situacao !== 'sem_resposta' || (c.ultimaMensagemCliente?.getTime() ?? 0) > ultLoja) return { estado: 'cancelado' as const, detalhe: 'a cliente respondeu' };
+    // followup-minutos: regras de segurança (antes de pegar a trava da conversa).
+    if (venda && (await this.equipeDigitando(e.conversaId))) {
+      // Alguém da equipe está escrevendo agora: espera; se responder, a cadência para sozinha.
+      await this.o.armazem.adiar(e.id, new Date(agora.getTime() + ESPERA_EQUIPE_DIGITANDO));
+      return 'adiado';
+    }
+    if ((situacao === 'sem_resposta' || situacao === 'preco_sem_agendar') && (await this.temHorarioMarcado(e.conversaId))) return fim('cancelado', 'tem horário marcado');
+    if (curto) {
+      // Toque de minutos ("ainda está aí?"): no máximo uma vez por dia na mesma conversa. Já saiu: vai para o próximo.
+      const jaSaiu = (await this.o.armazem.envios(e.conversaId)).some(
+        (x) => x.id !== e.id && x.tipo === 'cadencia' && x.situacao === e.situacao && x.passo === e.passo && x.estado === 'enviado' && x.enviadoEm && mesmoDia(new Date(x.enviadoEm), agora),
+      );
+      if (jaSaiu) {
+        await fim('pulado', 'esse toque de minutos já saiu hoje nesta conversa');
+        await this.programarProximo(e, cad);
+        return 'pulado';
       }
-      if (DE_VENDA.includes(e.situacao as Situacao) && e.situacao !== 'faltou' && (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida')) return { estado: 'cancelado' as const, detalhe: 'agendou' };
+    }
+    // "digitando…" demais nesta rodada do relógio: fica para a próxima (30 s depois), para o relógio não travar.
+    if (this.o.pausaDigitando && this.orcamentoDigitando <= 0) {
+      await this.o.armazem.adiar(e.id, agora);
+      return 'adiado';
+    }
+
+    type Resultado =
+      | { estado: 'cancelado' | 'pulado'; detalhe: string }
+      | { estado: 'pular'; detalhe: string }
+      | { estado: 'adiar'; quando: Date }
+      | { estado: 'enviado'; detalhe: null; conversa: Conversa };
+    const r = await this.o.sintonia().comConversa(e.conversaId, async (c): Promise<Resultado> => {
+      const agoraC = this.agora();
+      if (c.modo === 'humano' && cfg.pararQuandoEquipeAssume && venda) return { estado: 'cancelado', detalhe: 'a equipe assumiu' };
+      if (ehGrupo(c)) return { estado: 'cancelado', detalhe: 'conversa de grupo' };
+      // followup-minutos: a equipe acabou de mexer na conversa (a IA está em silêncio por isso): espera passar.
+      if (venda && c.pausaIaAte && c.pausaIaAte.getTime() > agoraC.getTime()) return { estado: 'adiar', quando: new Date(c.pausaIaAte.getTime() + MIN) };
+      const ultCliente = c.ultimaMensagemCliente?.getTime() ?? 0;
+      const ultLoja = Math.max(c.ultimaMensagemIa?.getTime() ?? 0, c.ultimaMensagemEquipe?.getTime() ?? 0);
+      if (cad.pararSeResponder && ultCliente > base.getTime()) {
+        // A última palavra é da cliente e já passou do começo: ela respondeu.
+        if (e.situacao !== 'sem_resposta' || ultCliente > ultLoja) return { estado: 'cancelado', detalhe: 'a cliente respondeu' };
+      }
+      // followup-minutos: "não respondeu" só sai quando a ÚLTIMA mensagem é da loja (IA ou equipe).
+      if (situacao === 'sem_resposta' && (!ultLoja || ultCliente > ultLoja)) return { estado: 'cancelado', detalhe: ultLoja ? 'a cliente respondeu' : 'a loja ainda não respondeu' };
+      if (DE_VENDA.includes(situacao) && situacao !== 'faltou' && (c.etapa === 'agendada' || c.etapa === 'compareceu' || c.etapa === 'perdida')) return { estado: 'cancelado', detalhe: 'agendou' };
+      // followup-minutos: toque de minutos só com a conversa quente (a última mensagem da loja é de hoje).
+      if (curto && (!ultLoja || !mesmoDia(new Date(ultLoja), agoraC))) return { estado: 'pular', detalhe: 'a conversa esfriou (toque de minutos só no mesmo dia)' };
       const v = this.variaveis(c, { servico: typeof e.dados.servico === 'string' ? e.dados.servico : null });
       let texto = preencher(passo.texto, v);
       if (passo.ia && passo.objetivo && this.o.agente && this.o.iaDisponivel?.()) {
@@ -442,14 +517,15 @@ export class Followup {
             mensagens: await this.o.repo.mensagens(c.id),
             agora: this.agora(),
             modo: 'responder',
-            objetivo: `Mensagem de follow-up (${NOME_SITUACAO[e.situacao as Situacao]}), passo ${e.passo + 1} de ${e.total}. Objetivo: ${passo.objetivo} Escreva uma mensagem curta e natural para enviar agora à cliente.`,
+            objetivo: `Mensagem de follow-up (${NOME_SITUACAO[situacao]}), passo ${e.passo + 1} de ${e.total}. Objetivo: ${passo.objetivo} Escreva uma mensagem curta e natural para enviar agora à cliente.`,
           });
           if (ia.texto.trim()) texto = ia.texto.trim();
         } catch (x) {
           this.log('IA não escreveu o follow-up; vai o texto da cadência', String(x));
         }
       }
-      if (!texto.trim()) return { estado: 'pulado' as const, detalhe: 'mensagem vazia' };
+      if (!texto.trim()) return { estado: 'pulado', detalhe: 'mensagem vazia' };
+      await this.digitar(c.id, texto);
       await this.o.sintonia().enviarAutomatico(c, texto, AUTOR_FOLLOWUP);
       await this.o.repo.salvarConversa(c);
       await this.o.armazem.concluir(e.id, 'enviado', null, this.agora());
@@ -457,21 +533,61 @@ export class Followup {
         const r = await this.o.email.deAutomacao({ conversa: c, modeloId: passo.emailModeloId, chave: `fu:${e.chave}`, variaveis: this.paraEmail(v) }).catch((x) => ({ ok: false as const, motivo: String(x) }));
         if (!r.ok) this.log('E-mail do follow-up não saiu', r.motivo);
       }
-      return { estado: 'enviado' as const, detalhe: null, conversa: c };
+      return { estado: 'enviado', detalhe: null, conversa: c };
     });
     if (!r) return fim('cancelado', 'conversa não existe');
+    if (r.estado === 'adiar') {
+      await this.o.armazem.adiar(e.id, r.quando);
+      return 'adiado';
+    }
+    if (r.estado === 'pular') {
+      await fim('pulado', r.detalhe);
+      await this.programarProximo(e, cad);
+      return 'pulado';
+    }
     if (r.estado !== 'enviado') return fim(r.estado, r.detalhe);
     await this.o.repo.registrarEvento({ tipo: 'followup', conversaId: e.conversaId, unidade: r.conversa.unidade, em: this.agora(), dados: { situacao: e.situacao, passo: e.passo + 1, total: e.total } });
-    // Próximo passo: conta a partir de agora.
-    const prox = cad.passos[e.passo + 1];
-    if (prox) {
-      await this.o.armazem.programar(
-        this.o.empresaId,
-        { conversaId: e.conversaId, tipo: 'cadencia', situacao: e.situacao, passo: e.passo + 1, total: cad.passos.length, chave: e.chave.replace(/:\d+$/, `:${e.passo + 1}`), quando: new Date(this.agora().getTime() + prox.esperaHoras * HORA), dados: e.dados },
-        this.agora(),
-      );
-    }
+    await this.programarProximo(e, cad);
     return 'enviado';
+  }
+
+  /** Próximo passo da cadência: conta a partir de agora. */
+  private async programarProximo(e: EnvioFollowup, cad: { passos: Passo[] }): Promise<void> {
+    const prox = cad.passos[e.passo + 1];
+    if (!prox) return;
+    await this.o.armazem.programar(
+      this.o.empresaId,
+      { conversaId: e.conversaId, tipo: 'cadencia', situacao: e.situacao, passo: e.passo + 1, total: cad.passos.length, chave: e.chave.replace(/:\d+$/, `:${e.passo + 1}`), quando: new Date(this.agora().getTime() + esperaMs(prox)), dados: e.dados },
+      this.agora(),
+    );
+  }
+
+  /** followup-minutos: "digitando…" pelo tempo de escrever a mensagem, como a IA faz (dentro do limite da rodada). */
+  private async digitar(conversaId: string, texto: string): Promise<void> {
+    const mostrar = this.o.sintonia().mostrarPresenca;
+    if (!this.o.pausaDigitando || !mostrar) return;
+    const ms = Math.max(0, Math.min(8000, Math.round(this.o.pausaDigitando(texto))));
+    if (!ms) return;
+    this.orcamentoDigitando -= ms;
+    const esperar = this.o.esperar ?? ((x: number) => new Promise<void>((ok) => setTimeout(ok, x)));
+    // O aviso sai antes da espera (no máximo 2 s esperando o canal; se demorar, segue assim mesmo).
+    const inicio = Date.now();
+    let relogio: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([Promise.resolve(mostrar.call(this.o.sintonia(), conversaId, 'digitando', ms / 1000)).catch(() => undefined), new Promise<void>((ok) => (relogio = setTimeout(ok, 2000)))]);
+    clearTimeout(relogio);
+    await esperar(Math.max(0, ms - (this.o.esperar ? 0 : Date.now() - inicio)));
+  }
+
+  /** followup-minutos: há um horário marcado pela frente nesta conversa (que a cliente não pediu para remarcar). */
+  private async temHorarioMarcado(conversaId: string): Promise<boolean> {
+    const agora = this.agora().getTime();
+    return (await this.o.armazem.confirmacoesDa(conversaId)).some((x) => x.inicio.getTime() > agora && x.status !== 'remarcar');
+  }
+
+  /** followup-minutos: alguém da equipe está digitando nesta conversa agora. */
+  private async equipeDigitando(conversaId: string): Promise<boolean> {
+    const quem = await Promise.resolve(this.o.sintonia().quemEstaRespondendo?.(conversaId)).catch(() => undefined);
+    return Array.isArray(quem) && quem.length > 0;
   }
 
   private async enviarConfirmacao(e: EnvioFollowup, cfg: ConfigFollowup, fim: (estado: 'enviado' | 'cancelado' | 'pulado' | 'falhou', detalhe: string | null) => Promise<string>): Promise<string> {
@@ -563,6 +679,11 @@ export class Followup {
       confirmacao: conf ? { agendamento: conf.agendamento, status: conf.status, inicio: conf.inicio, servico: conf.servico } : null,
       historico: envios.slice(0, 20).map((x) => ({ situacao: x.situacao, passo: x.passo + 1, total: x.total, quando: x.quando, estado: x.estado, detalhe: x.detalhe ?? null })),
     };
+  }
+
+  /** followup-minutos: mensagens de cada cadência enviadas hoje (dia da Bahia), para a tela. */
+  async enviadasHoje(): Promise<Record<string, number>> {
+    return this.o.armazem.enviadosPorSituacao(this.o.empresaId, inicioDoDia(this.agora()));
   }
 
   async pausar(conversaId: string, por: string): Promise<void> {

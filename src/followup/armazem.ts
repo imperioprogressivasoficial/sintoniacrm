@@ -17,6 +17,8 @@ export interface ArmazemFollowup {
   adiar(id: string, quando: Date): Promise<void>;
   envios(conversaId: string): Promise<EnvioFollowup[]>;
   contarEnviados(conversaId: string, tipo: EnvioFollowup['tipo'], desde: Date): Promise<number>;
+  /** followup-minutos: quantas mensagens de cadência saíram na empresa desde `desde`, por cadência (tela: "enviadas hoje"). */
+  enviadosPorSituacao(empresaId: string, desde: Date): Promise<Record<string, number>>;
 
   salvarConfirmacao(empresaId: string, c: Omit<Confirmacao, 'status' | 'perguntadoEm' | 'respondidoEm' | 'resposta'>): Promise<void>;
   confirmacao(empresaId: string, agendamento: string): Promise<Confirmacao | undefined>;
@@ -96,6 +98,11 @@ export class ArmazemFollowupMemoria implements ArmazemFollowup {
   }
   async contarEnviados(conversaId: string, tipo: EnvioFollowup['tipo'], desde: Date) {
     return this.lista.filter((x) => x.conversaId === conversaId && x.tipo === tipo && x.estado === 'enviado' && x.enviadoEm && x.enviadoEm >= desde).length;
+  }
+  async enviadosPorSituacao(empresaId: string, desde: Date) {
+    const r: Record<string, number> = {};
+    for (const x of this.lista) if (x.empresaId === empresaId && x.tipo === 'cadencia' && x.estado === 'enviado' && x.enviadoEm && x.enviadoEm >= desde) r[x.situacao] = (r[x.situacao] ?? 0) + 1;
+    return r;
   }
   async salvarConfirmacao(empresaId: string, c: Omit<Confirmacao, 'status' | 'perguntadoEm' | 'respondidoEm' | 'resposta'>) {
     const k = `${empresaId}|${c.agendamento}`;
@@ -230,6 +237,13 @@ export class ArmazemFollowupPostgres implements ArmazemFollowup {
   async contarEnviados(conversaId: string, tipo: EnvioFollowup['tipo'], desde: Date) {
     const { rows } = await this.pool.query(`select count(*)::int as n from sintonia.followup_envios where conversa_id = $1 and tipo = $2 and estado = 'enviado' and enviado_em >= $3`, [conversaId, tipo, desde]);
     return rows[0]?.n ?? 0;
+  }
+  async enviadosPorSituacao(empresaId: string, desde: Date) {
+    const { rows } = await this.pool.query(
+      `select situacao, count(*)::int as n from sintonia.followup_envios where empresa_id = $1 and tipo = 'cadencia' and estado = 'enviado' and enviado_em >= $2 group by situacao`,
+      [empresaId, desde],
+    );
+    return Object.fromEntries(rows.map((r) => [r.situacao as string, r.n as number]));
   }
   async salvarConfirmacao(empresaId: string, c: Omit<Confirmacao, 'status' | 'perguntadoEm' | 'respondidoEm' | 'resposta'>) {
     await this.pool.query(

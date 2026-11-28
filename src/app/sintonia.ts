@@ -1343,6 +1343,8 @@ export class Sintonia {
 
   private async enviarAtivo(t: Tarefa, c: Conversa): Promise<void> {
     if (c.modo === 'humano' || t.tipo === 'reavaliar') return;
+    // followup-minutos: com "Não respondeu" ligado no Follow-up, os follow-ups fixos antigos que já estavam na fila não saem (nada em dobro).
+    if (FOLLOWUPS.includes(t.tipo) && !(await this.motorDe(c)).followups) return;
     if (await this.botConduz(c)) return;
     // robustez: follow-up e lembrete da IA sem chave: não chama a IA (nada sai).
     if (!(await this.temIa(c))) return;

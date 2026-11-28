@@ -57,13 +57,16 @@ export const Gatilho = z.discriminatedUnion('tipo', [
 ]);
 export type Gatilho = z.infer<typeof Gatilho>;
 
+/** Condições do passo "Se… senão…". pos-venda: no_funil = a conversa está em alguma etapa do funil `valor`. */
+export const CONDICOES = ['cliente_respondeu', 'tem_tag', 'modo', 'horario_loja', 'no_funil'] as const;
+
 /** Até onde uma condição pode ter condição dentro. */
 export const PROFUNDIDADE_CONDICAO = 3;
 /** Passos no total (contando os de dentro das condições). */
 export const LIMITE_PASSOS = 40;
 
 export type Passo =
-  | { tipo: 'enviar_mensagem'; texto: string; so_no_horario: boolean }
+  | { tipo: 'enviar_mensagem'; texto: string; so_no_horario: boolean; ia_objetivo?: string }
   | { tipo: 'esperar'; minutos: number }
   | { tipo: 'mudar_modo'; modo: (typeof MODOS)[number] }
   | { tipo: 'fluxo_ia'; objetivo: string; dias: number }
@@ -80,7 +83,7 @@ export type Passo =
   | { tipo: 'pesquisa_nps' }
   | {
       tipo: 'condicao';
-      se: 'cliente_respondeu' | 'tem_tag' | 'modo' | 'horario_loja';
+      se: (typeof CONDICOES)[number];
       valor?: string;
       entao: Passo[];
       senao: Passo[];
@@ -89,7 +92,16 @@ export type Passo =
 export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
   z.discriminatedUnion('tipo', [
     /** Variáveis: {primeiro_nome} {nome} {unidade} {atendente}. so_no_horario (padrão true): fora do horário da loja, espera a abertura. */
-    z.object({ tipo: z.literal('enviar_mensagem'), texto: z.string().trim().min(1).max(1000), so_no_horario: z.boolean().default(true) }),
+    /*
+     * pos-venda: ia_objetivo = a IA escreve a mensagem com este objetivo (com a IA ligada); o texto é a reserva
+     * (vai quando a IA está desligada, pausada ou falha).
+     */
+    z.object({
+      tipo: z.literal('enviar_mensagem'),
+      texto: z.string().trim().min(1).max(1000),
+      so_no_horario: z.boolean().default(true),
+      ia_objetivo: z.string().trim().min(3).max(600).optional(),
+    }),
     z.object({ tipo: z.literal('esperar'), minutos: z.number().int().min(1).max(60 * 24 * 30) }),
     z.object({ tipo: z.literal('mudar_modo'), modo: z.enum(MODOS) }),
     /** Põe a conversa com a IA e passa o objetivo como instrução extra (vale por `dias`, padrão 7, enquanto estiver com a IA). */
@@ -113,7 +125,7 @@ export const Passo: z.ZodType<Passo, unknown> = z.lazy(() =>
     z.object({ tipo: z.literal('pesquisa_nps') }),
     z.object({
       tipo: z.literal('condicao'),
-      se: z.enum(['cliente_respondeu', 'tem_tag', 'modo', 'horario_loja']),
+      se: z.enum(CONDICOES),
       valor: z.string().trim().min(1).max(100).optional(),
       entao: z.array(Passo).max(LIMITE_PASSOS).default([]),
       senao: z.array(Passo).max(LIMITE_PASSOS).default([]),
@@ -125,8 +137,16 @@ export const Opcoes = z
   .object({
     /** Se alguém da equipe responder, as execuções desta automação com envio pendente na conversa são canceladas. */
     parar_se_equipe_responder: z.boolean().default(true),
+    /** pos-venda: a conversa saiu da etapa do gatilho (entrou/parada na etapa): o que falta (esperas e envios) para. */
+    parar_se_sair_da_etapa: z.boolean().default(false),
+    /**
+     * pos-venda: mensagem de relacionamento (marketing). Não roda para grupos; a mensagem é pulada (e o resto segue)
+     * se passar do limite do dia ou da semana (o da semana é o do Follow-up); se a cliente pediu para não receber
+     * mais mensagens, para tudo para ela.
+     */
+    respeitar_limites: z.boolean().default(false),
   })
-  .default({ parar_se_equipe_responder: true });
+  .default({ parar_se_equipe_responder: true, parar_se_sair_da_etapa: false, respeitar_limites: false });
 export type Opcoes = z.infer<typeof Opcoes>;
 
 export const AutomacaoNova = z.object({
@@ -147,7 +167,7 @@ export const AutomacaoAlteracao = z
     ligada: z.boolean().optional(),
     gatilho: Gatilho.optional(),
     passos: z.array(Passo).min(1).max(LIMITE_PASSOS).optional(),
-    opcoes: z.object({ parar_se_equipe_responder: z.boolean().optional() }).optional(),
+    opcoes: z.object({ parar_se_equipe_responder: z.boolean().optional(), parar_se_sair_da_etapa: z.boolean().optional(), respeitar_limites: z.boolean().optional() }).optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), 'Nada para mudar.');
 

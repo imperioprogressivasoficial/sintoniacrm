@@ -129,6 +129,7 @@ const ARQUIVOS: Record<string, { arquivo: string; tipo: string }> = {
   '/telas/bot.js': { arquivo: 'telas/bot.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/etapa-acoes.js': { arquivo: 'telas/etapa-acoes.js', tipo: 'text/javascript; charset=utf-8' }, // etapa-entrada
   '/telas/funil-regras.js': { arquivo: 'telas/funil-regras.js', tipo: 'text/javascript; charset=utf-8' }, // funil-atendimento
+  '/telas/pos-venda.js': { arquivo: 'telas/pos-venda.js', tipo: 'text/javascript; charset=utf-8' }, // pos-venda
   '/telas/relatorios.js': { arquivo: 'telas/relatorios.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/leads.js': { arquivo: 'telas/leads.js', tipo: 'text/javascript; charset=utf-8' },
   '/telas/transmissoes.js': { arquivo: 'telas/transmissoes.js', tipo: 'text/javascript; charset=utf-8' },

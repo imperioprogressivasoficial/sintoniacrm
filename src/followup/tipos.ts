@@ -27,9 +27,25 @@ export const GATILHO_SITUACAO: Record<Situacao, string> = {
   orcamento: 'Começa quando a conversa recebe a tag "Orçamento".',
 };
 
-const Passo = z.object({
-  /** Espera depois do passo anterior (ou do começo da cadência), em horas. */
-  esperaHoras: z.number().min(0.25).max(24 * 400),
+/** followup-minutos: as esperas valem em minutos (mínimo 1 minuto), horas ou dias. */
+export const UNIDADES_ESPERA = ['min', 'h', 'd'] as const;
+export type UnidadeEspera = (typeof UNIDADES_ESPERA)[number];
+const MIN_HORAS = 1 / 60;
+const MAX_HORAS = 24 * 400;
+
+const PassoCampos = z.object({
+  /**
+   * Espera depois do passo anterior (ou do começo da cadência), em horas (pode ser fração: 5 min = 5/60).
+   * followup-minutos: mínimo 1 minuto (antes era 15 min); sempre em minutos inteiros. A entrada também aceita
+   * `esperaMinutos` (vira esperaHoras); as configurações antigas (só esperaHoras) continuam valendo igual.
+   */
+  esperaHoras: z
+    .number()
+    .min(MIN_HORAS - 1e-9)
+    .max(MAX_HORAS)
+    .transform((h) => Math.max(1, Math.round(h * 60)) / 60),
+  /** followup-minutos: como a tela mostra a espera (minutos, horas ou dias). Sem ela, a tela escolhe pelo número. */
+  unidade: z.enum(UNIDADES_ESPERA).optional(),
   /** Mensagem com variáveis {nome} {primeiro_nome} {servico} {unidade} {data} {hora}. */
   texto: z.string().trim().max(1500).default(''),
   /** A IA escreve a mensagem com este objetivo (quando há chave da IA; sem chave, vai o texto). */
@@ -39,7 +55,25 @@ const Passo = z.object({
   email: z.boolean().default(false),
   emailModeloId: z.string().uuid().nullable().default(null),
 });
-export type Passo = z.infer<typeof Passo>;
+
+const Passo = z.preprocess((bruto) => {
+  // followup-minutos: { esperaMinutos: 5 } é o mesmo que { esperaHoras: 5/60 }.
+  if (!bruto || typeof bruto !== 'object') return bruto;
+  const { esperaMinutos, ...resto } = bruto as Record<string, unknown>;
+  if (typeof esperaMinutos === 'number' && Number.isFinite(esperaMinutos)) return { unidade: 'min', ...resto, esperaHoras: esperaMinutos / 60 };
+  return resto;
+}, PassoCampos);
+export type Passo = z.infer<typeof PassoCampos>;
+
+/** followup-minutos: espera do passo em milissegundos (minutos inteiros, no mínimo 1). */
+export const esperaMs = (p: Pick<Passo, 'esperaHoras'>): number => Math.max(1, Math.round(p.esperaHoras * 60)) * 60_000;
+
+/**
+ * followup-minutos: "toque curto" = espera de menos de 1 hora (ex.: 5 e 15 minutos). Só vale com a conversa quente
+ * (a última mensagem da loja é de hoje) e sai no máximo uma vez por dia na mesma conversa.
+ */
+export const TOQUE_CURTO_MS = 60 * 60_000;
+export const ehToqueCurto = (p: Pick<Passo, 'esperaHoras'>): boolean => esperaMs(p) < TOQUE_CURTO_MS;
 
 const Cadencia = z.object({
   id: z.enum(SITUACOES),
@@ -139,6 +173,28 @@ export const MODELOS_CADENCIA: Record<Situacao, Omit<Cadencia, 'ligada'>> = {
     ],
   },
 };
+
+/**
+ * followup-minutos (pedido do dono, 28/11): o modelo sugerido de "Não respondeu", em minutos e depois mais espaçado.
+ * Nunca nasce sozinho numa empresa nova (sem-exemplos): a tela oferece "Usar modelo sugerido" na cadência vazia,
+ * a pessoa vê, edita e salva. A migração 780 aplica este mesmo modelo, ligado, só na Império (quando a cadência
+ * dela ainda estava vazia); test/followup-minutos.test.ts confere que os dois continuam iguais.
+ * As esperas somam: 5 min, +15 min, +1 dia, +2 dias (a última cai no 3º dia).
+ */
+export const SUGESTAO_SEM_RESPOSTA: Passo[] = [
+  { esperaHoras: 5 / 60, unidade: 'min', texto: 'Oi, ainda está por aí?', ia: false, objetivo: '', email: false, emailModeloId: null },
+  { esperaHoras: 15 / 60, unidade: 'min', texto: 'Consegui te ajudar? Se quiser, já deixo seu horário separado.', ia: false, objetivo: '', email: false, emailModeloId: null },
+  {
+    esperaHoras: 24,
+    unidade: 'd',
+    texto: 'Oi, {primeiro_nome}! Passando para saber se ainda quer agendar. Se quiser, já vejo os horários para você.',
+    ia: true,
+    objetivo: 'Retomar a conversa de ontem com leveza: lembrar em uma frase o que ela queria (o serviço, a unidade ou o horário que estava vendo) e perguntar se quer que você reserve. Curta, sem pressionar e sem repetir a mensagem anterior.',
+    email: false,
+    emailModeloId: null,
+  },
+  { esperaHoras: 48, unidade: 'd', texto: 'Oi, {primeiro_nome}! Vou deixar nossa conversa guardada por aqui. Quando quiser, é só me chamar que eu vejo um horário para você 💜', ia: false, objetivo: '', email: false, emailModeloId: null },
+];
 
 export const TEXTOS_CONFIRMACAO = {
   texto: 'Olá, {primeiro_nome}! Passando para confirmar seu horário de {servico} na {unidade}, {data} às {hora}.\n\nResponda com o número:\n1 - Confirmo\n2 - Preciso remarcar',
