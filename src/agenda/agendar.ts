@@ -1,5 +1,6 @@
 import type { Agendamento, Conversa, UnidadeId } from '../domain.js';
-import { ehRoteador, ErroAgenda, NOMES_SISTEMA, type AgendaDaUnidade, type FonteAgenda } from './sistema.js';
+import { ehRoteador, ErroAgenda, NOMES_SISTEMA, type AgendaDaUnidade, type DadosExtrasCliente, type FonteAgenda } from './sistema.js';
+import { espelhoAtivo } from './espelho.js';
 import { unidadeDe } from '../unidades.js';
 import { deDataEHora, dataISO, DIA, horaHHmm } from '../util/tempo.js';
 
@@ -19,6 +20,17 @@ export interface PedidoAgendamento {
   nomeCliente: string;
   /** Quem agendou, gravado na observação do agendamento. */
   origem: string;
+  /**
+   * serena-regras: a cliente no sistema já conhecida (achada pela IA, ex. pelo nome). Sem: a da conversa (id do Trinks
+   * guardado ou pelo telefone) e, sem cadastro, cria uma nova.
+   */
+  clienteId?: number;
+  /** serena-regras: o horário é para outra pessoa (não usa nem grava o cadastro da dona da conversa). */
+  paraOutraPessoa?: { telefone?: string };
+  /** serena-regras: nascimento e e-mail da cliente nova (vão para o cadastro). */
+  extrasCliente?: DadosExtrasCliente;
+  /** serena-regras: marcas que vão no começo da observação (ex.: "PD" = profissional pedida pela cliente). */
+  marcas?: string[];
 }
 
 export interface ResultadoAgendamento {
@@ -72,9 +84,16 @@ export async function agendar(
   const profissional = (await agenda.listarProfissionais(est)).find((x) => x.id === p.profissionalId);
 
   // O id guardado na conversa é do Trinks: em outro sistema, a cliente é procurada pelo telefone.
+  // serena-regras: para outra pessoa, procura pelo telefone dela (se veio) e cria com o nome dela; nunca usa o da dona.
+  const telefone = p.paraOutraPessoa ? p.paraOutraPessoa.telefone || conversa.telefone : conversa.telefone;
   let clienteId =
-    (tipo === 'trinks' ? conversa.trinksClienteId : undefined) ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id;
-  if (!clienteId) clienteId = await agenda.criarCliente(est, p.nomeCliente, conversa.telefone);
+    p.clienteId ??
+    (p.paraOutraPessoa
+      ? p.paraOutraPessoa.telefone
+        ? (await agenda.buscarClientePorTelefone(est, p.paraOutraPessoa.telefone))?.id
+        : undefined
+      : ((tipo === 'trinks' ? conversa.trinksClienteId : undefined) ?? (await agenda.buscarClientePorTelefone(est, conversa.telefone))?.id));
+  if (!clienteId) clienteId = await agenda.criarCliente(est, p.nomeCliente, telefone, p.extrasCliente);
 
   const valor = servico.valorPromocional ?? servico.preco;
   try {
@@ -86,8 +105,9 @@ export async function agendar(
       hora,
       duracaoEmMinutos: servico.duracaoEmMinutos,
       valor,
-      observacoes: `Agendado por ${p.origem} (Sintonia)`,
+      observacoes: `${p.marcas?.length ? `${p.marcas.join(' ')} - ` : ''}Agendado por ${p.origem} (Sintonia)`,
     });
+    espelhoAtivo()?.sujar(p.unidade, p.data); // serena-regras: o espelho relê o dia agora
     return {
       clienteTrinksId: clienteId,
       valor,
@@ -119,11 +139,16 @@ export async function horariosLivres(
   servicoId: number,
   profissionalId: number | undefined,
   agora: Date,
+  op: { espelho?: boolean } = {},
 ): Promise<Array<{ profissionalId: number; profissional: string | null; horarios: string[] }>> {
   if (data < dataISO(agora)) return [];
   if (data > dataISO(new Date(agora.getTime() + 120 * DIA))) return [];
   const { sistema, local } = agendaDaUnidade(fonte, unidade);
-  const lista = await sistema.horariosVagos(local, data, { servicoId, profissionalId });
+  // serena-regras: o espelho da agenda responde na hora quando está em dia (quem grava confere no sistema).
+  const doEspelho = op.espelho ? espelhoAtivo()?.vagosDe(unidade, data, servicoId) : null;
+  const lista = doEspelho
+    ? doEspelho.filter((p) => !profissionalId || p.profissionalId === profissionalId).map((p) => ({ id: p.profissionalId, nome: p.profissional, horariosVagos: p.horarios }))
+    : await sistema.horariosVagos(local, data, { servicoId, profissionalId });
   const limite = agora.getTime() + 30 * 60_000;
   return lista
     .map((p) => ({

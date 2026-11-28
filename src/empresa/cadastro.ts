@@ -27,6 +27,12 @@ export const Endereco = z
   .prefault({});
 export type Endereco = z.infer<typeof Endereco>;
 
+/** serena-regras: lista de horários "HH:mm" sem repetição, em ordem (no máximo 24). */
+export const HorariosPadrao = z
+  .array(HHMM)
+  .max(24, 'No máximo 24 horários padrão.')
+  .transform((l) => [...new Set(l)].sort());
+
 /** Um dia da semana: 0 = domingo … 6 = sábado. */
 export const DiaHorario = z.object({ dia: z.number().int().min(0).max(6), aberto: z.boolean(), abre: HHMM, fecha: HHMM });
 export const Horario = z
@@ -113,6 +119,15 @@ export const DadosUnidade = z.object({
   nomeCliente: T(80).default(''),
   /** ligacoes-modos: jeito de ligar que vem marcado para quem ainda não escolheu (a gestão define). */
   modoLigacao: z.enum(['telefone', 'whatsapp']).catch('telefone').default('telefone'),
+  /**
+   * serena-regras: horários que a IA oferece (os que estiverem livres no dia), ex.: ["09:00", "12:30", "15:30"].
+   * Vazio = sem padrão: a IA oferece os horários livres da agenda.
+   */
+  horariosPadrao: HorariosPadrao.catch([]).default([]),
+  /** serena-regras: até que horário a IA pode marcar quando a cliente pede outro horário ('' = só os padrão). */
+  ultimoHorarioEspecial: z.union([z.literal(''), HHMM]).catch('').default(''),
+  /** serena-regras: id do serviço no sistema de agenda em que a IA marca (avaliação/procedimento padrão). null = a IA escolhe. */
+  servicoPadraoId: z.number().int().positive().nullable().catch(null).default(null),
 });
 export type DadosUnidade = z.infer<typeof DadosUnidade>;
 export const lerDadosUnidade = (b: unknown): DadosUnidade => {

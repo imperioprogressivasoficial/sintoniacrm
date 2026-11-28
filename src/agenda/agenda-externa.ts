@@ -50,6 +50,11 @@ export interface OpcoesAgendaExterna {
   esperaMs?: number;
   agora?: () => number;
   log?: (msg: string, detalhe?: string) => void;
+  /**
+   * serena-regras (item 9): o espelho da agenda (src/agenda/espelho.ts). Quando cobre o período e está em dia, a aba
+   * responde dele na hora, sem chamar o sistema. null = consulte o sistema.
+   */
+  espelho?: () => { marcadosDe(unidade: UnidadeId, dataInicio: string, dataFim: string): { agendamentos: AgendamentoDaAgenda[]; apelidos: Map<number, string> } | null } | null;
 }
 
 /** "2026-11-10T10:00:00" sem fuso é a hora do salão (Bahia); com fuso, vale o fuso. */
@@ -126,6 +131,10 @@ export class AgendaExterna {
     const { sistema, tipo, local } = agenda;
     const nome = NOMES_SISTEMA[tipo];
     if (!sistema.listarAgendamentosDoPeriodo) return { itens: [] };
+    const doEspelho = this.o.espelho?.()?.marcadosDe(unidade, dataInicio, dataFim);
+    if (doEspelho) {
+      return { itens: doEspelho.agendamentos.map((a) => paraItemExterno(a, tipo, unidade, doEspelho.apelidos)).filter((i): i is ItemExterno => Boolean(i)) };
+    }
 
     const chave = `${unidade}:${tipo}:${local}:${dataInicio}:${dataFim}`;
     for (const [k, g] of this.cache) if (g.expira <= this.agora()) this.cache.delete(k);

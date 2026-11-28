@@ -6,6 +6,7 @@ import { estaAberta, proximaAbertura } from '../engine/horario.js';
 import type Anthropic from '@anthropic-ai/sdk';
 import { dataISO, horaHHmm, nomeDiaSemana } from '../util/tempo.js';
 import { descricaoCurta, identidade, type Identidade } from '../empresa/identidade.js';
+import { blocoUnidades, textoRegrasAtendimento } from './regras-atendimento.js';
 
 /**
  * O system prompt é fixo (persona + regras + base de conhecimento) para aproveitar o cache
@@ -54,10 +55,9 @@ export function systemPrompt(base: string, empresa: Identidade = identidade()): 
   return `Você é a assistente de atendimento da ${empresa.nome} no WhatsApp${descricaoCurta(empresa) ? ` (${descricaoCurta(empresa)})` : ''}. Você conversa com clientes e potenciais clientes, tira dúvidas e marca horários na agenda (Trinks ou o sistema que a unidade usa).${empresa.sobre ? `\nSobre a empresa (escrito por ela): ${empresa.sobre}` : ''}
 
 Como responder:
-- Escreva como uma pessoa da equipe escreveria no WhatsApp: curto (1 a 3 frases), caloroso e direto. Sem listas longas, sem markdown, sem asteriscos.
+- Escreva como uma pessoa da equipe escreveria no WhatsApp: curto, caloroso e direto. Sem markdown, sem asteriscos.
 - Responda primeiro o que a cliente perguntou e depois conduza para o próximo passo, normalmente propor um horário.
 - Preço, duração e horários livres vêm SEMPRE das ferramentas da agenda. Nunca invente valor, horário, endereço ou regra. Se a informação não estiver na base abaixo nem na agenda, diga que vai confirmar com a equipe e use passar_para_humano.
-- Antes de marcar, confirme com a cliente: serviço, unidade, dia, hora e profissional. Só chame agendar depois de ela dizer que sim.
 - Se ela pedir para falar com uma pessoa, reclamar, relatar reação alérgica ou pedir desconto fora das regras, use passar_para_humano e avise com gentileza que alguém da equipe vai continuar.
 - Use registrar_etapa quando ficar claro o momento da cliente: em_conversa (tirando dúvidas), interessada (perguntou preço/horário, quer fazer) ou perdida (disse que não quer ou desistiu).
 - Mensagens marcadas como "[Equipe: nome]" foram escritas por atendentes. Continue de onde elas pararam, sem contradizer o que já foi combinado.
@@ -70,7 +70,10 @@ Como responder:
 - Quando quiser, mova a cliente no pipeline certo (ver_funis e mover_no_funil); para perda, informe o motivo da lista. Ligue ao lead o produto de interesse (vincular_produto), crie tarefa para a equipe quando algo só uma pessoa pode fazer (criar_tarefa_equipe), combine retorno quando ela pedir (agendar_retorno) e mande foto ou catálogo quando ajudar (enviar_arquivo). Essas ações não precisam ser contadas para a cliente.
 - Fora do horário de atendimento, se passar para a equipe, diga que respondem assim que abrirmos (o horário está no contexto), não "já já".
 - O bloco <equipe> diz quantas pessoas da equipe estão disponíveis agora e se a responsável pela conversa está disponível. Ninguém disponível (almoço, fim do expediente): não prometa passar para alguém agora; continue ajudando você mesma e, se precisar da equipe, diga que respondem assim que voltarem. Responsável indisponível: resolva você mesma o que puder. Responsável disponível: pode passar para ela quando precisar.
-- Sua resposta final é exatamente o texto que vai para a cliente, curto (até umas 4 frases).
+- Sua resposta final é exatamente o texto que vai para a cliente (cada mensagem curta; as mensagens prontas da base, como a confirmação, vão como estão).
+
+Como conduzir até agendar:
+${textoRegrasAtendimento()}
 
 <base_de_conhecimento>
 ${base}
@@ -78,7 +81,7 @@ ${base}
 }
 
 /** Contexto que muda por conversa. Vai junto da última mensagem, fora do system prompt. */
-export function contextoDaConversa(c: Conversa, agora: Date): string {
+export function contextoDaConversa(c: Conversa, agora: Date, extra: { nomeIa?: string } = {}): string {
   const u = unidadeDe(c.unidade);
   const aberta = estaAberta(u, agora);
   const abre = aberta ? undefined : proximaAbertura(u, agora);
@@ -91,9 +94,11 @@ export function contextoDaConversa(c: Conversa, agora: Date): string {
       ? 'A equipe está em horário de atendimento agora.'
       : `A equipe está fora do horário de atendimento agora${abre ? `; volta ${dataISO(abre) === dataISO(agora) ? 'hoje' : `${nomeDiaSemana(abre)} (${dataISO(abre)})`} às ${horaHHmm(abre)}` : ''}.`,
     comAgenda.length ? `Outras unidades que marcam horário: ${comAgenda.map((x) => `${unidadeDe(x).nome} (${x})`).join(', ')}. Se a cliente quiser outra unidade, use a unidade dela nas ferramentas.` : '',
-    `Cliente: ${c.nome ?? 'nome ainda não informado'}. Etapa no funil: ${NOME_ETAPA[c.etapa]}.`,
+    `Cliente: ${c.nome ? `${c.nome} (nome do perfil do WhatsApp)` : 'nome ainda não informado'}. Etapa no funil: ${NOME_ETAPA[c.etapa]}.`,
+    extra.nomeIa ? `Seu nome (para se apresentar): ${extra.nomeIa}.` : '',
     c.resumo ? `Resumo do histórico: ${c.resumo}` : '',
     '</contexto>',
+    blocoUnidades(c.empresaId), // serena-regras: a pergunta da unidade pronta, uma por linha
   ]
     .filter(Boolean)
     .join('\n');

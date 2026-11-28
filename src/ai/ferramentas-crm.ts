@@ -70,7 +70,21 @@ export const FERRAMENTA_ARQUIVO = def(
   },
 );
 
-export const FERRAMENTAS_CRM_ESCRITA: Ferramenta[] = [FERRAMENTA_MOVER, FERRAMENTA_VINCULAR, FERRAMENTA_TAREFA, FERRAMENTA_RETORNO, FERRAMENTA_ARQUIVO];
+/**
+ * serena-regras (item 6): a imagem da tabela de preços. A IA nunca escreve a lista de preços por conta própria: manda a
+ * imagem que a gestão cadastrou (Empresa › Documentos, categoria tabela) com o nome que a base indica (ex.: a tabela de
+ * cliente nova e a de quem já é cliente). Sem imagem com esse nome: a ferramenta avisa e a IA manda um resumo curto.
+ */
+export const FERRAMENTA_TABELA = def(
+  'enviar_tabela_precos',
+  'Manda para a cliente a IMAGEM da tabela de preços cadastrada nos arquivos da empresa. Use depois de confirmar o agendamento e sempre que ela perguntar preço. Passe o nome da tabela que a base indica para o caso dela (cliente nova ou não). Vai logo depois da sua mensagem.',
+  {
+    nome: { type: 'string', description: 'Nome (ou parte do nome) da tabela, como está na base de conhecimento' },
+    legenda: { type: ['string', 'null'], description: 'Legenda curta, ou null' },
+  },
+);
+
+export const FERRAMENTAS_CRM_ESCRITA: Ferramenta[] = [FERRAMENTA_MOVER, FERRAMENTA_VINCULAR, FERRAMENTA_TAREFA, FERRAMENTA_RETORNO, FERRAMENTA_ARQUIVO, FERRAMENTA_TABELA];
 export const FERRAMENTAS_CRM: Ferramenta[] = [...FERRAMENTAS_CRM_LEITURA, ...FERRAMENTAS_CRM_ESCRITA];
 export const FERRAMENTAS_CRM_NOMES = new Set(FERRAMENTAS_CRM.map((f) => f.name));
 export const CRM_ESCRITA_NOMES = new Set(FERRAMENTAS_CRM_ESCRITA.map((f) => f.name));
@@ -99,7 +113,24 @@ const ENTRADAS = {
     motivo: Texto(300),
   }),
   enviar_arquivo: z.object({ origem: z.enum(['foto_produto', 'documento']), id: Texto(80), legenda: z.string().trim().max(300).nullable().optional() }),
+  enviar_tabela_precos: z.object({ nome: Texto(120), legenda: z.string().trim().max(300).nullable().optional() }),
 } as const;
+
+/** serena-regras: a tabela pelo nome. Prefere categoria "tabela" e imagem; o nome inteiro antes de trecho. */
+export function acharTabela<D extends { id: string; nome: string; categoria: string; mimetype?: string }>(docs: D[], nome: string): D | undefined {
+  const alvo = sem(nome).replace(/^tabela\s+/, '').trim();
+  if (!alvo) return undefined;
+  const pontos = (d: D) => {
+    const n = sem(d.nome);
+    const casa = n === alvo || n === `tabela ${alvo}` ? 3 : n.includes(alvo) ? 2 : alvo.split(/\s+/).every((p) => n.includes(p)) ? 1 : 0;
+    if (!casa) return 0;
+    return casa * 10 + (d.categoria === 'tabela' ? 4 : 0) + (/^image\//.test(d.mimetype ?? '') ? 2 : 0);
+  };
+  return docs
+    .map((d) => ({ d, p: pontos(d) }))
+    .filter((x) => x.p > 0)
+    .sort((a, b) => b.p - a.p)[0]?.d;
+}
 
 /** O que a ferramenta precisa do contexto (o mesmo de src/ai/ferramentas.ts). */
 export interface ContextoCrm {
@@ -223,6 +254,17 @@ export async function rodarFerramentaCrm(nome: string, entrada: unknown, ctx: Co
       if ((acoes as AcaoCrm[]).filter((a) => a.tipo === 'enviar_arquivo').length >= 3) throw new RecusaFerramenta('No máximo 3 arquivos por resposta.');
       await pedir({ tipo: 'enviar_arquivo', origem: i.origem, id: i.id, nome: nomeArq, legenda: i.legenda?.trim() || null }, 'envie arquivo');
       return `ok: "${nomeArq}" vai logo depois da sua mensagem.`;
+    }
+    case 'enviar_tabela_precos': {
+      const i = ENTRADAS.enviar_tabela_precos.parse(entrada);
+      const d = acharTabela(await ctx.crm.documentos(), i.nome);
+      if (!d || (d.mimetype && !/^image\//.test(d.mimetype))) {
+        return `Não há imagem da tabela "${i.nome}" nos arquivos da empresa${d ? ' (só um arquivo que não é imagem)' : ''}. Mande um resumo curto em texto, só com o que está na base de conhecimento, sem inventar preço.`;
+      }
+      if (acoes.some((a) => a.tipo === 'enviar_arquivo' && a.id === d.id)) return `ok: "${d.nome}" já vai nesta resposta.`;
+      if ((acoes as AcaoCrm[]).filter((a) => a.tipo === 'enviar_arquivo').length >= 3) throw new RecusaFerramenta('No máximo 3 arquivos por resposta.');
+      await pedir({ tipo: 'enviar_arquivo', origem: 'documento', id: d.id, nome: d.nome, legenda: i.legenda?.trim() || null }, 'envie a tabela');
+      return `ok: a imagem "${d.nome}" vai logo depois da sua mensagem. Não escreva a lista de preços: a imagem já mostra. Só se ela pedir mais detalhe, um resumo curto.`;
     }
     default:
       throw new RecusaFerramenta(`Ferramenta desconhecida: ${nome}`);

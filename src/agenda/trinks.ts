@@ -6,6 +6,7 @@ import {
   type AgendamentoDaAgenda,
   type AgendamentoDoSistema,
   type ClienteAgenda,
+  type DadosExtrasCliente,
   type DadosNovoAgendamento,
   type FiltrosHorarios,
   type ProfissionalAgenda,
@@ -151,14 +152,31 @@ export class ClienteTrinks extends ClienteHttpFila implements SistemaAgenda {
 
   // ---------- escrita ----------
 
-  async criarCliente(estabelecimentoId: string, nome: string, telefone: string): Promise<number> {
+  async criarCliente(estabelecimentoId: string, nome: string, telefone: string, extras: DadosExtrasCliente = {}): Promise<number> {
     const tel = normalizarCelular(telefone);
     if (!tel) throw new Error(`Telefone inválido para cadastro: ${telefone}`);
     const p = partesTrinks(tel);
     const r = await this.pedir<{ id: number }>(estabelecimentoId, 'POST', '/v1/clientes', {
-      corpo: { nome, telefones: [{ ddi: p.ddi, ddd: p.ddd, numero: p.numero, tipoId: 6 }] },
+      corpo: {
+        nome,
+        telefones: [{ ddi: p.ddi, ddd: p.ddd, numero: p.numero, tipoId: 6 }],
+        // serena-regras: cliente nova informa nascimento e e-mail no WhatsApp.
+        ...(extras.email ? { email: extras.email } : {}),
+        ...(extras.dataNascimento ? { dataNascimento: extras.dataNascimento } : {}),
+      },
     });
     return r.id;
+  }
+
+  /**
+   * serena-regras: clientes pelo nome (o Trinks busca por trecho). Segunda chave para achar o cadastro de quem
+   * escreve de outro número: quem chama confere o nome inteiro e confirma com a cliente.
+   */
+  async buscarClientesPorNome(estabelecimentoId: string, nome: string): Promise<TrinksCliente[]> {
+    const n = nome.trim();
+    if (n.length < 3) return [];
+    const r = await this.pedir<Paginado<TrinksCliente>>(estabelecimentoId, 'GET', '/v1/clientes', { query: { Nome: n, PageSize: '20' } });
+    return r.data ?? [];
   }
 
   /**

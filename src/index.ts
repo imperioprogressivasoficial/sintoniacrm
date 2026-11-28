@@ -7,6 +7,7 @@ import { lerChaveDeArquivo, lerConfig } from './config.js';
 import { ClienteTrinks } from './agenda/trinks.js';
 import { AgendasDasUnidades, unidadesAgenda } from './agenda/unidades-agenda.js';
 import { AgendaExterna } from './agenda/agenda-externa.js';
+import { ArmazemEspelhoMemoria, ArmazemEspelhoPostgres, definirEspelho, EspelhoAgenda } from './agenda/espelho.js'; /* serena-regras */
 import { Agente } from './ai/agente.js';
 /* ia-completa: a IA faz tudo (CRM, remarcar/cancelar, ouvir/ver), com travas de segurança e a tela de estado */
 import { ArmazemTarefasIaMemoria, ArmazemTarefasIaPostgres, montarCrmIa } from './ai/crm-ia.js';
@@ -24,7 +25,7 @@ import { textoDoAnexo, tipoPeloMimetype } from './midia.js';
 import { CanalTeste, canalTesteDa, ehCanalTeste } from './channels/teste.js';
 import { revisarRascunho } from './ai/copiloto.js';
 import { carregarBaseDa } from './ai/prompt.js';
-import { Sintonia, type NumeroConectado } from './app/sintonia.js';
+import { pausaDigitando, Sintonia, type NumeroConectado } from './app/sintonia.js';
 import { CanalEvolution } from './channels/evolution.js';
 import { EvolutionAdmin } from './channels/evolution-admin.js';
 import { ArmazemSaudeMemoria, ArmazemSaudePostgres, SaudeWhatsApp } from './channels/whatsapp-saude.js';
@@ -63,7 +64,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { ContasMemoria, ContasPostgres, type Contas } from './auth/contas.js';
 import { gerarHash, senhaFraca } from './auth/senha.js';
-import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe } from './unidades.js';
+import { definirAgendaDasUnidades, definirEmpresaPadrao, EMPRESA_IMPERIO, idsUnidades, UNIDADE_INICIAL, UNIDADES_IMPERIO, unidadeDe, HORARIOS_PADRAO_IMPERIO } from './unidades.js';
 import { definirEmpresaPadraoIdentidade, IDENTIDADE_IMPERIO } from './empresa/identidade.js';
 import { dataISO, partesBahia } from './util/tempo.js';
 import { ArmazemEmpresaMemoria, ArmazemEmpresaPostgres, Empresa, regrasDaConfig } from './empresa/empresa.js';
@@ -278,6 +279,8 @@ const agente = new Agente(claude, agendas, () => base.texto(), {
   produtosDoLead: (c) => produtosLead.textoParaIa(c),
   /* ia-completa: pipelines, produtos e arquivos (lidos na hora; criados mais abaixo) */
   crm: () => crmIa,
+  /* serena-regras: a IA se apresenta com o nome da assinatura (padrão "Serena") */
+  nomeIa: async () => (await empresa.configIa()).assinatura.texto || 'Serena',
 });
 
 // Primeiro administrador (só se ainda não existir). ADMIN_SENHA_HASH evita guardar a senha em texto.
@@ -653,6 +656,7 @@ const sintonia = new Sintonia({
   midias,
   configIa: async () => regrasDaConfig(await empresa.configIa()),
   assinaturaIa: async () => (await empresa.configIa()).assinatura, /* assinatura da IA */
+  pausaEntrePartes: pausaDigitando /* serena-regras: "digitando…" entre uma mensagem e outra */,
   tagsIa: tagsDaIa,
   motor: (c) => followup.motor(c),
   avisarEquipe: async (texto) => {
@@ -1082,7 +1086,19 @@ const extras = montarExtras({
   produtos: (ids) => produtosLead.resumoDe(cfg.SINTONIA_EMPRESA_ID, ids),
 });
 // A Agenda mostra também o que a recepção marca direto no sistema do salão (cache de 1 minuto por unidade e período).
-const agendaExterna = new AgendaExterna({ roteador: agendas, log });
+/* serena-regras (item 9): espelho da agenda do Trinks por unidade (próximos 14 dias), atualizado em segundo plano aos
+   poucos (no máximo ~4 leituras por minuto) e logo depois de cada agendamento/cancelamento. A aba Agenda e a IA leem
+   dele; quem grava sempre confere no Trinks. SINTONIA_ESPELHO=0 desliga. */
+const espelho =
+  process.env.SINTONIA_ESPELHO === '0'
+    ? null
+    : new EspelhoAgenda({ empresaId: cfg.SINTONIA_EMPRESA_ID, fonte: agendas, armazem: pool ? new ArmazemEspelhoPostgres(pool) : new ArmazemEspelhoMemoria(), log });
+if (espelho) {
+  await espelho.carregar().catch((e) => log('Falha ao ler o espelho da agenda', String(e)));
+  definirEspelho(espelho);
+  espelho.iniciar(60_000);
+}
+const agendaExterna = new AgendaExterna({ roteador: agendas, log, espelho: () => espelho });
 registrarExtras(app, { repo, empresaId: cfg.SINTONIA_EMPRESA_ID, relatorios: extras.relatorios, leads: extras.leads, contas, agendaExterna });
 // Comercial: metas individuais, comissão, ranking, serviços mais agendados e o Painel na TV (/tv/:token).
 /* empresa-conta: o Comercial (e Desempenho, Análises, Plano, Criativos) lê os preços de Empresa › Produtos e serviços */
@@ -1101,7 +1117,7 @@ const cadastroEmpresa = registrarCadastro(app, {
   // horário de shopping de antes); qualquer outra empresa começa com uma "Unidade principal" e cadastra as dela.
   unidadesPadrao: (empresaId) =>
     empresaId === EMPRESA_IMPERIO
-      ? UNIDADES_IMPERIO.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.nomeCliente, horario: u.horario && Object.keys(u.horario).length ? horarioDeFaixas(u.horario) : null, ativa: u.ativa }))
+      ? UNIDADES_IMPERIO.map((u) => ({ id: u.id, nome: u.nome, nomeCliente: u.nomeCliente, horario: u.horario && Object.keys(u.horario).length ? horarioDeFaixas(u.horario) : null, ativa: u.ativa, ...HORARIOS_PADRAO_IMPERIO[u.id] }))
       : [{ id: UNIDADE_INICIAL.id, nome: UNIDADE_INICIAL.nome, horario: null }],
   // Não deixa apagar unidade com conversas, pessoas ou números ligados (só desativar).
   emUso: async (empresaId, id) => {

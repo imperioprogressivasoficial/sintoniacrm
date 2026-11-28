@@ -100,6 +100,11 @@ export interface DependenciasSintonia {
   juntarMs?: number;
   /** Como esperar (testes trocam por um relógio falso). */
   esperar?: (ms: number) => Promise<void>;
+  /**
+   * serena-regras (item 8): pausa com "digitando…" antes de cada mensagem depois da primeira, proporcional ao tamanho
+   * (ms). Ausente = as partes saem uma atrás da outra, sem pausa (comportamento antigo, testes).
+   */
+  pausaEntrePartes?: (texto: string) => number;
   /** ia-completa: transcreve os áudios e pega as fotos da cliente antes de a IA pensar. */
   percepcao?: { preparar(c: Conversa, mensagens: import('../domain.js').Mensagem[], agora: Date): Promise<{ percepcao: Percepcao; esperar: boolean }> };
   /** ia-completa: o que a IA mexe no CRM (pipeline, produto do lead, tarefa da equipe, arquivo para a cliente). */
@@ -1176,6 +1181,13 @@ export class Sintonia {
     partes = await this.assinarPartes(partes);
     let n = 0;
     for (const texto of partes) {
+      // serena-regras: entre uma mensagem e outra, "digitando…" pelo tempo de escrever a próxima (como uma pessoa).
+      const pausa = n > 0 && this.d.pausaEntrePartes ? Math.max(0, Math.min(8000, this.d.pausaEntrePartes(texto))) : 0;
+      if (pausa > 0) {
+        const num = this.numeroDa(c);
+        await Promise.resolve(num.canal.enviarPresenca?.(num.canalId, c.telefone, 'digitando', pausa)).catch(() => undefined);
+        await this.esperar(pausa);
+      }
       // Cada parte 1 ms depois da anterior: a ordem na tela é a ordem em que saíram.
       const emParte = new Date(em.getTime() + n);
       try {
@@ -1341,7 +1353,7 @@ export class Sintonia {
       }
       if (a.tipo === 'etapa') await this.moverFunil(c, { tipo: 'ia_classificou', etapa: a.etapa }, a.motivo);
       if (a.tipo === 'agendou') {
-        c.trinksClienteId = a.clienteTrinksId;
+        if (!a.paraOutraPessoa) c.trinksClienteId = a.clienteTrinksId; // serena-regras: horário de outra pessoa não troca o cadastro dela
         await this.moverFunil(c, { tipo: 'agendamento_criado' });
         await this.d.repo.cancelarTarefas(c.id, FOLLOWUPS);
         if ((await this.motorDe(c)).lembretes) {
@@ -1664,3 +1676,6 @@ function anexoInicial(r: AnexoRecebido, canal: CanalWhatsApp): Anexo {
   else if (!r.base64 && !canal.baixarMidia) a.situacao = 'falhou';
   return a;
 }
+
+/** serena-regras: "digitando…" de ~1,2 s a 4,5 s entre uma mensagem e outra, conforme o tamanho da próxima. */
+export const pausaDigitando = (texto: string): number => Math.round(Math.min(4500, Math.max(1200, 700 + texto.length * 30)));

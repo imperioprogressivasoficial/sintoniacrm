@@ -46,6 +46,8 @@ export interface DocumentoIa {
   nome: string;
   categoria: string;
   descricao: string;
+  /** serena-regras: tipo do arquivo (image/png…), para preferir a imagem da tabela. */
+  mimetype?: string;
 }
 export interface MotivoPerdaIa {
   id: string;
@@ -156,7 +158,7 @@ export function montarCrmIa(o: OpcoesCrmIa): CrmIa {
     async documentos() {
       return (await o.cadastro.documentos(o.empresaId))
         .filter((d) => d.visivel === 'equipe' && DOCS_PARA_CLIENTE.has(d.categoria))
-        .map((d) => ({ id: d.id, nome: d.nome, categoria: d.categoria, descricao: d.descricao }));
+        .map((d) => ({ id: d.id, nome: d.nome, categoria: d.categoria, descricao: d.descricao, mimetype: d.mimetype }));
     },
     async moverFunil(c, a) {
       // O motivo da perda vai antes (a tela faz igual): o registro de perdas lê no aviso do movimento.

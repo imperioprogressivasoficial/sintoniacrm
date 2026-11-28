@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ClienteClaude, PedidoAgente, RespostaAgente } from '../ai/agente.js';
-import { conferirPrecos, TEXTO_PASSAGEM, textoPassagem, ultimasDaCliente } from '../ai/agente.js';
+import { blocoClienteConhecida, conferirPrecos, TEXTO_PASSAGEM, textoPassagem, ultimasDaCliente } from '../ai/agente.js';
 import {
   type AcaoAgente,
   type Agenda,
@@ -66,13 +66,13 @@ const DO_CRM = new Set(FERRAMENTAS_CRM.map((f) => f.name));
 export function ferramentasPermitidas(permitidas: FerramentaAgente[], memoria: boolean): Set<string> {
   const s = new Set<string>();
   const tem = (f: FerramentaAgente) => permitidas.includes(f);
-  if (tem('consultar_agenda') || tem('agendar')) ['ver_servicos', 'consultar_horarios', 'ver_agendamentos_da_cliente', 'ver_produtos'].forEach((n) => s.add(n));
+  if (tem('consultar_agenda') || tem('agendar')) ['ver_servicos', 'consultar_horarios', 'buscar_cliente', 'ver_agendamentos_da_cliente', 'ver_produtos'].forEach((n) => s.add(n));
   if (tem('agendar')) ['agendar', 'remarcar_agendamento', 'cancelar_agendamento'].forEach((n) => s.add(n));
   if (tem('mover_etapa')) ['registrar_etapa', 'ver_funis', 'mover_no_funil'].forEach((n) => s.add(n));
   if (tem('produtos')) ['ver_produtos', 'vincular_produto'].forEach((n) => s.add(n));
   if (tem('tarefas')) s.add('criar_tarefa_equipe');
   if (tem('retorno')) s.add('agendar_retorno');
-  if (tem('enviar_arquivos')) ['ver_produtos', 'enviar_arquivo'].forEach((n) => s.add(n));
+  if (tem('enviar_arquivos')) ['ver_produtos', 'enviar_arquivo', 'enviar_tabela_precos'].forEach((n) => s.add(n));
   if (tem('marcar_tag')) s.add('marcar_tag');
   if (tem('transferir')) s.add('passar_para_humano');
   if (tem('lembrete_ligacao')) s.add('criar_lembrete_ligacao');
@@ -182,7 +182,8 @@ export class ExecutorAgentes {
     const cliente = this.clienteDe(a);
     const system = await this.systemDe(a, nomes);
     const memoria = cfg.memoriaCliente && !simulacao ? await this.d.armazem.memoria(this.d.empresaId, p.conversa.telefone).catch(() => []) : [];
-    const messages = this.montarMensagens(p, textoMemoria(memoria), simulacao);
+    const quemE = await blocoClienteConhecida(this.d.agenda, p, 6000); // serena-regras
+    const messages = this.montarMensagens(a, p, textoMemoria(memoria), simulacao, quemE);
     const anthropic = a.provedor === 'anthropic';
     const comReserva = anthropic && /^claude-(opus|sonnet)-5-5/.test(a.modelo);
     const sessao = novaSessao();
@@ -322,8 +323,9 @@ export class ExecutorAgentes {
     });
   }
 
-  private montarMensagens(p: PedidoAgente, memoria: string, simulacao: boolean): Anthropic.Beta.Messages.BetaMessageParam[] {
-    const extra: string[] = [contextoDaConversa(p.conversa, p.agora)];
+  private montarMensagens(a: AgenteIa, p: PedidoAgente, memoria: string, simulacao: boolean, cliente: string): Anthropic.Beta.Messages.BetaMessageParam[] {
+    const extra: string[] = [contextoDaConversa(p.conversa, p.agora, { nomeIa: a.nome })];
+    if (cliente) extra.push(cliente);
     if (p.equipe) extra.push(`<equipe>\n${p.equipe.texto}\n</equipe>`);
     if (memoria) extra.push(memoria);
     if (p.tipoAtivo) {
