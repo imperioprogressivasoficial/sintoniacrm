@@ -98,6 +98,8 @@ export interface DependenciasSintonia {
    * JUNTAR_MAX_MS de espera). Ausente/0 = responde na hora (comportamento antigo, testes).
    */
   juntarMs?: number;
+  /** dono 28/11: ids das mensagens apagadas para todos (a IA não lê o que a equipe apagou). */
+  apagadasParaTodos?: (conversaId: string) => Promise<Set<string>>;
   /** Como esperar (testes trocam por um relógio falso). */
   esperar?: (ms: number) => Promise<void>;
   /**
@@ -1043,7 +1045,9 @@ export class Sintonia {
       if (await this.limiteDeCusto(c, modo)) return;
 
       const marco = c.ultimaMensagemCliente?.getTime();
-      let mensagens = await this.d.repo.mensagens(c.id);
+      const apagadas = (await this.d.apagadasParaTodos?.(c.id).catch(() => undefined)) ?? new Set<string>();
+      const semApagadas = (l: import('../domain.js').Mensagem[]) => (apagadas.size ? l.filter((m) => !apagadas.has(m.id)) : l);
+      let mensagens = semApagadas(await this.d.repo.mensagens(c.id));
       // ia-completa: áudio transcrito e foto como imagem; mídia que acabou de chegar e ainda baixa: espera um pouco.
       let percepcao: Percepcao | undefined;
       if (this.d.percepcao) {
@@ -1053,7 +1057,7 @@ export class Sintonia {
           percepcao = r?.percepcao;
           if (!r?.esperar || this.agora().getTime() >= limite) break;
           await this.esperar(5_000);
-          mensagens = await this.d.repo.mensagens(c.id);
+          mensagens = semApagadas(await this.d.repo.mensagens(c.id));
         }
       }
       const atual = c;

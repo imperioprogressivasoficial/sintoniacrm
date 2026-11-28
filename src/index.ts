@@ -635,6 +635,7 @@ const sintonia = new Sintonia({
   filaIa,
   /* ia-completa: junta mensagens seguidas (só com a fila da IA, que pensa por trás); ouve áudio e vê foto; CRM; custo. */
   juntarMs: filaIa ? Number(process.env.SINTONIA_JUNTAR_MS ?? 3500) : 0, // dono 28/11: responde mais rápido
+  ...(pool ? { apagadasParaTodos: async (id: string) => new Set((await pool!.query<{ mensagem_id: string }>("select mensagem_id from sintonia.mensagem_extras where conversa_id = $1 and apagada = 'todos'", [id])).rows.map((r) => r.mensagem_id)) } : {}),
   percepcao: new PercepcaoIa({ repo, transcricoes, transcritor, transcricaoLigada, log }),
   crmIa,
   guardaCusto,
@@ -1190,6 +1191,34 @@ const aprender = new Aprender({
   log,
 });
 base.usarAprendido(() => aprender.memoria());
+/* dono 28/11: "apaguei para todos, responda correto de novo". Resposta da IA apagada para todos (e nada da loja
+   depois dela) = a cliente ficou sem resposta: a IA responde de novo. Confere ao subir e a cada 1 min (últimas 12 h). */
+async function responderApagadas(): Promise<void> {
+  if (!pool) return;
+  const { rows } = await pool.query<{ id: string }>(
+    `select c.id from sintonia.conversas c
+      where c.modo <> 'humano' and c.ultima_mensagem_cliente > now() - interval '12 hours'
+        and c.ultima_mensagem_ia >= c.ultima_mensagem_cliente
+        and exists (select 1 from sintonia.mensagens m join sintonia.mensagem_extras x on x.mensagem_id = m.id
+                     where m.conversa_id = c.id and m.autor = 'ia' and m.em >= c.ultima_mensagem_cliente and x.apagada = 'todos')
+        and not exists (select 1 from sintonia.mensagens m left join sintonia.mensagem_extras x on x.mensagem_id = m.id
+                     where m.conversa_id = c.id and m.autor in ('ia', 'equipe') and m.em >= c.ultima_mensagem_cliente
+                       and coalesce(x.apagada, '') <> 'todos')
+      limit 20`,
+  );
+  for (const r of rows) {
+    await pool.query(
+      `update sintonia.conversas c set ultima_mensagem_ia = (select max(m.em) from sintonia.mensagens m left join sintonia.mensagem_extras x on x.mensagem_id = m.id
+         where m.conversa_id = c.id and m.autor = 'ia' and coalesce(x.apagada, '') <> 'todos') where c.id = $1`,
+      [r.id],
+    );
+    log('Resposta da IA apagada para todos: a IA responde de novo', r.id);
+    if (filaIa) filaIa.pedir(r.id);
+    else void sintonia.pensar(r.id).catch((e) => log('Falha ao responder de novo', String(e)));
+  }
+}
+setTimeout(() => void responderApagadas().catch((e) => log('Falha ao conferir respostas apagadas', String(e))), 15_000).unref();
+setInterval(() => void responderApagadas().catch((e) => log('Falha ao conferir respostas apagadas', String(e))), 60_000).unref();
 /* dono 28/11: a memória da Assia (agente do Estúdio de IA) vira proposta de treinamento para a Serena, uma vez só.
    Vai pelo mesmo caminho dos documentos do dono: a gestão aprova em Treinamento da IA › Aprender com a equipe. */
 setTimeout(() => {
