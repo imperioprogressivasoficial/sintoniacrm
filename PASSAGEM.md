@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 22h05: b7807ae no ar — serena-regras inteira (cliente pelo telefone no Trinks, horários padrão por unidade em Empresa › Unidades, PD, enviar_tabela_precos, espelho da agenda 14 dias, migração 777). Tabelas: a gestão cadastra as imagens em Empresa › Documentos, categoria "tabela", nomes "Seu Primeiro Alisamento" e "Liso Infinito". PRÓXIMO: follow-up de clientes (docs/PEDIDOS.md).
+
 - 27/11 21h35: a50b8ca no ar — Serena parte 1 (só o texto do knowledge, copiado da worktree serena-regras com [SEU NOME]=Serena e horários padrão escritos). Ao juntar a serena-regras, ficar com o knowledge dela (ela põe o nome pelo prompt e os horários pela unidade).
 
 - LEMBRAR O DONO: quando a serena-regras estiver no ar, começar o follow-up de clientes (detalhes em docs/PEDIDOS.md, seção PRÓXIMO).
