@@ -94,7 +94,7 @@ export function contextoDaConversa(c: Conversa, agora: Date, extra: { nomeIa?: s
       ? 'A equipe está em horário de atendimento agora.'
       : `A equipe está fora do horário de atendimento agora${abre ? `; volta ${dataISO(abre) === dataISO(agora) ? 'hoje' : `${nomeDiaSemana(abre)} (${dataISO(abre)})`} às ${horaHHmm(abre)}` : ''}.`,
     comAgenda.length ? `Outras unidades que marcam horário: ${comAgenda.map((x) => `${unidadeDe(x).nome} (${x})`).join(', ')}. Se a cliente quiser outra unidade, use a unidade dela nas ferramentas.` : '',
-    `Cliente: ${c.nome ? `${c.nome} (nome do perfil do WhatsApp)` : 'nome ainda não informado'}. Etapa no funil: ${NOME_ETAPA[c.etapa]}.`,
+    `Cliente: ${c.nome ? `"${c.nome}" é como ela aparece no WhatsApp (pode ser apelido ou frase, ex.: "Deus é fiel"): NUNCA chame a cliente por esse nome; use só o nome que ela mesma disser ou o nome do cadastro em <cliente_conhecida>` : 'nome ainda não informado'}. Etapa no funil: ${NOME_ETAPA[c.etapa]}.`,
     extra.nomeIa ? `Seu nome (para se apresentar): ${extra.nomeIa}.` : '',
     c.resumo ? `Resumo do histórico: ${c.resumo}` : '',
     '</contexto>',
