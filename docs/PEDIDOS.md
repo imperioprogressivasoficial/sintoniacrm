@@ -2,7 +2,7 @@
 Cada automação nova (follow-up, movimento de funil, pós-venda etc.) nasce ligada e preenchida para a Império, mas sempre
 com tela para desligar e mudar tempos e textos. O dono não deve precisar pedir a uma IA para mudar um tempo (ex.: 5 → 10 min).
 
-## EM ANDAMENTO (28/11)
+## FEITO (28/11, no ar)
 - Funil de atendimento: Novo lead, Em atendimento, Reagendar, Sem resposta, Agendado Sumaré, Agendado Norte, Finalizado, Perdido; a IA/sistema move sozinho (regras ligáveis); nenhum lead parado na entrada.
 - Follow-up "não respondeu" em minutos (5 min, 15 min, 1 dia, 3 dias), editável na tela de Follow-up.
 - Funil pós-venda (Conscientização, Retorno 30 dias, …) com automação até a cliente voltar; meta 4 visitas no ano.
