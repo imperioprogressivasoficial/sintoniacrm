@@ -52,6 +52,8 @@ com o código empacotado; a receita sobe no projeto Docker `sintonia` da VPS 196
 
 ## Onde parei
 
+- 27/11 21h35: a50b8ca no ar — Serena parte 1 (só o texto do knowledge, copiado da worktree serena-regras com [SEU NOME]=Serena e horários padrão escritos). Ao juntar a serena-regras, ficar com o knowledge dela (ela põe o nome pelo prompt e os horários pela unidade).
+
 - LEMBRAR O DONO: quando a serena-regras estiver no ar, começar o follow-up de clientes (detalhes em docs/PEDIDOS.md, seção PRÓXIMO).
 
 - 27/11 21h: 6d66610 no ar — aprender com a equipe (src/aprender, migração 776; 1ª rodada roda sozinha ao subir) + regras do dono no knowledge (sem sinal, Pix/cartão, cancelar sem custo, horários Sumaré 9–19 e Norte 9–22, sem clube, tabela Seu Primeiro Alisamento). Próximo: regras novas da Serena (ver pedido do dono 27/11 noite: não pedir nome, unidades em 2 linhas, horários padrão, sem nome de profissional, PD, cliente de volta, tabela em imagem, mensagens humanizadas) e espelho da agenda do Trinks.
