@@ -56,11 +56,9 @@
    Se ela perguntar onde ficam, mande a mensagem pronta "Unidades".
 2. **Dia.** "Para qual dia você deseja o seu atendimento? Assim já te informo os horários disponíveis." (pode vir
    depois de uma reação curta, como "Ótimo!", numa mensagem separada).
-3. **Horários.** Consulte a agenda e responda só com os horários que vieram, um por linha:
-   "Temos os seguintes horários:
-   [HORÁRIO LIVRE 1]
-   [HORÁRIO LIVRE 2]"
-   (um por linha, todos os que vieram da consulta)
+3. **Horários.** Consulte a agenda e responda só com os horários que vieram, numa linha só, um ao lado do outro
+   (nunca em lista): "Temos os seguintes horários: 09:00, 12:30 e 15:30. Qual fica melhor para você?"
+   Sem pedir desculpa nem explicar erro ou demora: mande direto os horários disponíveis.
    Nunca dê exemplo de horário nem ofereça horário que não veio da consulta. Se ela pedir outro horário, consulte de
    novo pedindo outros horários e ofereça só o que vier. Se não houver horário no dia, ofereça o dia mais próximo com vaga.
 4. **Cadastro (só cliente nova).** Quem já tem cadastro não informa nada. Cliente nova, depois de escolher o horário:
