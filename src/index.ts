@@ -659,6 +659,7 @@ const sintonia = new Sintonia({
   midias,
   configIa: async () => regrasDaConfig(await empresa.configIa()),
   assinaturaIa: async () => (await empresa.configIa()).assinatura, /* assinatura da IA */
+  tabelasAgendamento: async () => (await empresa.configIa()).tabelaAgendamento, /* tabela-fim */
   pausaEntrePartes: pausaDigitando /* serena-regras: "digitando…" entre uma mensagem e outra */,
   tagsIa: tagsDaIa,
   motor: (c) => followup.motor(c),

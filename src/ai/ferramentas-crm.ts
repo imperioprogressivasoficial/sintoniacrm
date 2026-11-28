@@ -116,13 +116,29 @@ const ENTRADAS = {
   enviar_tabela_precos: z.object({ nome: Texto(120), legenda: z.string().trim().max(300).nullable().optional() }),
 } as const;
 
-/** serena-regras: a tabela pelo nome. Prefere categoria "tabela" e imagem; o nome inteiro antes de trecho. */
+/** Palavras que não ajudam a achar a tabela pelo nome ("Tabela de preços - Seu Primeiro Alisamento"). */
+const PALAVRAS_VAZIAS = new Set(['tabela', 'tabelas', 'de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'para', 'com', 'preco', 'precos', 'valor', 'valores', 'png', 'jpg', 'jpeg', 'webp', 'pdf']);
+/** Nome sem acento, sem pontuação, sem extensão e sem palavras vazias: "Tabela_Liso-Infinito.png" → "liso infinito". */
+const palavrasDoNome = (s: string): string[] =>
+  sem(s)
+    .replace(/\.(png|jpe?g|webp|gif|pdf)$/, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((p) => p && !PALAVRAS_VAZIAS.has(p));
+
+/**
+ * serena-regras: a tabela pelo nome. Prefere categoria "tabela" e imagem; o nome inteiro antes de trecho.
+ * tabela-fim: compara só as palavras que contam (sem "tabela de preços", pontuação, "_", "-" ou extensão do arquivo).
+ */
 export function acharTabela<D extends { id: string; nome: string; categoria: string; mimetype?: string }>(docs: D[], nome: string): D | undefined {
-  const alvo = sem(nome).replace(/^tabela\s+/, '').trim();
-  if (!alvo) return undefined;
+  const alvo = palavrasDoNome(nome);
+  if (!alvo.length) return undefined;
+  const a = alvo.join(' ');
   const pontos = (d: D) => {
-    const n = sem(d.nome);
-    const casa = n === alvo || n === `tabela ${alvo}` ? 3 : n.includes(alvo) ? 2 : alvo.split(/\s+/).every((p) => n.includes(p)) ? 1 : 0;
+    const pal = palavrasDoNome(d.nome);
+    const n = pal.join(' ');
+    const casa = n === a ? 3 : ` ${n} `.includes(` ${a} `) ? 2 : alvo.every((p) => pal.includes(p)) ? 1 : 0;
     if (!casa) return 0;
     return casa * 10 + (d.categoria === 'tabela' ? 4 : 0) + (/^image\//.test(d.mimetype ?? '') ? 2 : 0);
   };
@@ -130,6 +146,23 @@ export function acharTabela<D extends { id: string; nome: string; categoria: str
     .map((d) => ({ d, p: pontos(d) }))
     .filter((x) => x.p > 0)
     .sort((a, b) => b.p - a.p)[0]?.d;
+}
+
+/** tabela-fim: nomes das tabelas que vão no fim do agendamento (Mais › IA; vazio = não manda). */
+export interface TabelasAgendamento {
+  clienteNova: string;
+  jaCliente: string;
+}
+
+/**
+ * tabela-fim (dono 28/11): a imagem da tabela que o sistema manda depois da confirmação do agendamento.
+ * Cliente nova: a tabela "clienteNova"; quem já era cliente: "jaCliente". Só imagem; sem imagem = undefined.
+ */
+export function tabelaDoAgendamento<D extends { id: string; nome: string; categoria: string; mimetype?: string }>(docs: D[], nomes: TabelasAgendamento, clienteNova: boolean): D | undefined {
+  const nome = (clienteNova ? nomes.clienteNova : nomes.jaCliente).trim();
+  if (!nome) return undefined;
+  const d = acharTabela(docs, nome);
+  return d && /^image\//.test(d.mimetype ?? '') ? d : undefined;
 }
 
 /** O que a ferramenta precisa do contexto (o mesmo de src/ai/ferramentas.ts). */
@@ -257,8 +290,12 @@ export async function rodarFerramentaCrm(nome: string, entrada: unknown, ctx: Co
     }
     case 'enviar_tabela_precos': {
       const i = ENTRADAS.enviar_tabela_precos.parse(entrada);
-      const d = acharTabela(await ctx.crm.documentos(), i.nome);
+      const docs = await ctx.crm.documentos();
+      const d = acharTabela(docs, i.nome);
       if (!d || (d.mimetype && !/^image\//.test(d.mimetype))) {
+        // tabela-fim: o nome não bateu, mas há tabelas em imagem: diz quais são (a IA tenta de novo com o nome certo).
+        const outras = d ? [] : docs.filter((x) => x.categoria === 'tabela' && /^image\//.test(x.mimetype ?? '')).map((x) => `"${x.nome}"`);
+        if (outras.length) return `Nenhuma tabela com o nome "${i.nome}". As tabelas em imagem são: ${outras.slice(0, 8).join(', ')}. Chame de novo com o nome da que serve para o caso dela.`;
         return `Não há imagem da tabela "${i.nome}" nos arquivos da empresa${d ? ' (só um arquivo que não é imagem)' : ''}. Mande um resumo curto em texto, só com o que está na base de conhecimento, sem inventar preço.`;
       }
       if (acoes.some((a) => a.tipo === 'enviar_arquivo' && a.id === d.id)) return `ok: "${d.nome}" já vai nesta resposta.`;

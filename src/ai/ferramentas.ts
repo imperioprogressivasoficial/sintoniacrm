@@ -30,7 +30,7 @@ export interface AgendamentoAntigo {
 /** Efeitos que o agente pede e o app aplica depois (funil, lembretes, alerta para a equipe). */
 export type AcaoAgente =
   /** serena-regras: `paraOutraPessoa` = o horário é de outra pessoa (o cadastro da dona da conversa não muda). */
-  | { tipo: 'agendou'; agendamento: Agendamento; clienteTrinksId: number; paraOutraPessoa?: boolean }
+  | { tipo: 'agendou'; agendamento: Agendamento; clienteTrinksId: number; paraOutraPessoa?: boolean; /** tabela-fim */ clienteNova?: boolean }
   | { tipo: 'passar_para_humano'; motivo: string }
   | { tipo: 'etapa'; etapa: Etapa; motivo: string }
   /** dono 28/11: a cliente disse ou corrigiu o próprio nome: vira o nome do contato. */
@@ -387,7 +387,7 @@ export function horaPermitida(unidade: string, hora: string): boolean {
   return filtrarPelaUnidade(unidade, [hora.padStart(5, '0')], true).length > 0;
 }
 
-/** O serviço em que a IA marca: o que veio, o padrão da unidade ou um único "avaliação". Sem nenhum: recusa explicando. */
+/** O serviço em que a IA marca: o que veio, o padrão da unidade, o "Essencial" ou um único "avaliação". Sem nenhum: recusa explicando. */
 async function servicoEscolhido(ctx: ContextoFerramentas, unidade: string, servicoId: number | null | undefined): Promise<ServicoAgenda> {
   const servicos = await servicosDa(ctx, unidade);
   if (servicoId) {
@@ -396,7 +396,7 @@ async function servicoEscolhido(ctx: ContextoFerramentas, unidade: string, servi
     return s;
   }
   const s = servicoParaAgendar(unidade, servicos);
-  if (!s) throw new RecusaFerramenta(`A unidade ${unidadeDe(unidade).nome} não tem serviço padrão para agendar (Empresa › Unidades). Use ver_servicos e passe o servico_id da avaliação/procedimento principal, sem perguntar o procedimento à cliente.`);
+  if (!s) throw new RecusaFerramenta(`A unidade ${unidadeDe(unidade).nome} não tem serviço padrão para agendar (Empresa › Unidades). Use ver_servicos e passe o servico_id do procedimento principal, sem perguntar o procedimento à cliente.`);
   return s;
 }
 
@@ -630,7 +630,10 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
       // serena-regras: cadastro novo só com nome completo (cliente nova ou outra pessoa); quem já tem cadastro não informa nada.
       const temCadastro = Boolean(i.cliente_id || (!outra && existentes.clienteId));
       // Sem cadastro nesta unidade mas com cadastro em outra: usa o nome de lá (não pergunta de novo).
-      const nome = i.nome_cliente?.trim() || (!outra && !temCadastro ? (await conhecerCliente(agenda, conversa, agora, { prazoMs: 3000 }).catch(() => null))?.nome : null) || '';
+      const conhecida = !outra && !temCadastro && !i.nome_cliente?.trim() ? await conhecerCliente(agenda, conversa, agora, { prazoMs: 3000 }).catch(() => null) : null;
+      const nome = i.nome_cliente?.trim() || conhecida?.nome || '';
+      // tabela-fim: cliente nova = sem cadastro na agenda (nem nesta unidade nem em outra): define a tabela do fim.
+      const clienteNova = !outra && !temCadastro && !conhecida?.conhecida;
       if (daIa && !temCadastro && nome.length < 3) {
         throw new RecusaFerramenta(
           outra
@@ -660,6 +663,7 @@ async function rodar(nome: string, entrada: unknown, ctx: ContextoFerramentas): 
           ...(outra ? { para_outra: { telefone: telOutra ?? undefined } } : {}),
           extras: { ...(i.data_nascimento ? { dataNascimento: i.data_nascimento } : {}), ...(i.email ? { email: i.email } : {}) },
           marcas: daIa && i.profissional_id ? ['PD'] : [],
+          ...(clienteNova ? { clienteNova: true } : {}),
         },
         hora,
       );
@@ -771,6 +775,8 @@ type PedidoIa = {
   para_outra?: { telefone?: string };
   extras?: { dataNascimento?: string; email?: string };
   marcas?: string[];
+  /** tabela-fim: a cliente não tinha cadastro na agenda. */
+  clienteNova?: boolean;
 };
 
 /**
@@ -798,7 +804,7 @@ async function agendarComConferencia(ctx: ContextoFerramentas, i: PedidoIa, hora
       },
       ctx.agora,
     );
-    ctx.acoes.push({ tipo: 'agendou', clienteTrinksId: r.clienteTrinksId, agendamento: r.agendamento, ...(i.para_outra ? { paraOutraPessoa: true } : {}) });
+    ctx.acoes.push({ tipo: 'agendou', clienteTrinksId: r.clienteTrinksId, agendamento: r.agendamento, ...(i.para_outra ? { paraOutraPessoa: true } : {}), ...(i.clienteNova ? { clienteNova: true } : {}) });
     // serena-regras: sem nome de profissional no que a IA lê (ela nunca cita ninguém para a cliente).
     const u = unidadeDe(i.unidade);
     return {
@@ -811,7 +817,10 @@ async function agendarComConferencia(ctx: ContextoFerramentas, i: PedidoIa, hora
       ...(u.endereco ? { endereco_no_cadastro: u.endereco } : {}),
       ...(i.marcas?.includes('PD') ? { profissional_pedida: true } : {}),
       valor: r.valor,
-      proximo_passo: 'Mande a confirmação no modelo da base (data, horário, unidade e endereço) e depois a tabela de preços (enviar_tabela_precos).',
+      // tabela-fim: a imagem da tabela vai sozinha depois da confirmação (o sistema manda; a IA não precisa chamar).
+      proximo_passo: i.para_outra
+        ? 'Mande a confirmação no modelo da base (data, horário, unidade e endereço).'
+        : 'Mande a confirmação no modelo da base (data, horário, unidade e endereço). A imagem da tabela de preços o sistema manda sozinho logo depois: não chame enviar_tabela_precos e não escreva preços.',
     };
   } catch (e) {
     if (e instanceof ErroAgendamento) {

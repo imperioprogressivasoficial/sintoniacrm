@@ -18,6 +18,11 @@ export interface ConfigIA {
   marcarTags: boolean;
   /** Assinatura nas respostas da IA para a cliente (dono 21/11): ex. "*Serena:*" no começo ou "_Serena_" no fim. */
   assinatura: { ligada: boolean; texto: string; posicao: 'inicio' | 'fim' };
+  /**
+   * tabela-fim (dono 28/11): nome (ou parte do nome) da imagem da tabela de preços (Empresa › Documentos, categoria
+   * tabela) que o sistema manda logo depois da confirmação de cada agendamento da IA. Vazio = não manda.
+   */
+  tabelaAgendamento: { clienteNova: string; jaCliente: string };
 }
 
 export const CONFIG_IA_PADRAO: ConfigIA = {
@@ -25,6 +30,7 @@ export const CONFIG_IA_PADRAO: ConfigIA = {
   assumirSemResposta: { ligado: true, minutos: REGRAS_PADRAO.assumirAposMin },
   marcarTags: false,
   assinatura: { ligada: false, texto: 'Serena', posicao: 'inicio' },
+  tabelaAgendamento: { clienteNova: '', jaCliente: '' },
 };
 
 /** O que a tela pode mudar (tudo opcional: só muda o que vier). */
@@ -37,6 +43,7 @@ export const AlteracaoConfigIA = z.object({
   assinatura: z
     .object({ ligada: z.boolean().optional(), texto: z.string().trim().max(40).optional(), posicao: z.enum(['inicio', 'fim']).optional() })
     .optional(),
+  tabelaAgendamento: z.object({ clienteNova: z.string().trim().max(120).optional(), jaCliente: z.string().trim().max(120).optional() }).optional(),
 });
 export type AlteracaoConfigIA = z.infer<typeof AlteracaoConfigIA>;
 
@@ -55,6 +62,10 @@ export function normalizarConfig(bruto: unknown): ConfigIA {
       ligada: v.assinatura?.ligada ?? CONFIG_IA_PADRAO.assinatura.ligada,
       texto: v.assinatura?.texto || CONFIG_IA_PADRAO.assinatura.texto,
       posicao: v.assinatura?.posicao ?? CONFIG_IA_PADRAO.assinatura.posicao,
+    },
+    tabelaAgendamento: {
+      clienteNova: v.tabelaAgendamento?.clienteNova ?? CONFIG_IA_PADRAO.tabelaAgendamento.clienteNova,
+      jaCliente: v.tabelaAgendamento?.jaCliente ?? CONFIG_IA_PADRAO.tabelaAgendamento.jaCliente,
     },
   };
 }
@@ -244,6 +255,7 @@ export class Empresa {
       assumirSemResposta: { ...atual.assumirSemResposta, ...dropUndef(alteracao.assumirSemResposta ?? {}) },
       marcarTags: alteracao.marcarTags ?? atual.marcarTags,
       assinatura: { ...atual.assinatura, ...dropUndef(alteracao.assinatura ?? {}) },
+      tabelaAgendamento: { ...atual.tabelaAgendamento, ...dropUndef(alteracao.tabelaAgendamento ?? {}) },
     };
     if (!nova.assinatura.texto.trim()) nova.assinatura.texto = CONFIG_IA_PADRAO.assinatura.texto;
     await this.armazem.gravarConfigIa(this.id, nova, por, this.agora());
